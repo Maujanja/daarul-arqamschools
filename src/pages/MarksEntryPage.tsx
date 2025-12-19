@@ -1,107 +1,179 @@
-import { useState, useMemo } from 'react';
+import { useState, useEffect } from 'react';
 import { DashboardLayout } from '@/components/layout/DashboardLayout';
 import { GradeBadge } from '@/components/dashboard/GradeBadge';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
-import { mockStudents, mockSubjects, classes, terms, academicYears } from '@/data/mockData';
+import { supabase } from '@/integrations/supabase/client';
 import { calculateGrade } from '@/types';
-import { Save, CheckCircle, AlertCircle } from 'lucide-react';
+import { Save, Loader2 } from 'lucide-react';
 import { useToast } from '@/hooks/use-toast';
+
+interface Student {
+  id: string;
+  full_name: string;
+  roll_number: string;
+  class: string;
+}
+
+interface Subject {
+  id: string;
+  name: string;
+  code: string;
+  max_marks: number;
+}
 
 interface StudentMark {
   studentId: string;
   studentName: string;
   rollNumber: string;
-  test1: number | '';
-  test2: number | '';
-  assignment: number | '';
   exam: number | '';
   total: number;
   grade: string;
 }
 
+const terms = ['Term 1', 'Term 2', 'Term 3'];
+const academicYears = ['2024-2025', '2023-2024', '2022-2023'];
+const classes = ['10-A', '10-B', '9-A', '9-B', '8-A', '8-B'];
+
 export default function MarksEntryPage() {
   const { toast } = useToast();
   const [selectedClass, setSelectedClass] = useState('10-A');
-  const [selectedSubject, setSelectedSubject] = useState('sub-1');
+  const [selectedSubject, setSelectedSubject] = useState('');
   const [selectedTerm, setSelectedTerm] = useState('Term 1');
   const [selectedYear, setSelectedYear] = useState('2024-2025');
   const [isSubmitting, setIsSubmitting] = useState(false);
+  const [isLoading, setIsLoading] = useState(true);
+  
+  const [students, setStudents] = useState<Student[]>([]);
+  const [subjects, setSubjects] = useState<Subject[]>([]);
+  const [marks, setMarks] = useState<StudentMark[]>([]);
 
-  const maxMarks = {
-    test1: 20,
-    test2: 20,
-    assignment: 10,
-    exam: 50,
-  };
+  const selectedSubjectData = subjects.find(s => s.id === selectedSubject);
+  const maxMarks = selectedSubjectData?.max_marks || 100;
 
-  const studentsInClass = mockStudents.filter(s => s.class === selectedClass);
-  const selectedSubjectData = mockSubjects.find(s => s.id === selectedSubject);
+  // Fetch subjects
+  useEffect(() => {
+    const fetchSubjects = async () => {
+      const { data, error } = await supabase
+        .from('subjects')
+        .select('*')
+        .order('name');
+      
+      if (error) {
+        console.error('Error fetching subjects:', error);
+        return;
+      }
+      
+      setSubjects(data || []);
+      if (data && data.length > 0 && !selectedSubject) {
+        setSelectedSubject(data[0].id);
+      }
+    };
+    
+    fetchSubjects();
+  }, []);
 
-  const [marks, setMarks] = useState<StudentMark[]>(() => 
-    studentsInClass.map(student => ({
-      studentId: student.id,
-      studentName: student.name,
-      rollNumber: student.rollNumber,
-      test1: '',
-      test2: '',
-      assignment: '',
-      exam: '',
-      total: 0,
-      grade: '-',
-    }))
-  );
-
-  // Reset marks when class changes
-  useMemo(() => {
-    const newMarks = mockStudents
-      .filter(s => s.class === selectedClass)
-      .map(student => ({
+  // Fetch students when class changes
+  useEffect(() => {
+    const fetchStudents = async () => {
+      setIsLoading(true);
+      const { data, error } = await supabase
+        .from('students')
+        .select('*')
+        .eq('class', selectedClass)
+        .order('roll_number');
+      
+      if (error) {
+        console.error('Error fetching students:', error);
+        setIsLoading(false);
+        return;
+      }
+      
+      setStudents(data || []);
+      
+      // Initialize marks for these students
+      const initialMarks: StudentMark[] = (data || []).map(student => ({
         studentId: student.id,
-        studentName: student.name,
-        rollNumber: student.rollNumber,
-        test1: '' as number | '',
-        test2: '' as number | '',
-        assignment: '' as number | '',
-        exam: '' as number | '',
+        studentName: student.full_name,
+        rollNumber: student.roll_number,
+        exam: '',
         total: 0,
         grade: '-',
       }));
-    setMarks(newMarks);
+      
+      setMarks(initialMarks);
+      setIsLoading(false);
+    };
+    
+    fetchStudents();
   }, [selectedClass]);
 
-  const updateMark = (studentId: string, field: keyof Pick<StudentMark, 'test1' | 'test2' | 'assignment' | 'exam'>, value: string) => {
-    const numValue = value === '' ? '' : Math.min(Math.max(0, parseInt(value) || 0), maxMarks[field]);
+  // Load existing marks when subject/term/year changes
+  useEffect(() => {
+    const loadExistingMarks = async () => {
+      if (!selectedSubject || students.length === 0) return;
+      
+      const { data, error } = await supabase
+        .from('marks')
+        .select('*')
+        .eq('class', selectedClass)
+        .eq('subject_id', selectedSubject)
+        .eq('term', selectedTerm)
+        .eq('academic_year', selectedYear);
+      
+      if (error) {
+        console.error('Error loading marks:', error);
+        return;
+      }
+      
+      if (data && data.length > 0) {
+        setMarks(prev => prev.map(mark => {
+          const existingMark = data.find(m => m.student_id === mark.studentId);
+          if (existingMark) {
+            return {
+              ...mark,
+              exam: existingMark.exam,
+              total: existingMark.total,
+              grade: existingMark.grade,
+            };
+          }
+          return mark;
+        }));
+      }
+    };
+    
+    loadExistingMarks();
+  }, [selectedSubject, selectedTerm, selectedYear, students, selectedClass]);
+
+  const updateMark = (studentId: string, value: string) => {
+    const numValue = value === '' ? '' : Math.min(Math.max(0, parseInt(value) || 0), maxMarks);
     
     setMarks(prev => prev.map(mark => {
       if (mark.studentId !== studentId) return mark;
       
-      const updated = { ...mark, [field]: numValue };
+      const examScore = typeof numValue === 'number' ? numValue : 0;
+      const total = examScore;
+      const percentage = (total / maxMarks) * 100;
+      const grade = total > 0 ? calculateGrade(percentage) : '-';
       
-      // Calculate total and grade
-      const t1 = typeof updated.test1 === 'number' ? updated.test1 : 0;
-      const t2 = typeof updated.test2 === 'number' ? updated.test2 : 0;
-      const ass = typeof updated.assignment === 'number' ? updated.assignment : 0;
-      const ex = typeof updated.exam === 'number' ? updated.exam : 0;
-      
-      updated.total = t1 + t2 + ass + ex;
-      updated.grade = updated.total > 0 ? calculateGrade(updated.total) : '-';
-      
-      return updated;
+      return {
+        ...mark,
+        exam: numValue,
+        total,
+        grade,
+      };
     }));
   };
 
   const handleSubmit = async () => {
     // Validate all marks are entered
-    const incomplete = marks.some(m => 
-      m.test1 === '' || m.test2 === '' || m.assignment === '' || m.exam === ''
-    );
+    const incomplete = marks.some(m => m.exam === '');
 
     if (incomplete) {
       toast({
-        title: "Incomplete Marks",
-        description: "Please enter marks for all students before submitting.",
+        title: "Alama Hazijakamilika",
+        description: "Tafadhali ingiza alama za wanafunzi wote kabla ya kuwasilisha.",
         variant: "destructive",
       });
       return;
@@ -109,20 +181,50 @@ export default function MarksEntryPage() {
 
     setIsSubmitting(true);
     
-    // Simulate API call
-    await new Promise(resolve => setTimeout(resolve, 1500));
-    
-    toast({
-      title: "Marks Submitted Successfully!",
-      description: `Marks for Class ${selectedClass} - ${selectedSubjectData?.name} have been saved.`,
-    });
-    
-    setIsSubmitting(false);
+    try {
+      // Upsert marks to database
+      const marksToInsert = marks.map(mark => ({
+        student_id: mark.studentId,
+        subject_id: selectedSubject,
+        class: selectedClass,
+        exam: typeof mark.exam === 'number' ? mark.exam : 0,
+        total: mark.total,
+        grade: mark.grade,
+        term: selectedTerm,
+        academic_year: selectedYear,
+      }));
+
+      for (const markData of marksToInsert) {
+        const { error } = await supabase
+          .from('marks')
+          .upsert(markData, {
+            onConflict: 'student_id,subject_id,term,academic_year',
+          });
+        
+        if (error) {
+          throw error;
+        }
+      }
+      
+      toast({
+        title: "Alama Zimehifadhiwa!",
+        description: `Alama za Darasa ${selectedClass} - ${selectedSubjectData?.name} zimehifadhiwa.`,
+      });
+    } catch (error: any) {
+      console.error('Error saving marks:', error);
+      toast({
+        title: "Hitilafu",
+        description: error.message || "Kushindwa kuhifadhi alama. Jaribu tena.",
+        variant: "destructive",
+      });
+    } finally {
+      setIsSubmitting(false);
+    }
   };
 
-  const getInputClass = (value: number | '', max: number) => {
+  const getInputClass = (value: number | '') => {
     if (value === '') return '';
-    const percentage = (value / max) * 100;
+    const percentage = (Number(value) / maxMarks) * 100;
     if (percentage >= 75) return 'border-success/50 bg-success/5';
     if (percentage >= 50) return 'border-primary/50 bg-primary/5';
     if (percentage >= 40) return 'border-warning/50 bg-warning/5';
@@ -134,45 +236,45 @@ export default function MarksEntryPage() {
       <div className="space-y-8">
         {/* Header */}
         <div>
-          <h1 className="text-3xl font-display font-bold text-foreground">Marks Entry</h1>
-          <p className="text-muted-foreground mt-1">Enter student marks for continuous assessment and exams</p>
+          <h1 className="text-3xl font-display font-bold text-foreground">Uwekaji Alama</h1>
+          <p className="text-muted-foreground mt-1">Ingiza alama za mitihani ya wanafunzi</p>
         </div>
 
         {/* Filters */}
         <div className="card-elevated p-6 animate-fade-in">
-          <h3 className="font-display font-semibold text-lg mb-4 text-card-foreground">Select Class & Subject</h3>
+          <h3 className="font-display font-semibold text-lg mb-4 text-card-foreground">Chagua Darasa & Somo</h3>
           <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
             <div className="space-y-2">
-              <label className="text-sm font-medium text-muted-foreground">Class</label>
+              <label className="text-sm font-medium text-muted-foreground">Darasa</label>
               <Select value={selectedClass} onValueChange={setSelectedClass}>
                 <SelectTrigger>
-                  <SelectValue placeholder="Select class" />
+                  <SelectValue placeholder="Chagua darasa" />
                 </SelectTrigger>
                 <SelectContent>
-                  {['10-A', '10-B', '9-A'].map((cls) => (
-                    <SelectItem key={cls} value={cls}>Class {cls}</SelectItem>
+                  {classes.map((cls) => (
+                    <SelectItem key={cls} value={cls}>Darasa {cls}</SelectItem>
                   ))}
                 </SelectContent>
               </Select>
             </div>
             <div className="space-y-2">
-              <label className="text-sm font-medium text-muted-foreground">Subject</label>
+              <label className="text-sm font-medium text-muted-foreground">Somo</label>
               <Select value={selectedSubject} onValueChange={setSelectedSubject}>
                 <SelectTrigger>
-                  <SelectValue placeholder="Select subject" />
+                  <SelectValue placeholder="Chagua somo" />
                 </SelectTrigger>
                 <SelectContent>
-                  {mockSubjects.map((subject) => (
+                  {subjects.map((subject) => (
                     <SelectItem key={subject.id} value={subject.id}>{subject.name}</SelectItem>
                   ))}
                 </SelectContent>
               </Select>
             </div>
             <div className="space-y-2">
-              <label className="text-sm font-medium text-muted-foreground">Term</label>
+              <label className="text-sm font-medium text-muted-foreground">Muhula</label>
               <Select value={selectedTerm} onValueChange={setSelectedTerm}>
                 <SelectTrigger>
-                  <SelectValue placeholder="Select term" />
+                  <SelectValue placeholder="Chagua muhula" />
                 </SelectTrigger>
                 <SelectContent>
                   {terms.map((term) => (
@@ -182,10 +284,10 @@ export default function MarksEntryPage() {
               </Select>
             </div>
             <div className="space-y-2">
-              <label className="text-sm font-medium text-muted-foreground">Academic Year</label>
+              <label className="text-sm font-medium text-muted-foreground">Mwaka wa Masomo</label>
               <Select value={selectedYear} onValueChange={setSelectedYear}>
                 <SelectTrigger>
-                  <SelectValue placeholder="Select year" />
+                  <SelectValue placeholder="Chagua mwaka" />
                 </SelectTrigger>
                 <SelectContent>
                   {academicYears.map((year) => (
@@ -203,130 +305,93 @@ export default function MarksEntryPage() {
             <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4">
               <div>
                 <h3 className="font-display font-semibold text-lg text-card-foreground">
-                  Class {selectedClass} - {selectedSubjectData?.name}
+                  Darasa {selectedClass} - {selectedSubjectData?.name || 'Chagua Somo'}
                 </h3>
-                <p className="text-sm text-muted-foreground">{marks.length} students • {selectedTerm} • {selectedYear}</p>
+                <p className="text-sm text-muted-foreground">{marks.length} wanafunzi • {selectedTerm} • {selectedYear}</p>
               </div>
               <Button 
                 className="btn-gradient"
                 onClick={handleSubmit}
-                disabled={isSubmitting}
+                disabled={isSubmitting || marks.length === 0}
               >
                 {isSubmitting ? (
                   <>
-                    <svg className="animate-spin h-4 w-4 mr-2" viewBox="0 0 24 24">
-                      <circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4" fill="none" />
-                      <path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z" />
-                    </svg>
-                    Saving...
+                    <Loader2 className="w-4 h-4 mr-2 animate-spin" />
+                    Inahifadhi...
                   </>
                 ) : (
                   <>
                     <Save className="w-4 h-4 mr-2" />
-                    Submit Marks
+                    Hifadhi Alama
                   </>
                 )}
               </Button>
             </div>
           </div>
           
-          <div className="overflow-x-auto">
-            <table className="w-full">
-              <thead>
-                <tr className="bg-muted/50">
-                  <th className="text-left py-3 px-4 text-sm font-medium text-muted-foreground">Roll No.</th>
-                  <th className="text-left py-3 px-4 text-sm font-medium text-muted-foreground">Student Name</th>
-                  <th className="text-center py-3 px-4 text-sm font-medium text-muted-foreground">
-                    <div>Test 1</div>
-                    <div className="text-xs font-normal">(Max: {maxMarks.test1})</div>
-                  </th>
-                  <th className="text-center py-3 px-4 text-sm font-medium text-muted-foreground">
-                    <div>Test 2</div>
-                    <div className="text-xs font-normal">(Max: {maxMarks.test2})</div>
-                  </th>
-                  <th className="text-center py-3 px-4 text-sm font-medium text-muted-foreground">
-                    <div>Assignment</div>
-                    <div className="text-xs font-normal">(Max: {maxMarks.assignment})</div>
-                  </th>
-                  <th className="text-center py-3 px-4 text-sm font-medium text-muted-foreground">
-                    <div>Exam</div>
-                    <div className="text-xs font-normal">(Max: {maxMarks.exam})</div>
-                  </th>
-                  <th className="text-center py-3 px-4 text-sm font-medium text-muted-foreground">Total (100)</th>
-                  <th className="text-center py-3 px-4 text-sm font-medium text-muted-foreground">Grade</th>
-                </tr>
-              </thead>
-              <tbody>
-                {marks.map((mark, index) => (
-                  <tr 
-                    key={mark.studentId} 
-                    className="border-b border-border/50 table-row-hover animate-slide-up"
-                    style={{ animationDelay: `${index * 50}ms` }}
-                  >
-                    <td className="py-4 px-4 font-mono text-sm text-card-foreground">{mark.rollNumber}</td>
-                    <td className="py-4 px-4 font-medium text-card-foreground">{mark.studentName}</td>
-                    <td className="py-4 px-4">
-                      <Input
-                        type="number"
-                        min="0"
-                        max={maxMarks.test1}
-                        value={mark.test1}
-                        onChange={(e) => updateMark(mark.studentId, 'test1', e.target.value)}
-                        className={`w-20 text-center mx-auto ${getInputClass(mark.test1, maxMarks.test1)}`}
-                        placeholder="-"
-                      />
-                    </td>
-                    <td className="py-4 px-4">
-                      <Input
-                        type="number"
-                        min="0"
-                        max={maxMarks.test2}
-                        value={mark.test2}
-                        onChange={(e) => updateMark(mark.studentId, 'test2', e.target.value)}
-                        className={`w-20 text-center mx-auto ${getInputClass(mark.test2, maxMarks.test2)}`}
-                        placeholder="-"
-                      />
-                    </td>
-                    <td className="py-4 px-4">
-                      <Input
-                        type="number"
-                        min="0"
-                        max={maxMarks.assignment}
-                        value={mark.assignment}
-                        onChange={(e) => updateMark(mark.studentId, 'assignment', e.target.value)}
-                        className={`w-20 text-center mx-auto ${getInputClass(mark.assignment, maxMarks.assignment)}`}
-                        placeholder="-"
-                      />
-                    </td>
-                    <td className="py-4 px-4">
-                      <Input
-                        type="number"
-                        min="0"
-                        max={maxMarks.exam}
-                        value={mark.exam}
-                        onChange={(e) => updateMark(mark.studentId, 'exam', e.target.value)}
-                        className={`w-20 text-center mx-auto ${getInputClass(mark.exam, maxMarks.exam)}`}
-                        placeholder="-"
-                      />
-                    </td>
-                    <td className="py-4 px-4 text-center">
-                      <span className={`text-lg font-bold ${mark.total >= 75 ? 'text-success' : mark.total >= 50 ? 'text-primary' : mark.total >= 40 ? 'text-warning' : mark.total > 0 ? 'text-destructive' : 'text-muted-foreground'}`}>
-                        {mark.total || '-'}
-                      </span>
-                    </td>
-                    <td className="py-4 px-4 text-center">
-                      <GradeBadge grade={mark.grade} />
-                    </td>
+          {isLoading ? (
+            <div className="p-12 text-center">
+              <Loader2 className="w-8 h-8 animate-spin mx-auto text-primary" />
+              <p className="text-muted-foreground mt-4">Inapakia wanafunzi...</p>
+            </div>
+          ) : marks.length === 0 ? (
+            <div className="p-12 text-center">
+              <p className="text-muted-foreground">Hakuna wanafunzi katika darasa hili. Ongeza wanafunzi kwanza.</p>
+            </div>
+          ) : (
+            <div className="overflow-x-auto">
+              <table className="w-full">
+                <thead>
+                  <tr className="bg-muted/50">
+                    <th className="text-left py-3 px-4 text-sm font-medium text-muted-foreground">Namba</th>
+                    <th className="text-left py-3 px-4 text-sm font-medium text-muted-foreground">Jina la Mwanafunzi</th>
+                    <th className="text-center py-3 px-4 text-sm font-medium text-muted-foreground">
+                      <div>Mtihani</div>
+                      <div className="text-xs font-normal">(Max: {maxMarks})</div>
+                    </th>
+                    <th className="text-center py-3 px-4 text-sm font-medium text-muted-foreground">Jumla</th>
+                    <th className="text-center py-3 px-4 text-sm font-medium text-muted-foreground">Daraja</th>
                   </tr>
-                ))}
-              </tbody>
-            </table>
-          </div>
+                </thead>
+                <tbody>
+                  {marks.map((mark, index) => (
+                    <tr 
+                      key={mark.studentId} 
+                      className="border-b border-border/50 table-row-hover animate-slide-up"
+                      style={{ animationDelay: `${index * 50}ms` }}
+                    >
+                      <td className="py-4 px-4 font-mono text-sm text-card-foreground">{mark.rollNumber}</td>
+                      <td className="py-4 px-4 font-medium text-card-foreground">{mark.studentName}</td>
+                      <td className="py-4 px-4">
+                        <Input
+                          type="number"
+                          min="0"
+                          max={maxMarks}
+                          value={mark.exam}
+                          onChange={(e) => updateMark(mark.studentId, e.target.value)}
+                          className={`w-24 text-center mx-auto ${getInputClass(mark.exam)}`}
+                          placeholder="-"
+                        />
+                      </td>
+                      <td className="py-4 px-4 text-center">
+                        <span className={`text-lg font-bold ${mark.total >= 75 ? 'text-success' : mark.total >= 50 ? 'text-primary' : mark.total >= 40 ? 'text-warning' : mark.total > 0 ? 'text-destructive' : 'text-muted-foreground'}`}>
+                          {mark.total || '-'}
+                        </span>
+                      </td>
+                      <td className="py-4 px-4 text-center">
+                        <GradeBadge grade={mark.grade} />
+                      </td>
+                    </tr>
+                  ))}
+                </tbody>
+              </table>
+            </div>
+          )}
         </div>
 
         {/* Grading Info */}
         <div className="card-elevated p-6 animate-fade-in">
-          <h3 className="font-display font-semibold text-lg mb-4 text-card-foreground">Grading Scale</h3>
+          <h3 className="font-display font-semibold text-lg mb-4 text-card-foreground">Viwango vya Daraja</h3>
           <div className="flex flex-wrap gap-4">
             <div className="flex items-center gap-2">
               <GradeBadge grade="A" size="sm" />
