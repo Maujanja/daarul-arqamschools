@@ -4,22 +4,29 @@ import { useAuth } from '@/contexts/AuthContext';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
-import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
-import { GraduationCap, Mail, Lock, Eye, EyeOff, AlertCircle, User } from 'lucide-react';
+import { GraduationCap, Lock, Eye, EyeOff, AlertCircle, User, Hash, UserCheck } from 'lucide-react';
 import { useToast } from '@/hooks/use-toast';
 import { UserRole } from '@/types';
 
 export default function LoginPage() {
-  const [email, setEmail] = useState('');
-  const [password, setPassword] = useState('');
-  const [fullName, setFullName] = useState('');
-  const [role, setRole] = useState<UserRole>('teacher');
+  // Admin login
+  const [adminUsername, setAdminUsername] = useState('');
+  const [adminPassword, setAdminPassword] = useState('');
+  
+  // Teacher login
+  const [teacherName, setTeacherName] = useState('');
+  const [teacherPassword, setTeacherPassword] = useState('');
+  
+  // Parent login
+  const [studentName, setStudentName] = useState('');
+  const [studentRollNumber, setStudentRollNumber] = useState('');
+  
   const [showPassword, setShowPassword] = useState(false);
   const [isLoading, setIsLoading] = useState(false);
   const [error, setError] = useState('');
   
-  const { login, signup, isAuthenticated, isLoading: authLoading } = useAuth();
+  const { loginAsAdmin, loginAsTeacher, loginAsParent, isAuthenticated, isLoading: authLoading } = useAuth();
   const navigate = useNavigate();
   const { toast } = useToast();
 
@@ -29,41 +36,63 @@ export default function LoginPage() {
     }
   }, [isAuthenticated, authLoading, navigate]);
 
-  const handleLogin = async (e: React.FormEvent) => {
+  const handleAdminLogin = async (e: React.FormEvent) => {
     e.preventDefault();
     setError('');
     setIsLoading(true);
 
     try {
-      const result = await login(email, password);
+      const result = await loginAsAdmin(adminUsername, adminPassword);
       if (result.success) {
         toast({
-          title: "Karibu tena!",
-          description: "Umefanikiwa kuingia.",
+          title: "Karibu Admin!",
+          description: "Umefanikiwa kuingia kama msimamizi.",
         });
         navigate('/dashboard');
       } else {
-        setError(result.error || 'Kuingia kumeshindikana');
+        setError(result.error || 'Jina au nywila si sahihi');
       }
     } finally {
       setIsLoading(false);
     }
   };
 
-  const handleSignup = async (e: React.FormEvent) => {
+  const handleTeacherLogin = async (e: React.FormEvent) => {
     e.preventDefault();
     setError('');
     setIsLoading(true);
 
     try {
-      const result = await signup(email, password, fullName, role);
+      const result = await loginAsTeacher(teacherName, teacherPassword);
       if (result.success) {
         toast({
-          title: "Akaunti imeundwa!",
-          description: "Akaunti yako imeundwa vizuri. Unaweza kuingia sasa.",
+          title: "Karibu Mwalimu!",
+          description: "Umefanikiwa kuingia.",
         });
+        navigate('/dashboard');
       } else {
-        setError(result.error || 'Kusajili kumeshindikana');
+        setError(result.error || 'Jina au nywila si sahihi');
+      }
+    } finally {
+      setIsLoading(false);
+    }
+  };
+
+  const handleParentLogin = async (e: React.FormEvent) => {
+    e.preventDefault();
+    setError('');
+    setIsLoading(true);
+
+    try {
+      const result = await loginAsParent(studentName, studentRollNumber);
+      if (result.success) {
+        toast({
+          title: "Karibu Mzazi!",
+          description: "Umefanikiwa kuingia.",
+        });
+        navigate('/dashboard');
+      } else {
+        setError(result.error || 'Jina la mwanafunzi au ID si sahihi');
       }
     } finally {
       setIsLoading(false);
@@ -99,42 +128,36 @@ export default function LoginPage() {
           <div className="space-y-6 mt-8">
             <div className="flex items-start gap-4">
               <div className="w-10 h-10 rounded-lg bg-primary/20 backdrop-blur-sm flex items-center justify-center shrink-0">
-                <svg className="w-5 h-5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 12l2 2 4-4m6 2a9 9 0 11-18 0 9 9 0 0118 0z" />
-                </svg>
+                <UserCheck className="w-5 h-5" />
               </div>
               <div>
-                <h3 className="font-semibold mb-1">Uwekaji Alama Kiotomatiki</h3>
-                <p className="text-sm text-primary-foreground/70">Ingiza alama kwa urahisi na upate daraja moja kwa moja</p>
+                <h3 className="font-semibold mb-1">Admin</h3>
+                <p className="text-sm text-primary-foreground/70">Ingia kwa jina la mtumiaji na nywila</p>
               </div>
             </div>
             <div className="flex items-start gap-4">
               <div className="w-10 h-10 rounded-lg bg-primary/20 backdrop-blur-sm flex items-center justify-center shrink-0">
-                <svg className="w-5 h-5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 19v-6a2 2 0 00-2-2H5a2 2 0 00-2 2v6a2 2 0 002 2h2a2 2 0 002-2zm0 0V9a2 2 0 012-2h2a2 2 0 012 2v10m-6 0a2 2 0 002 2h2a2 2 0 002-2m0 0V5a2 2 0 012-2h2a2 2 0 012 2v14a2 2 0 01-2 2h-2a2 2 0 01-2-2z" />
-                </svg>
+                <User className="w-5 h-5" />
               </div>
               <div>
-                <h3 className="font-semibold mb-1">Ripoti Kamili</h3>
-                <p className="text-sm text-primary-foreground/70">Tengeneza ripoti za kina na uchambuzi wa kitaalamu</p>
+                <h3 className="font-semibold mb-1">Mwalimu</h3>
+                <p className="text-sm text-primary-foreground/70">Ingia kwa jina na nywila uliyopewa na admin</p>
               </div>
             </div>
             <div className="flex items-start gap-4">
               <div className="w-10 h-10 rounded-lg bg-primary/20 backdrop-blur-sm flex items-center justify-center shrink-0">
-                <svg className="w-5 h-5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 4.354a4 4 0 110 5.292M15 21H3v-1a6 6 0 0112 0v1zm0 0h6v-1a6 6 0 00-9-5.197m13.5-9a2.5 2.5 0 11-5 0 2.5 2.5 0 015 0z" />
-                </svg>
+                <Hash className="w-5 h-5" />
               </div>
               <div>
-                <h3 className="font-semibold mb-1">Portal ya Wazazi</h3>
-                <p className="text-sm text-primary-foreground/70">Wazazi waone maendeleo ya watoto wao moja kwa moja</p>
+                <h3 className="font-semibold mb-1">Mzazi</h3>
+                <p className="text-sm text-primary-foreground/70">Ingia kwa jina la mwanao na ID yake</p>
               </div>
             </div>
           </div>
         </div>
       </div>
 
-      {/* Right Panel - Login/Signup Form */}
+      {/* Right Panel - Login Forms */}
       <div className="flex-1 flex items-center justify-center p-8">
         <div className="w-full max-w-md space-y-8 animate-fade-in">
           {/* Mobile Logo */}
@@ -152,29 +175,31 @@ export default function LoginPage() {
             </div>
           )}
 
-          <Tabs defaultValue="login" className="w-full">
-            <TabsList className="grid w-full grid-cols-2">
-              <TabsTrigger value="login">Ingia</TabsTrigger>
-              <TabsTrigger value="signup">Jisajili</TabsTrigger>
+          <Tabs defaultValue="admin" className="w-full">
+            <TabsList className="grid w-full grid-cols-3">
+              <TabsTrigger value="admin">Admin</TabsTrigger>
+              <TabsTrigger value="teacher">Mwalimu</TabsTrigger>
+              <TabsTrigger value="parent">Mzazi</TabsTrigger>
             </TabsList>
 
-            <TabsContent value="login" className="space-y-6 mt-6">
+            {/* Admin Login */}
+            <TabsContent value="admin" className="space-y-6 mt-6">
               <div className="text-center lg:text-left">
-                <h2 className="text-2xl font-display font-bold text-foreground">Karibu tena</h2>
-                <p className="text-muted-foreground mt-2">Ingia kwenye akaunti yako kuendelea</p>
+                <h2 className="text-2xl font-display font-bold text-foreground">Msimamizi</h2>
+                <p className="text-muted-foreground mt-2">Ingia kama msimamizi wa mfumo</p>
               </div>
 
-              <form onSubmit={handleLogin} className="space-y-6">
+              <form onSubmit={handleAdminLogin} className="space-y-6">
                 <div className="space-y-2">
-                  <Label htmlFor="login-email">Barua pepe</Label>
+                  <Label htmlFor="admin-username">Jina la Mtumiaji</Label>
                   <div className="relative">
-                    <Mail className="absolute left-3 top-1/2 -translate-y-1/2 w-5 h-5 text-muted-foreground" />
+                    <User className="absolute left-3 top-1/2 -translate-y-1/2 w-5 h-5 text-muted-foreground" />
                     <Input
-                      id="login-email"
-                      type="email"
-                      placeholder="Ingiza barua pepe yako"
-                      value={email}
-                      onChange={(e) => setEmail(e.target.value)}
+                      id="admin-username"
+                      type="text"
+                      placeholder="Ingiza jina la mtumiaji"
+                      value={adminUsername}
+                      onChange={(e) => setAdminUsername(e.target.value)}
                       className="pl-10 input-enhanced"
                       required
                     />
@@ -182,15 +207,15 @@ export default function LoginPage() {
                 </div>
 
                 <div className="space-y-2">
-                  <Label htmlFor="login-password">Nywila</Label>
+                  <Label htmlFor="admin-password">Nywila</Label>
                   <div className="relative">
                     <Lock className="absolute left-3 top-1/2 -translate-y-1/2 w-5 h-5 text-muted-foreground" />
                     <Input
-                      id="login-password"
+                      id="admin-password"
                       type={showPassword ? 'text' : 'password'}
-                      placeholder="Ingiza nywila yako"
-                      value={password}
-                      onChange={(e) => setPassword(e.target.value)}
+                      placeholder="Ingiza nywila"
+                      value={adminPassword}
+                      onChange={(e) => setAdminPassword(e.target.value)}
                       className="pl-10 pr-10 input-enhanced"
                       required
                     />
@@ -224,23 +249,24 @@ export default function LoginPage() {
               </form>
             </TabsContent>
 
-            <TabsContent value="signup" className="space-y-6 mt-6">
+            {/* Teacher Login */}
+            <TabsContent value="teacher" className="space-y-6 mt-6">
               <div className="text-center lg:text-left">
-                <h2 className="text-2xl font-display font-bold text-foreground">Unda Akaunti</h2>
-                <p className="text-muted-foreground mt-2">Jisajili kuanza kutumia mfumo</p>
+                <h2 className="text-2xl font-display font-bold text-foreground">Mwalimu</h2>
+                <p className="text-muted-foreground mt-2">Ingia kwa taarifa ulizopewa na admin</p>
               </div>
 
-              <form onSubmit={handleSignup} className="space-y-4">
+              <form onSubmit={handleTeacherLogin} className="space-y-6">
                 <div className="space-y-2">
-                  <Label htmlFor="signup-name">Jina Kamili</Label>
+                  <Label htmlFor="teacher-name">Jina</Label>
                   <div className="relative">
                     <User className="absolute left-3 top-1/2 -translate-y-1/2 w-5 h-5 text-muted-foreground" />
                     <Input
-                      id="signup-name"
+                      id="teacher-name"
                       type="text"
-                      placeholder="Ingiza jina lako kamili"
-                      value={fullName}
-                      onChange={(e) => setFullName(e.target.value)}
+                      placeholder="Ingiza jina lako"
+                      value={teacherName}
+                      onChange={(e) => setTeacherName(e.target.value)}
                       className="pl-10 input-enhanced"
                       required
                     />
@@ -248,34 +274,17 @@ export default function LoginPage() {
                 </div>
 
                 <div className="space-y-2">
-                  <Label htmlFor="signup-email">Barua pepe</Label>
-                  <div className="relative">
-                    <Mail className="absolute left-3 top-1/2 -translate-y-1/2 w-5 h-5 text-muted-foreground" />
-                    <Input
-                      id="signup-email"
-                      type="email"
-                      placeholder="Ingiza barua pepe yako"
-                      value={email}
-                      onChange={(e) => setEmail(e.target.value)}
-                      className="pl-10 input-enhanced"
-                      required
-                    />
-                  </div>
-                </div>
-
-                <div className="space-y-2">
-                  <Label htmlFor="signup-password">Nywila</Label>
+                  <Label htmlFor="teacher-password">Nywila</Label>
                   <div className="relative">
                     <Lock className="absolute left-3 top-1/2 -translate-y-1/2 w-5 h-5 text-muted-foreground" />
                     <Input
-                      id="signup-password"
+                      id="teacher-password"
                       type={showPassword ? 'text' : 'password'}
-                      placeholder="Unda nywila (angalau herufi 6)"
-                      value={password}
-                      onChange={(e) => setPassword(e.target.value)}
+                      placeholder="Ingiza nywila yako"
+                      value={teacherPassword}
+                      onChange={(e) => setTeacherPassword(e.target.value)}
                       className="pl-10 pr-10 input-enhanced"
                       required
-                      minLength={6}
                     />
                     <button
                       type="button"
@@ -285,20 +294,6 @@ export default function LoginPage() {
                       {showPassword ? <EyeOff className="w-5 h-5" /> : <Eye className="w-5 h-5" />}
                     </button>
                   </div>
-                </div>
-
-                <div className="space-y-2">
-                  <Label htmlFor="signup-role">Jukumu</Label>
-                  <Select value={role} onValueChange={(value) => setRole(value as UserRole)}>
-                    <SelectTrigger>
-                      <SelectValue placeholder="Chagua jukumu lako" />
-                    </SelectTrigger>
-                    <SelectContent>
-                      <SelectItem value="admin">Msimamizi (Admin)</SelectItem>
-                      <SelectItem value="teacher">Mwalimu (Teacher)</SelectItem>
-                      <SelectItem value="parent">Mzazi (Parent)</SelectItem>
-                    </SelectContent>
-                  </Select>
                 </div>
 
                 <Button 
@@ -312,10 +307,70 @@ export default function LoginPage() {
                         <circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4" fill="none" />
                         <path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z" />
                       </svg>
-                      Inasajili...
+                      Inaingia...
                     </span>
                   ) : (
-                    'Jisajili'
+                    'Ingia'
+                  )}
+                </Button>
+              </form>
+            </TabsContent>
+
+            {/* Parent Login */}
+            <TabsContent value="parent" className="space-y-6 mt-6">
+              <div className="text-center lg:text-left">
+                <h2 className="text-2xl font-display font-bold text-foreground">Mzazi</h2>
+                <p className="text-muted-foreground mt-2">Ingia kwa taarifa za mwanao</p>
+              </div>
+
+              <form onSubmit={handleParentLogin} className="space-y-6">
+                <div className="space-y-2">
+                  <Label htmlFor="student-name">Jina la Mwanafunzi</Label>
+                  <div className="relative">
+                    <User className="absolute left-3 top-1/2 -translate-y-1/2 w-5 h-5 text-muted-foreground" />
+                    <Input
+                      id="student-name"
+                      type="text"
+                      placeholder="Ingiza jina la mwanao"
+                      value={studentName}
+                      onChange={(e) => setStudentName(e.target.value)}
+                      className="pl-10 input-enhanced"
+                      required
+                    />
+                  </div>
+                </div>
+
+                <div className="space-y-2">
+                  <Label htmlFor="student-roll">ID Namba ya Mwanafunzi</Label>
+                  <div className="relative">
+                    <Hash className="absolute left-3 top-1/2 -translate-y-1/2 w-5 h-5 text-muted-foreground" />
+                    <Input
+                      id="student-roll"
+                      type="text"
+                      placeholder="Ingiza ID namba ya mwanao"
+                      value={studentRollNumber}
+                      onChange={(e) => setStudentRollNumber(e.target.value)}
+                      className="pl-10 input-enhanced"
+                      required
+                    />
+                  </div>
+                </div>
+
+                <Button 
+                  type="submit" 
+                  className="w-full btn-gradient h-12 text-base"
+                  disabled={isLoading}
+                >
+                  {isLoading ? (
+                    <span className="flex items-center gap-2">
+                      <svg className="animate-spin h-5 w-5" viewBox="0 0 24 24">
+                        <circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4" fill="none" />
+                        <path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z" />
+                      </svg>
+                      Inaingia...
+                    </span>
+                  ) : (
+                    'Ingia'
                   )}
                 </Button>
               </form>

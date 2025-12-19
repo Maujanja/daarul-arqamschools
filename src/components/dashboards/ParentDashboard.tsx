@@ -28,24 +28,47 @@ export function ParentDashboard() {
       
       setIsLoading(true);
       
-      // Get parent record
-      const { data: parentData } = await supabase
-        .from('parents')
-        .select('id')
-        .eq('user_id', user.id)
-        .maybeSingle();
+      // For parent login, user.id is the parent_id or student_id
+      // Try to get student directly by parent_id first
+      let studentData = null;
       
-      if (!parentData) {
-        setIsLoading(false);
-        return;
-      }
-      
-      // Get student linked to parent
-      const { data: studentData } = await supabase
+      const { data: studentByParent } = await supabase
         .from('students')
         .select('*')
-        .eq('parent_id', parentData.id)
+        .eq('parent_id', user.id)
         .maybeSingle();
+      
+      if (studentByParent) {
+        studentData = studentByParent;
+      } else {
+        // If not found, try finding by student id (when parent logged in with child info)
+        const { data: studentById } = await supabase
+          .from('students')
+          .select('*')
+          .eq('id', user.id)
+          .maybeSingle();
+        
+        studentData = studentById;
+      }
+      
+      if (!studentData) {
+        // Try to find any student linked to any parent with matching name
+        const { data: parentRecord } = await supabase
+          .from('parents')
+          .select('id')
+          .ilike('full_name', `%${user.name}%`)
+          .maybeSingle();
+        
+        if (parentRecord) {
+          const { data: studentByParentRecord } = await supabase
+            .from('students')
+            .select('*')
+            .eq('parent_id', parentRecord.id)
+            .maybeSingle();
+          
+          studentData = studentByParentRecord;
+        }
+      }
       
       if (!studentData) {
         setIsLoading(false);
