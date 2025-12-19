@@ -1,24 +1,35 @@
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { useAuth } from '@/contexts/AuthContext';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
-import { GraduationCap, Mail, Lock, Eye, EyeOff, AlertCircle } from 'lucide-react';
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
+import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
+import { GraduationCap, Mail, Lock, Eye, EyeOff, AlertCircle, User } from 'lucide-react';
 import { useToast } from '@/hooks/use-toast';
+import { UserRole } from '@/types';
 
 export default function LoginPage() {
   const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
+  const [fullName, setFullName] = useState('');
+  const [role, setRole] = useState<UserRole>('teacher');
   const [showPassword, setShowPassword] = useState(false);
   const [isLoading, setIsLoading] = useState(false);
   const [error, setError] = useState('');
   
-  const { login } = useAuth();
+  const { login, signup, isAuthenticated, isLoading: authLoading } = useAuth();
   const navigate = useNavigate();
   const { toast } = useToast();
 
-  const handleSubmit = async (e: React.FormEvent) => {
+  useEffect(() => {
+    if (isAuthenticated && !authLoading) {
+      navigate('/dashboard');
+    }
+  }, [isAuthenticated, authLoading, navigate]);
+
+  const handleLogin = async (e: React.FormEvent) => {
     e.preventDefault();
     setError('');
     setIsLoading(true);
@@ -27,23 +38,45 @@ export default function LoginPage() {
       const result = await login(email, password);
       if (result.success) {
         toast({
-          title: "Welcome back!",
-          description: "You have successfully logged in.",
+          title: "Karibu tena!",
+          description: "Umefanikiwa kuingia.",
         });
         navigate('/dashboard');
       } else {
-        setError(result.error || 'Login failed');
+        setError(result.error || 'Kuingia kumeshindikana');
       }
     } finally {
       setIsLoading(false);
     }
   };
 
-  const demoAccounts = [
-    { role: 'Admin', email: 'admin@school.edu' },
-    { role: 'Teacher', email: 'sarah.j@school.edu' },
-    { role: 'Parent', email: 'robert.s@email.com' },
-  ];
+  const handleSignup = async (e: React.FormEvent) => {
+    e.preventDefault();
+    setError('');
+    setIsLoading(true);
+
+    try {
+      const result = await signup(email, password, fullName, role);
+      if (result.success) {
+        toast({
+          title: "Akaunti imeundwa!",
+          description: "Akaunti yako imeundwa vizuri. Unaweza kuingia sasa.",
+        });
+      } else {
+        setError(result.error || 'Kusajili kumeshindikana');
+      }
+    } finally {
+      setIsLoading(false);
+    }
+  };
+
+  if (authLoading) {
+    return (
+      <div className="min-h-screen flex items-center justify-center bg-background">
+        <div className="animate-spin h-8 w-8 border-4 border-primary border-t-transparent rounded-full" />
+      </div>
+    );
+  }
 
   return (
     <div className="min-h-screen flex">
@@ -59,7 +92,7 @@ export default function LoginPage() {
               EduManage
             </h1>
             <p className="text-xl text-primary-foreground/80">
-              School Academic Management System
+              Mfumo wa Usimamizi wa Masomo
             </p>
           </div>
           
@@ -71,8 +104,8 @@ export default function LoginPage() {
                 </svg>
               </div>
               <div>
-                <h3 className="font-semibold mb-1">Automated Assessment</h3>
-                <p className="text-sm text-primary-foreground/70">Streamlined marks entry with auto-calculated grades and rankings</p>
+                <h3 className="font-semibold mb-1">Uwekaji Alama Kiotomatiki</h3>
+                <p className="text-sm text-primary-foreground/70">Ingiza alama kwa urahisi na upate daraja moja kwa moja</p>
               </div>
             </div>
             <div className="flex items-start gap-4">
@@ -82,8 +115,8 @@ export default function LoginPage() {
                 </svg>
               </div>
               <div>
-                <h3 className="font-semibold mb-1">Comprehensive Reports</h3>
-                <p className="text-sm text-primary-foreground/70">Generate detailed academic reports with visual analytics</p>
+                <h3 className="font-semibold mb-1">Ripoti Kamili</h3>
+                <p className="text-sm text-primary-foreground/70">Tengeneza ripoti za kina na uchambuzi wa kitaalamu</p>
               </div>
             </div>
             <div className="flex items-start gap-4">
@@ -93,15 +126,15 @@ export default function LoginPage() {
                 </svg>
               </div>
               <div>
-                <h3 className="font-semibold mb-1">Parent Portal</h3>
-                <p className="text-sm text-primary-foreground/70">Keep parents informed with real-time academic updates</p>
+                <h3 className="font-semibold mb-1">Portal ya Wazazi</h3>
+                <p className="text-sm text-primary-foreground/70">Wazazi waone maendeleo ya watoto wao moja kwa moja</p>
               </div>
             </div>
           </div>
         </div>
       </div>
 
-      {/* Right Panel - Login Form */}
+      {/* Right Panel - Login/Signup Form */}
       <div className="flex-1 flex items-center justify-center p-8">
         <div className="w-full max-w-md space-y-8 animate-fade-in">
           {/* Mobile Logo */}
@@ -112,11 +145,6 @@ export default function LoginPage() {
             <h1 className="text-2xl font-display font-bold text-foreground">EduManage</h1>
           </div>
 
-          <div className="text-center lg:text-left">
-            <h2 className="text-2xl font-display font-bold text-foreground">Welcome back</h2>
-            <p className="text-muted-foreground mt-2">Sign in to your account to continue</p>
-          </div>
-
           {error && (
             <div className="flex items-center gap-2 p-4 rounded-lg bg-destructive/10 text-destructive animate-scale-in">
               <AlertCircle className="w-5 h-5 shrink-0" />
@@ -124,84 +152,175 @@ export default function LoginPage() {
             </div>
           )}
 
-          <form onSubmit={handleSubmit} className="space-y-6">
-            <div className="space-y-2">
-              <Label htmlFor="email">Email address</Label>
-              <div className="relative">
-                <Mail className="absolute left-3 top-1/2 -translate-y-1/2 w-5 h-5 text-muted-foreground" />
-                <Input
-                  id="email"
-                  type="email"
-                  placeholder="Enter your email"
-                  value={email}
-                  onChange={(e) => setEmail(e.target.value)}
-                  className="pl-10 input-enhanced"
-                  required
-                />
+          <Tabs defaultValue="login" className="w-full">
+            <TabsList className="grid w-full grid-cols-2">
+              <TabsTrigger value="login">Ingia</TabsTrigger>
+              <TabsTrigger value="signup">Jisajili</TabsTrigger>
+            </TabsList>
+
+            <TabsContent value="login" className="space-y-6 mt-6">
+              <div className="text-center lg:text-left">
+                <h2 className="text-2xl font-display font-bold text-foreground">Karibu tena</h2>
+                <p className="text-muted-foreground mt-2">Ingia kwenye akaunti yako kuendelea</p>
               </div>
-            </div>
 
-            <div className="space-y-2">
-              <Label htmlFor="password">Password</Label>
-              <div className="relative">
-                <Lock className="absolute left-3 top-1/2 -translate-y-1/2 w-5 h-5 text-muted-foreground" />
-                <Input
-                  id="password"
-                  type={showPassword ? 'text' : 'password'}
-                  placeholder="Enter your password"
-                  value={password}
-                  onChange={(e) => setPassword(e.target.value)}
-                  className="pl-10 pr-10 input-enhanced"
-                  required
-                />
-                <button
-                  type="button"
-                  onClick={() => setShowPassword(!showPassword)}
-                  className="absolute right-3 top-1/2 -translate-y-1/2 text-muted-foreground hover:text-foreground transition-colors"
-                >
-                  {showPassword ? <EyeOff className="w-5 h-5" /> : <Eye className="w-5 h-5" />}
-                </button>
-              </div>
-            </div>
-
-            <Button 
-              type="submit" 
-              className="w-full btn-gradient h-12 text-base"
-              disabled={isLoading}
-            >
-              {isLoading ? (
-                <span className="flex items-center gap-2">
-                  <svg className="animate-spin h-5 w-5" viewBox="0 0 24 24">
-                    <circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4" fill="none" />
-                    <path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z" />
-                  </svg>
-                  Signing in...
-                </span>
-              ) : (
-                'Sign in'
-              )}
-            </Button>
-          </form>
-
-          {/* Demo Accounts */}
-          <div className="pt-6 border-t border-border">
-            <p className="text-sm text-muted-foreground mb-4 text-center">Demo accounts (use any password)</p>
-            <div className="grid gap-2">
-              {demoAccounts.map((account) => (
-                <button
-                  key={account.email}
-                  onClick={() => setEmail(account.email)}
-                  className="flex items-center justify-between p-3 rounded-lg border border-border hover:bg-muted/50 transition-colors text-left"
-                >
-                  <div>
-                    <p className="font-medium text-sm text-foreground">{account.role}</p>
-                    <p className="text-xs text-muted-foreground">{account.email}</p>
+              <form onSubmit={handleLogin} className="space-y-6">
+                <div className="space-y-2">
+                  <Label htmlFor="login-email">Barua pepe</Label>
+                  <div className="relative">
+                    <Mail className="absolute left-3 top-1/2 -translate-y-1/2 w-5 h-5 text-muted-foreground" />
+                    <Input
+                      id="login-email"
+                      type="email"
+                      placeholder="Ingiza barua pepe yako"
+                      value={email}
+                      onChange={(e) => setEmail(e.target.value)}
+                      className="pl-10 input-enhanced"
+                      required
+                    />
                   </div>
-                  <span className="text-xs text-primary">Use →</span>
-                </button>
-              ))}
-            </div>
-          </div>
+                </div>
+
+                <div className="space-y-2">
+                  <Label htmlFor="login-password">Nywila</Label>
+                  <div className="relative">
+                    <Lock className="absolute left-3 top-1/2 -translate-y-1/2 w-5 h-5 text-muted-foreground" />
+                    <Input
+                      id="login-password"
+                      type={showPassword ? 'text' : 'password'}
+                      placeholder="Ingiza nywila yako"
+                      value={password}
+                      onChange={(e) => setPassword(e.target.value)}
+                      className="pl-10 pr-10 input-enhanced"
+                      required
+                    />
+                    <button
+                      type="button"
+                      onClick={() => setShowPassword(!showPassword)}
+                      className="absolute right-3 top-1/2 -translate-y-1/2 text-muted-foreground hover:text-foreground transition-colors"
+                    >
+                      {showPassword ? <EyeOff className="w-5 h-5" /> : <Eye className="w-5 h-5" />}
+                    </button>
+                  </div>
+                </div>
+
+                <Button 
+                  type="submit" 
+                  className="w-full btn-gradient h-12 text-base"
+                  disabled={isLoading}
+                >
+                  {isLoading ? (
+                    <span className="flex items-center gap-2">
+                      <svg className="animate-spin h-5 w-5" viewBox="0 0 24 24">
+                        <circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4" fill="none" />
+                        <path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z" />
+                      </svg>
+                      Inaingia...
+                    </span>
+                  ) : (
+                    'Ingia'
+                  )}
+                </Button>
+              </form>
+            </TabsContent>
+
+            <TabsContent value="signup" className="space-y-6 mt-6">
+              <div className="text-center lg:text-left">
+                <h2 className="text-2xl font-display font-bold text-foreground">Unda Akaunti</h2>
+                <p className="text-muted-foreground mt-2">Jisajili kuanza kutumia mfumo</p>
+              </div>
+
+              <form onSubmit={handleSignup} className="space-y-4">
+                <div className="space-y-2">
+                  <Label htmlFor="signup-name">Jina Kamili</Label>
+                  <div className="relative">
+                    <User className="absolute left-3 top-1/2 -translate-y-1/2 w-5 h-5 text-muted-foreground" />
+                    <Input
+                      id="signup-name"
+                      type="text"
+                      placeholder="Ingiza jina lako kamili"
+                      value={fullName}
+                      onChange={(e) => setFullName(e.target.value)}
+                      className="pl-10 input-enhanced"
+                      required
+                    />
+                  </div>
+                </div>
+
+                <div className="space-y-2">
+                  <Label htmlFor="signup-email">Barua pepe</Label>
+                  <div className="relative">
+                    <Mail className="absolute left-3 top-1/2 -translate-y-1/2 w-5 h-5 text-muted-foreground" />
+                    <Input
+                      id="signup-email"
+                      type="email"
+                      placeholder="Ingiza barua pepe yako"
+                      value={email}
+                      onChange={(e) => setEmail(e.target.value)}
+                      className="pl-10 input-enhanced"
+                      required
+                    />
+                  </div>
+                </div>
+
+                <div className="space-y-2">
+                  <Label htmlFor="signup-password">Nywila</Label>
+                  <div className="relative">
+                    <Lock className="absolute left-3 top-1/2 -translate-y-1/2 w-5 h-5 text-muted-foreground" />
+                    <Input
+                      id="signup-password"
+                      type={showPassword ? 'text' : 'password'}
+                      placeholder="Unda nywila (angalau herufi 6)"
+                      value={password}
+                      onChange={(e) => setPassword(e.target.value)}
+                      className="pl-10 pr-10 input-enhanced"
+                      required
+                      minLength={6}
+                    />
+                    <button
+                      type="button"
+                      onClick={() => setShowPassword(!showPassword)}
+                      className="absolute right-3 top-1/2 -translate-y-1/2 text-muted-foreground hover:text-foreground transition-colors"
+                    >
+                      {showPassword ? <EyeOff className="w-5 h-5" /> : <Eye className="w-5 h-5" />}
+                    </button>
+                  </div>
+                </div>
+
+                <div className="space-y-2">
+                  <Label htmlFor="signup-role">Jukumu</Label>
+                  <Select value={role} onValueChange={(value) => setRole(value as UserRole)}>
+                    <SelectTrigger>
+                      <SelectValue placeholder="Chagua jukumu lako" />
+                    </SelectTrigger>
+                    <SelectContent>
+                      <SelectItem value="admin">Msimamizi (Admin)</SelectItem>
+                      <SelectItem value="teacher">Mwalimu (Teacher)</SelectItem>
+                      <SelectItem value="parent">Mzazi (Parent)</SelectItem>
+                    </SelectContent>
+                  </Select>
+                </div>
+
+                <Button 
+                  type="submit" 
+                  className="w-full btn-gradient h-12 text-base"
+                  disabled={isLoading}
+                >
+                  {isLoading ? (
+                    <span className="flex items-center gap-2">
+                      <svg className="animate-spin h-5 w-5" viewBox="0 0 24 24">
+                        <circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4" fill="none" />
+                        <path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z" />
+                      </svg>
+                      Inasajili...
+                    </span>
+                  ) : (
+                    'Jisajili'
+                  )}
+                </Button>
+              </form>
+            </TabsContent>
+          </Tabs>
         </div>
       </div>
     </div>
