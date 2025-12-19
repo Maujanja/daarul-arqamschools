@@ -38,14 +38,12 @@ export interface Marks {
   studentId: string;
   subjectId: string;
   class: string;
-  test1: number;
-  test2: number;
-  assignment: number;
   exam: number;
   total: number;
   grade: string;
   term: string;
   academicYear: string;
+  teacherId?: string;
 }
 
 export interface Parent {

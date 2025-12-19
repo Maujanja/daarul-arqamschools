@@ -1,30 +1,107 @@
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
 import { DashboardLayout } from '@/components/layout/DashboardLayout';
 import { GradeBadge } from '@/components/dashboard/GradeBadge';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
-import { mockStudents } from '@/data/mockData';
-import { Search, Plus, MoreHorizontal, GraduationCap, Mail, Calendar } from 'lucide-react';
+import { supabase } from '@/integrations/supabase/client';
+import { Search, Plus, MoreHorizontal, GraduationCap, Calendar, Loader2 } from 'lucide-react';
 import {
   DropdownMenu,
   DropdownMenuContent,
   DropdownMenuItem,
   DropdownMenuTrigger,
 } from '@/components/ui/dropdown-menu';
+import { calculateGrade, Grade } from '@/types';
+
+interface Student {
+  id: string;
+  full_name: string;
+  class: string;
+  roll_number: string;
+  admission_date: string;
+  parent_id: string | null;
+}
+
+interface StudentWithMarks extends Student {
+  averageMarks: number;
+  grade: Grade;
+}
 
 export default function StudentsPage() {
   const [searchQuery, setSearchQuery] = useState('');
   const [selectedClass, setSelectedClass] = useState('all');
+  const [students, setStudents] = useState<StudentWithMarks[]>([]);
+  const [classes, setClasses] = useState<string[]>(['all']);
+  const [loading, setLoading] = useState(true);
 
-  const filteredStudents = mockStudents.filter(student => {
-    const matchesSearch = student.name.toLowerCase().includes(searchQuery.toLowerCase()) ||
-                         student.rollNumber.toLowerCase().includes(searchQuery.toLowerCase());
+  useEffect(() => {
+    fetchStudents();
+  }, []);
+
+  const fetchStudents = async () => {
+    try {
+      setLoading(true);
+      
+      // Fetch students
+      const { data: studentsData, error: studentsError } = await supabase
+        .from('students')
+        .select('*')
+        .order('full_name');
+
+      if (studentsError) throw studentsError;
+
+      // Fetch all marks
+      const { data: marksData, error: marksError } = await supabase
+        .from('marks')
+        .select('student_id, total');
+
+      if (marksError) throw marksError;
+
+      // Calculate average for each student
+      const studentsWithMarks: StudentWithMarks[] = (studentsData || []).map(student => {
+        const studentMarks = marksData?.filter(m => m.student_id === student.id) || [];
+        const averageMarks = studentMarks.length > 0
+          ? Math.round(studentMarks.reduce((sum, m) => sum + m.total, 0) / studentMarks.length)
+          : 0;
+        const grade = calculateGrade(averageMarks);
+
+        return {
+          ...student,
+          averageMarks,
+          grade
+        };
+      });
+
+      setStudents(studentsWithMarks);
+
+      // Extract unique classes
+      const uniqueClasses = [...new Set(studentsData?.map(s => s.class) || [])].sort();
+      setClasses(['all', ...uniqueClasses]);
+
+    } catch (error) {
+      console.error('Error fetching students:', error);
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  const filteredStudents = students.filter(student => {
+    const matchesSearch = student.full_name.toLowerCase().includes(searchQuery.toLowerCase()) ||
+                         student.roll_number.toLowerCase().includes(searchQuery.toLowerCase());
     const matchesClass = selectedClass === 'all' || student.class === selectedClass;
     return matchesSearch && matchesClass;
   });
 
-  const classes = ['all', '10-A', '10-B', '9-A', '9-B'];
+  if (loading) {
+    return (
+      <DashboardLayout>
+        <div className="flex items-center justify-center min-h-[400px]">
+          <Loader2 className="w-8 h-8 animate-spin text-primary" />
+        </div>
+      </DashboardLayout>
+    );
+  }
 
   return (
     <DashboardLayout>
@@ -77,7 +154,7 @@ export default function StudentsPage() {
             >
               <div className="flex items-start justify-between mb-4">
                 <div className="w-14 h-14 rounded-xl bg-gradient-to-br from-primary to-accent flex items-center justify-center text-primary-foreground font-bold text-lg">
-                  {student.name.split(' ').map(n => n[0]).join('')}
+                  {student.full_name.split(' ').map(n => n[0]).join('')}
                 </div>
                 <DropdownMenu>
                   <DropdownMenuTrigger asChild>
@@ -94,8 +171,8 @@ export default function StudentsPage() {
                 </DropdownMenu>
               </div>
 
-              <h3 className="font-display font-semibold text-lg text-card-foreground mb-1">{student.name}</h3>
-              <p className="text-sm text-muted-foreground mb-4">Roll No: {student.rollNumber}</p>
+              <h3 className="font-display font-semibold text-lg text-card-foreground mb-1">{student.full_name}</h3>
+              <p className="text-sm text-muted-foreground mb-4">Roll No: {student.roll_number}</p>
 
               <div className="space-y-3">
                 <div className="flex items-center gap-2 text-sm">
@@ -106,16 +183,16 @@ export default function StudentsPage() {
                 <div className="flex items-center gap-2 text-sm">
                   <Calendar className="w-4 h-4 text-muted-foreground" />
                   <span className="text-muted-foreground">Admission:</span>
-                  <span className="font-medium text-card-foreground">{new Date(student.admissionDate).toLocaleDateString()}</span>
+                  <span className="font-medium text-card-foreground">{new Date(student.admission_date).toLocaleDateString()}</span>
                 </div>
               </div>
 
               <div className="mt-4 pt-4 border-t border-border flex items-center justify-between">
                 <div>
                   <p className="text-xs text-muted-foreground">Average</p>
-                  <p className="font-bold text-primary">78%</p>
+                  <p className="font-bold text-primary">{student.averageMarks}%</p>
                 </div>
-                <GradeBadge grade="A" />
+                <GradeBadge grade={student.grade} />
               </div>
             </div>
           ))}

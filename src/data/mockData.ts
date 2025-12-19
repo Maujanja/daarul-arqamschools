@@ -35,18 +35,18 @@ export const mockSubjects: Subject[] = [
 ];
 
 export const mockMarks: Marks[] = [
-  { id: 'm-1', studentId: 'std-1', subjectId: 'sub-1', class: '10-A', test1: 18, test2: 17, assignment: 9, exam: 42, total: 86, grade: 'A', term: 'Term 1', academicYear: '2024-2025' },
-  { id: 'm-2', studentId: 'std-1', subjectId: 'sub-2', class: '10-A', test1: 15, test2: 16, assignment: 8, exam: 38, total: 77, grade: 'A', term: 'Term 1', academicYear: '2024-2025' },
-  { id: 'm-3', studentId: 'std-1', subjectId: 'sub-3', class: '10-A', test1: 16, test2: 14, assignment: 7, exam: 35, total: 72, grade: 'B', term: 'Term 1', academicYear: '2024-2025' },
-  { id: 'm-4', studentId: 'std-2', subjectId: 'sub-1', class: '10-A', test1: 20, test2: 19, assignment: 10, exam: 45, total: 94, grade: 'A', term: 'Term 1', academicYear: '2024-2025' },
-  { id: 'm-5', studentId: 'std-2', subjectId: 'sub-2', class: '10-A', test1: 17, test2: 18, assignment: 9, exam: 40, total: 84, grade: 'A', term: 'Term 1', academicYear: '2024-2025' },
-  { id: 'm-6', studentId: 'std-2', subjectId: 'sub-3', class: '10-A', test1: 19, test2: 18, assignment: 10, exam: 43, total: 90, grade: 'A', term: 'Term 1', academicYear: '2024-2025' },
-  { id: 'm-7', studentId: 'std-3', subjectId: 'sub-1', class: '10-A', test1: 12, test2: 14, assignment: 6, exam: 30, total: 62, grade: 'C', term: 'Term 1', academicYear: '2024-2025' },
-  { id: 'm-8', studentId: 'std-3', subjectId: 'sub-2', class: '10-A', test1: 14, test2: 13, assignment: 7, exam: 32, total: 66, grade: 'B', term: 'Term 1', academicYear: '2024-2025' },
-  { id: 'm-9', studentId: 'std-4', subjectId: 'sub-1', class: '10-B', test1: 16, test2: 15, assignment: 8, exam: 36, total: 75, grade: 'A', term: 'Term 1', academicYear: '2024-2025' },
-  { id: 'm-10', studentId: 'std-4', subjectId: 'sub-2', class: '10-B', test1: 13, test2: 12, assignment: 6, exam: 28, total: 59, grade: 'C', term: 'Term 1', academicYear: '2024-2025' },
-  { id: 'm-11', studentId: 'std-5', subjectId: 'sub-1', class: '10-B', test1: 10, test2: 11, assignment: 5, exam: 22, total: 48, grade: 'D', term: 'Term 1', academicYear: '2024-2025' },
-  { id: 'm-12', studentId: 'std-5', subjectId: 'sub-2', class: '10-B', test1: 8, test2: 9, assignment: 4, exam: 18, total: 39, grade: 'F', term: 'Term 1', academicYear: '2024-2025' },
+  { id: 'm-1', studentId: 'std-1', subjectId: 'sub-1', class: '10-A', exam: 86, total: 86, grade: 'A', term: 'Term 1', academicYear: '2024-2025' },
+  { id: 'm-2', studentId: 'std-1', subjectId: 'sub-2', class: '10-A', exam: 77, total: 77, grade: 'A', term: 'Term 1', academicYear: '2024-2025' },
+  { id: 'm-3', studentId: 'std-1', subjectId: 'sub-3', class: '10-A', exam: 72, total: 72, grade: 'B', term: 'Term 1', academicYear: '2024-2025' },
+  { id: 'm-4', studentId: 'std-2', subjectId: 'sub-1', class: '10-A', exam: 94, total: 94, grade: 'A', term: 'Term 1', academicYear: '2024-2025' },
+  { id: 'm-5', studentId: 'std-2', subjectId: 'sub-2', class: '10-A', exam: 84, total: 84, grade: 'A', term: 'Term 1', academicYear: '2024-2025' },
+  { id: 'm-6', studentId: 'std-2', subjectId: 'sub-3', class: '10-A', exam: 90, total: 90, grade: 'A', term: 'Term 1', academicYear: '2024-2025' },
+  { id: 'm-7', studentId: 'std-3', subjectId: 'sub-1', class: '10-A', exam: 62, total: 62, grade: 'C', term: 'Term 1', academicYear: '2024-2025' },
+  { id: 'm-8', studentId: 'std-3', subjectId: 'sub-2', class: '10-A', exam: 66, total: 66, grade: 'B', term: 'Term 1', academicYear: '2024-2025' },
+  { id: 'm-9', studentId: 'std-4', subjectId: 'sub-1', class: '10-B', exam: 75, total: 75, grade: 'A', term: 'Term 1', academicYear: '2024-2025' },
+  { id: 'm-10', studentId: 'std-4', subjectId: 'sub-2', class: '10-B', exam: 59, total: 59, grade: 'C', term: 'Term 1', academicYear: '2024-2025' },
+  { id: 'm-11', studentId: 'std-5', subjectId: 'sub-1', class: '10-B', exam: 48, total: 48, grade: 'D', term: 'Term 1', academicYear: '2024-2025' },
+  { id: 'm-12', studentId: 'std-5', subjectId: 'sub-2', class: '10-B', exam: 39, total: 39, grade: 'F', term: 'Term 1', academicYear: '2024-2025' },
 ];
 
 export const mockParents: Parent[] = [
