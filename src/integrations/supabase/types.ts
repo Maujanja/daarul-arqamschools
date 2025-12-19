@@ -14,6 +14,27 @@ export type Database = {
   }
   public: {
     Tables: {
+      admin_credentials: {
+        Row: {
+          created_at: string | null
+          id: string
+          password_hash: string
+          username: string
+        }
+        Insert: {
+          created_at?: string | null
+          id?: string
+          password_hash: string
+          username: string
+        }
+        Update: {
+          created_at?: string | null
+          id?: string
+          password_hash?: string
+          username?: string
+        }
+        Relationships: []
+      }
       feedback: {
         Row: {
           created_at: string
@@ -255,6 +276,7 @@ export type Database = {
           email: string
           full_name: string
           id: string
+          password_hash: string | null
           subjects: string[]
           updated_at: string
           user_id: string | null
@@ -265,6 +287,7 @@ export type Database = {
           email: string
           full_name: string
           id?: string
+          password_hash?: string | null
           subjects?: string[]
           updated_at?: string
           user_id?: string | null
@@ -275,6 +298,7 @@ export type Database = {
           email?: string
           full_name?: string
           id?: string
+          password_hash?: string | null
           subjects?: string[]
           updated_at?: string
           user_id?: string | null
