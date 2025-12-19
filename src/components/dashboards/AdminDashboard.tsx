@@ -1,3 +1,4 @@
+import { useNavigate } from 'react-router-dom';
 import { StatCard } from '@/components/dashboard/StatCard';
 import { PerformanceChart } from '@/components/dashboard/PerformanceChart';
 import { RecentActivity } from '@/components/dashboard/RecentActivity';
@@ -28,6 +29,8 @@ const topStudents = [
 ];
 
 export function AdminDashboard() {
+  const navigate = useNavigate();
+
   return (
     <div className="space-y-8">
       {/* Header */}
@@ -91,7 +94,10 @@ export function AdminDashboard() {
         <div className="card-elevated p-6 animate-fade-in">
           <h3 className="font-display font-semibold text-lg mb-6 text-card-foreground">Quick Actions</h3>
           <div className="space-y-3">
-            <button className="w-full flex items-center gap-3 p-4 rounded-lg bg-primary/5 hover:bg-primary/10 transition-colors text-left">
+            <button 
+              onClick={() => navigate('/reports')}
+              className="w-full flex items-center gap-3 p-4 rounded-lg bg-primary/5 hover:bg-primary/10 transition-colors text-left"
+            >
               <div className="w-10 h-10 rounded-lg bg-primary/10 flex items-center justify-center">
                 <FileText className="w-5 h-5 text-primary" />
               </div>
@@ -100,7 +106,10 @@ export function AdminDashboard() {
                 <p className="text-xs text-muted-foreground">Create academic reports</p>
               </div>
             </button>
-            <button className="w-full flex items-center gap-3 p-4 rounded-lg bg-accent/5 hover:bg-accent/10 transition-colors text-left">
+            <button 
+              onClick={() => navigate('/users')}
+              className="w-full flex items-center gap-3 p-4 rounded-lg bg-accent/5 hover:bg-accent/10 transition-colors text-left"
+            >
               <div className="w-10 h-10 rounded-lg bg-accent/10 flex items-center justify-center">
                 <Users className="w-5 h-5 text-accent" />
               </div>
@@ -109,7 +118,10 @@ export function AdminDashboard() {
                 <p className="text-xs text-muted-foreground">Add or edit user accounts</p>
               </div>
             </button>
-            <button className="w-full flex items-center gap-3 p-4 rounded-lg bg-success/5 hover:bg-success/10 transition-colors text-left">
+            <button 
+              onClick={() => navigate('/feedback')}
+              className="w-full flex items-center gap-3 p-4 rounded-lg bg-success/5 hover:bg-success/10 transition-colors text-left"
+            >
               <div className="w-10 h-10 rounded-lg bg-success/10 flex items-center justify-center">
                 <MessageSquare className="w-5 h-5 text-success" />
               </div>
