@@ -1,4 +1,6 @@
 import { useNavigate } from 'react-router-dom';
+import { useQuery } from '@tanstack/react-query';
+import { supabase } from '@/integrations/supabase/client';
 import { StatCard } from '@/components/dashboard/StatCard';
 import { PerformanceChart } from '@/components/dashboard/PerformanceChart';
 import { RecentActivity } from '@/components/dashboard/RecentActivity';
@@ -6,30 +8,60 @@ import { TopStudents } from '@/components/dashboard/TopStudents';
 import { Users, GraduationCap, BookOpen, TrendingUp, MessageSquare, FileText } from 'lucide-react';
 
 const performanceData = [
-  { name: 'Sep', value: 72, average: 68 },
-  { name: 'Oct', value: 75, average: 70 },
-  { name: 'Nov', value: 78, average: 72 },
-  { name: 'Dec', value: 82, average: 74 },
+  { name: 'Sep', value: 0, average: 0 },
+  { name: 'Oct', value: 0, average: 0 },
+  { name: 'Nov', value: 0, average: 0 },
+  { name: 'Dec', value: 0, average: 0 },
 ];
 
-const recentActivities = [
-  { id: '1', type: 'marks' as const, message: 'Sarah Johnson submitted marks for Class 10-A Mathematics', time: '5 minutes ago' },
-  { id: '2', type: 'feedback' as const, message: 'New feedback received from Robert Smith', time: '1 hour ago' },
-  { id: '3', type: 'report' as const, message: 'Term 1 reports generated for Class 10-B', time: '2 hours ago' },
-  { id: '4', type: 'user' as const, message: 'New teacher account created for David Lee', time: '3 hours ago' },
-  { id: '5', type: 'marks' as const, message: 'Michael Chen submitted marks for Class 9-A Science', time: '4 hours ago' },
-];
+const recentActivities: { id: string; type: 'marks' | 'feedback' | 'report' | 'user'; message: string; time: string }[] = [];
 
-const topStudents = [
-  { rank: 1, name: 'Emma Davis', class: '10-A', average: 94, grade: 'A' },
-  { rank: 2, name: 'Alex Smith', class: '10-A', average: 86, grade: 'A' },
-  { rank: 3, name: 'Sophia Brown', class: '10-B', average: 75, grade: 'A' },
-  { rank: 4, name: 'James Wilson', class: '10-A', average: 66, grade: 'B' },
-  { rank: 5, name: 'Oliver Taylor', class: '10-B', average: 48, grade: 'D' },
-];
+const topStudents: { rank: number; name: string; class: string; average: number; grade: string }[] = [];
 
 export function AdminDashboard() {
   const navigate = useNavigate();
+
+  // Fetch real counts from database
+  const { data: studentsCount = 0 } = useQuery({
+    queryKey: ['students-count'],
+    queryFn: async () => {
+      const { count } = await supabase
+        .from('students')
+        .select('*', { count: 'exact', head: true });
+      return count || 0;
+    },
+  });
+
+  const { data: teachersCount = 0 } = useQuery({
+    queryKey: ['teachers-count'],
+    queryFn: async () => {
+      const { count } = await supabase
+        .from('teachers')
+        .select('*', { count: 'exact', head: true });
+      return count || 0;
+    },
+  });
+
+  const { data: subjectsCount = 0 } = useQuery({
+    queryKey: ['subjects-count'],
+    queryFn: async () => {
+      const { count } = await supabase
+        .from('subjects')
+        .select('*', { count: 'exact', head: true });
+      return count || 0;
+    },
+  });
+
+  const { data: feedbackCount = 0 } = useQuery({
+    queryKey: ['feedback-pending-count'],
+    queryFn: async () => {
+      const { count } = await supabase
+        .from('feedback')
+        .select('*', { count: 'exact', head: true })
+        .eq('status', 'pending');
+      return count || 0;
+    },
+  });
 
   return (
     <div className="space-y-8">
@@ -42,33 +74,31 @@ export function AdminDashboard() {
       {/* Stats Grid */}
       <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-6">
         <StatCard
-          title="Total Students"
-          value="1,284"
-          subtitle="Across all classes"
+          title="Wanafunzi"
+          value={studentsCount.toLocaleString()}
+          subtitle="Madarasa yote"
           icon={GraduationCap}
-          trend={{ value: 12, isPositive: true }}
           variant="primary"
         />
         <StatCard
-          title="Total Teachers"
-          value="48"
-          subtitle="Active staff members"
+          title="Walimu"
+          value={teachersCount.toLocaleString()}
+          subtitle="Walimu wote"
           icon={Users}
           variant="accent"
         />
         <StatCard
-          title="Subjects"
-          value="12"
-          subtitle="Active subjects"
+          title="Masomo"
+          value={subjectsCount.toLocaleString()}
+          subtitle="Masomo yote"
           icon={BookOpen}
           variant="success"
         />
         <StatCard
-          title="Avg. Performance"
-          value="74%"
-          subtitle="School-wide average"
+          title="Maoni"
+          value={feedbackCount.toLocaleString()}
+          subtitle="Yanasubiri jibu"
           icon={TrendingUp}
-          trend={{ value: 5, isPositive: true }}
           variant="warning"
         />
       </div>
