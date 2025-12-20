@@ -5,7 +5,9 @@ import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { supabase } from '@/integrations/supabase/client';
-import { Search, Plus, MoreHorizontal, GraduationCap, Calendar, Loader2 } from 'lucide-react';
+import { Search, Plus, MoreHorizontal, GraduationCap, Calendar, Loader2, Download, FileText } from 'lucide-react';
+import { generateStudentReportPDF, generateAllStudentsReportPDF } from '@/utils/pdfGenerator';
+import { toast } from 'sonner';
 import {
   DropdownMenu,
   DropdownMenuContent,
@@ -93,6 +95,64 @@ export default function StudentsPage() {
     return matchesSearch && matchesClass;
   });
 
+  const handleDownloadStudentReport = async (student: StudentWithMarks) => {
+    try {
+      // Fetch marks with subject details for this student
+      const { data: marksData, error } = await supabase
+        .from('marks')
+        .select(`
+          total,
+          grade,
+          term,
+          academic_year,
+          subject_id,
+          subjects (name)
+        `)
+        .eq('student_id', student.id);
+
+      if (error) throw error;
+
+      const subjects = (marksData || []).map((m: any) => ({
+        name: m.subjects?.name || 'Unknown Subject',
+        marks: m.total,
+        grade: m.grade,
+      }));
+
+      const term = marksData?.[0]?.term || 'Term 1';
+      const academicYear = marksData?.[0]?.academic_year || '2024-2025';
+
+      generateStudentReportPDF({
+        fullName: student.full_name,
+        rollNumber: student.roll_number,
+        className: student.class,
+        admissionDate: new Date(student.admission_date).toLocaleDateString(),
+        subjects,
+        averageMarks: student.averageMarks,
+        overallGrade: student.grade,
+        term,
+        academicYear,
+      });
+
+      toast.success('Ripoti imepakuliwa!');
+    } catch (error) {
+      console.error('Error generating PDF:', error);
+      toast.error('Imeshindikana kupakua ripoti');
+    }
+  };
+
+  const handleDownloadAllReports = () => {
+    const studentsData = filteredStudents.map(s => ({
+      name: s.full_name,
+      rollNumber: s.roll_number,
+      className: s.class,
+      average: s.averageMarks,
+      grade: s.grade,
+    }));
+
+    generateAllStudentsReportPDF(studentsData, 'Term 1', '2024-2025');
+    toast.success('Ripoti ya wanafunzi wote imepakuliwa!');
+  };
+
   if (loading) {
     return (
       <DashboardLayout>
@@ -112,10 +172,16 @@ export default function StudentsPage() {
             <h1 className="text-3xl font-display font-bold text-foreground">Students</h1>
             <p className="text-muted-foreground mt-1">Manage student records and view academic information</p>
           </div>
-          <Button className="btn-gradient">
-            <Plus className="w-4 h-4 mr-2" />
-            Add Student
-          </Button>
+          <div className="flex gap-2">
+            <Button variant="outline" onClick={handleDownloadAllReports}>
+              <Download className="w-4 h-4 mr-2" />
+              Export All PDF
+            </Button>
+            <Button className="btn-gradient">
+              <Plus className="w-4 h-4 mr-2" />
+              Add Student
+            </Button>
+          </div>
         </div>
 
         {/* Filters */}
@@ -165,6 +231,10 @@ export default function StudentsPage() {
                   <DropdownMenuContent align="end">
                     <DropdownMenuItem>View Profile</DropdownMenuItem>
                     <DropdownMenuItem>View Marks</DropdownMenuItem>
+                    <DropdownMenuItem onClick={() => handleDownloadStudentReport(student)}>
+                      <FileText className="w-4 h-4 mr-2" />
+                      Download Report
+                    </DropdownMenuItem>
                     <DropdownMenuItem>Edit Details</DropdownMenuItem>
                     <DropdownMenuItem className="text-destructive">Delete</DropdownMenuItem>
                   </DropdownMenuContent>

@@ -1,4 +1,4 @@
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
 import { DashboardLayout } from '@/components/layout/DashboardLayout';
 import { PerformanceChart } from '@/components/dashboard/PerformanceChart';
 import { GradeBadge } from '@/components/dashboard/GradeBadge';
@@ -6,8 +6,12 @@ import { TopStudents } from '@/components/dashboard/TopStudents';
 import { Button } from '@/components/ui/button';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
-import { Download, FileText, Users, BookOpen, TrendingUp, BarChart3 } from 'lucide-react';
+import { Download, FileText, Users, BookOpen, TrendingUp, BarChart3, Loader2 } from 'lucide-react';
 import { PieChart, Pie, Cell, ResponsiveContainer, Legend, Tooltip, BarChart, Bar, XAxis, YAxis, CartesianGrid } from 'recharts';
+import { supabase } from '@/integrations/supabase/client';
+import { generateClassReportPDF, generateAllStudentsReportPDF } from '@/utils/pdfGenerator';
+import { toast } from 'sonner';
+import { calculateGrade } from '@/types';
 
 const gradeDistribution = [
   { name: 'Grade A', value: 25, color: 'hsl(var(--success))' },
@@ -50,6 +54,109 @@ export default function ReportsPage() {
   const [selectedClass, setSelectedClass] = useState('all');
   const [selectedTerm, setSelectedTerm] = useState('Term 1');
   const [selectedYear, setSelectedYear] = useState('2024-2025');
+  const [loading, setLoading] = useState(false);
+  const [studentsData, setStudentsData] = useState<any[]>([]);
+  const [classStats, setClassStats] = useState<any[]>([]);
+
+  useEffect(() => {
+    fetchReportData();
+  }, [selectedClass, selectedTerm, selectedYear]);
+
+  const fetchReportData = async () => {
+    try {
+      setLoading(true);
+
+      // Fetch students with their marks
+      const { data: students, error: studentsError } = await supabase
+        .from('students')
+        .select('*');
+
+      if (studentsError) throw studentsError;
+
+      const { data: marks, error: marksError } = await supabase
+        .from('marks')
+        .select('*');
+
+      if (marksError) throw marksError;
+
+      // Calculate student averages
+      const studentsWithAvg = (students || []).map(student => {
+        const studentMarks = marks?.filter(m => m.student_id === student.id) || [];
+        const average = studentMarks.length > 0
+          ? Math.round(studentMarks.reduce((sum, m) => sum + m.total, 0) / studentMarks.length)
+          : 0;
+        return {
+          ...student,
+          average,
+          grade: calculateGrade(average),
+        };
+      });
+
+      setStudentsData(studentsWithAvg);
+
+      // Calculate class statistics
+      const classes = [...new Set(students?.map(s => s.class) || [])];
+      const stats = classes.map(cls => {
+        const classStudents = studentsWithAvg.filter(s => s.class === cls);
+        const averages = classStudents.map(s => s.average).filter(a => a > 0);
+        return {
+          class: cls,
+          students: classStudents.length,
+          average: averages.length > 0 ? Math.round(averages.reduce((a, b) => a + b, 0) / averages.length) : 0,
+          highest: Math.max(...averages, 0),
+          lowest: Math.min(...averages.filter(a => a > 0), 0),
+          passRate: averages.length > 0 
+            ? Math.round((averages.filter(a => a >= 40).length / averages.length) * 100) 
+            : 0,
+        };
+      });
+
+      setClassStats(stats);
+    } catch (error) {
+      console.error('Error fetching report data:', error);
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  const handleExportAllReports = () => {
+    const data = studentsData.map(s => ({
+      name: s.full_name,
+      rollNumber: s.roll_number,
+      className: s.class,
+      average: s.average,
+      grade: s.grade,
+    }));
+
+    generateAllStudentsReportPDF(data, selectedTerm, selectedYear);
+    toast.success('Ripoti zote zimepakuliwa!');
+  };
+
+  const handleDownloadClassReport = (classData: any) => {
+    const classStudents = studentsData
+      .filter(s => s.class === classData.class)
+      .sort((a, b) => b.average - a.average)
+      .map((s, index) => ({
+        rank: index + 1,
+        name: s.full_name,
+        rollNumber: s.roll_number,
+        average: s.average,
+        grade: s.grade,
+      }));
+
+    generateClassReportPDF({
+      className: classData.class,
+      term: selectedTerm,
+      academicYear: selectedYear,
+      students: classStudents,
+      classAverage: classData.average,
+      highestScore: classData.highest,
+      lowestScore: classData.lowest,
+      passRate: classData.passRate,
+    });
+
+    toast.success(`Ripoti ya ${classData.class} imepakuliwa!`);
+  };
 
   return (
     <DashboardLayout>
@@ -60,8 +167,8 @@ export default function ReportsPage() {
             <h1 className="text-3xl font-display font-bold text-foreground">Reports & Analytics</h1>
             <p className="text-muted-foreground mt-1">View comprehensive academic reports and performance analysis</p>
           </div>
-          <Button className="btn-gradient">
-            <Download className="w-4 h-4 mr-2" />
+          <Button className="btn-gradient" onClick={handleExportAllReports} disabled={loading}>
+            {loading ? <Loader2 className="w-4 h-4 mr-2 animate-spin" /> : <Download className="w-4 h-4 mr-2" />}
             Export All Reports
           </Button>
         </div>
@@ -200,9 +307,9 @@ export default function ReportsPage() {
             <div className="card-elevated p-6 animate-fade-in">
               <div className="flex items-center justify-between mb-6">
                 <h3 className="font-display font-semibold text-lg text-card-foreground">Class Performance Summary</h3>
-                <Button variant="outline" size="sm">
+                <Button variant="outline" size="sm" onClick={() => handleExportAllReports()}>
                   <Download className="w-4 h-4 mr-2" />
-                  Download PDF
+                  Download All PDF
                 </Button>
               </div>
               <div className="overflow-x-auto">
@@ -219,12 +326,7 @@ export default function ReportsPage() {
                     </tr>
                   </thead>
                   <tbody>
-                    {[
-                      { class: '10-A', students: 32, average: 76, highest: 94, lowest: 38, passRate: 94 },
-                      { class: '10-B', students: 30, average: 72, highest: 88, lowest: 35, passRate: 90 },
-                      { class: '9-A', students: 35, average: 74, highest: 90, lowest: 40, passRate: 92 },
-                      { class: '9-B', students: 33, average: 70, highest: 86, lowest: 36, passRate: 88 },
-                    ].map((row, index) => (
+                    {classStats.length > 0 ? classStats.map((row, index) => (
                       <tr key={index} className="border-b border-border/50 table-row-hover">
                         <td className="py-4 px-4 font-medium text-card-foreground">{row.class}</td>
                         <td className="py-4 px-4 text-center text-card-foreground">{row.students}</td>
@@ -239,13 +341,19 @@ export default function ReportsPage() {
                           </span>
                         </td>
                         <td className="py-4 px-4 text-right">
-                          <Button variant="ghost" size="sm">
+                          <Button variant="ghost" size="sm" onClick={() => handleDownloadClassReport(row)}>
                             <FileText className="w-4 h-4 mr-1" />
-                            View
+                            PDF
                           </Button>
                         </td>
                       </tr>
-                    ))}
+                    )) : (
+                      <tr>
+                        <td colSpan={7} className="py-8 text-center text-muted-foreground">
+                          Hakuna data ya madarasa
+                        </td>
+                      </tr>
+                    )}
                   </tbody>
                 </table>
               </div>
