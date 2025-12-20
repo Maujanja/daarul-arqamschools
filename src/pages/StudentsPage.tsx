@@ -14,6 +14,15 @@ import {
   DropdownMenuItem,
   DropdownMenuTrigger,
 } from '@/components/ui/dropdown-menu';
+import {
+  Dialog,
+  DialogContent,
+  DialogDescription,
+  DialogFooter,
+  DialogHeader,
+  DialogTitle,
+} from '@/components/ui/dialog';
+import { Label } from '@/components/ui/label';
 import { calculateGrade, Grade } from '@/types';
 
 interface Student {
@@ -36,6 +45,14 @@ export default function StudentsPage() {
   const [students, setStudents] = useState<StudentWithMarks[]>([]);
   const [classes, setClasses] = useState<string[]>(['all']);
   const [loading, setLoading] = useState(true);
+  const [showAddDialog, setShowAddDialog] = useState(false);
+  const [saving, setSaving] = useState(false);
+  const [newStudent, setNewStudent] = useState({
+    full_name: '',
+    roll_number: '',
+    class: '',
+    admission_date: new Date().toISOString().split('T')[0],
+  });
 
   useEffect(() => {
     fetchStudents();
@@ -85,6 +102,59 @@ export default function StudentsPage() {
       console.error('Error fetching students:', error);
     } finally {
       setLoading(false);
+    }
+  };
+
+  const handleAddStudent = async () => {
+    if (!newStudent.full_name || !newStudent.roll_number || !newStudent.class) {
+      toast.error('Tafadhali jaza taarifa zote zinazohitajika');
+      return;
+    }
+
+    try {
+      setSaving(true);
+
+      const { error } = await supabase
+        .from('students')
+        .insert({
+          full_name: newStudent.full_name.trim(),
+          roll_number: newStudent.roll_number.trim(),
+          class: newStudent.class.trim(),
+          admission_date: newStudent.admission_date,
+        });
+
+      if (error) throw error;
+
+      toast.success('Mwanafunzi ameongezwa kikamilifu!');
+      setShowAddDialog(false);
+      setNewStudent({
+        full_name: '',
+        roll_number: '',
+        class: '',
+        admission_date: new Date().toISOString().split('T')[0],
+      });
+      fetchStudents();
+    } catch (error: any) {
+      console.error('Error adding student:', error);
+      toast.error(error.message || 'Imeshindwa kuongeza mwanafunzi');
+    } finally {
+      setSaving(false);
+    }
+  };
+
+  const handleDeleteStudent = async (id: string) => {
+    try {
+      const { error } = await supabase
+        .from('students')
+        .delete()
+        .eq('id', id);
+
+      if (error) throw error;
+      toast.success('Mwanafunzi amefutwa');
+      fetchStudents();
+    } catch (error) {
+      console.error('Error deleting student:', error);
+      toast.error('Imeshindwa kufuta mwanafunzi');
     }
   };
 
@@ -141,6 +211,11 @@ export default function StudentsPage() {
   };
 
   const handleDownloadAllReports = () => {
+    if (filteredStudents.length === 0) {
+      toast.error('Hakuna wanafunzi wa kutengeneza ripoti');
+      return;
+    }
+    
     const studentsData = filteredStudents.map(s => ({
       name: s.full_name,
       rollNumber: s.roll_number,
@@ -169,17 +244,19 @@ export default function StudentsPage() {
         {/* Header */}
         <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4">
           <div>
-            <h1 className="text-3xl font-display font-bold text-foreground">Students</h1>
-            <p className="text-muted-foreground mt-1">Manage student records and view academic information</p>
+            <h1 className="text-3xl font-display font-bold text-foreground">Wanafunzi</h1>
+            <p className="text-muted-foreground mt-1">Simamia rekodi za wanafunzi na taarifa za kitaaluma</p>
           </div>
           <div className="flex gap-2">
-            <Button variant="outline" onClick={handleDownloadAllReports}>
-              <Download className="w-4 h-4 mr-2" />
-              Export All PDF
-            </Button>
-            <Button className="btn-gradient">
+            {filteredStudents.length > 0 && (
+              <Button variant="outline" onClick={handleDownloadAllReports}>
+                <Download className="w-4 h-4 mr-2" />
+                Export PDF
+              </Button>
+            )}
+            <Button className="btn-gradient" onClick={() => setShowAddDialog(true)}>
               <Plus className="w-4 h-4 mr-2" />
-              Add Student
+              Ongeza Mwanafunzi
             </Button>
           </div>
         </div>
@@ -190,7 +267,7 @@ export default function StudentsPage() {
             <div className="relative flex-1">
               <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-5 h-5 text-muted-foreground" />
               <Input
-                placeholder="Search by name or roll number..."
+                placeholder="Tafuta kwa jina au namba ya usajili..."
                 value={searchQuery}
                 onChange={(e) => setSearchQuery(e.target.value)}
                 className="pl-10 input-enhanced"
@@ -198,12 +275,12 @@ export default function StudentsPage() {
             </div>
             <Select value={selectedClass} onValueChange={setSelectedClass}>
               <SelectTrigger className="w-full sm:w-48">
-                <SelectValue placeholder="Filter by class" />
+                <SelectValue placeholder="Chagua darasa" />
               </SelectTrigger>
               <SelectContent>
-                <SelectItem value="all">All Classes</SelectItem>
+                <SelectItem value="all">Madarasa Yote</SelectItem>
                 {classes.slice(1).map((cls) => (
-                  <SelectItem key={cls} value={cls}>Class {cls}</SelectItem>
+                  <SelectItem key={cls} value={cls}>Darasa {cls}</SelectItem>
                 ))}
               </SelectContent>
             </Select>
@@ -211,72 +288,144 @@ export default function StudentsPage() {
         </div>
 
         {/* Students Grid */}
-        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
-          {filteredStudents.map((student, index) => (
-            <div 
-              key={student.id} 
-              className="card-elevated p-6 animate-slide-up"
-              style={{ animationDelay: `${index * 50}ms` }}
-            >
-              <div className="flex items-start justify-between mb-4">
-                <div className="w-14 h-14 rounded-xl bg-gradient-to-br from-primary to-accent flex items-center justify-center text-primary-foreground font-bold text-lg">
-                  {student.full_name.split(' ').map(n => n[0]).join('')}
+        {filteredStudents.length > 0 ? (
+          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
+            {filteredStudents.map((student, index) => (
+              <div 
+                key={student.id} 
+                className="card-elevated p-6 animate-slide-up"
+                style={{ animationDelay: `${index * 50}ms` }}
+              >
+                <div className="flex items-start justify-between mb-4">
+                  <div className="w-14 h-14 rounded-xl bg-gradient-to-br from-primary to-accent flex items-center justify-center text-primary-foreground font-bold text-lg">
+                    {student.full_name.split(' ').map(n => n[0]).join('')}
+                  </div>
+                  <DropdownMenu>
+                    <DropdownMenuTrigger asChild>
+                      <Button variant="ghost" size="icon" className="h-8 w-8">
+                        <MoreHorizontal className="h-4 w-4" />
+                      </Button>
+                    </DropdownMenuTrigger>
+                    <DropdownMenuContent align="end">
+                      <DropdownMenuItem>Tazama Wasifu</DropdownMenuItem>
+                      <DropdownMenuItem>Tazama Alama</DropdownMenuItem>
+                      <DropdownMenuItem onClick={() => handleDownloadStudentReport(student)}>
+                        <FileText className="w-4 h-4 mr-2" />
+                        Pakua Ripoti
+                      </DropdownMenuItem>
+                      <DropdownMenuItem>Hariri</DropdownMenuItem>
+                      <DropdownMenuItem 
+                        className="text-destructive"
+                        onClick={() => handleDeleteStudent(student.id)}
+                      >
+                        Futa
+                      </DropdownMenuItem>
+                    </DropdownMenuContent>
+                  </DropdownMenu>
                 </div>
-                <DropdownMenu>
-                  <DropdownMenuTrigger asChild>
-                    <Button variant="ghost" size="icon" className="h-8 w-8">
-                      <MoreHorizontal className="h-4 w-4" />
-                    </Button>
-                  </DropdownMenuTrigger>
-                  <DropdownMenuContent align="end">
-                    <DropdownMenuItem>View Profile</DropdownMenuItem>
-                    <DropdownMenuItem>View Marks</DropdownMenuItem>
-                    <DropdownMenuItem onClick={() => handleDownloadStudentReport(student)}>
-                      <FileText className="w-4 h-4 mr-2" />
-                      Download Report
-                    </DropdownMenuItem>
-                    <DropdownMenuItem>Edit Details</DropdownMenuItem>
-                    <DropdownMenuItem className="text-destructive">Delete</DropdownMenuItem>
-                  </DropdownMenuContent>
-                </DropdownMenu>
+
+                <h3 className="font-display font-semibold text-lg text-card-foreground mb-1">{student.full_name}</h3>
+                <p className="text-sm text-muted-foreground mb-4">Namba: {student.roll_number}</p>
+
+                <div className="space-y-3">
+                  <div className="flex items-center gap-2 text-sm">
+                    <GraduationCap className="w-4 h-4 text-muted-foreground" />
+                    <span className="text-muted-foreground">Darasa:</span>
+                    <span className="font-medium text-card-foreground">{student.class}</span>
+                  </div>
+                  <div className="flex items-center gap-2 text-sm">
+                    <Calendar className="w-4 h-4 text-muted-foreground" />
+                    <span className="text-muted-foreground">Usajili:</span>
+                    <span className="font-medium text-card-foreground">{new Date(student.admission_date).toLocaleDateString()}</span>
+                  </div>
+                </div>
+
+                <div className="mt-4 pt-4 border-t border-border flex items-center justify-between">
+                  <div>
+                    <p className="text-xs text-muted-foreground">Wastani</p>
+                    <p className="font-bold text-primary">{student.averageMarks}%</p>
+                  </div>
+                  <GradeBadge grade={student.grade} />
+                </div>
               </div>
-
-              <h3 className="font-display font-semibold text-lg text-card-foreground mb-1">{student.full_name}</h3>
-              <p className="text-sm text-muted-foreground mb-4">Roll No: {student.roll_number}</p>
-
-              <div className="space-y-3">
-                <div className="flex items-center gap-2 text-sm">
-                  <GraduationCap className="w-4 h-4 text-muted-foreground" />
-                  <span className="text-muted-foreground">Class:</span>
-                  <span className="font-medium text-card-foreground">{student.class}</span>
-                </div>
-                <div className="flex items-center gap-2 text-sm">
-                  <Calendar className="w-4 h-4 text-muted-foreground" />
-                  <span className="text-muted-foreground">Admission:</span>
-                  <span className="font-medium text-card-foreground">{new Date(student.admission_date).toLocaleDateString()}</span>
-                </div>
-              </div>
-
-              <div className="mt-4 pt-4 border-t border-border flex items-center justify-between">
-                <div>
-                  <p className="text-xs text-muted-foreground">Average</p>
-                  <p className="font-bold text-primary">{student.averageMarks}%</p>
-                </div>
-                <GradeBadge grade={student.grade} />
-              </div>
-            </div>
-          ))}
-        </div>
-
-        {/* Empty State */}
-        {filteredStudents.length === 0 && (
+            ))}
+          </div>
+        ) : (
+          /* Empty State */
           <div className="card-elevated p-12 text-center animate-fade-in">
-            <GraduationCap className="w-12 h-12 text-muted-foreground mx-auto mb-4" />
-            <h3 className="font-display font-semibold text-lg text-card-foreground mb-2">No students found</h3>
-            <p className="text-muted-foreground">Try adjusting your search or filter criteria</p>
+            <GraduationCap className="w-16 h-16 text-muted-foreground mx-auto mb-4" />
+            <h3 className="font-display font-semibold text-xl text-card-foreground mb-2">
+              Hakuna wanafunzi waliosajiliwa
+            </h3>
+            <p className="text-muted-foreground mb-6">
+              Anza kwa kuongeza wanafunzi wapya kwenye mfumo
+            </p>
+            <Button className="btn-gradient" onClick={() => setShowAddDialog(true)}>
+              <Plus className="w-4 h-4 mr-2" />
+              Ongeza Mwanafunzi wa Kwanza
+            </Button>
           </div>
         )}
       </div>
+
+      {/* Add Student Dialog */}
+      <Dialog open={showAddDialog} onOpenChange={setShowAddDialog}>
+        <DialogContent>
+          <DialogHeader>
+            <DialogTitle>Ongeza Mwanafunzi Mpya</DialogTitle>
+            <DialogDescription>
+              Jaza taarifa za mwanafunzi mpya hapa chini
+            </DialogDescription>
+          </DialogHeader>
+          <div className="space-y-4 py-4">
+            <div className="space-y-2">
+              <Label htmlFor="full_name">Jina Kamili</Label>
+              <Input
+                id="full_name"
+                value={newStudent.full_name}
+                onChange={(e) => setNewStudent({ ...newStudent, full_name: e.target.value })}
+                placeholder="Mfano: Juma Hassan"
+              />
+            </div>
+            <div className="space-y-2">
+              <Label htmlFor="roll_number">Namba ya Usajili</Label>
+              <Input
+                id="roll_number"
+                value={newStudent.roll_number}
+                onChange={(e) => setNewStudent({ ...newStudent, roll_number: e.target.value })}
+                placeholder="Mfano: STD001"
+              />
+            </div>
+            <div className="space-y-2">
+              <Label htmlFor="class">Darasa</Label>
+              <Input
+                id="class"
+                value={newStudent.class}
+                onChange={(e) => setNewStudent({ ...newStudent, class: e.target.value })}
+                placeholder="Mfano: Form 1A"
+              />
+            </div>
+            <div className="space-y-2">
+              <Label htmlFor="admission_date">Tarehe ya Usajili</Label>
+              <Input
+                id="admission_date"
+                type="date"
+                value={newStudent.admission_date}
+                onChange={(e) => setNewStudent({ ...newStudent, admission_date: e.target.value })}
+              />
+            </div>
+          </div>
+          <DialogFooter>
+            <Button variant="outline" onClick={() => setShowAddDialog(false)}>
+              Ghairi
+            </Button>
+            <Button onClick={handleAddStudent} disabled={saving}>
+              {saving && <Loader2 className="w-4 h-4 mr-2 animate-spin" />}
+              Hifadhi
+            </Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
     </DashboardLayout>
   );
 }
