@@ -1,4 +1,4 @@
-import { useState, useEffect } from 'react';
+import { useState, useEffect, useMemo } from 'react';
 import { DashboardLayout } from '@/components/layout/DashboardLayout';
 import { PerformanceChart } from '@/components/dashboard/PerformanceChart';
 import { GradeBadge } from '@/components/dashboard/GradeBadge';
@@ -13,42 +13,6 @@ import { generateClassReportPDF, generateAllStudentsReportPDF } from '@/utils/pd
 import { toast } from 'sonner';
 import { calculateGrade } from '@/types';
 
-const gradeDistribution = [
-  { name: 'Grade A', value: 25, color: 'hsl(var(--success))' },
-  { name: 'Grade B', value: 35, color: 'hsl(var(--primary))' },
-  { name: 'Grade C', value: 20, color: 'hsl(var(--warning))' },
-  { name: 'Grade D', value: 12, color: 'hsl(var(--chart-4))' },
-  { name: 'Grade F', value: 8, color: 'hsl(var(--destructive))' },
-];
-
-const subjectPerformance = [
-  { name: 'Math', average: 72, highest: 94, lowest: 38 },
-  { name: 'Science', average: 68, highest: 89, lowest: 35 },
-  { name: 'English', average: 75, highest: 92, lowest: 42 },
-  { name: 'History', average: 70, highest: 88, lowest: 40 },
-  { name: 'Geography', average: 73, highest: 90, lowest: 45 },
-];
-
-const classComparison = [
-  { name: '10-A', value: 76 },
-  { name: '10-B', value: 72 },
-  { name: '9-A', value: 74 },
-  { name: '9-B', value: 70 },
-];
-
-const topStudents = [
-  { rank: 1, name: 'Emma Davis', class: '10-A', average: 94, grade: 'A' },
-  { rank: 2, name: 'Alex Smith', class: '10-A', average: 86, grade: 'A' },
-  { rank: 3, name: 'Sophia Brown', class: '10-B', average: 75, grade: 'A' },
-  { rank: 4, name: 'James Wilson', class: '10-A', average: 70, grade: 'B' },
-  { rank: 5, name: 'Olivia Johnson', class: '9-A', average: 68, grade: 'B' },
-];
-
-const bottomStudents = [
-  { rank: 1, name: 'Oliver Taylor', class: '10-B', average: 38, grade: 'F' },
-  { rank: 2, name: 'Liam Anderson', class: '9-B', average: 42, grade: 'D' },
-  { rank: 3, name: 'Mason Garcia', class: '10-A', average: 45, grade: 'D' },
-];
 
 export default function ReportsPage() {
   const [selectedClass, setSelectedClass] = useState('all');
@@ -57,6 +21,55 @@ export default function ReportsPage() {
   const [loading, setLoading] = useState(false);
   const [studentsData, setStudentsData] = useState<any[]>([]);
   const [classStats, setClassStats] = useState<any[]>([]);
+  const [subjectsData, setSubjectsData] = useState<any[]>([]);
+
+  // Computed data from studentsData
+  const gradeDistribution = useMemo(() => {
+    if (studentsData.length === 0) return [];
+    const grades = { A: 0, B: 0, C: 0, D: 0, F: 0 };
+    studentsData.forEach(s => {
+      if (s.grade in grades) grades[s.grade as keyof typeof grades]++;
+    });
+    return [
+      { name: 'Daraja A', value: grades.A, color: 'hsl(var(--success))' },
+      { name: 'Daraja B', value: grades.B, color: 'hsl(var(--primary))' },
+      { name: 'Daraja C', value: grades.C, color: 'hsl(var(--warning))' },
+      { name: 'Daraja D', value: grades.D, color: 'hsl(var(--chart-4))' },
+      { name: 'Daraja F', value: grades.F, color: 'hsl(var(--destructive))' },
+    ].filter(g => g.value > 0);
+  }, [studentsData]);
+
+  const classComparison = useMemo(() => {
+    return classStats.map(c => ({ name: c.class, value: c.average }));
+  }, [classStats]);
+
+  const topStudents = useMemo(() => {
+    return studentsData
+      .filter(s => s.average > 0)
+      .sort((a, b) => b.average - a.average)
+      .slice(0, 5)
+      .map((s, i) => ({
+        rank: i + 1,
+        name: s.full_name,
+        class: s.class,
+        average: s.average,
+        grade: s.grade,
+      }));
+  }, [studentsData]);
+
+  const bottomStudents = useMemo(() => {
+    return studentsData
+      .filter(s => s.average > 0 && s.average < 50)
+      .sort((a, b) => a.average - b.average)
+      .slice(0, 5)
+      .map((s, i) => ({
+        rank: i + 1,
+        name: s.full_name,
+        class: s.class,
+        average: s.average,
+        grade: s.grade,
+      }));
+  }, [studentsData]);
 
   useEffect(() => {
     fetchReportData();
@@ -78,6 +91,12 @@ export default function ReportsPage() {
         .select('*');
 
       if (marksError) throw marksError;
+
+      const { data: subjects, error: subjectsError } = await supabase
+        .from('subjects')
+        .select('*');
+
+      if (subjectsError) throw subjectsError;
 
       // Calculate student averages
       const studentsWithAvg = (students || []).map(student => {
@@ -112,6 +131,20 @@ export default function ReportsPage() {
       });
 
       setClassStats(stats);
+
+      // Calculate subject statistics
+      const subjectStats = (subjects || []).map(subject => {
+        const subjectMarks = marks?.filter(m => m.subject_id === subject.id) || [];
+        const totals = subjectMarks.map(m => m.total).filter(t => t > 0);
+        return {
+          name: subject.name,
+          average: totals.length > 0 ? Math.round(totals.reduce((a, b) => a + b, 0) / totals.length) : 0,
+          highest: totals.length > 0 ? Math.max(...totals) : 0,
+          lowest: totals.length > 0 ? Math.min(...totals) : 0,
+        };
+      });
+
+      setSubjectsData(subjectStats);
     } catch (error) {
       console.error('Error fetching report data:', error);
     } finally {
@@ -242,63 +275,75 @@ export default function ReportsPage() {
             <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
               {/* Grade Distribution */}
               <div className="card-elevated p-6 animate-fade-in">
-                <h3 className="font-display font-semibold text-lg mb-6 text-card-foreground">Grade Distribution</h3>
+                <h3 className="font-display font-semibold text-lg mb-6 text-card-foreground">Mgawanyo wa Madaraja</h3>
                 <div className="h-[300px]">
-                  <ResponsiveContainer width="100%" height="100%">
-                    <PieChart>
-                      <Pie
-                        data={gradeDistribution}
-                        cx="50%"
-                        cy="50%"
-                        innerRadius={60}
-                        outerRadius={100}
-                        paddingAngle={5}
-                        dataKey="value"
-                      >
-                        {gradeDistribution.map((entry, index) => (
-                          <Cell key={`cell-${index}`} fill={entry.color} />
-                        ))}
-                      </Pie>
-                      <Tooltip 
-                        contentStyle={{
-                          backgroundColor: 'hsl(var(--card))',
-                          border: '1px solid hsl(var(--border))',
-                          borderRadius: '8px',
-                        }}
-                      />
-                      <Legend />
-                    </PieChart>
-                  </ResponsiveContainer>
+                  {gradeDistribution.length > 0 ? (
+                    <ResponsiveContainer width="100%" height="100%">
+                      <PieChart>
+                        <Pie
+                          data={gradeDistribution}
+                          cx="50%"
+                          cy="50%"
+                          innerRadius={60}
+                          outerRadius={100}
+                          paddingAngle={5}
+                          dataKey="value"
+                        >
+                          {gradeDistribution.map((entry, index) => (
+                            <Cell key={`cell-${index}`} fill={entry.color} />
+                          ))}
+                        </Pie>
+                        <Tooltip 
+                          contentStyle={{
+                            backgroundColor: 'hsl(var(--card))',
+                            border: '1px solid hsl(var(--border))',
+                            borderRadius: '8px',
+                          }}
+                        />
+                        <Legend />
+                      </PieChart>
+                    </ResponsiveContainer>
+                  ) : (
+                    <div className="flex items-center justify-center h-full text-muted-foreground">
+                      Hakuna data
+                    </div>
+                  )}
                 </div>
               </div>
 
               {/* Class Comparison */}
               <div className="card-elevated p-6 animate-fade-in">
-                <h3 className="font-display font-semibold text-lg mb-6 text-card-foreground">Class Comparison</h3>
+                <h3 className="font-display font-semibold text-lg mb-6 text-card-foreground">Ulinganisho wa Madarasa</h3>
                 <div className="h-[300px]">
-                  <ResponsiveContainer width="100%" height="100%">
-                    <BarChart data={classComparison}>
-                      <CartesianGrid strokeDasharray="3 3" stroke="hsl(var(--border))" />
-                      <XAxis dataKey="name" stroke="hsl(var(--muted-foreground))" />
-                      <YAxis stroke="hsl(var(--muted-foreground))" domain={[0, 100]} />
-                      <Tooltip 
-                        contentStyle={{
-                          backgroundColor: 'hsl(var(--card))',
-                          border: '1px solid hsl(var(--border))',
-                          borderRadius: '8px',
-                        }}
-                      />
-                      <Bar dataKey="value" fill="hsl(var(--primary))" radius={[4, 4, 0, 0]} name="Average %" />
-                    </BarChart>
-                  </ResponsiveContainer>
+                  {classComparison.length > 0 ? (
+                    <ResponsiveContainer width="100%" height="100%">
+                      <BarChart data={classComparison}>
+                        <CartesianGrid strokeDasharray="3 3" stroke="hsl(var(--border))" />
+                        <XAxis dataKey="name" stroke="hsl(var(--muted-foreground))" />
+                        <YAxis stroke="hsl(var(--muted-foreground))" domain={[0, 100]} />
+                        <Tooltip 
+                          contentStyle={{
+                            backgroundColor: 'hsl(var(--card))',
+                            border: '1px solid hsl(var(--border))',
+                            borderRadius: '8px',
+                          }}
+                        />
+                        <Bar dataKey="value" fill="hsl(var(--primary))" radius={[4, 4, 0, 0]} name="Average %" />
+                      </BarChart>
+                    </ResponsiveContainer>
+                  ) : (
+                    <div className="flex items-center justify-center h-full text-muted-foreground">
+                      Hakuna data
+                    </div>
+                  )}
                 </div>
               </div>
             </div>
 
             {/* Top and Bottom Performers */}
             <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
-              <TopStudents students={topStudents} title="Top Performers" />
-              <TopStudents students={bottomStudents.map((s, i) => ({ ...s, rank: i + 1 }))} title="Needs Improvement" />
+              <TopStudents students={topStudents} title="Wanafunzi Bora" />
+              <TopStudents students={bottomStudents} title="Wanahitaji Msaada" />
             </div>
           </TabsContent>
 
@@ -363,13 +408,13 @@ export default function ReportsPage() {
           {/* Subject Analysis Tab */}
           <TabsContent value="subject" className="space-y-6">
             <PerformanceChart 
-              data={subjectPerformance.map(s => ({ name: s.name, value: s.average }))} 
-              title="Subject-wise Average Performance"
+              data={subjectsData.map(s => ({ name: s.name, value: s.average }))} 
+              title="Utendaji wa Masomo"
             />
 
             <div className="card-elevated p-6 animate-fade-in">
               <div className="flex items-center justify-between mb-6">
-                <h3 className="font-display font-semibold text-lg text-card-foreground">Subject Analysis</h3>
+                <h3 className="font-display font-semibold text-lg text-card-foreground">Uchambuzi wa Masomo</h3>
                 <Button variant="outline" size="sm">
                   <Download className="w-4 h-4 mr-2" />
                   Export
@@ -379,15 +424,15 @@ export default function ReportsPage() {
                 <table className="w-full">
                   <thead>
                     <tr className="border-b border-border">
-                      <th className="text-left py-3 px-4 text-sm font-medium text-muted-foreground">Subject</th>
-                      <th className="text-center py-3 px-4 text-sm font-medium text-muted-foreground">Class Average</th>
-                      <th className="text-center py-3 px-4 text-sm font-medium text-muted-foreground">Highest Score</th>
-                      <th className="text-center py-3 px-4 text-sm font-medium text-muted-foreground">Lowest Score</th>
-                      <th className="text-center py-3 px-4 text-sm font-medium text-muted-foreground">Mode Grade</th>
+                      <th className="text-left py-3 px-4 text-sm font-medium text-muted-foreground">Somo</th>
+                      <th className="text-center py-3 px-4 text-sm font-medium text-muted-foreground">Wastani</th>
+                      <th className="text-center py-3 px-4 text-sm font-medium text-muted-foreground">Juu Zaidi</th>
+                      <th className="text-center py-3 px-4 text-sm font-medium text-muted-foreground">Chini Zaidi</th>
+                      <th className="text-center py-3 px-4 text-sm font-medium text-muted-foreground">Daraja</th>
                     </tr>
                   </thead>
                   <tbody>
-                    {subjectPerformance.map((subject, index) => (
+                    {subjectsData.length > 0 ? subjectsData.map((subject, index) => (
                       <tr key={index} className="border-b border-border/50 table-row-hover">
                         <td className="py-4 px-4 font-medium text-card-foreground">{subject.name}</td>
                         <td className="py-4 px-4 text-center font-semibold text-primary">{subject.average}%</td>
@@ -397,7 +442,13 @@ export default function ReportsPage() {
                           <GradeBadge grade={subject.average >= 75 ? 'A' : subject.average >= 65 ? 'B' : 'C'} />
                         </td>
                       </tr>
-                    ))}
+                    )) : (
+                      <tr>
+                        <td colSpan={5} className="py-8 text-center text-muted-foreground">
+                          Hakuna data ya masomo
+                        </td>
+                      </tr>
+                    )}
                   </tbody>
                 </table>
               </div>
