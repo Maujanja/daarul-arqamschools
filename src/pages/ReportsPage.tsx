@@ -31,11 +31,11 @@ export default function ReportsPage() {
       if (s.grade in grades) grades[s.grade as keyof typeof grades]++;
     });
     return [
-      { name: 'Daraja A', value: grades.A, color: 'hsl(var(--success))' },
-      { name: 'Daraja B', value: grades.B, color: 'hsl(var(--primary))' },
-      { name: 'Daraja C', value: grades.C, color: 'hsl(var(--warning))' },
-      { name: 'Daraja D', value: grades.D, color: 'hsl(var(--chart-4))' },
-      { name: 'Daraja F', value: grades.F, color: 'hsl(var(--destructive))' },
+      { name: 'Grade A', value: grades.A, color: 'hsl(var(--success))' },
+      { name: 'Grade B', value: grades.B, color: 'hsl(var(--primary))' },
+      { name: 'Grade C', value: grades.C, color: 'hsl(var(--warning))' },
+      { name: 'Grade D', value: grades.D, color: 'hsl(var(--chart-4))' },
+      { name: 'Grade F', value: grades.F, color: 'hsl(var(--destructive))' },
     ].filter(g => g.value > 0);
   }, [studentsData]);
 
@@ -162,7 +162,7 @@ export default function ReportsPage() {
     }));
 
     generateAllStudentsReportPDF(data, selectedTerm, selectedYear);
-    toast.success('Ripoti zote zimepakuliwa!');
+    toast.success('All reports downloaded!');
   };
 
   const handleDownloadClassReport = (classData: any) => {
@@ -188,7 +188,7 @@ export default function ReportsPage() {
       passRate: classData.passRate,
     });
 
-    toast.success(`Ripoti ya ${classData.class} imepakuliwa!`);
+    toast.success(`${classData.class} report downloaded!`);
   };
 
   return (
@@ -275,7 +275,7 @@ export default function ReportsPage() {
             <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
               {/* Grade Distribution */}
               <div className="card-elevated p-6 animate-fade-in">
-                <h3 className="font-display font-semibold text-lg mb-6 text-card-foreground">Mgawanyo wa Madaraja</h3>
+                <h3 className="font-display font-semibold text-lg mb-6 text-card-foreground">Grade Distribution</h3>
                 <div className="h-[300px]">
                   {gradeDistribution.length > 0 ? (
                     <ResponsiveContainer width="100%" height="100%">
@@ -305,7 +305,7 @@ export default function ReportsPage() {
                     </ResponsiveContainer>
                   ) : (
                     <div className="flex items-center justify-center h-full text-muted-foreground">
-                      Hakuna data
+                      No data available
                     </div>
                   )}
                 </div>
@@ -313,7 +313,7 @@ export default function ReportsPage() {
 
               {/* Class Comparison */}
               <div className="card-elevated p-6 animate-fade-in">
-                <h3 className="font-display font-semibold text-lg mb-6 text-card-foreground">Ulinganisho wa Madarasa</h3>
+                <h3 className="font-display font-semibold text-lg mb-6 text-card-foreground">Class Comparison</h3>
                 <div className="h-[300px]">
                   {classComparison.length > 0 ? (
                     <ResponsiveContainer width="100%" height="100%">
@@ -333,7 +333,7 @@ export default function ReportsPage() {
                     </ResponsiveContainer>
                   ) : (
                     <div className="flex items-center justify-center h-full text-muted-foreground">
-                      Hakuna data
+                      No data available
                     </div>
                   )}
                 </div>
@@ -342,8 +342,8 @@ export default function ReportsPage() {
 
             {/* Top and Bottom Performers */}
             <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
-              <TopStudents students={topStudents} title="Wanafunzi Bora" />
-              <TopStudents students={bottomStudents} title="Wanahitaji Msaada" />
+              <TopStudents students={topStudents} title="Top Performers" />
+              <TopStudents students={bottomStudents} title="Need Support" />
             </div>
           </TabsContent>
 
@@ -395,7 +395,7 @@ export default function ReportsPage() {
                     )) : (
                       <tr>
                         <td colSpan={7} className="py-8 text-center text-muted-foreground">
-                          Hakuna data ya madarasa
+                          No class data available
                         </td>
                       </tr>
                     )}
@@ -409,12 +409,12 @@ export default function ReportsPage() {
           <TabsContent value="subject" className="space-y-6">
             <PerformanceChart 
               data={subjectsData.map(s => ({ name: s.name, value: s.average }))} 
-              title="Utendaji wa Masomo"
+              title="Subject Performance"
             />
 
             <div className="card-elevated p-6 animate-fade-in">
               <div className="flex items-center justify-between mb-6">
-                <h3 className="font-display font-semibold text-lg text-card-foreground">Uchambuzi wa Masomo</h3>
+                <h3 className="font-display font-semibold text-lg text-card-foreground">Subject Analysis</h3>
                 <Button variant="outline" size="sm">
                   <Download className="w-4 h-4 mr-2" />
                   Export
@@ -424,11 +424,11 @@ export default function ReportsPage() {
                 <table className="w-full">
                   <thead>
                     <tr className="border-b border-border">
-                      <th className="text-left py-3 px-4 text-sm font-medium text-muted-foreground">Somo</th>
-                      <th className="text-center py-3 px-4 text-sm font-medium text-muted-foreground">Wastani</th>
-                      <th className="text-center py-3 px-4 text-sm font-medium text-muted-foreground">Juu Zaidi</th>
-                      <th className="text-center py-3 px-4 text-sm font-medium text-muted-foreground">Chini Zaidi</th>
-                      <th className="text-center py-3 px-4 text-sm font-medium text-muted-foreground">Daraja</th>
+                      <th className="text-left py-3 px-4 text-sm font-medium text-muted-foreground">Subject</th>
+                      <th className="text-center py-3 px-4 text-sm font-medium text-muted-foreground">Average</th>
+                      <th className="text-center py-3 px-4 text-sm font-medium text-muted-foreground">Highest</th>
+                      <th className="text-center py-3 px-4 text-sm font-medium text-muted-foreground">Lowest</th>
+                      <th className="text-center py-3 px-4 text-sm font-medium text-muted-foreground">Grade</th>
                     </tr>
                   </thead>
                   <tbody>
@@ -445,7 +445,7 @@ export default function ReportsPage() {
                     )) : (
                       <tr>
                         <td colSpan={5} className="py-8 text-center text-muted-foreground">
-                          Hakuna data ya masomo
+                          No subject data available
                         </td>
                       </tr>
                     )}

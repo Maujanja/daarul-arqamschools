@@ -126,10 +126,10 @@ export function ParentDashboard() {
   if (!childName) {
     return (
       <div className="space-y-8">
-        <div>
-          <h1 className="text-3xl font-display font-bold text-foreground">Dashboard ya Mzazi</h1>
-          <p className="text-muted-foreground mt-1">Hakuna mwanafunzi aliyeunganishwa na akaunti yako.</p>
-        </div>
+      <div>
+        <h1 className="text-3xl font-display font-bold text-foreground">Parent Dashboard</h1>
+        <p className="text-muted-foreground mt-1">No student is linked to your account.</p>
+      </div>
       </div>
     );
   }
@@ -141,19 +141,19 @@ export function ParentDashboard() {
       {/* Header */}
       <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4">
         <div>
-          <h1 className="text-3xl font-display font-bold text-foreground">Dashboard ya Mzazi</h1>
+          <h1 className="text-3xl font-display font-bold text-foreground">Parent Dashboard</h1>
           <p className="text-muted-foreground mt-1">
-            Unaangalia rekodi za <span className="font-semibold text-primary">{childName}</span>
+            Viewing records for <span className="font-semibold text-primary">{childName}</span>
           </p>
         </div>
         <div className="flex gap-3">
           <Button variant="outline">
             <MessageSquare className="w-4 h-4 mr-2" />
-            Tuma Maoni
+            Send Feedback
           </Button>
           <Button className="btn-gradient">
             <Download className="w-4 h-4 mr-2" />
-            Pakua Ripoti
+            Download Report
           </Button>
         </div>
       </div>
@@ -166,20 +166,20 @@ export function ParentDashboard() {
           </div>
           <div className="flex-1">
             <h2 className="text-xl font-display font-bold text-card-foreground">{childName}</h2>
-            <p className="text-muted-foreground">Darasa {childClass}</p>
+            <p className="text-muted-foreground">Class {childClass}</p>
             <div className="flex flex-wrap gap-4 mt-3">
               <div className="flex items-center gap-2">
                 <Calendar className="w-4 h-4 text-muted-foreground" />
-                <span className="text-sm text-muted-foreground">Mwaka 2024-2025</span>
+                <span className="text-sm text-muted-foreground">Year 2024-2025</span>
               </div>
               <div className="flex items-center gap-2">
                 <Award className="w-4 h-4 text-warning" />
-                <span className="text-sm text-muted-foreground">Nafasi: <span className="font-semibold text-card-foreground">#{classRank}</span></span>
+                <span className="text-sm text-muted-foreground">Rank: <span className="font-semibold text-card-foreground">#{classRank}</span></span>
               </div>
             </div>
           </div>
           <div className="text-center md:text-right">
-            <p className="text-sm text-muted-foreground">Wastani wa Jumla</p>
+            <p className="text-sm text-muted-foreground">Overall Average</p>
             <p className="text-4xl font-bold font-display gradient-text">{overallAverage.toFixed(1)}%</p>
             <GradeBadge grade={overallAverage >= 75 ? 'A' : overallAverage >= 65 ? 'B' : overallAverage >= 50 ? 'C' : overallAverage >= 40 ? 'D' : 'F'} size="lg" />
           </div>
@@ -189,30 +189,30 @@ export function ParentDashboard() {
       {/* Stats Grid */}
       <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-6">
         <StatCard
-          title="Masomo"
+          title="Subjects"
           value={studentMarks.length.toString()}
-          subtitle="Masomo yaliyosajiliwa"
+          subtitle="Registered subjects"
           icon={BookOpen}
           variant="primary"
         />
         <StatCard
-          title="Somo Bora"
+          title="Best Subject"
           value={studentMarks.length > 0 ? studentMarks.reduce((best, m) => m.total > best.total ? m : best, studentMarks[0]).subject : '-'}
           subtitle={studentMarks.length > 0 ? `${Math.max(...studentMarks.map(m => m.total))}%` : '-'}
           icon={Award}
           variant="success"
         />
         <StatCard
-          title="Nafasi Darasani"
+          title="Class Rank"
           value={`#${classRank}`}
-          subtitle="Kati ya wanafunzi wote"
+          subtitle="Among all students"
           icon={TrendingUp}
           variant="accent"
         />
         <StatCard
-          title="Mahudhurio"
+          title="Attendance"
           value="94%"
-          subtitle="Muhula huu"
+          subtitle="This term"
           icon={Calendar}
           variant="warning"
         />
@@ -224,20 +224,20 @@ export function ParentDashboard() {
           <div className="lg:col-span-2">
             <PerformanceChart 
               data={performanceData} 
-              title="Utendaji kwa Somo" 
+              title="Performance by Subject" 
             />
           </div>
           
           {/* Grade Distribution */}
           <div className="card-elevated p-6 animate-fade-in">
-            <h3 className="font-display font-semibold text-lg mb-6 text-card-foreground">Mgawanyo wa Daraja</h3>
+            <h3 className="font-display font-semibold text-lg mb-6 text-card-foreground">Grade Distribution</h3>
             <div className="space-y-4">
               {['A', 'B', 'C', 'D', 'F'].map(grade => {
                 const count = studentMarks.filter(m => m.grade === grade).length;
                 const percentage = studentMarks.length > 0 ? (count / studentMarks.length) * 100 : 0;
                 return (
                   <div key={grade} className="flex items-center justify-between">
-                    <span className="text-sm text-muted-foreground">Daraja {grade}</span>
+                    <span className="text-sm text-muted-foreground">Grade {grade}</span>
                     <div className="flex items-center gap-2">
                       <div className="w-32 h-2 bg-muted rounded-full overflow-hidden">
                         <div 
@@ -259,20 +259,20 @@ export function ParentDashboard() {
       {studentMarks.length > 0 && (
         <div className="card-elevated p-6 animate-fade-in">
           <div className="flex items-center justify-between mb-6">
-            <h3 className="font-display font-semibold text-lg text-card-foreground">Alama za Kina - Muhula 1</h3>
+            <h3 className="font-display font-semibold text-lg text-card-foreground">Detailed Marks - Term 1</h3>
             <Button variant="outline" size="sm">
               <Download className="w-4 h-4 mr-2" />
-              Pakua PDF
+              Download PDF
             </Button>
           </div>
           <div className="overflow-x-auto">
             <table className="w-full">
               <thead>
                 <tr className="border-b border-border">
-                  <th className="text-left py-3 px-4 text-sm font-medium text-muted-foreground">Somo</th>
-                  <th className="text-center py-3 px-4 text-sm font-medium text-muted-foreground">Mtihani (100)</th>
-                  <th className="text-center py-3 px-4 text-sm font-medium text-muted-foreground">Jumla</th>
-                  <th className="text-center py-3 px-4 text-sm font-medium text-muted-foreground">Daraja</th>
+                  <th className="text-left py-3 px-4 text-sm font-medium text-muted-foreground">Subject</th>
+                  <th className="text-center py-3 px-4 text-sm font-medium text-muted-foreground">Exam (100)</th>
+                  <th className="text-center py-3 px-4 text-sm font-medium text-muted-foreground">Total</th>
+                  <th className="text-center py-3 px-4 text-sm font-medium text-muted-foreground">Grade</th>
                 </tr>
               </thead>
               <tbody>
@@ -289,7 +289,7 @@ export function ParentDashboard() {
               </tbody>
               <tfoot>
                 <tr className="bg-muted/50">
-                  <td className="py-4 px-4 font-semibold text-card-foreground">Wastani wa Jumla</td>
+                  <td className="py-4 px-4 font-semibold text-card-foreground">Overall Average</td>
                   <td></td>
                   <td className="py-4 px-4 text-center font-bold text-xl text-primary">{overallAverage.toFixed(1)}</td>
                   <td className="py-4 px-4 text-center">
