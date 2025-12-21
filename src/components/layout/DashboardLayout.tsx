@@ -23,8 +23,8 @@ export function DashboardLayout({ children }: DashboardLayoutProps) {
         <header className="hidden lg:flex items-center gap-3 px-8 py-4 border-b border-border bg-card/50 backdrop-blur-sm sticky top-0 z-30">
           <img src={dasLogo} alt="Daarul Arqam Logo" className="w-10 h-10 object-contain" />
           <div>
-            <h1 className="font-display font-bold text-foreground text-sm leading-tight">DAARUL ARQAM EXAMS REPORTS</h1>
-            <p className="text-xs text-muted-foreground">Mfumo wa Usimamizi wa Matokeo</p>
+            <h1 className="font-display font-bold text-foreground text-sm leading-tight">DAARUL-ARQAM SCHOOLS</h1>
+            <p className="text-xs text-muted-foreground">Exam Results Management System</p>
           </div>
         </header>
         <div className="p-4 sm:p-6 lg:p-8 pt-16 lg:pt-6">

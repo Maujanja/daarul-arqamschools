@@ -11,8 +11,8 @@ export default function SettingsPage() {
       <div className="space-y-8 max-w-4xl">
         {/* Header */}
         <div>
-          <h1 className="text-3xl font-display font-bold text-foreground">Mipangilio</h1>
-          <p className="text-muted-foreground mt-1">Simamia mipangilio ya mfumo</p>
+          <h1 className="text-3xl font-display font-bold text-foreground">Settings</h1>
+          <p className="text-muted-foreground mt-1">Manage system settings</p>
         </div>
 
         {/* General Settings */}
@@ -22,22 +22,22 @@ export default function SettingsPage() {
               <Settings className="w-5 h-5 text-primary" />
             </div>
             <div>
-              <h2 className="font-display font-semibold text-lg text-card-foreground">Mipangilio ya Jumla</h2>
-              <p className="text-sm text-muted-foreground">Taarifa za msingi za shule</p>
+              <h2 className="font-display font-semibold text-lg text-card-foreground">General Settings</h2>
+              <p className="text-sm text-muted-foreground">Basic school information</p>
             </div>
           </div>
           
           <div className="space-y-4">
             <div className="space-y-2">
-              <Label htmlFor="school_name">Jina la Shule</Label>
+              <Label htmlFor="school_name">School Name</Label>
               <Input id="school_name" defaultValue="EduManage Academy" className="input-enhanced" />
             </div>
             <div className="space-y-2">
-              <Label htmlFor="academic_year">Mwaka wa Masomo</Label>
+              <Label htmlFor="academic_year">Academic Year</Label>
               <Input id="academic_year" defaultValue="2024/2025" className="input-enhanced" />
             </div>
             <div className="space-y-2">
-              <Label htmlFor="current_term">Muhula wa Sasa</Label>
+              <Label htmlFor="current_term">Current Term</Label>
               <Input id="current_term" defaultValue="Term 1" className="input-enhanced" />
             </div>
           </div>
@@ -50,30 +50,30 @@ export default function SettingsPage() {
               <Bell className="w-5 h-5 text-accent" />
             </div>
             <div>
-              <h2 className="font-display font-semibold text-lg text-card-foreground">Arifa</h2>
-              <p className="text-sm text-muted-foreground">Simamia mipangilio ya arifa</p>
+              <h2 className="font-display font-semibold text-lg text-card-foreground">Notifications</h2>
+              <p className="text-sm text-muted-foreground">Manage notification settings</p>
             </div>
           </div>
           
           <div className="space-y-4">
             <div className="flex items-center justify-between">
               <div>
-                <p className="font-medium text-card-foreground">Arifa za Barua Pepe</p>
-                <p className="text-sm text-muted-foreground">Pata arifa kwa barua pepe</p>
+                <p className="font-medium text-card-foreground">Email Notifications</p>
+                <p className="text-sm text-muted-foreground">Receive notifications via email</p>
               </div>
               <Switch defaultChecked />
             </div>
             <div className="flex items-center justify-between">
               <div>
-                <p className="font-medium text-card-foreground">Arifa za Alama Mpya</p>
-                <p className="text-sm text-muted-foreground">Julikane alama zinapoingizwa</p>
+                <p className="font-medium text-card-foreground">New Marks Notifications</p>
+                <p className="text-sm text-muted-foreground">Get notified when marks are entered</p>
               </div>
               <Switch defaultChecked />
             </div>
             <div className="flex items-center justify-between">
               <div>
-                <p className="font-medium text-card-foreground">Arifa za Maoni</p>
-                <p className="text-sm text-muted-foreground">Julikane maoni mapya yanapofika</p>
+                <p className="font-medium text-card-foreground">Feedback Notifications</p>
+                <p className="text-sm text-muted-foreground">Get notified when new feedback arrives</p>
               </div>
               <Switch defaultChecked />
             </div>
@@ -87,32 +87,32 @@ export default function SettingsPage() {
               <Shield className="w-5 h-5 text-destructive" />
             </div>
             <div>
-              <h2 className="font-display font-semibold text-lg text-card-foreground">Usalama</h2>
-              <p className="text-sm text-muted-foreground">Mipangilio ya usalama</p>
+              <h2 className="font-display font-semibold text-lg text-card-foreground">Security</h2>
+              <p className="text-sm text-muted-foreground">Security settings</p>
             </div>
           </div>
           
           <div className="space-y-4">
             <div className="space-y-2">
-              <Label htmlFor="current_password">Nenosiri la Sasa</Label>
+              <Label htmlFor="current_password">Current Password</Label>
               <Input id="current_password" type="password" className="input-enhanced" />
             </div>
             <div className="space-y-2">
-              <Label htmlFor="new_password">Nenosiri Jipya</Label>
+              <Label htmlFor="new_password">New Password</Label>
               <Input id="new_password" type="password" className="input-enhanced" />
             </div>
             <div className="space-y-2">
-              <Label htmlFor="confirm_password">Thibitisha Nenosiri</Label>
+              <Label htmlFor="confirm_password">Confirm Password</Label>
               <Input id="confirm_password" type="password" className="input-enhanced" />
             </div>
-            <Button variant="outline">Badilisha Nenosiri</Button>
+            <Button variant="outline">Change Password</Button>
           </div>
         </div>
 
         {/* Save Button */}
         <div className="flex justify-end">
           <Button className="btn-gradient">
-            Hifadhi Mabadiliko
+            Save Changes
           </Button>
         </div>
       </div>

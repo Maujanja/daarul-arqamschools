@@ -46,12 +46,12 @@ export default function LoginPage() {
       const result = await loginAsAdmin(adminUsername, adminPassword);
       if (result.success) {
         toast({
-          title: "Karibu Admin!",
-          description: "Umefanikiwa kuingia kama msimamizi.",
+          title: "Welcome Admin!",
+          description: "You have successfully logged in as administrator.",
         });
         navigate('/dashboard');
       } else {
-        setError(result.error || 'Jina au nywila si sahihi');
+        setError(result.error || 'Invalid username or password');
       }
     } finally {
       setIsLoading(false);
@@ -67,12 +67,12 @@ export default function LoginPage() {
       const result = await loginAsTeacher(teacherName, teacherPassword);
       if (result.success) {
         toast({
-          title: "Karibu Mwalimu!",
-          description: "Umefanikiwa kuingia.",
+          title: "Welcome Teacher!",
+          description: "You have successfully logged in.",
         });
         navigate('/dashboard');
       } else {
-        setError(result.error || 'Jina au nywila si sahihi');
+        setError(result.error || 'Invalid name or password');
       }
     } finally {
       setIsLoading(false);
@@ -88,12 +88,12 @@ export default function LoginPage() {
       const result = await loginAsParent(studentName, studentRollNumber);
       if (result.success) {
         toast({
-          title: "Karibu Mzazi!",
-          description: "Umefanikiwa kuingia.",
+          title: "Welcome Parent!",
+          description: "You have successfully logged in.",
         });
         navigate('/dashboard');
       } else {
-        setError(result.error || 'Jina la mwanafunzi au ID si sahihi');
+        setError(result.error || 'Invalid student name or ID');
       }
     } finally {
       setIsLoading(false);
@@ -117,13 +117,13 @@ export default function LoginPage() {
           <div className="mb-8">
             <img src={dasLogo} alt="Daarul Arqam Logo" className="w-24 h-24 object-contain mb-6" />
             <h1 className="text-3xl font-display font-bold mb-2">
-              DAARUL ARQAM
+              DAARUL-ARQAM
             </h1>
             <h2 className="text-2xl font-display font-semibold mb-4">
-              EXAMS REPORTS
+              SCHOOLS
             </h2>
             <p className="text-lg text-primary-foreground/80">
-              Mfumo wa Usimamizi wa Matokeo ya Mitihani
+              Exam Results Management System
             </p>
           </div>
           
@@ -134,7 +134,7 @@ export default function LoginPage() {
               </div>
               <div>
                 <h3 className="font-semibold mb-1">Admin</h3>
-                <p className="text-sm text-primary-foreground/70">Ingia kwa jina la mtumiaji na nywila</p>
+                <p className="text-sm text-primary-foreground/70">Login with username and password</p>
               </div>
             </div>
             <div className="flex items-start gap-4">
@@ -142,8 +142,8 @@ export default function LoginPage() {
                 <User className="w-5 h-5" />
               </div>
               <div>
-                <h3 className="font-semibold mb-1">Mwalimu</h3>
-                <p className="text-sm text-primary-foreground/70">Ingia kwa jina na nywila uliyopewa na admin</p>
+                <h3 className="font-semibold mb-1">Teacher</h3>
+                <p className="text-sm text-primary-foreground/70">Login with name and password provided by admin</p>
               </div>
             </div>
             <div className="flex items-start gap-4">
@@ -151,8 +151,8 @@ export default function LoginPage() {
                 <Hash className="w-5 h-5" />
               </div>
               <div>
-                <h3 className="font-semibold mb-1">Mzazi</h3>
-                <p className="text-sm text-primary-foreground/70">Ingia kwa jina la mwanao na ID yake</p>
+                <h3 className="font-semibold mb-1">Parent</h3>
+                <p className="text-sm text-primary-foreground/70">Login with your child's name and ID</p>
               </div>
             </div>
           </div>
@@ -165,8 +165,8 @@ export default function LoginPage() {
           {/* Mobile Logo */}
           <div className="lg:hidden text-center">
             <img src={dasLogo} alt="Daarul Arqam Logo" className="w-20 h-20 object-contain mx-auto mb-4" />
-            <h1 className="text-xl font-display font-bold text-foreground">DAARUL ARQAM</h1>
-            <p className="text-sm text-muted-foreground">EXAMS REPORTS</p>
+            <h1 className="text-xl font-display font-bold text-foreground">DAARUL-ARQAM</h1>
+            <p className="text-sm text-muted-foreground">SCHOOLS</p>
           </div>
 
           {error && (
@@ -179,26 +179,26 @@ export default function LoginPage() {
           <Tabs defaultValue="admin" className="w-full">
             <TabsList className="grid w-full grid-cols-3">
               <TabsTrigger value="admin">Admin</TabsTrigger>
-              <TabsTrigger value="teacher">Mwalimu</TabsTrigger>
-              <TabsTrigger value="parent">Mzazi</TabsTrigger>
+              <TabsTrigger value="teacher">Teacher</TabsTrigger>
+              <TabsTrigger value="parent">Parent</TabsTrigger>
             </TabsList>
 
             {/* Admin Login */}
             <TabsContent value="admin" className="space-y-6 mt-6">
               <div className="text-center lg:text-left">
-                <h2 className="text-2xl font-display font-bold text-foreground">Msimamizi</h2>
-                <p className="text-muted-foreground mt-2">Ingia kama msimamizi wa mfumo</p>
+                <h2 className="text-2xl font-display font-bold text-foreground">Administrator</h2>
+                <p className="text-muted-foreground mt-2">Login as system administrator</p>
               </div>
 
               <form onSubmit={handleAdminLogin} className="space-y-6">
                 <div className="space-y-2">
-                  <Label htmlFor="admin-username">Jina la Mtumiaji</Label>
+                  <Label htmlFor="admin-username">Username</Label>
                   <div className="relative">
                     <User className="absolute left-3 top-1/2 -translate-y-1/2 w-5 h-5 text-muted-foreground" />
                     <Input
                       id="admin-username"
                       type="text"
-                      placeholder="Ingiza jina la mtumiaji"
+                      placeholder="Enter username"
                       value={adminUsername}
                       onChange={(e) => setAdminUsername(e.target.value)}
                       className="pl-10 input-enhanced"
@@ -208,13 +208,13 @@ export default function LoginPage() {
                 </div>
 
                 <div className="space-y-2">
-                  <Label htmlFor="admin-password">Nywila</Label>
+                  <Label htmlFor="admin-password">Password</Label>
                   <div className="relative">
                     <Lock className="absolute left-3 top-1/2 -translate-y-1/2 w-5 h-5 text-muted-foreground" />
                     <Input
                       id="admin-password"
                       type={showPassword ? 'text' : 'password'}
-                      placeholder="Ingiza nywila"
+                      placeholder="Enter password"
                       value={adminPassword}
                       onChange={(e) => setAdminPassword(e.target.value)}
                       className="pl-10 pr-10 input-enhanced"
@@ -241,10 +241,10 @@ export default function LoginPage() {
                         <circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4" fill="none" />
                         <path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z" />
                       </svg>
-                      Inaingia...
+                      Logging in...
                     </span>
                   ) : (
-                    'Ingia'
+                    'Login'
                   )}
                 </Button>
               </form>
@@ -253,19 +253,19 @@ export default function LoginPage() {
             {/* Teacher Login */}
             <TabsContent value="teacher" className="space-y-6 mt-6">
               <div className="text-center lg:text-left">
-                <h2 className="text-2xl font-display font-bold text-foreground">Mwalimu</h2>
-                <p className="text-muted-foreground mt-2">Ingia kwa taarifa ulizopewa na admin</p>
+                <h2 className="text-2xl font-display font-bold text-foreground">Teacher</h2>
+                <p className="text-muted-foreground mt-2">Login with credentials provided by admin</p>
               </div>
 
               <form onSubmit={handleTeacherLogin} className="space-y-6">
                 <div className="space-y-2">
-                  <Label htmlFor="teacher-name">Jina</Label>
+                  <Label htmlFor="teacher-name">Name</Label>
                   <div className="relative">
                     <User className="absolute left-3 top-1/2 -translate-y-1/2 w-5 h-5 text-muted-foreground" />
                     <Input
                       id="teacher-name"
                       type="text"
-                      placeholder="Ingiza jina lako"
+                      placeholder="Enter your name"
                       value={teacherName}
                       onChange={(e) => setTeacherName(e.target.value)}
                       className="pl-10 input-enhanced"
@@ -275,13 +275,13 @@ export default function LoginPage() {
                 </div>
 
                 <div className="space-y-2">
-                  <Label htmlFor="teacher-password">Nywila</Label>
+                  <Label htmlFor="teacher-password">Password</Label>
                   <div className="relative">
                     <Lock className="absolute left-3 top-1/2 -translate-y-1/2 w-5 h-5 text-muted-foreground" />
                     <Input
                       id="teacher-password"
                       type={showPassword ? 'text' : 'password'}
-                      placeholder="Ingiza nywila yako"
+                      placeholder="Enter your password"
                       value={teacherPassword}
                       onChange={(e) => setTeacherPassword(e.target.value)}
                       className="pl-10 pr-10 input-enhanced"
@@ -308,10 +308,10 @@ export default function LoginPage() {
                         <circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4" fill="none" />
                         <path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z" />
                       </svg>
-                      Inaingia...
+                      Logging in...
                     </span>
                   ) : (
-                    'Ingia'
+                    'Login'
                   )}
                 </Button>
               </form>
@@ -320,19 +320,19 @@ export default function LoginPage() {
             {/* Parent Login */}
             <TabsContent value="parent" className="space-y-6 mt-6">
               <div className="text-center lg:text-left">
-                <h2 className="text-2xl font-display font-bold text-foreground">Mzazi</h2>
-                <p className="text-muted-foreground mt-2">Ingia kwa taarifa za mwanao</p>
+                <h2 className="text-2xl font-display font-bold text-foreground">Parent</h2>
+                <p className="text-muted-foreground mt-2">Login with your child's information</p>
               </div>
 
               <form onSubmit={handleParentLogin} className="space-y-6">
                 <div className="space-y-2">
-                  <Label htmlFor="student-name">Jina la Mwanafunzi</Label>
+                  <Label htmlFor="student-name">Student Name</Label>
                   <div className="relative">
                     <User className="absolute left-3 top-1/2 -translate-y-1/2 w-5 h-5 text-muted-foreground" />
                     <Input
                       id="student-name"
                       type="text"
-                      placeholder="Ingiza jina la mwanao"
+                      placeholder="Enter your child's name"
                       value={studentName}
                       onChange={(e) => setStudentName(e.target.value)}
                       className="pl-10 input-enhanced"
@@ -342,13 +342,13 @@ export default function LoginPage() {
                 </div>
 
                 <div className="space-y-2">
-                  <Label htmlFor="student-roll">ID Namba ya Mwanafunzi</Label>
+                  <Label htmlFor="student-roll">Student ID Number</Label>
                   <div className="relative">
                     <Hash className="absolute left-3 top-1/2 -translate-y-1/2 w-5 h-5 text-muted-foreground" />
                     <Input
                       id="student-roll"
                       type="text"
-                      placeholder="Ingiza ID namba ya mwanao"
+                      placeholder="Enter your child's ID number"
                       value={studentRollNumber}
                       onChange={(e) => setStudentRollNumber(e.target.value)}
                       className="pl-10 input-enhanced"
@@ -368,10 +368,10 @@ export default function LoginPage() {
                         <circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4" fill="none" />
                         <path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z" />
                       </svg>
-                      Inaingia...
+                      Logging in...
                     </span>
                   ) : (
-                    'Ingia'
+                    'Login'
                   )}
                 </Button>
               </form>

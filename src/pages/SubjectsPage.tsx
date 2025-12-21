@@ -57,7 +57,7 @@ export default function SubjectsPage() {
       setSubjects(data || []);
     } catch (error) {
       console.error('Error fetching subjects:', error);
-      toast.error('Imeshindwa kupata masomo');
+      toast.error('Failed to fetch subjects');
     } finally {
       setLoading(false);
     }
@@ -65,7 +65,7 @@ export default function SubjectsPage() {
 
   const handleAddSubject = async () => {
     if (!newSubject.name || !newSubject.code) {
-      toast.error('Tafadhali jaza taarifa zote zinazohitajika');
+      toast.error('Please fill in all required fields');
       return;
     }
 
@@ -82,13 +82,13 @@ export default function SubjectsPage() {
 
       if (error) throw error;
 
-      toast.success('Somo limeongezwa kikamilifu');
+      toast.success('Subject added successfully');
       setShowAddDialog(false);
       setNewSubject({ name: '', code: '', max_marks: '100' });
       fetchSubjects();
     } catch (error) {
       console.error('Error adding subject:', error);
-      toast.error('Imeshindwa kuongeza somo');
+      toast.error('Failed to add subject');
     } finally {
       setSaving(false);
     }
@@ -102,11 +102,11 @@ export default function SubjectsPage() {
         .eq('id', id);
 
       if (error) throw error;
-      toast.success('Somo limefutwa');
+      toast.success('Subject deleted');
       fetchSubjects();
     } catch (error) {
       console.error('Error deleting subject:', error);
-      toast.error('Imeshindwa kufuta somo');
+      toast.error('Failed to delete subject');
     }
   };
 
@@ -131,12 +131,12 @@ export default function SubjectsPage() {
         {/* Header */}
         <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4">
           <div>
-            <h1 className="text-3xl font-display font-bold text-foreground">Masomo</h1>
-            <p className="text-muted-foreground mt-1">Simamia masomo yote ya shule</p>
+            <h1 className="text-3xl font-display font-bold text-foreground">Subjects</h1>
+            <p className="text-muted-foreground mt-1">Manage all school subjects</p>
           </div>
           <Button className="btn-gradient" onClick={() => setShowAddDialog(true)}>
             <Plus className="w-4 h-4 mr-2" />
-            Ongeza Somo
+            Add Subject
           </Button>
         </div>
 
@@ -145,7 +145,7 @@ export default function SubjectsPage() {
           <div className="relative">
             <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-5 h-5 text-muted-foreground" />
             <Input
-              placeholder="Tafuta kwa jina au code..."
+              placeholder="Search by name or code..."
               value={searchQuery}
               onChange={(e) => setSearchQuery(e.target.value)}
               className="pl-10 input-enhanced"
@@ -172,12 +172,12 @@ export default function SubjectsPage() {
                     </Button>
                   </DropdownMenuTrigger>
                   <DropdownMenuContent align="end">
-                    <DropdownMenuItem>Hariri</DropdownMenuItem>
+                    <DropdownMenuItem>Edit</DropdownMenuItem>
                     <DropdownMenuItem 
                       className="text-destructive"
                       onClick={() => handleDeleteSubject(subject.id)}
                     >
-                      Futa
+                      Delete
                     </DropdownMenuItem>
                   </DropdownMenuContent>
                 </DropdownMenu>
@@ -189,7 +189,7 @@ export default function SubjectsPage() {
               <p className="text-sm text-muted-foreground mb-3">Code: {subject.code}</p>
               
               <div className="pt-3 border-t border-border">
-                <p className="text-xs text-muted-foreground">Alama za Juu</p>
+                <p className="text-xs text-muted-foreground">Maximum Marks</p>
                 <p className="font-bold text-primary text-lg">{subject.max_marks}</p>
               </div>
             </div>
@@ -201,9 +201,9 @@ export default function SubjectsPage() {
           <div className="card-elevated p-12 text-center animate-fade-in">
             <BookOpen className="w-12 h-12 text-muted-foreground mx-auto mb-4" />
             <h3 className="font-display font-semibold text-lg text-card-foreground mb-2">
-              Hakuna masomo yaliyopatikana
+              No subjects found
             </h3>
-            <p className="text-muted-foreground">Jaribu kubadilisha vigezo vya utafutaji</p>
+            <p className="text-muted-foreground">Try adjusting your search criteria</p>
           </div>
         )}
       </div>
@@ -212,32 +212,32 @@ export default function SubjectsPage() {
       <Dialog open={showAddDialog} onOpenChange={setShowAddDialog}>
         <DialogContent>
           <DialogHeader>
-            <DialogTitle>Ongeza Somo Jipya</DialogTitle>
+            <DialogTitle>Add New Subject</DialogTitle>
             <DialogDescription>
-              Jaza taarifa za somo jipya hapa chini
+              Fill in the new subject's information below
             </DialogDescription>
           </DialogHeader>
           <div className="space-y-4 py-4">
             <div className="space-y-2">
-              <Label htmlFor="name">Jina la Somo</Label>
+              <Label htmlFor="name">Subject Name</Label>
               <Input
                 id="name"
                 value={newSubject.name}
                 onChange={(e) => setNewSubject({ ...newSubject, name: e.target.value })}
-                placeholder="Mfano: Hisabati"
+                placeholder="e.g. Mathematics"
               />
             </div>
             <div className="space-y-2">
-              <Label htmlFor="code">Code ya Somo</Label>
+              <Label htmlFor="code">Subject Code</Label>
               <Input
                 id="code"
                 value={newSubject.code}
                 onChange={(e) => setNewSubject({ ...newSubject, code: e.target.value })}
-                placeholder="Mfano: MATH"
+                placeholder="e.g. MATH"
               />
             </div>
             <div className="space-y-2">
-              <Label htmlFor="max_marks">Alama za Juu</Label>
+              <Label htmlFor="max_marks">Maximum Marks</Label>
               <Input
                 id="max_marks"
                 type="number"
@@ -249,11 +249,11 @@ export default function SubjectsPage() {
           </div>
           <DialogFooter>
             <Button variant="outline" onClick={() => setShowAddDialog(false)}>
-              Ghairi
+              Cancel
             </Button>
             <Button onClick={handleAddSubject} disabled={saving}>
               {saving && <Loader2 className="w-4 h-4 mr-2 animate-spin" />}
-              Hifadhi
+              Save
             </Button>
           </DialogFooter>
         </DialogContent>

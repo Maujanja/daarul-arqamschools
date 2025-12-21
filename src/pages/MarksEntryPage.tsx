@@ -172,8 +172,8 @@ export default function MarksEntryPage() {
 
     if (incomplete) {
       toast({
-        title: "Alama Hazijakamilika",
-        description: "Tafadhali ingiza alama za wanafunzi wote kabla ya kuwasilisha.",
+        title: "Marks Incomplete",
+        description: "Please enter marks for all students before submitting.",
         variant: "destructive",
       });
       return;
@@ -207,14 +207,14 @@ export default function MarksEntryPage() {
       }
       
       toast({
-        title: "Alama Zimehifadhiwa!",
-        description: `Alama za Darasa ${selectedClass} - ${selectedSubjectData?.name} zimehifadhiwa.`,
+        title: "Marks Saved!",
+        description: `Marks for Class ${selectedClass} - ${selectedSubjectData?.name} have been saved.`,
       });
     } catch (error: any) {
       console.error('Error saving marks:', error);
       toast({
-        title: "Hitilafu",
-        description: error.message || "Kushindwa kuhifadhi alama. Jaribu tena.",
+        title: "Error",
+        description: error.message || "Failed to save marks. Please try again.",
         variant: "destructive",
       });
     } finally {
@@ -236,32 +236,32 @@ export default function MarksEntryPage() {
       <div className="space-y-8">
         {/* Header */}
         <div>
-          <h1 className="text-3xl font-display font-bold text-foreground">Uwekaji Alama</h1>
-          <p className="text-muted-foreground mt-1">Ingiza alama za mitihani ya wanafunzi</p>
+          <h1 className="text-3xl font-display font-bold text-foreground">Marks Entry</h1>
+          <p className="text-muted-foreground mt-1">Enter exam marks for students</p>
         </div>
 
         {/* Filters */}
         <div className="card-elevated p-6 animate-fade-in">
-          <h3 className="font-display font-semibold text-lg mb-4 text-card-foreground">Chagua Darasa & Somo</h3>
+          <h3 className="font-display font-semibold text-lg mb-4 text-card-foreground">Select Class & Subject</h3>
           <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
             <div className="space-y-2">
-              <label className="text-sm font-medium text-muted-foreground">Darasa</label>
+              <label className="text-sm font-medium text-muted-foreground">Class</label>
               <Select value={selectedClass} onValueChange={setSelectedClass}>
                 <SelectTrigger>
-                  <SelectValue placeholder="Chagua darasa" />
+                  <SelectValue placeholder="Select class" />
                 </SelectTrigger>
                 <SelectContent>
                   {classes.map((cls) => (
-                    <SelectItem key={cls} value={cls}>Darasa {cls}</SelectItem>
+                    <SelectItem key={cls} value={cls}>Class {cls}</SelectItem>
                   ))}
                 </SelectContent>
               </Select>
             </div>
             <div className="space-y-2">
-              <label className="text-sm font-medium text-muted-foreground">Somo</label>
+              <label className="text-sm font-medium text-muted-foreground">Subject</label>
               <Select value={selectedSubject} onValueChange={setSelectedSubject}>
                 <SelectTrigger>
-                  <SelectValue placeholder="Chagua somo" />
+                  <SelectValue placeholder="Select subject" />
                 </SelectTrigger>
                 <SelectContent>
                   {subjects.map((subject) => (
@@ -271,10 +271,10 @@ export default function MarksEntryPage() {
               </Select>
             </div>
             <div className="space-y-2">
-              <label className="text-sm font-medium text-muted-foreground">Muhula</label>
+              <label className="text-sm font-medium text-muted-foreground">Term</label>
               <Select value={selectedTerm} onValueChange={setSelectedTerm}>
                 <SelectTrigger>
-                  <SelectValue placeholder="Chagua muhula" />
+                  <SelectValue placeholder="Select term" />
                 </SelectTrigger>
                 <SelectContent>
                   {terms.map((term) => (
@@ -284,10 +284,10 @@ export default function MarksEntryPage() {
               </Select>
             </div>
             <div className="space-y-2">
-              <label className="text-sm font-medium text-muted-foreground">Mwaka wa Masomo</label>
+              <label className="text-sm font-medium text-muted-foreground">Academic Year</label>
               <Select value={selectedYear} onValueChange={setSelectedYear}>
                 <SelectTrigger>
-                  <SelectValue placeholder="Chagua mwaka" />
+                  <SelectValue placeholder="Select year" />
                 </SelectTrigger>
                 <SelectContent>
                   {academicYears.map((year) => (
@@ -305,9 +305,9 @@ export default function MarksEntryPage() {
             <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4">
               <div>
                 <h3 className="font-display font-semibold text-lg text-card-foreground">
-                  Darasa {selectedClass} - {selectedSubjectData?.name || 'Chagua Somo'}
+                  Class {selectedClass} - {selectedSubjectData?.name || 'Select Subject'}
                 </h3>
-                <p className="text-sm text-muted-foreground">{marks.length} wanafunzi • {selectedTerm} • {selectedYear}</p>
+                <p className="text-sm text-muted-foreground">{marks.length} students • {selectedTerm} • {selectedYear}</p>
               </div>
               <Button 
                 className="btn-gradient"
@@ -317,12 +317,12 @@ export default function MarksEntryPage() {
                 {isSubmitting ? (
                   <>
                     <Loader2 className="w-4 h-4 mr-2 animate-spin" />
-                    Inahifadhi...
+                    Saving...
                   </>
                 ) : (
                   <>
                     <Save className="w-4 h-4 mr-2" />
-                    Hifadhi Alama
+                    Save Marks
                   </>
                 )}
               </Button>
@@ -332,25 +332,25 @@ export default function MarksEntryPage() {
           {isLoading ? (
             <div className="p-12 text-center">
               <Loader2 className="w-8 h-8 animate-spin mx-auto text-primary" />
-              <p className="text-muted-foreground mt-4">Inapakia wanafunzi...</p>
+              <p className="text-muted-foreground mt-4">Loading students...</p>
             </div>
           ) : marks.length === 0 ? (
             <div className="p-12 text-center">
-              <p className="text-muted-foreground">Hakuna wanafunzi katika darasa hili. Ongeza wanafunzi kwanza.</p>
+              <p className="text-muted-foreground">No students in this class. Add students first.</p>
             </div>
           ) : (
             <div className="overflow-x-auto">
               <table className="w-full">
                 <thead>
                   <tr className="bg-muted/50">
-                    <th className="text-left py-3 px-4 text-sm font-medium text-muted-foreground">Namba</th>
-                    <th className="text-left py-3 px-4 text-sm font-medium text-muted-foreground">Jina la Mwanafunzi</th>
+                    <th className="text-left py-3 px-4 text-sm font-medium text-muted-foreground">Roll No</th>
+                    <th className="text-left py-3 px-4 text-sm font-medium text-muted-foreground">Student Name</th>
                     <th className="text-center py-3 px-4 text-sm font-medium text-muted-foreground">
-                      <div>Mtihani</div>
+                      <div>Exam</div>
                       <div className="text-xs font-normal">(Max: {maxMarks})</div>
                     </th>
-                    <th className="text-center py-3 px-4 text-sm font-medium text-muted-foreground">Jumla</th>
-                    <th className="text-center py-3 px-4 text-sm font-medium text-muted-foreground">Daraja</th>
+                    <th className="text-center py-3 px-4 text-sm font-medium text-muted-foreground">Total</th>
+                    <th className="text-center py-3 px-4 text-sm font-medium text-muted-foreground">Grade</th>
                   </tr>
                 </thead>
                 <tbody>
@@ -391,7 +391,7 @@ export default function MarksEntryPage() {
 
         {/* Grading Info */}
         <div className="card-elevated p-6 animate-fade-in">
-          <h3 className="font-display font-semibold text-lg mb-4 text-card-foreground">Viwango vya Daraja</h3>
+          <h3 className="font-display font-semibold text-lg mb-4 text-card-foreground">Grading Scale</h3>
           <div className="flex flex-wrap gap-4">
             <div className="flex items-center gap-2">
               <GradeBadge grade="A" size="sm" />

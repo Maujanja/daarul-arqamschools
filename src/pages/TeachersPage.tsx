@@ -60,7 +60,7 @@ export default function TeachersPage() {
       setTeachers(data || []);
     } catch (error) {
       console.error('Error fetching teachers:', error);
-      toast.error('Imeshindwa kupata walimu');
+      toast.error('Failed to fetch teachers');
     } finally {
       setLoading(false);
     }
@@ -68,7 +68,7 @@ export default function TeachersPage() {
 
   const handleAddTeacher = async () => {
     if (!newTeacher.full_name || !newTeacher.email || !newTeacher.password) {
-      toast.error('Tafadhali jaza taarifa zote zinazohitajika');
+      toast.error('Please fill in all required fields');
       return;
     }
 
@@ -90,13 +90,13 @@ export default function TeachersPage() {
 
       if (error) throw error;
 
-      toast.success('Mwalimu ameongezwa kikamilifu');
+      toast.success('Teacher added successfully');
       setShowAddDialog(false);
       setNewTeacher({ full_name: '', email: '', password: '', subjects: '', classes: '' });
       fetchTeachers();
     } catch (error) {
       console.error('Error adding teacher:', error);
-      toast.error('Imeshindwa kuongeza mwalimu');
+      toast.error('Failed to add teacher');
     } finally {
       setSaving(false);
     }
@@ -110,11 +110,11 @@ export default function TeachersPage() {
         .eq('id', id);
 
       if (error) throw error;
-      toast.success('Mwalimu amefutwa');
+      toast.success('Teacher deleted');
       fetchTeachers();
     } catch (error) {
       console.error('Error deleting teacher:', error);
-      toast.error('Imeshindwa kufuta mwalimu');
+      toast.error('Failed to delete teacher');
     }
   };
 
@@ -139,12 +139,12 @@ export default function TeachersPage() {
         {/* Header */}
         <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4">
           <div>
-            <h1 className="text-3xl font-display font-bold text-foreground">Walimu</h1>
-            <p className="text-muted-foreground mt-1">Simamia taarifa za walimu na masomo yao</p>
+            <h1 className="text-3xl font-display font-bold text-foreground">Teachers</h1>
+            <p className="text-muted-foreground mt-1">Manage teacher information and their subjects</p>
           </div>
           <Button className="btn-gradient" onClick={() => setShowAddDialog(true)}>
             <Plus className="w-4 h-4 mr-2" />
-            Ongeza Mwalimu
+            Add Teacher
           </Button>
         </div>
 
@@ -153,7 +153,7 @@ export default function TeachersPage() {
           <div className="relative">
             <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-5 h-5 text-muted-foreground" />
             <Input
-              placeholder="Tafuta kwa jina au barua pepe..."
+              placeholder="Search by name or email..."
               value={searchQuery}
               onChange={(e) => setSearchQuery(e.target.value)}
               className="pl-10 input-enhanced"
@@ -180,13 +180,13 @@ export default function TeachersPage() {
                     </Button>
                   </DropdownMenuTrigger>
                   <DropdownMenuContent align="end">
-                    <DropdownMenuItem>Angalia Taarifa</DropdownMenuItem>
-                    <DropdownMenuItem>Hariri Taarifa</DropdownMenuItem>
+                    <DropdownMenuItem>View Details</DropdownMenuItem>
+                    <DropdownMenuItem>Edit Details</DropdownMenuItem>
                     <DropdownMenuItem 
                       className="text-destructive"
                       onClick={() => handleDeleteTeacher(teacher.id)}
                     >
-                      Futa
+                      Delete
                     </DropdownMenuItem>
                   </DropdownMenuContent>
                 </DropdownMenu>
@@ -204,18 +204,18 @@ export default function TeachersPage() {
                 <div className="flex items-start gap-2 text-sm">
                   <BookOpen className="w-4 h-4 text-muted-foreground mt-0.5" />
                   <div>
-                    <span className="text-muted-foreground">Masomo: </span>
+                    <span className="text-muted-foreground">Subjects: </span>
                     <span className="font-medium text-card-foreground">
-                      {teacher.subjects.length > 0 ? teacher.subjects.join(', ') : 'Hakuna'}
+                      {teacher.subjects.length > 0 ? teacher.subjects.join(', ') : 'None'}
                     </span>
                   </div>
                 </div>
                 <div className="flex items-start gap-2 text-sm">
                   <Users className="w-4 h-4 text-muted-foreground mt-0.5" />
                   <div>
-                    <span className="text-muted-foreground">Madarasa: </span>
+                    <span className="text-muted-foreground">Classes: </span>
                     <span className="font-medium text-card-foreground">
-                      {teacher.classes.length > 0 ? teacher.classes.join(', ') : 'Hakuna'}
+                      {teacher.classes.length > 0 ? teacher.classes.join(', ') : 'None'}
                     </span>
                   </div>
                 </div>
@@ -229,9 +229,9 @@ export default function TeachersPage() {
           <div className="card-elevated p-12 text-center animate-fade-in">
             <Users className="w-12 h-12 text-muted-foreground mx-auto mb-4" />
             <h3 className="font-display font-semibold text-lg text-card-foreground mb-2">
-              Hakuna walimu waliopatikana
+              No teachers found
             </h3>
-            <p className="text-muted-foreground">Jaribu kubadilisha vigezo vya utafutaji</p>
+            <p className="text-muted-foreground">Try adjusting your search criteria</p>
           </div>
         )}
       </div>
@@ -240,67 +240,67 @@ export default function TeachersPage() {
       <Dialog open={showAddDialog} onOpenChange={setShowAddDialog}>
         <DialogContent>
           <DialogHeader>
-            <DialogTitle>Ongeza Mwalimu Mpya</DialogTitle>
+            <DialogTitle>Add New Teacher</DialogTitle>
             <DialogDescription>
-              Jaza taarifa za mwalimu mpya hapa chini
+              Fill in the new teacher's information below
             </DialogDescription>
           </DialogHeader>
           <div className="space-y-4 py-4">
             <div className="space-y-2">
-              <Label htmlFor="name">Jina Kamili</Label>
+              <Label htmlFor="name">Full Name</Label>
               <Input
                 id="name"
                 value={newTeacher.full_name}
                 onChange={(e) => setNewTeacher({ ...newTeacher, full_name: e.target.value })}
-                placeholder="Mfano: John Doe"
+                placeholder="e.g. John Doe"
               />
             </div>
             <div className="space-y-2">
-              <Label htmlFor="email">Barua Pepe</Label>
+              <Label htmlFor="email">Email</Label>
               <Input
                 id="email"
                 type="email"
                 value={newTeacher.email}
                 onChange={(e) => setNewTeacher({ ...newTeacher, email: e.target.value })}
-                placeholder="mfano@shule.com"
+                placeholder="example@school.com"
               />
             </div>
             <div className="space-y-2">
-              <Label htmlFor="password">Nenosiri</Label>
+              <Label htmlFor="password">Password</Label>
               <Input
                 id="password"
                 type="password"
                 value={newTeacher.password}
                 onChange={(e) => setNewTeacher({ ...newTeacher, password: e.target.value })}
-                placeholder="Nenosiri la kuingia"
+                placeholder="Login password"
               />
             </div>
             <div className="space-y-2">
-              <Label htmlFor="subjects">Masomo (tenganisha kwa koma)</Label>
+              <Label htmlFor="subjects">Subjects (comma separated)</Label>
               <Input
                 id="subjects"
                 value={newTeacher.subjects}
                 onChange={(e) => setNewTeacher({ ...newTeacher, subjects: e.target.value })}
-                placeholder="Mfano: Hesabu, Kiswahili, English"
+                placeholder="e.g. Mathematics, English, Science"
               />
             </div>
             <div className="space-y-2">
-              <Label htmlFor="classes">Madarasa (tenganisha kwa koma)</Label>
+              <Label htmlFor="classes">Classes (comma separated)</Label>
               <Input
                 id="classes"
                 value={newTeacher.classes}
                 onChange={(e) => setNewTeacher({ ...newTeacher, classes: e.target.value })}
-                placeholder="Mfano: 10-A, 10-B, 9-A"
+                placeholder="e.g. 10-A, 10-B, 9-A"
               />
             </div>
           </div>
           <DialogFooter>
             <Button variant="outline" onClick={() => setShowAddDialog(false)}>
-              Ghairi
+              Cancel
             </Button>
             <Button onClick={handleAddTeacher} disabled={saving}>
               {saving && <Loader2 className="w-4 h-4 mr-2 animate-spin" />}
-              Hifadhi
+              Save
             </Button>
           </DialogFooter>
         </DialogContent>
