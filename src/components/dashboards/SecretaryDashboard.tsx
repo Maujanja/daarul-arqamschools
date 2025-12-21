@@ -89,8 +89,8 @@ export function SecretaryDashboard() {
   const handleAddPayment = async () => {
     if (!selectedStudentId || !paymentAmount) {
       toast({
-        title: "Kosa",
-        description: "Chagua mwanafunzi na weka kiasi cha malipo",
+        title: "Error",
+        description: "Please select a student and enter the payment amount",
         variant: "destructive"
       });
       return;
@@ -111,14 +111,14 @@ export function SecretaryDashboard() {
 
     if (error) {
       toast({
-        title: "Kosa",
-        description: "Imeshindikana kurekodi malipo",
+        title: "Error",
+        description: "Failed to record payment",
         variant: "destructive"
       });
     } else {
       toast({
-        title: "Imefanikiwa",
-        description: "Malipo yamerekodwa",
+        title: "Success",
+        description: "Payment has been recorded",
       });
       setShowAddPaymentDialog(false);
       resetPaymentForm();
@@ -171,42 +171,42 @@ export function SecretaryDashboard() {
       {/* Header */}
       <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4">
         <div>
-          <h1 className="text-3xl font-display font-bold text-foreground">Dashibodi ya Katibu</h1>
-          <p className="text-muted-foreground mt-1">Usimamizi wa Ada na Malipo</p>
+          <h1 className="text-3xl font-display font-bold text-foreground">Secretary Dashboard</h1>
+          <p className="text-muted-foreground mt-1">Fee and Payment Management</p>
         </div>
         <Button className="btn-gradient" onClick={() => setShowAddPaymentDialog(true)}>
           <Plus className="w-4 h-4 mr-2" />
-          Rekodi Malipo
+          Record Payment
         </Button>
       </div>
 
       {/* Stats Grid */}
       <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-6">
         <StatCard
-          title="Wanafunzi Wote"
+          title="Total Students"
           value={students.length.toString()}
-          subtitle="Wamesajiliwa"
+          subtitle="Registered"
           icon={Users}
           variant="primary"
         />
         <StatCard
-          title="Jumla Iliyokusanywa"
+          title="Total Collected"
           value={`TZS ${totalCollected.toLocaleString()}`}
-          subtitle="Mwaka huu"
+          subtitle="This year"
           icon={DollarSign}
           variant="success"
         />
         <StatCard
-          title="Wenye Madeni"
+          title="With Outstanding"
           value={studentsWithDebt.toString()}
-          subtitle="Wanafunzi"
+          subtitle="Students"
           icon={AlertTriangle}
           variant="warning"
         />
         <StatCard
-          title="Malipo ya Leo"
+          title="Today's Payments"
           value={feePayments.filter(p => p.payment_date === new Date().toISOString().split('T')[0]).length.toString()}
-          subtitle="Rekodi"
+          subtitle="Records"
           icon={TrendingUp}
           variant="accent"
         />
@@ -215,11 +215,11 @@ export function SecretaryDashboard() {
       {/* Students with Balance */}
       <div className="card-elevated p-6 animate-fade-in">
         <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4 mb-6">
-          <h3 className="font-display font-semibold text-lg text-card-foreground">Hali ya Malipo ya Wanafunzi</h3>
+          <h3 className="font-display font-semibold text-lg text-card-foreground">Student Payment Status</h3>
           <div className="relative w-full sm:w-64">
             <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-muted-foreground" />
             <Input
-              placeholder="Tafuta mwanafunzi..."
+              placeholder="Search student..."
               value={searchQuery}
               onChange={(e) => setSearchQuery(e.target.value)}
               className="pl-9"
@@ -231,12 +231,12 @@ export function SecretaryDashboard() {
           <table className="w-full">
             <thead>
               <tr className="border-b border-border">
-                <th className="text-left py-3 px-4 text-sm font-medium text-muted-foreground">Jina</th>
-                <th className="text-left py-3 px-4 text-sm font-medium text-muted-foreground">Darasa</th>
-                <th className="text-right py-3 px-4 text-sm font-medium text-muted-foreground">Ada Inayohitajika</th>
-                <th className="text-right py-3 px-4 text-sm font-medium text-muted-foreground">Kilicholipwa</th>
-                <th className="text-right py-3 px-4 text-sm font-medium text-muted-foreground">Deni</th>
-                <th className="text-right py-3 px-4 text-sm font-medium text-muted-foreground">Hatua</th>
+                <th className="text-left py-3 px-4 text-sm font-medium text-muted-foreground">Name</th>
+                <th className="text-left py-3 px-4 text-sm font-medium text-muted-foreground">Class</th>
+                <th className="text-right py-3 px-4 text-sm font-medium text-muted-foreground">Expected Fee</th>
+                <th className="text-right py-3 px-4 text-sm font-medium text-muted-foreground">Paid</th>
+                <th className="text-right py-3 px-4 text-sm font-medium text-muted-foreground">Balance</th>
+                <th className="text-right py-3 px-4 text-sm font-medium text-muted-foreground">Action</th>
               </tr>
             </thead>
             <tbody>
@@ -258,7 +258,7 @@ export function SecretaryDashboard() {
                       {balance > 0 ? (
                         <span className="text-destructive font-medium">TZS {balance.toLocaleString()}</span>
                       ) : (
-                        <span className="text-success font-medium">Hakuna</span>
+                        <span className="text-success font-medium">None</span>
                       )}
                     </td>
                     <td className="py-4 px-4 text-right">
@@ -270,7 +270,7 @@ export function SecretaryDashboard() {
                         }}
                       >
                         <Receipt className="w-3 h-3 mr-1" />
-                        Lipa
+                        Pay
                       </Button>
                     </td>
                   </tr>
@@ -283,16 +283,16 @@ export function SecretaryDashboard() {
 
       {/* Recent Payments */}
       <div className="card-elevated p-6 animate-fade-in">
-        <h3 className="font-display font-semibold text-lg mb-6 text-card-foreground">Malipo ya Hivi Karibuni</h3>
+        <h3 className="font-display font-semibold text-lg mb-6 text-card-foreground">Recent Payments</h3>
         <div className="overflow-x-auto">
           <table className="w-full">
             <thead>
               <tr className="border-b border-border">
-                <th className="text-left py-3 px-4 text-sm font-medium text-muted-foreground">Mwanafunzi</th>
-                <th className="text-left py-3 px-4 text-sm font-medium text-muted-foreground">Darasa</th>
-                <th className="text-left py-3 px-4 text-sm font-medium text-muted-foreground">Tarehe</th>
-                <th className="text-left py-3 px-4 text-sm font-medium text-muted-foreground">Njia</th>
-                <th className="text-right py-3 px-4 text-sm font-medium text-muted-foreground">Kiasi</th>
+                <th className="text-left py-3 px-4 text-sm font-medium text-muted-foreground">Student</th>
+                <th className="text-left py-3 px-4 text-sm font-medium text-muted-foreground">Class</th>
+                <th className="text-left py-3 px-4 text-sm font-medium text-muted-foreground">Date</th>
+                <th className="text-left py-3 px-4 text-sm font-medium text-muted-foreground">Method</th>
+                <th className="text-right py-3 px-4 text-sm font-medium text-muted-foreground">Amount</th>
               </tr>
             </thead>
             <tbody>
@@ -300,7 +300,7 @@ export function SecretaryDashboard() {
                 <tr key={payment.id} className="border-b border-border/50 table-row-hover">
                   <td className="py-4 px-4 font-medium text-card-foreground">{payment.students?.full_name || 'N/A'}</td>
                   <td className="py-4 px-4 text-card-foreground">{payment.students?.class || 'N/A'}</td>
-                  <td className="py-4 px-4 text-card-foreground">{new Date(payment.payment_date).toLocaleDateString('sw-TZ')}</td>
+                  <td className="py-4 px-4 text-card-foreground">{new Date(payment.payment_date).toLocaleDateString()}</td>
                   <td className="py-4 px-4 text-card-foreground">{payment.payment_method}</td>
                   <td className="py-4 px-4 text-right font-medium text-success">TZS {Number(payment.amount).toLocaleString()}</td>
                 </tr>
@@ -308,7 +308,7 @@ export function SecretaryDashboard() {
               {feePayments.length === 0 && (
                 <tr>
                   <td colSpan={5} className="py-8 text-center text-muted-foreground">
-                    Hakuna malipo yaliyorekodiwa
+                    No payments recorded yet
                   </td>
                 </tr>
               )}
@@ -321,14 +321,14 @@ export function SecretaryDashboard() {
       <Dialog open={showAddPaymentDialog} onOpenChange={setShowAddPaymentDialog}>
         <DialogContent>
           <DialogHeader>
-            <DialogTitle>Rekodi Malipo</DialogTitle>
+            <DialogTitle>Record Payment</DialogTitle>
           </DialogHeader>
           <div className="space-y-4 py-4">
             <div className="space-y-2">
-              <Label>Mwanafunzi</Label>
+              <Label>Student</Label>
               <Select value={selectedStudentId} onValueChange={setSelectedStudentId}>
                 <SelectTrigger>
-                  <SelectValue placeholder="Chagua mwanafunzi" />
+                  <SelectValue placeholder="Select student" />
                 </SelectTrigger>
                 <SelectContent>
                   {students.map((student) => (
@@ -341,42 +341,42 @@ export function SecretaryDashboard() {
             </div>
             
             <div className="space-y-2">
-              <Label>Kiasi (TZS)</Label>
+              <Label>Amount (TZS)</Label>
               <Input
                 type="number"
-                placeholder="Weka kiasi"
+                placeholder="Enter amount"
                 value={paymentAmount}
                 onChange={(e) => setPaymentAmount(e.target.value)}
               />
             </div>
             
             <div className="space-y-2">
-              <Label>Njia ya Malipo</Label>
+              <Label>Payment Method</Label>
               <Select value={paymentMethod} onValueChange={setPaymentMethod}>
                 <SelectTrigger>
                   <SelectValue />
                 </SelectTrigger>
                 <SelectContent>
-                  <SelectItem value="Cash">Taslimu</SelectItem>
-                  <SelectItem value="Bank Transfer">Benki</SelectItem>
-                  <SelectItem value="Mobile Money">Simu (M-Pesa/Tigo Pesa)</SelectItem>
+                  <SelectItem value="Cash">Cash</SelectItem>
+                  <SelectItem value="Bank Transfer">Bank Transfer</SelectItem>
+                  <SelectItem value="Mobile Money">Mobile Money (M-Pesa/Tigo Pesa)</SelectItem>
                 </SelectContent>
               </Select>
             </div>
             
             <div className="space-y-2">
-              <Label>Nambari ya Risiti (Hiari)</Label>
+              <Label>Receipt Number (Optional)</Label>
               <Input
-                placeholder="Weka nambari ya risiti"
+                placeholder="Enter receipt number"
                 value={receiptNumber}
                 onChange={(e) => setReceiptNumber(e.target.value)}
               />
             </div>
             
             <div className="space-y-2">
-              <Label>Maelezo (Hiari)</Label>
+              <Label>Notes (Optional)</Label>
               <Input
-                placeholder="Weka maelezo yoyote"
+                placeholder="Enter any notes"
                 value={paymentNotes}
                 onChange={(e) => setPaymentNotes(e.target.value)}
               />
@@ -384,16 +384,16 @@ export function SecretaryDashboard() {
           </div>
           <DialogFooter>
             <Button variant="outline" onClick={() => setShowAddPaymentDialog(false)}>
-              Ghairi
+              Cancel
             </Button>
             <Button onClick={handleAddPayment} disabled={isSubmitting}>
               {isSubmitting ? (
                 <>
                   <Loader2 className="w-4 h-4 mr-2 animate-spin" />
-                  Inahifadhi...
+                  Saving...
                 </>
               ) : (
-                'Hifadhi Malipo'
+                'Save Payment'
               )}
             </Button>
           </DialogFooter>

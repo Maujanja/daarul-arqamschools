@@ -93,8 +93,8 @@ export default function FeedbackPage() {
         const student = studentsData?.find(s => s.id === fb.student_id);
         return {
           ...fb,
-          parentName: parent?.full_name || 'Mzazi',
-          studentName: student?.full_name || 'Mwanafunzi',
+          parentName: parent?.full_name || 'Parent',
+          studentName: student?.full_name || 'Student',
           studentClass: student?.class || ''
         };
       });
@@ -135,8 +135,8 @@ export default function FeedbackPage() {
     
     if (!studentId) {
       toast({
-        title: "Kosa",
-        description: "Hakuna mwanafunzi aliyeunganishwa na akaunti yako",
+        title: "Error",
+        description: "No student linked to your account",
         variant: "destructive"
       });
       return;
@@ -153,14 +153,14 @@ export default function FeedbackPage() {
 
     if (error) {
       toast({
-        title: "Kosa",
-        description: "Imeshindikana kutuma maoni",
+        title: "Error",
+        description: "Failed to send feedback",
         variant: "destructive"
       });
     } else {
       toast({
-        title: "Imefanikiwa",
-        description: "Maoni yako yametumwa kwa Admin na Mwalimu",
+        title: "Success",
+        description: "Your feedback has been sent to Admin and Teacher",
       });
       setNewMessage('');
       fetchFeedback();
@@ -177,14 +177,14 @@ export default function FeedbackPage() {
 
     if (error) {
       toast({
-        title: "Kosa",
-        description: "Imeshindikana kubadilisha hali",
+        title: "Error",
+        description: "Failed to update status",
         variant: "destructive"
       });
     } else {
       toast({
-        title: "Imefanikiwa",
-        description: "Maoni yamekaguliwa",
+        title: "Success",
+        description: "Feedback marked as reviewed",
       });
       fetchFeedback();
     }
@@ -194,9 +194,9 @@ export default function FeedbackPage() {
     <DashboardLayout>
       <div className="space-y-8">
         <div>
-          <h1 className="text-3xl font-display font-bold text-foreground">Maoni</h1>
+          <h1 className="text-3xl font-display font-bold text-foreground">Feedback</h1>
           <p className="text-muted-foreground mt-1">
-            {isParent ? "Tuma maoni kwa walimu na uone majibu" : "Angalia na ujibu maoni ya wazazi"}
+            {isParent ? "Send feedback to teachers and view responses" : "View and respond to parent feedback"}
           </p>
         </div>
 
@@ -206,19 +206,19 @@ export default function FeedbackPage() {
               <div className="card-elevated p-6 animate-fade-in">
                 <h3 className="font-display font-semibold text-lg mb-4 text-card-foreground">
                   <MessageSquare className="w-5 h-5 inline mr-2 text-primary" />
-                  Tuma Maoni
+                  Send Feedback
                 </h3>
                 <form onSubmit={handleSubmit} className="space-y-4">
                   <div>
-                    <label className="text-sm font-medium text-muted-foreground">Mwanafunzi</label>
+                    <label className="text-sm font-medium text-muted-foreground">Student</label>
                     <div className="mt-1 p-3 rounded-lg bg-muted/50 text-card-foreground">
-                      {studentName || 'Hakuna mwanafunzi'}
+                      {studentName || 'No student linked'}
                     </div>
                   </div>
                   <div>
-                    <label className="text-sm font-medium text-muted-foreground">Ujumbe Wako</label>
+                    <label className="text-sm font-medium text-muted-foreground">Your Message</label>
                     <Textarea
-                      placeholder="Andika maoni yako hapa..."
+                      placeholder="Write your feedback here..."
                       value={newMessage}
                       onChange={(e) => setNewMessage(e.target.value)}
                       className="mt-1 min-h-[150px] input-enhanced"
@@ -232,12 +232,12 @@ export default function FeedbackPage() {
                     {submitting ? (
                       <>
                         <Loader2 className="w-4 h-4 mr-2 animate-spin" />
-                        Inatuma...
+                        Sending...
                       </>
                     ) : (
                       <>
                         <Send className="w-4 h-4 mr-2" />
-                        Tuma Maoni
+                        Send Feedback
                       </>
                     )}
                   </Button>
@@ -250,22 +250,22 @@ export default function FeedbackPage() {
             <div className="card-elevated animate-fade-in">
               <div className="p-6 border-b border-border">
                 <h3 className="font-display font-semibold text-lg text-card-foreground">
-                  {isParent ? "Historia ya Maoni Yako" : "Maoni ya Wazazi"}
+                  {isParent ? "Your Feedback History" : "Parent Feedback"}
                 </h3>
-                <p className="text-sm text-muted-foreground mt-1">{feedbackList.length} ujumbe</p>
+                <p className="text-sm text-muted-foreground mt-1">{feedbackList.length} messages</p>
               </div>
 
               {loading ? (
                 <div className="p-12 text-center">
                   <Loader2 className="w-8 h-8 animate-spin text-primary mx-auto" />
-                  <p className="text-muted-foreground mt-4">Inapakia...</p>
+                  <p className="text-muted-foreground mt-4">Loading...</p>
                 </div>
               ) : feedbackList.length === 0 ? (
                 <div className="p-12 text-center">
                   <MessageSquare className="w-12 h-12 text-muted-foreground mx-auto mb-4" />
-                  <h3 className="font-display font-semibold text-lg text-card-foreground mb-2">Hakuna maoni bado</h3>
+                  <h3 className="font-display font-semibold text-lg text-card-foreground mb-2">No feedback yet</h3>
                   <p className="text-muted-foreground">
-                    {isParent ? "Tuma maoni yako ya kwanza kwa walimu" : "Hakuna maoni yaliyopokelewa kutoka kwa wazazi"}
+                    {isParent ? "Send your first feedback to teachers" : "No feedback received from parents"}
                   </p>
                 </div>
               ) : (
@@ -281,17 +281,17 @@ export default function FeedbackPage() {
                             <div>
                               <p className="font-medium text-card-foreground">{feedback.parentName}</p>
                               <p className="text-sm text-muted-foreground">
-                                Kuhusu: {feedback.studentName} ({feedback.studentClass})
+                                About: {feedback.studentName} ({feedback.studentClass})
                               </p>
                             </div>
                             <div className="flex items-center gap-2">
                               {feedback.status === 'pending' ? (
                                 <span className="inline-flex items-center gap-1 px-2 py-1 rounded-full text-xs font-medium bg-warning/10 text-warning">
-                                  <Clock className="w-3 h-3" />Inasubiri
+                                  <Clock className="w-3 h-3" />Pending
                                 </span>
                               ) : (
                                 <span className="inline-flex items-center gap-1 px-2 py-1 rounded-full text-xs font-medium bg-success/10 text-success">
-                                  <CheckCircle className="w-3 h-3" />Imekaguliwa
+                                  <CheckCircle className="w-3 h-3" />Reviewed
                                 </span>
                               )}
                             </div>
@@ -299,7 +299,7 @@ export default function FeedbackPage() {
                           <p className="mt-3 text-card-foreground">{feedback.message}</p>
                           <div className="flex items-center gap-2 mt-3 text-xs text-muted-foreground">
                             <Calendar className="w-3 h-3" />
-                            {new Date(feedback.created_at).toLocaleDateString('sw-TZ', { year: 'numeric', month: 'long', day: 'numeric' })}
+                            {new Date(feedback.created_at).toLocaleDateString('en-US', { year: 'numeric', month: 'long', day: 'numeric' })}
                           </div>
                           {(isAdmin || isTeacher) && feedback.status === 'pending' && (
                             <div className="mt-4">
@@ -308,7 +308,7 @@ export default function FeedbackPage() {
                                 onClick={() => handleMarkReviewed(feedback.id)}
                               >
                                 <CheckCircle className="w-3 h-3 mr-1" />
-                                Weka kama Imekaguliwa
+                                Mark as Reviewed
                               </Button>
                             </div>
                           )}
