@@ -15,6 +15,7 @@ interface AuthContextType {
   loginAsAdmin: (username: string, password: string) => Promise<{ success: boolean; error?: string }>;
   loginAsTeacher: (name: string, password: string) => Promise<{ success: boolean; error?: string }>;
   loginAsParent: (studentName: string, rollNumber: string) => Promise<{ success: boolean; error?: string }>;
+  loginAsSecretary: (username: string, password: string) => Promise<{ success: boolean; error?: string }>;
   logout: () => void;
 }
 
@@ -125,6 +126,33 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
     }
   }, []);
 
+  const loginAsSecretary = useCallback(async (username: string, password: string) => {
+    try {
+      const { data, error } = await supabase
+        .from('secretary_credentials')
+        .select('*')
+        .eq('username', username)
+        .eq('password_hash', password)
+        .maybeSingle();
+
+      if (error || !data) {
+        return { success: false, error: 'Jina au nywila si sahihi' };
+      }
+
+      const authUser: AuthUser = {
+        id: data.id,
+        name: data.full_name,
+        role: 'secretary',
+      };
+
+      setUser(authUser);
+      localStorage.setItem(AUTH_STORAGE_KEY, JSON.stringify(authUser));
+      return { success: true };
+    } catch (error: any) {
+      return { success: false, error: error.message || 'Kuingia kumeshindikana' };
+    }
+  }, []);
+
   const logout = useCallback(() => {
     setUser(null);
     localStorage.removeItem(AUTH_STORAGE_KEY);
@@ -138,6 +166,7 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
       loginAsAdmin,
       loginAsTeacher,
       loginAsParent,
+      loginAsSecretary,
       logout,
     }}>
       {children}

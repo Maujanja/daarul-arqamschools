@@ -2,7 +2,7 @@ import { useState, useEffect } from 'react';
 import { StatCard } from '@/components/dashboard/StatCard';
 import { PerformanceChart } from '@/components/dashboard/PerformanceChart';
 import { GradeBadge } from '@/components/dashboard/GradeBadge';
-import { BookOpen, TrendingUp, Award, Download, MessageSquare, Calendar, Loader2 } from 'lucide-react';
+import { BookOpen, TrendingUp, Award, Download, MessageSquare, Calendar, Loader2, DollarSign, AlertTriangle } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { supabase } from '@/integrations/supabase/client';
 import { useAuth } from '@/contexts/AuthContext';
@@ -14,13 +14,27 @@ interface StudentMark {
   grade: string;
 }
 
+interface FeePayment {
+  amount: number;
+  payment_date: string;
+  payment_method: string;
+}
+
+interface FeeStructure {
+  total_fee: number;
+}
+
 export function ParentDashboard() {
   const { user } = useAuth();
   const [isLoading, setIsLoading] = useState(true);
   const [childName, setChildName] = useState('');
   const [childClass, setChildClass] = useState('');
+  const [studentId, setStudentId] = useState('');
   const [studentMarks, setStudentMarks] = useState<StudentMark[]>([]);
   const [overallAverage, setOverallAverage] = useState(0);
+  const [feePayments, setFeePayments] = useState<FeePayment[]>([]);
+  const [expectedFee, setExpectedFee] = useState(0);
+  const [paidAmount, setPaidAmount] = useState(0);
 
   useEffect(() => {
     const fetchChildData = async () => {
@@ -77,6 +91,7 @@ export function ParentDashboard() {
       
       setChildName(studentData.full_name);
       setChildClass(studentData.class);
+      setStudentId(studentData.id);
       
       // Get marks for this student
       const { data: marksData } = await supabase
@@ -104,11 +119,36 @@ export function ParentDashboard() {
         }
       }
       
+      // Get fee payments for this student
+      const { data: payments } = await supabase
+        .from('fee_payments')
+        .select('amount, payment_date, payment_method')
+        .eq('student_id', studentData.id);
+      
+      if (payments) {
+        setFeePayments(payments);
+        const totalPaid = payments.reduce((sum, p) => sum + Number(p.amount), 0);
+        setPaidAmount(totalPaid);
+      }
+      
+      // Get fee structure for this class
+      const { data: feeStructure } = await supabase
+        .from('fee_structure')
+        .select('total_fee')
+        .eq('class', studentData.class)
+        .maybeSingle();
+      
+      if (feeStructure) {
+        setExpectedFee(Number(feeStructure.total_fee));
+      }
+      
       setIsLoading(false);
     };
     
     fetchChildData();
   }, [user]);
+
+  const balance = expectedFee - paidAmount;
 
   const performanceData = studentMarks.map(m => ({
     name: m.subject.slice(0, 4),

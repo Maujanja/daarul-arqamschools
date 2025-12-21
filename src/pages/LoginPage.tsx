@@ -5,7 +5,7 @@ import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
-import { Lock, Eye, EyeOff, AlertCircle, User, Hash, UserCheck } from 'lucide-react';
+import { Lock, Eye, EyeOff, AlertCircle, User, Hash, UserCheck, FileText } from 'lucide-react';
 import { useToast } from '@/hooks/use-toast';
 import { UserRole } from '@/types';
 import dasLogo from '@/assets/das-logo.png';
@@ -23,11 +23,15 @@ export default function LoginPage() {
   const [studentName, setStudentName] = useState('');
   const [studentRollNumber, setStudentRollNumber] = useState('');
   
+  // Secretary login
+  const [secretaryUsername, setSecretaryUsername] = useState('');
+  const [secretaryPassword, setSecretaryPassword] = useState('');
+  
   const [showPassword, setShowPassword] = useState(false);
   const [isLoading, setIsLoading] = useState(false);
   const [error, setError] = useState('');
   
-  const { loginAsAdmin, loginAsTeacher, loginAsParent, isAuthenticated, isLoading: authLoading } = useAuth();
+  const { loginAsAdmin, loginAsTeacher, loginAsParent, loginAsSecretary, isAuthenticated, isLoading: authLoading } = useAuth();
   const navigate = useNavigate();
   const { toast } = useToast();
 
@@ -88,12 +92,33 @@ export default function LoginPage() {
       const result = await loginAsParent(studentName, studentRollNumber);
       if (result.success) {
         toast({
-          title: "Welcome Parent!",
-          description: "You have successfully logged in.",
+          title: "Karibu Mzazi!",
+          description: "Umeingia kikamilifu.",
         });
         navigate('/dashboard');
       } else {
         setError(result.error || 'Invalid student name or ID');
+      }
+    } finally {
+      setIsLoading(false);
+    }
+  };
+
+  const handleSecretaryLogin = async (e: React.FormEvent) => {
+    e.preventDefault();
+    setError('');
+    setIsLoading(true);
+
+    try {
+      const result = await loginAsSecretary(secretaryUsername, secretaryPassword);
+      if (result.success) {
+        toast({
+          title: "Karibu Katibu!",
+          description: "Umeingia kikamilifu.",
+        });
+        navigate('/dashboard');
+      } else {
+        setError(result.error || 'Invalid username or password');
       }
     } finally {
       setIsLoading(false);
@@ -155,6 +180,15 @@ export default function LoginPage() {
                 <p className="text-sm text-primary-foreground/70">Login with your child's name and ID</p>
               </div>
             </div>
+            <div className="flex items-start gap-4">
+              <div className="w-10 h-10 rounded-lg bg-primary/20 backdrop-blur-sm flex items-center justify-center shrink-0">
+                <FileText className="w-5 h-5" />
+              </div>
+              <div>
+                <h3 className="font-semibold mb-1">Secretary</h3>
+                <p className="text-sm text-primary-foreground/70">Login to manage fees and payments</p>
+              </div>
+            </div>
           </div>
         </div>
       </div>
@@ -177,10 +211,11 @@ export default function LoginPage() {
           )}
 
           <Tabs defaultValue="admin" className="w-full">
-            <TabsList className="grid w-full grid-cols-3">
+            <TabsList className="grid w-full grid-cols-4">
               <TabsTrigger value="admin">Admin</TabsTrigger>
-              <TabsTrigger value="teacher">Teacher</TabsTrigger>
-              <TabsTrigger value="parent">Parent</TabsTrigger>
+              <TabsTrigger value="teacher">Mwalimu</TabsTrigger>
+              <TabsTrigger value="parent">Mzazi</TabsTrigger>
+              <TabsTrigger value="secretary">Katibu</TabsTrigger>
             </TabsList>
 
             {/* Admin Login */}
@@ -372,6 +407,73 @@ export default function LoginPage() {
                     </span>
                   ) : (
                     'Login'
+                  )}
+                </Button>
+              </form>
+            </TabsContent>
+
+            {/* Secretary Login */}
+            <TabsContent value="secretary" className="space-y-6 mt-6">
+              <div className="text-center lg:text-left">
+                <h2 className="text-2xl font-display font-bold text-foreground">Katibu</h2>
+                <p className="text-muted-foreground mt-2">Ingia kusimamia ada na malipo</p>
+              </div>
+
+              <form onSubmit={handleSecretaryLogin} className="space-y-6">
+                <div className="space-y-2">
+                  <Label htmlFor="secretary-username">Jina la Mtumiaji</Label>
+                  <div className="relative">
+                    <User className="absolute left-3 top-1/2 -translate-y-1/2 w-5 h-5 text-muted-foreground" />
+                    <Input
+                      id="secretary-username"
+                      type="text"
+                      placeholder="Weka jina la mtumiaji"
+                      value={secretaryUsername}
+                      onChange={(e) => setSecretaryUsername(e.target.value)}
+                      className="pl-10 input-enhanced"
+                      required
+                    />
+                  </div>
+                </div>
+
+                <div className="space-y-2">
+                  <Label htmlFor="secretary-password">Nywila</Label>
+                  <div className="relative">
+                    <Lock className="absolute left-3 top-1/2 -translate-y-1/2 w-5 h-5 text-muted-foreground" />
+                    <Input
+                      id="secretary-password"
+                      type={showPassword ? 'text' : 'password'}
+                      placeholder="Weka nywila"
+                      value={secretaryPassword}
+                      onChange={(e) => setSecretaryPassword(e.target.value)}
+                      className="pl-10 pr-10 input-enhanced"
+                      required
+                    />
+                    <button
+                      type="button"
+                      onClick={() => setShowPassword(!showPassword)}
+                      className="absolute right-3 top-1/2 -translate-y-1/2 text-muted-foreground hover:text-foreground transition-colors"
+                    >
+                      {showPassword ? <EyeOff className="w-5 h-5" /> : <Eye className="w-5 h-5" />}
+                    </button>
+                  </div>
+                </div>
+
+                <Button 
+                  type="submit" 
+                  className="w-full btn-gradient h-12 text-base"
+                  disabled={isLoading}
+                >
+                  {isLoading ? (
+                    <span className="flex items-center gap-2">
+                      <svg className="animate-spin h-5 w-5" viewBox="0 0 24 24">
+                        <circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4" fill="none" />
+                        <path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z" />
+                      </svg>
+                      Inaingia...
+                    </span>
+                  ) : (
+                    'Ingia'
                   )}
                 </Button>
               </form>
