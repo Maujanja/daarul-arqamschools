@@ -107,7 +107,7 @@ export default function StudentsPage() {
 
   const handleAddStudent = async () => {
     if (!newStudent.full_name || !newStudent.roll_number || !newStudent.class) {
-      toast.error('Tafadhali jaza taarifa zote zinazohitajika');
+      toast.error('Please fill in all required fields');
       return;
     }
 
@@ -125,7 +125,7 @@ export default function StudentsPage() {
 
       if (error) throw error;
 
-      toast.success('Mwanafunzi ameongezwa kikamilifu!');
+      toast.success('Student added successfully!');
       setShowAddDialog(false);
       setNewStudent({
         full_name: '',
@@ -136,7 +136,7 @@ export default function StudentsPage() {
       fetchStudents();
     } catch (error: any) {
       console.error('Error adding student:', error);
-      toast.error(error.message || 'Imeshindwa kuongeza mwanafunzi');
+      toast.error(error.message || 'Failed to add student');
     } finally {
       setSaving(false);
     }
@@ -150,11 +150,11 @@ export default function StudentsPage() {
         .eq('id', id);
 
       if (error) throw error;
-      toast.success('Mwanafunzi amefutwa');
+      toast.success('Student deleted');
       fetchStudents();
     } catch (error) {
       console.error('Error deleting student:', error);
-      toast.error('Imeshindwa kufuta mwanafunzi');
+      toast.error('Failed to delete student');
     }
   };
 
@@ -203,16 +203,16 @@ export default function StudentsPage() {
         academicYear,
       });
 
-      toast.success('Ripoti imepakuliwa!');
+      toast.success('Report downloaded!');
     } catch (error) {
       console.error('Error generating PDF:', error);
-      toast.error('Imeshindikana kupakua ripoti');
+      toast.error('Failed to download report');
     }
   };
 
   const handleDownloadAllReports = () => {
     if (filteredStudents.length === 0) {
-      toast.error('Hakuna wanafunzi wa kutengeneza ripoti');
+      toast.error('No students to generate report');
       return;
     }
     
@@ -225,7 +225,7 @@ export default function StudentsPage() {
     }));
 
     generateAllStudentsReportPDF(studentsData, 'Term 1', '2024-2025');
-    toast.success('Ripoti ya wanafunzi wote imepakuliwa!');
+    toast.success('All students report downloaded!');
   };
 
   if (loading) {
@@ -244,8 +244,8 @@ export default function StudentsPage() {
         {/* Header */}
         <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4">
           <div>
-            <h1 className="text-3xl font-display font-bold text-foreground">Wanafunzi</h1>
-            <p className="text-muted-foreground mt-1">Simamia rekodi za wanafunzi na taarifa za kitaaluma</p>
+            <h1 className="text-3xl font-display font-bold text-foreground">Students</h1>
+            <p className="text-muted-foreground mt-1">Manage student records and academic information</p>
           </div>
           <div className="flex gap-2">
             {filteredStudents.length > 0 && (
@@ -256,7 +256,7 @@ export default function StudentsPage() {
             )}
             <Button className="btn-gradient" onClick={() => setShowAddDialog(true)}>
               <Plus className="w-4 h-4 mr-2" />
-              Ongeza Mwanafunzi
+              Add Student
             </Button>
           </div>
         </div>
@@ -267,7 +267,7 @@ export default function StudentsPage() {
             <div className="relative flex-1">
               <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-5 h-5 text-muted-foreground" />
               <Input
-                placeholder="Tafuta kwa jina au namba ya usajili..."
+                placeholder="Search by name or roll number..."
                 value={searchQuery}
                 onChange={(e) => setSearchQuery(e.target.value)}
                 className="pl-10 input-enhanced"
@@ -275,12 +275,12 @@ export default function StudentsPage() {
             </div>
             <Select value={selectedClass} onValueChange={setSelectedClass}>
               <SelectTrigger className="w-full sm:w-48">
-                <SelectValue placeholder="Chagua darasa" />
+                <SelectValue placeholder="Select class" />
               </SelectTrigger>
               <SelectContent>
-                <SelectItem value="all">Madarasa Yote</SelectItem>
+                <SelectItem value="all">All Classes</SelectItem>
                 {classes.slice(1).map((cls) => (
-                  <SelectItem key={cls} value={cls}>Darasa {cls}</SelectItem>
+                  <SelectItem key={cls} value={cls}>Class {cls}</SelectItem>
                 ))}
               </SelectContent>
             </Select>
@@ -307,42 +307,42 @@ export default function StudentsPage() {
                       </Button>
                     </DropdownMenuTrigger>
                     <DropdownMenuContent align="end">
-                      <DropdownMenuItem>Tazama Wasifu</DropdownMenuItem>
-                      <DropdownMenuItem>Tazama Alama</DropdownMenuItem>
+                      <DropdownMenuItem>View Profile</DropdownMenuItem>
+                      <DropdownMenuItem>View Marks</DropdownMenuItem>
                       <DropdownMenuItem onClick={() => handleDownloadStudentReport(student)}>
                         <FileText className="w-4 h-4 mr-2" />
-                        Pakua Ripoti
+                        Download Report
                       </DropdownMenuItem>
-                      <DropdownMenuItem>Hariri</DropdownMenuItem>
+                      <DropdownMenuItem>Edit</DropdownMenuItem>
                       <DropdownMenuItem 
                         className="text-destructive"
                         onClick={() => handleDeleteStudent(student.id)}
                       >
-                        Futa
+                        Delete
                       </DropdownMenuItem>
                     </DropdownMenuContent>
                   </DropdownMenu>
                 </div>
 
                 <h3 className="font-display font-semibold text-lg text-card-foreground mb-1">{student.full_name}</h3>
-                <p className="text-sm text-muted-foreground mb-4">Namba: {student.roll_number}</p>
+                <p className="text-sm text-muted-foreground mb-4">Roll No: {student.roll_number}</p>
 
                 <div className="space-y-3">
                   <div className="flex items-center gap-2 text-sm">
                     <GraduationCap className="w-4 h-4 text-muted-foreground" />
-                    <span className="text-muted-foreground">Darasa:</span>
+                    <span className="text-muted-foreground">Class:</span>
                     <span className="font-medium text-card-foreground">{student.class}</span>
                   </div>
                   <div className="flex items-center gap-2 text-sm">
                     <Calendar className="w-4 h-4 text-muted-foreground" />
-                    <span className="text-muted-foreground">Usajili:</span>
+                    <span className="text-muted-foreground">Admission:</span>
                     <span className="font-medium text-card-foreground">{new Date(student.admission_date).toLocaleDateString()}</span>
                   </div>
                 </div>
 
                 <div className="mt-4 pt-4 border-t border-border flex items-center justify-between">
                   <div>
-                    <p className="text-xs text-muted-foreground">Wastani</p>
+                    <p className="text-xs text-muted-foreground">Average</p>
                     <p className="font-bold text-primary">{student.averageMarks}%</p>
                   </div>
                   <GradeBadge grade={student.grade} />
@@ -355,14 +355,14 @@ export default function StudentsPage() {
           <div className="card-elevated p-12 text-center animate-fade-in">
             <GraduationCap className="w-16 h-16 text-muted-foreground mx-auto mb-4" />
             <h3 className="font-display font-semibold text-xl text-card-foreground mb-2">
-              Hakuna wanafunzi waliosajiliwa
+              No students registered
             </h3>
             <p className="text-muted-foreground mb-6">
-              Anza kwa kuongeza wanafunzi wapya kwenye mfumo
+              Start by adding new students to the system
             </p>
             <Button className="btn-gradient" onClick={() => setShowAddDialog(true)}>
               <Plus className="w-4 h-4 mr-2" />
-              Ongeza Mwanafunzi wa Kwanza
+              Add First Student
             </Button>
           </div>
         )}
@@ -372,41 +372,41 @@ export default function StudentsPage() {
       <Dialog open={showAddDialog} onOpenChange={setShowAddDialog}>
         <DialogContent>
           <DialogHeader>
-            <DialogTitle>Ongeza Mwanafunzi Mpya</DialogTitle>
+            <DialogTitle>Add New Student</DialogTitle>
             <DialogDescription>
-              Jaza taarifa za mwanafunzi mpya hapa chini
+              Fill in the new student's information below
             </DialogDescription>
           </DialogHeader>
           <div className="space-y-4 py-4">
             <div className="space-y-2">
-              <Label htmlFor="full_name">Jina Kamili</Label>
+              <Label htmlFor="full_name">Full Name</Label>
               <Input
                 id="full_name"
                 value={newStudent.full_name}
                 onChange={(e) => setNewStudent({ ...newStudent, full_name: e.target.value })}
-                placeholder="Mfano: Juma Hassan"
+                placeholder="e.g. John Doe"
               />
             </div>
             <div className="space-y-2">
-              <Label htmlFor="roll_number">Namba ya Usajili</Label>
+              <Label htmlFor="roll_number">Roll Number</Label>
               <Input
                 id="roll_number"
                 value={newStudent.roll_number}
                 onChange={(e) => setNewStudent({ ...newStudent, roll_number: e.target.value })}
-                placeholder="Mfano: STD001"
+                placeholder="e.g. STD001"
               />
             </div>
             <div className="space-y-2">
-              <Label htmlFor="class">Darasa</Label>
+              <Label htmlFor="class">Class</Label>
               <Input
                 id="class"
                 value={newStudent.class}
                 onChange={(e) => setNewStudent({ ...newStudent, class: e.target.value })}
-                placeholder="Mfano: Form 1A"
+                placeholder="e.g. Form 1A"
               />
             </div>
             <div className="space-y-2">
-              <Label htmlFor="admission_date">Tarehe ya Usajili</Label>
+              <Label htmlFor="admission_date">Admission Date</Label>
               <Input
                 id="admission_date"
                 type="date"
@@ -417,11 +417,11 @@ export default function StudentsPage() {
           </div>
           <DialogFooter>
             <Button variant="outline" onClick={() => setShowAddDialog(false)}>
-              Ghairi
+              Cancel
             </Button>
             <Button onClick={handleAddStudent} disabled={saving}>
               {saving && <Loader2 className="w-4 h-4 mr-2 animate-spin" />}
-              Hifadhi
+              Save
             </Button>
           </DialogFooter>
         </DialogContent>

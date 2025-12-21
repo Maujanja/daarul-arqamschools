@@ -83,8 +83,8 @@ export function Sidebar() {
             <div className="flex items-center gap-3">
               <img src={dasLogo} alt="Daarul Arqam Logo" className="w-12 h-12 object-contain" />
               <div>
-                <h1 className="font-display font-bold text-sidebar-foreground text-sm leading-tight">DAARUL ARQAM</h1>
-                <p className="text-xs text-sidebar-foreground/60">EXAMS REPORTS</p>
+                <h1 className="font-display font-bold text-sidebar-foreground text-sm leading-tight">DAARUL-ARQAM</h1>
+                <p className="text-xs text-sidebar-foreground/60">SCHOOLS</p>
               </div>
             </div>
           </div>
