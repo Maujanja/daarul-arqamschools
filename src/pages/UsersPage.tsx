@@ -38,6 +38,7 @@ interface Teacher {
   id: string;
   full_name: string;
   email: string;
+  password_hash: string | null;
   subjects: string[];
   classes: string[];
 }
@@ -81,6 +82,26 @@ export default function UsersPage() {
     full_name: '',
     email: '',
     phone: '',
+  });
+
+  // Teacher Management
+  const [showViewTeacherDialog, setShowViewTeacherDialog] = useState(false);
+  const [showEditTeacherDialog, setShowEditTeacherDialog] = useState(false);
+  const [selectedTeacher, setSelectedTeacher] = useState<Teacher | null>(null);
+  const [editTeacher, setEditTeacher] = useState({
+    full_name: '',
+    email: '',
+    password: '',
+    subjects: '',
+    classes: '',
+  });
+  const [showAddTeacherDialog, setShowAddTeacherDialog] = useState(false);
+  const [newTeacher, setNewTeacher] = useState({
+    full_name: '',
+    email: '',
+    password: '',
+    subjects: '',
+    classes: '',
   });
 
   useEffect(() => {
@@ -199,6 +220,114 @@ export default function UsersPage() {
     }
   };
 
+  // Teacher Management Functions
+  const handleViewTeacher = (teacher: Teacher) => {
+    setSelectedTeacher(teacher);
+    setShowViewTeacherDialog(true);
+  };
+
+  const handleOpenEditTeacher = (teacher: Teacher) => {
+    setSelectedTeacher(teacher);
+    setEditTeacher({
+      full_name: teacher.full_name,
+      email: teacher.email,
+      password: '',
+      subjects: teacher.subjects.join(', '),
+      classes: teacher.classes.join(', '),
+    });
+    setShowEditTeacherDialog(true);
+  };
+
+  const handleEditTeacher = async () => {
+    if (!selectedTeacher || !editTeacher.full_name || !editTeacher.email) {
+      toast.error('Please fill in all required fields');
+      return;
+    }
+
+    try {
+      setSaving(true);
+      
+      const subjectsArray = editTeacher.subjects.split(',').map(s => s.trim()).filter(Boolean);
+      const classesArray = editTeacher.classes.split(',').map(c => c.trim()).filter(Boolean);
+
+      const updateData: any = {
+        full_name: editTeacher.full_name,
+        email: editTeacher.email,
+        subjects: subjectsArray,
+        classes: classesArray,
+      };
+
+      if (editTeacher.password) {
+        updateData.password_hash = editTeacher.password;
+      }
+
+      const { error } = await supabase
+        .from('teachers')
+        .update(updateData)
+        .eq('id', selectedTeacher.id);
+
+      if (error) throw error;
+
+      toast.success('Teacher updated successfully');
+      setShowEditTeacherDialog(false);
+      setSelectedTeacher(null);
+      fetchData();
+    } catch (error) {
+      console.error('Error updating teacher:', error);
+      toast.error('Failed to update teacher');
+    } finally {
+      setSaving(false);
+    }
+  };
+
+  const handleAddTeacher = async () => {
+    if (!newTeacher.full_name || !newTeacher.email || !newTeacher.password) {
+      toast.error('Please fill in all required fields');
+      return;
+    }
+
+    try {
+      setSaving(true);
+      
+      const subjectsArray = newTeacher.subjects.split(',').map(s => s.trim()).filter(Boolean);
+      const classesArray = newTeacher.classes.split(',').map(c => c.trim()).filter(Boolean);
+
+      const { error } = await supabase
+        .from('teachers')
+        .insert({
+          full_name: newTeacher.full_name,
+          email: newTeacher.email,
+          password_hash: newTeacher.password,
+          subjects: subjectsArray,
+          classes: classesArray,
+        });
+
+      if (error) throw error;
+
+      toast.success('Teacher added successfully');
+      setShowAddTeacherDialog(false);
+      setNewTeacher({ full_name: '', email: '', password: '', subjects: '', classes: '' });
+      fetchData();
+    } catch (error) {
+      console.error('Error adding teacher:', error);
+      toast.error('Failed to add teacher');
+    } finally {
+      setSaving(false);
+    }
+  };
+
+  const handleDeleteTeacher = async (id: string) => {
+    try {
+      const { error } = await supabase.from('teachers').delete().eq('id', id);
+      if (error) throw error;
+      toast.success('Teacher deleted');
+      fetchData();
+    } catch (error) {
+      console.error('Error deleting teacher:', error);
+      toast.error('Failed to delete teacher');
+    }
+  };
+
   const filteredTeachers = teachers.filter(t =>
     t.full_name.toLowerCase().includes(searchQuery.toLowerCase())
   );
@@ -263,17 +392,57 @@ export default function UsersPage() {
 
           {/* Teachers Tab */}
           <TabsContent value="teachers">
+            <div className="flex justify-end mb-4">
+              <Button onClick={() => setShowAddTeacherDialog(true)}>
+                <Plus className="w-4 h-4 mr-2" />
+                Add Teacher
+              </Button>
+            </div>
             <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
               {filteredTeachers.map((teacher) => (
                 <div key={teacher.id} className="card-elevated p-4">
-                  <div className="flex items-center gap-3">
-                    <div className="w-10 h-10 rounded-full bg-accent/20 flex items-center justify-center">
-                      <Shield className="w-5 h-5 text-accent" />
+                  <div className="flex items-start justify-between">
+                    <div className="flex items-center gap-3">
+                      <div className="w-10 h-10 rounded-full bg-accent/20 flex items-center justify-center">
+                        <Shield className="w-5 h-5 text-accent" />
+                      </div>
+                      <div className="flex-1 min-w-0">
+                        <p className="font-medium text-card-foreground truncate">{teacher.full_name}</p>
+                        <p className="text-xs text-muted-foreground truncate">{teacher.email}</p>
+                      </div>
                     </div>
-                    <div className="flex-1 min-w-0">
-                      <p className="font-medium text-card-foreground truncate">{teacher.full_name}</p>
-                      <p className="text-xs text-muted-foreground truncate">{teacher.email}</p>
-                    </div>
+                    <DropdownMenu>
+                      <DropdownMenuTrigger asChild>
+                        <Button variant="ghost" size="icon" className="h-8 w-8">
+                          <MoreHorizontal className="h-4 w-4" />
+                        </Button>
+                      </DropdownMenuTrigger>
+                      <DropdownMenuContent align="end">
+                        <DropdownMenuItem onClick={() => handleViewTeacher(teacher)}>
+                          View Details
+                        </DropdownMenuItem>
+                        <DropdownMenuItem onClick={() => handleOpenEditTeacher(teacher)}>
+                          Edit Details
+                        </DropdownMenuItem>
+                        <DropdownMenuItem 
+                          className="text-destructive"
+                          onClick={() => handleDeleteTeacher(teacher.id)}
+                        >
+                          Delete
+                        </DropdownMenuItem>
+                      </DropdownMenuContent>
+                    </DropdownMenu>
+                  </div>
+                  <div className="mt-3 pt-3 border-t space-y-1">
+                    <p className="text-xs text-muted-foreground">
+                      <span className="font-medium">Password:</span> {teacher.password_hash || 'Not set'}
+                    </p>
+                    <p className="text-xs text-muted-foreground">
+                      <span className="font-medium">Subjects:</span> {teacher.subjects.length > 0 ? teacher.subjects.join(', ') : 'None'}
+                    </p>
+                    <p className="text-xs text-muted-foreground">
+                      <span className="font-medium">Classes:</span> {teacher.classes.length > 0 ? teacher.classes.join(', ') : 'None'}
+                    </p>
                   </div>
                 </div>
               ))}
@@ -486,6 +655,186 @@ export default function UsersPage() {
               Cancel
             </Button>
             <Button onClick={handleAddParent} disabled={saving}>
+              {saving && <Loader2 className="w-4 h-4 mr-2 animate-spin" />}
+              Save
+            </Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
+
+      {/* View Teacher Dialog */}
+      <Dialog open={showViewTeacherDialog} onOpenChange={setShowViewTeacherDialog}>
+        <DialogContent>
+          <DialogHeader>
+            <DialogTitle>Teacher Details</DialogTitle>
+            <DialogDescription>
+              Viewing information for {selectedTeacher?.full_name}
+            </DialogDescription>
+          </DialogHeader>
+          {selectedTeacher && (
+            <div className="space-y-4 py-4">
+              <div className="flex items-center gap-4">
+                <div className="w-16 h-16 rounded-xl bg-gradient-to-br from-accent to-success flex items-center justify-center text-primary-foreground font-bold text-xl">
+                  {selectedTeacher.full_name.split(' ').map(n => n[0]).join('')}
+                </div>
+                <div>
+                  <h3 className="font-semibold text-lg">{selectedTeacher.full_name}</h3>
+                  <p className="text-muted-foreground">{selectedTeacher.email}</p>
+                </div>
+              </div>
+              <div className="space-y-3 pt-4 border-t">
+                <div>
+                  <Label className="text-muted-foreground">Password</Label>
+                  <p className="font-medium font-mono bg-muted px-2 py-1 rounded">
+                    {selectedTeacher.password_hash || 'Not set'}
+                  </p>
+                </div>
+                <div>
+                  <Label className="text-muted-foreground">Subjects</Label>
+                  <p className="font-medium">
+                    {selectedTeacher.subjects.length > 0 ? selectedTeacher.subjects.join(', ') : 'None assigned'}
+                  </p>
+                </div>
+                <div>
+                  <Label className="text-muted-foreground">Classes</Label>
+                  <p className="font-medium">
+                    {selectedTeacher.classes.length > 0 ? selectedTeacher.classes.join(', ') : 'None assigned'}
+                  </p>
+                </div>
+              </div>
+            </div>
+          )}
+          <DialogFooter>
+            <Button onClick={() => setShowViewTeacherDialog(false)}>Close</Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
+
+      {/* Edit Teacher Dialog */}
+      <Dialog open={showEditTeacherDialog} onOpenChange={setShowEditTeacherDialog}>
+        <DialogContent>
+          <DialogHeader>
+            <DialogTitle>Edit Teacher</DialogTitle>
+            <DialogDescription>Update teacher information</DialogDescription>
+          </DialogHeader>
+          <div className="space-y-4 py-4">
+            <div className="space-y-2">
+              <Label htmlFor="edit_teacher_name">Full Name</Label>
+              <Input
+                id="edit_teacher_name"
+                value={editTeacher.full_name}
+                onChange={(e) => setEditTeacher({ ...editTeacher, full_name: e.target.value })}
+              />
+            </div>
+            <div className="space-y-2">
+              <Label htmlFor="edit_teacher_email">Email</Label>
+              <Input
+                id="edit_teacher_email"
+                type="email"
+                value={editTeacher.email}
+                onChange={(e) => setEditTeacher({ ...editTeacher, email: e.target.value })}
+              />
+            </div>
+            <div className="space-y-2">
+              <Label htmlFor="edit_teacher_password">Password (leave empty to keep current)</Label>
+              <Input
+                id="edit_teacher_password"
+                type="text"
+                value={editTeacher.password}
+                onChange={(e) => setEditTeacher({ ...editTeacher, password: e.target.value })}
+                placeholder="New password"
+              />
+            </div>
+            <div className="space-y-2">
+              <Label htmlFor="edit_teacher_subjects">Subjects (comma separated)</Label>
+              <Input
+                id="edit_teacher_subjects"
+                value={editTeacher.subjects}
+                onChange={(e) => setEditTeacher({ ...editTeacher, subjects: e.target.value })}
+              />
+            </div>
+            <div className="space-y-2">
+              <Label htmlFor="edit_teacher_classes">Classes (comma separated)</Label>
+              <Input
+                id="edit_teacher_classes"
+                value={editTeacher.classes}
+                onChange={(e) => setEditTeacher({ ...editTeacher, classes: e.target.value })}
+              />
+            </div>
+          </div>
+          <DialogFooter>
+            <Button variant="outline" onClick={() => setShowEditTeacherDialog(false)}>
+              Cancel
+            </Button>
+            <Button onClick={handleEditTeacher} disabled={saving}>
+              {saving && <Loader2 className="w-4 h-4 mr-2 animate-spin" />}
+              Save Changes
+            </Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
+
+      {/* Add Teacher Dialog */}
+      <Dialog open={showAddTeacherDialog} onOpenChange={setShowAddTeacherDialog}>
+        <DialogContent>
+          <DialogHeader>
+            <DialogTitle>Add Teacher</DialogTitle>
+            <DialogDescription>Fill in the new teacher's information</DialogDescription>
+          </DialogHeader>
+          <div className="space-y-4 py-4">
+            <div className="space-y-2">
+              <Label htmlFor="new_teacher_name">Full Name</Label>
+              <Input
+                id="new_teacher_name"
+                value={newTeacher.full_name}
+                onChange={(e) => setNewTeacher({ ...newTeacher, full_name: e.target.value })}
+                placeholder="e.g. John Doe"
+              />
+            </div>
+            <div className="space-y-2">
+              <Label htmlFor="new_teacher_email">Email</Label>
+              <Input
+                id="new_teacher_email"
+                type="email"
+                value={newTeacher.email}
+                onChange={(e) => setNewTeacher({ ...newTeacher, email: e.target.value })}
+                placeholder="example@school.com"
+              />
+            </div>
+            <div className="space-y-2">
+              <Label htmlFor="new_teacher_password">Password</Label>
+              <Input
+                id="new_teacher_password"
+                type="text"
+                value={newTeacher.password}
+                onChange={(e) => setNewTeacher({ ...newTeacher, password: e.target.value })}
+                placeholder="Login password"
+              />
+            </div>
+            <div className="space-y-2">
+              <Label htmlFor="new_teacher_subjects">Subjects (comma separated)</Label>
+              <Input
+                id="new_teacher_subjects"
+                value={newTeacher.subjects}
+                onChange={(e) => setNewTeacher({ ...newTeacher, subjects: e.target.value })}
+                placeholder="e.g. Mathematics, English"
+              />
+            </div>
+            <div className="space-y-2">
+              <Label htmlFor="new_teacher_classes">Classes (comma separated)</Label>
+              <Input
+                id="new_teacher_classes"
+                value={newTeacher.classes}
+                onChange={(e) => setNewTeacher({ ...newTeacher, classes: e.target.value })}
+                placeholder="e.g. S1, S2, S3"
+              />
+            </div>
+          </div>
+          <DialogFooter>
+            <Button variant="outline" onClick={() => setShowAddTeacherDialog(false)}>
+              Cancel
+            </Button>
+            <Button onClick={handleAddTeacher} disabled={saving}>
               {saving && <Loader2 className="w-4 h-4 mr-2 animate-spin" />}
               Save
             </Button>
