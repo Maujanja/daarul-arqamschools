@@ -167,33 +167,31 @@ export function ParentDashboard() {
     return (
       <div className="space-y-8">
       <div>
-        <h1 className="text-3xl font-display font-bold text-foreground">Parent Dashboard</h1>
-        <p className="text-muted-foreground mt-1">No student is linked to your account.</p>
+        <h1 className="text-3xl font-display font-bold text-foreground">Dashibodi ya Mzazi</h1>
+        <p className="text-muted-foreground mt-1">Hakuna mwanafunzi aliyeunganishwa na akaunti yako.</p>
       </div>
       </div>
     );
   }
-
-  const classRank = 3; // This would be calculated from actual data
 
   return (
     <div className="space-y-8">
       {/* Header */}
       <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4">
         <div>
-          <h1 className="text-3xl font-display font-bold text-foreground">Parent Dashboard</h1>
+          <h1 className="text-3xl font-display font-bold text-foreground">Dashibodi ya Mzazi</h1>
           <p className="text-muted-foreground mt-1">
-            Viewing records for <span className="font-semibold text-primary">{childName}</span>
+            Rekodi za <span className="font-semibold text-primary">{childName}</span>
           </p>
         </div>
         <div className="flex gap-3">
-          <Button variant="outline">
+          <Button variant="outline" onClick={() => window.location.href = '/feedback'}>
             <MessageSquare className="w-4 h-4 mr-2" />
-            Send Feedback
+            Tuma Maoni
           </Button>
           <Button className="btn-gradient">
             <Download className="w-4 h-4 mr-2" />
-            Download Report
+            Pakua Ripoti
           </Button>
         </div>
       </div>
@@ -206,20 +204,24 @@ export function ParentDashboard() {
           </div>
           <div className="flex-1">
             <h2 className="text-xl font-display font-bold text-card-foreground">{childName}</h2>
-            <p className="text-muted-foreground">Class {childClass}</p>
+            <p className="text-muted-foreground">Darasa {childClass}</p>
             <div className="flex flex-wrap gap-4 mt-3">
               <div className="flex items-center gap-2">
                 <Calendar className="w-4 h-4 text-muted-foreground" />
-                <span className="text-sm text-muted-foreground">Year 2024-2025</span>
+                <span className="text-sm text-muted-foreground">Mwaka 2024-2025</span>
               </div>
               <div className="flex items-center gap-2">
-                <Award className="w-4 h-4 text-warning" />
-                <span className="text-sm text-muted-foreground">Rank: <span className="font-semibold text-card-foreground">#{classRank}</span></span>
+                <DollarSign className="w-4 h-4 text-primary" />
+                <span className="text-sm text-muted-foreground">
+                  Deni: <span className={`font-semibold ${balance > 0 ? 'text-destructive' : 'text-success'}`}>
+                    {balance > 0 ? `TZS ${balance.toLocaleString()}` : 'Hakuna'}
+                  </span>
+                </span>
               </div>
             </div>
           </div>
           <div className="text-center md:text-right">
-            <p className="text-sm text-muted-foreground">Overall Average</p>
+            <p className="text-sm text-muted-foreground">Wastani wa Jumla</p>
             <p className="text-4xl font-bold font-display gradient-text">{overallAverage.toFixed(1)}%</p>
             <GradeBadge grade={overallAverage >= 75 ? 'A' : overallAverage >= 65 ? 'B' : overallAverage >= 50 ? 'C' : overallAverage >= 40 ? 'D' : 'F'} size="lg" />
           </div>
@@ -229,34 +231,98 @@ export function ParentDashboard() {
       {/* Stats Grid */}
       <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-6">
         <StatCard
-          title="Subjects"
+          title="Masomo"
           value={studentMarks.length.toString()}
-          subtitle="Registered subjects"
+          subtitle="Masomo yaliyosajiliwa"
           icon={BookOpen}
           variant="primary"
         />
         <StatCard
-          title="Best Subject"
+          title="Somo Bora"
           value={studentMarks.length > 0 ? studentMarks.reduce((best, m) => m.total > best.total ? m : best, studentMarks[0]).subject : '-'}
           subtitle={studentMarks.length > 0 ? `${Math.max(...studentMarks.map(m => m.total))}%` : '-'}
           icon={Award}
           variant="success"
         />
         <StatCard
-          title="Class Rank"
-          value={`#${classRank}`}
-          subtitle="Among all students"
-          icon={TrendingUp}
+          title="Kilicholipwa"
+          value={`TZS ${paidAmount.toLocaleString()}`}
+          subtitle={expectedFee > 0 ? `Kati ya TZS ${expectedFee.toLocaleString()}` : 'Ada haijawekwa'}
+          icon={DollarSign}
           variant="accent"
         />
         <StatCard
-          title="Attendance"
-          value="94%"
-          subtitle="This term"
-          icon={Calendar}
-          variant="warning"
+          title="Deni la Ada"
+          value={balance > 0 ? `TZS ${balance.toLocaleString()}` : 'Hakuna'}
+          subtitle={balance > 0 ? 'Bado hajamaliza' : 'Amelipa yote'}
+          icon={AlertTriangle}
+          variant={balance > 0 ? 'warning' : 'success'}
         />
       </div>
+
+      {/* Fee Status Card */}
+      {expectedFee > 0 && (
+        <div className="card-elevated p-6 animate-fade-in">
+          <h3 className="font-display font-semibold text-lg mb-6 text-card-foreground flex items-center gap-2">
+            <DollarSign className="w-5 h-5 text-primary" />
+            Hali ya Ada - Term 1, 2024-2025
+          </h3>
+          <div className="grid grid-cols-1 md:grid-cols-3 gap-6 mb-6">
+            <div className="p-4 rounded-lg bg-muted/50">
+              <p className="text-sm text-muted-foreground">Ada Inayohitajika</p>
+              <p className="text-2xl font-bold text-card-foreground">TZS {expectedFee.toLocaleString()}</p>
+            </div>
+            <div className="p-4 rounded-lg bg-success/10">
+              <p className="text-sm text-muted-foreground">Kilicholipwa</p>
+              <p className="text-2xl font-bold text-success">TZS {paidAmount.toLocaleString()}</p>
+            </div>
+            <div className={`p-4 rounded-lg ${balance > 0 ? 'bg-destructive/10' : 'bg-success/10'}`}>
+              <p className="text-sm text-muted-foreground">Deni</p>
+              <p className={`text-2xl font-bold ${balance > 0 ? 'text-destructive' : 'text-success'}`}>
+                {balance > 0 ? `TZS ${balance.toLocaleString()}` : 'Hakuna Deni'}
+              </p>
+            </div>
+          </div>
+          
+          {/* Progress Bar */}
+          <div className="mb-4">
+            <div className="flex justify-between text-sm mb-2">
+              <span className="text-muted-foreground">Maendeleo ya Malipo</span>
+              <span className="font-medium text-card-foreground">
+                {expectedFee > 0 ? Math.round((paidAmount / expectedFee) * 100) : 0}%
+              </span>
+            </div>
+            <div className="h-3 bg-muted rounded-full overflow-hidden">
+              <div 
+                className="h-full bg-gradient-to-r from-primary to-success rounded-full transition-all duration-500"
+                style={{ width: `${expectedFee > 0 ? Math.min((paidAmount / expectedFee) * 100, 100) : 0}%` }}
+              />
+            </div>
+          </div>
+
+          {/* Payment History */}
+          {feePayments.length > 0 && (
+            <div className="mt-6">
+              <h4 className="font-medium text-card-foreground mb-4">Historia ya Malipo</h4>
+              <div className="space-y-3">
+                {feePayments.map((payment, index) => (
+                  <div key={index} className="flex items-center justify-between p-3 rounded-lg bg-muted/30">
+                    <div>
+                      <p className="font-medium text-card-foreground">TZS {Number(payment.amount).toLocaleString()}</p>
+                      <p className="text-sm text-muted-foreground">{payment.payment_method}</p>
+                    </div>
+                    <div className="text-right">
+                      <p className="text-sm text-muted-foreground">
+                        {new Date(payment.payment_date).toLocaleDateString('sw-TZ')}
+                      </p>
+                    </div>
+                  </div>
+                ))}
+              </div>
+            </div>
+          )}
+        </div>
+      )}
 
       {/* Performance Chart */}
       {performanceData.length > 0 && (
