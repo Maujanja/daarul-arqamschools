@@ -19,6 +19,7 @@ import {
 } from 'lucide-react';
 import { cn } from '@/lib/utils';
 import { Button } from '@/components/ui/button';
+import dasLogo from '@/assets/das-logo.png';
 
 interface NavItem {
   label: string;
@@ -78,14 +79,12 @@ export function Sidebar() {
       )}>
         <div className="flex flex-col h-full">
           {/* Logo */}
-          <div className="p-6 border-b border-sidebar-border">
+          <div className="p-4 border-b border-sidebar-border">
             <div className="flex items-center gap-3">
-              <div className="w-10 h-10 rounded-xl bg-gradient-to-br from-primary to-accent flex items-center justify-center">
-                <GraduationCap className="w-6 h-6 text-primary-foreground" />
-              </div>
+              <img src={dasLogo} alt="Daarul Arqam Logo" className="w-12 h-12 object-contain" />
               <div>
-                <h1 className="font-display font-bold text-sidebar-foreground text-lg">EduManage</h1>
-                <p className="text-xs text-sidebar-foreground/60">Academic System</p>
+                <h1 className="font-display font-bold text-sidebar-foreground text-sm leading-tight">DAARUL ARQAM</h1>
+                <p className="text-xs text-sidebar-foreground/60">EXAMS REPORTS</p>
               </div>
             </div>
           </div>
