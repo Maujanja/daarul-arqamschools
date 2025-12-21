@@ -2,7 +2,7 @@ import { useState, useEffect } from 'react';
 import { StatCard } from '@/components/dashboard/StatCard';
 import { PerformanceChart } from '@/components/dashboard/PerformanceChart';
 import { GradeBadge } from '@/components/dashboard/GradeBadge';
-import { BookOpen, TrendingUp, Award, Download, MessageSquare, Calendar, Loader2, DollarSign, AlertTriangle } from 'lucide-react';
+import { BookOpen, Award, Download, MessageSquare, Calendar, Loader2, DollarSign, AlertTriangle } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { supabase } from '@/integrations/supabase/client';
 import { useAuth } from '@/contexts/AuthContext';
@@ -18,10 +18,6 @@ interface FeePayment {
   amount: number;
   payment_date: string;
   payment_method: string;
-}
-
-interface FeeStructure {
-  total_fee: number;
 }
 
 export function ParentDashboard() {
@@ -42,8 +38,6 @@ export function ParentDashboard() {
       
       setIsLoading(true);
       
-      // For parent login, user.id is the parent_id or student_id
-      // Try to get student directly by parent_id first
       let studentData = null;
       
       const { data: studentByParent } = await supabase
@@ -55,7 +49,6 @@ export function ParentDashboard() {
       if (studentByParent) {
         studentData = studentByParent;
       } else {
-        // If not found, try finding by student id (when parent logged in with child info)
         const { data: studentById } = await supabase
           .from('students')
           .select('*')
@@ -66,7 +59,6 @@ export function ParentDashboard() {
       }
       
       if (!studentData) {
-        // Try to find any student linked to any parent with matching name
         const { data: parentRecord } = await supabase
           .from('parents')
           .select('id')
@@ -167,8 +159,8 @@ export function ParentDashboard() {
     return (
       <div className="space-y-8">
       <div>
-        <h1 className="text-3xl font-display font-bold text-foreground">Dashibodi ya Mzazi</h1>
-        <p className="text-muted-foreground mt-1">Hakuna mwanafunzi aliyeunganishwa na akaunti yako.</p>
+        <h1 className="text-3xl font-display font-bold text-foreground">Parent Dashboard</h1>
+        <p className="text-muted-foreground mt-1">No student is linked to your account.</p>
       </div>
       </div>
     );
@@ -179,19 +171,19 @@ export function ParentDashboard() {
       {/* Header */}
       <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4">
         <div>
-          <h1 className="text-3xl font-display font-bold text-foreground">Dashibodi ya Mzazi</h1>
+          <h1 className="text-3xl font-display font-bold text-foreground">Parent Dashboard</h1>
           <p className="text-muted-foreground mt-1">
-            Rekodi za <span className="font-semibold text-primary">{childName}</span>
+            Viewing records for <span className="font-semibold text-primary">{childName}</span>
           </p>
         </div>
         <div className="flex gap-3">
           <Button variant="outline" onClick={() => window.location.href = '/feedback'}>
             <MessageSquare className="w-4 h-4 mr-2" />
-            Tuma Maoni
+            Send Feedback
           </Button>
           <Button className="btn-gradient">
             <Download className="w-4 h-4 mr-2" />
-            Pakua Ripoti
+            Download Report
           </Button>
         </div>
       </div>
@@ -204,24 +196,24 @@ export function ParentDashboard() {
           </div>
           <div className="flex-1">
             <h2 className="text-xl font-display font-bold text-card-foreground">{childName}</h2>
-            <p className="text-muted-foreground">Darasa {childClass}</p>
+            <p className="text-muted-foreground">Class {childClass}</p>
             <div className="flex flex-wrap gap-4 mt-3">
               <div className="flex items-center gap-2">
                 <Calendar className="w-4 h-4 text-muted-foreground" />
-                <span className="text-sm text-muted-foreground">Mwaka 2024-2025</span>
+                <span className="text-sm text-muted-foreground">Year 2024-2025</span>
               </div>
               <div className="flex items-center gap-2">
                 <DollarSign className="w-4 h-4 text-primary" />
                 <span className="text-sm text-muted-foreground">
-                  Deni: <span className={`font-semibold ${balance > 0 ? 'text-destructive' : 'text-success'}`}>
-                    {balance > 0 ? `TZS ${balance.toLocaleString()}` : 'Hakuna'}
+                  Balance: <span className={`font-semibold ${balance > 0 ? 'text-destructive' : 'text-success'}`}>
+                    {balance > 0 ? `TZS ${balance.toLocaleString()}` : 'None'}
                   </span>
                 </span>
               </div>
             </div>
           </div>
           <div className="text-center md:text-right">
-            <p className="text-sm text-muted-foreground">Wastani wa Jumla</p>
+            <p className="text-sm text-muted-foreground">Overall Average</p>
             <p className="text-4xl font-bold font-display gradient-text">{overallAverage.toFixed(1)}%</p>
             <GradeBadge grade={overallAverage >= 75 ? 'A' : overallAverage >= 65 ? 'B' : overallAverage >= 50 ? 'C' : overallAverage >= 40 ? 'D' : 'F'} size="lg" />
           </div>
@@ -231,30 +223,30 @@ export function ParentDashboard() {
       {/* Stats Grid */}
       <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-6">
         <StatCard
-          title="Masomo"
+          title="Subjects"
           value={studentMarks.length.toString()}
-          subtitle="Masomo yaliyosajiliwa"
+          subtitle="Registered subjects"
           icon={BookOpen}
           variant="primary"
         />
         <StatCard
-          title="Somo Bora"
+          title="Best Subject"
           value={studentMarks.length > 0 ? studentMarks.reduce((best, m) => m.total > best.total ? m : best, studentMarks[0]).subject : '-'}
           subtitle={studentMarks.length > 0 ? `${Math.max(...studentMarks.map(m => m.total))}%` : '-'}
           icon={Award}
           variant="success"
         />
         <StatCard
-          title="Kilicholipwa"
+          title="Paid Amount"
           value={`TZS ${paidAmount.toLocaleString()}`}
-          subtitle={expectedFee > 0 ? `Kati ya TZS ${expectedFee.toLocaleString()}` : 'Ada haijawekwa'}
+          subtitle={expectedFee > 0 ? `Out of TZS ${expectedFee.toLocaleString()}` : 'Fee not set'}
           icon={DollarSign}
           variant="accent"
         />
         <StatCard
-          title="Deni la Ada"
-          value={balance > 0 ? `TZS ${balance.toLocaleString()}` : 'Hakuna'}
-          subtitle={balance > 0 ? 'Bado hajamaliza' : 'Amelipa yote'}
+          title="Fee Balance"
+          value={balance > 0 ? `TZS ${balance.toLocaleString()}` : 'None'}
+          subtitle={balance > 0 ? 'Outstanding balance' : 'Fully paid'}
           icon={AlertTriangle}
           variant={balance > 0 ? 'warning' : 'success'}
         />
@@ -265,21 +257,21 @@ export function ParentDashboard() {
         <div className="card-elevated p-6 animate-fade-in">
           <h3 className="font-display font-semibold text-lg mb-6 text-card-foreground flex items-center gap-2">
             <DollarSign className="w-5 h-5 text-primary" />
-            Hali ya Ada - Term 1, 2024-2025
+            Fee Status - Term 1, 2024-2025
           </h3>
           <div className="grid grid-cols-1 md:grid-cols-3 gap-6 mb-6">
             <div className="p-4 rounded-lg bg-muted/50">
-              <p className="text-sm text-muted-foreground">Ada Inayohitajika</p>
+              <p className="text-sm text-muted-foreground">Expected Fee</p>
               <p className="text-2xl font-bold text-card-foreground">TZS {expectedFee.toLocaleString()}</p>
             </div>
             <div className="p-4 rounded-lg bg-success/10">
-              <p className="text-sm text-muted-foreground">Kilicholipwa</p>
+              <p className="text-sm text-muted-foreground">Paid Amount</p>
               <p className="text-2xl font-bold text-success">TZS {paidAmount.toLocaleString()}</p>
             </div>
             <div className={`p-4 rounded-lg ${balance > 0 ? 'bg-destructive/10' : 'bg-success/10'}`}>
-              <p className="text-sm text-muted-foreground">Deni</p>
+              <p className="text-sm text-muted-foreground">Balance</p>
               <p className={`text-2xl font-bold ${balance > 0 ? 'text-destructive' : 'text-success'}`}>
-                {balance > 0 ? `TZS ${balance.toLocaleString()}` : 'Hakuna Deni'}
+                {balance > 0 ? `TZS ${balance.toLocaleString()}` : 'No Balance'}
               </p>
             </div>
           </div>
@@ -287,7 +279,7 @@ export function ParentDashboard() {
           {/* Progress Bar */}
           <div className="mb-4">
             <div className="flex justify-between text-sm mb-2">
-              <span className="text-muted-foreground">Maendeleo ya Malipo</span>
+              <span className="text-muted-foreground">Payment Progress</span>
               <span className="font-medium text-card-foreground">
                 {expectedFee > 0 ? Math.round((paidAmount / expectedFee) * 100) : 0}%
               </span>
@@ -303,7 +295,7 @@ export function ParentDashboard() {
           {/* Payment History */}
           {feePayments.length > 0 && (
             <div className="mt-6">
-              <h4 className="font-medium text-card-foreground mb-4">Historia ya Malipo</h4>
+              <h4 className="font-medium text-card-foreground mb-4">Payment History</h4>
               <div className="space-y-3">
                 {feePayments.map((payment, index) => (
                   <div key={index} className="flex items-center justify-between p-3 rounded-lg bg-muted/30">
@@ -313,7 +305,7 @@ export function ParentDashboard() {
                     </div>
                     <div className="text-right">
                       <p className="text-sm text-muted-foreground">
-                        {new Date(payment.payment_date).toLocaleDateString('sw-TZ')}
+                        {new Date(payment.payment_date).toLocaleDateString()}
                       </p>
                     </div>
                   </div>

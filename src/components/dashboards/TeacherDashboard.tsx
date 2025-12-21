@@ -174,45 +174,45 @@ export function TeacherDashboard() {
       {/* Header */}
       <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4">
         <div>
-          <h1 className="text-3xl font-display font-bold text-foreground">Dashibodi ya Mwalimu</h1>
-          <p className="text-muted-foreground mt-1">Karibu, {teacherData?.full_name || user?.name}!</p>
+          <h1 className="text-3xl font-display font-bold text-foreground">Teacher Dashboard</h1>
+          <p className="text-muted-foreground mt-1">Welcome back, {teacherData?.full_name || user?.name}!</p>
         </div>
         <Button 
           className="btn-gradient"
           onClick={() => navigate('/marks-entry')}
         >
           <ClipboardList className="w-4 h-4 mr-2" />
-          Ingiza Alama
+          Enter Marks
         </Button>
       </div>
 
       {/* Stats Grid */}
       <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-6">
         <StatCard
-          title="Madarasa Yangu"
+          title="My Classes"
           value={assignedClasses.length.toString()}
-          subtitle="Madarasa niliyopewa"
+          subtitle="Assigned classes"
           icon={BookOpen}
           variant="primary"
         />
         <StatCard
-          title="Wanafunzi Wote"
+          title="Total Students"
           value={totalStudents.toString()}
-          subtitle="Katika madarasa yote"
+          subtitle="Across all classes"
           icon={Users}
           variant="accent"
         />
         <StatCard
-          title="Alama Zimewekwa"
+          title="Marks Submitted"
           value={marksSubmitted.toString()}
-          subtitle={`Kati ya ${assignedClasses.length} madarasa`}
+          subtitle={`Out of ${assignedClasses.length} classes`}
           icon={CheckCircle}
           variant="success"
         />
         <StatCard
-          title="Yanayosubiri"
+          title="Pending"
           value={pendingClasses.toString()}
-          subtitle="Madarasa yanayobaki"
+          subtitle="Classes remaining"
           icon={Clock}
           variant="warning"
         />
@@ -223,49 +223,49 @@ export function TeacherDashboard() {
         <div className="lg:col-span-2">
           <PerformanceChart 
             data={performanceData} 
-            title={`Utendaji wa Darasa ${selectedClass}`}
+            title={`Class ${selectedClass} Performance`}
           />
         </div>
         
         <div className="space-y-6">
           {/* Class Selector */}
           <div className="card-elevated p-6 animate-fade-in">
-            <h3 className="font-display font-semibold text-lg mb-4 text-card-foreground">Chagua Darasa</h3>
+            <h3 className="font-display font-semibold text-lg mb-4 text-card-foreground">Select Class</h3>
             <Select value={selectedClass} onValueChange={setSelectedClass}>
               <SelectTrigger>
-                <SelectValue placeholder="Chagua darasa" />
+                <SelectValue placeholder="Select a class" />
               </SelectTrigger>
               <SelectContent>
                 {assignedClasses.map((cls) => (
-                  <SelectItem key={cls} value={cls}>Darasa {cls}</SelectItem>
+                  <SelectItem key={cls} value={cls}>Class {cls}</SelectItem>
                 ))}
               </SelectContent>
             </Select>
             <div className="mt-4 p-4 rounded-lg bg-muted/50">
-              <p className="text-sm text-muted-foreground">Wanafunzi katika darasa</p>
+              <p className="text-sm text-muted-foreground">Students in class</p>
               <p className="text-2xl font-bold text-card-foreground">{studentsInClass.length}</p>
             </div>
           </div>
 
           <TopStudents 
             students={topStudents} 
-            title={`Wanafunzi Bora - ${selectedClass}`}
+            title={`Top Students - ${selectedClass}`}
           />
         </div>
       </div>
 
       {/* Marks Entry Status */}
       <div className="card-elevated p-6 animate-fade-in">
-        <h3 className="font-display font-semibold text-lg mb-6 text-card-foreground">Hali ya Kuingiza Alama</h3>
+        <h3 className="font-display font-semibold text-lg mb-6 text-card-foreground">Marks Entry Status</h3>
         <div className="overflow-x-auto">
           <table className="w-full">
             <thead>
               <tr className="border-b border-border">
-                <th className="text-left py-3 px-4 text-sm font-medium text-muted-foreground">Darasa</th>
-                <th className="text-left py-3 px-4 text-sm font-medium text-muted-foreground">Somo</th>
-                <th className="text-left py-3 px-4 text-sm font-medium text-muted-foreground">Wanafunzi</th>
-                <th className="text-left py-3 px-4 text-sm font-medium text-muted-foreground">Hali</th>
-                <th className="text-right py-3 px-4 text-sm font-medium text-muted-foreground">Hatua</th>
+                <th className="text-left py-3 px-4 text-sm font-medium text-muted-foreground">Class</th>
+                <th className="text-left py-3 px-4 text-sm font-medium text-muted-foreground">Subject</th>
+                <th className="text-left py-3 px-4 text-sm font-medium text-muted-foreground">Students</th>
+                <th className="text-left py-3 px-4 text-sm font-medium text-muted-foreground">Status</th>
+                <th className="text-right py-3 px-4 text-sm font-medium text-muted-foreground">Action</th>
               </tr>
             </thead>
             <tbody>
@@ -278,12 +278,12 @@ export function TeacherDashboard() {
                     {item.status === 'completed' ? (
                       <span className="inline-flex items-center gap-1 px-2 py-1 rounded-full text-xs font-medium bg-success/10 text-success">
                         <CheckCircle className="w-3 h-3" />
-                        Imekamilika
+                        Completed
                       </span>
                     ) : (
                       <span className="inline-flex items-center gap-1 px-2 py-1 rounded-full text-xs font-medium bg-warning/10 text-warning">
                         <Clock className="w-3 h-3" />
-                        Inasubiri
+                        Pending
                       </span>
                     )}
                   </td>
@@ -293,14 +293,14 @@ export function TeacherDashboard() {
                       size="sm"
                       onClick={() => navigate('/marks-entry')}
                     >
-                      {item.status === 'completed' ? 'Angalia' : 'Ingiza Alama'}
+                      {item.status === 'completed' ? 'View' : 'Enter Marks'}
                     </Button>
                   </td>
                 </tr>
               )) : (
                 <tr>
                   <td colSpan={5} className="py-8 text-center text-muted-foreground">
-                    Hujapewa madarasa yoyote. Wasiliana na Admin.
+                    No classes assigned. Please contact Admin.
                   </td>
                 </tr>
               )}

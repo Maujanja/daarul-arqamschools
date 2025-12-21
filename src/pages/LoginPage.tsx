@@ -213,9 +213,9 @@ export default function LoginPage() {
           <Tabs defaultValue="admin" className="w-full">
             <TabsList className="grid w-full grid-cols-4">
               <TabsTrigger value="admin">Admin</TabsTrigger>
-              <TabsTrigger value="teacher">Mwalimu</TabsTrigger>
-              <TabsTrigger value="parent">Mzazi</TabsTrigger>
-              <TabsTrigger value="secretary">Katibu</TabsTrigger>
+              <TabsTrigger value="teacher">Teacher</TabsTrigger>
+              <TabsTrigger value="parent">Parent</TabsTrigger>
+              <TabsTrigger value="secretary">Secretary</TabsTrigger>
             </TabsList>
 
             {/* Admin Login */}
@@ -415,19 +415,19 @@ export default function LoginPage() {
             {/* Secretary Login */}
             <TabsContent value="secretary" className="space-y-6 mt-6">
               <div className="text-center lg:text-left">
-                <h2 className="text-2xl font-display font-bold text-foreground">Katibu</h2>
-                <p className="text-muted-foreground mt-2">Ingia kusimamia ada na malipo</p>
+                <h2 className="text-2xl font-display font-bold text-foreground">Secretary</h2>
+                <p className="text-muted-foreground mt-2">Login to manage fees and payments</p>
               </div>
 
               <form onSubmit={handleSecretaryLogin} className="space-y-6">
                 <div className="space-y-2">
-                  <Label htmlFor="secretary-username">Jina la Mtumiaji</Label>
+                  <Label htmlFor="secretary-username">Username</Label>
                   <div className="relative">
                     <User className="absolute left-3 top-1/2 -translate-y-1/2 w-5 h-5 text-muted-foreground" />
                     <Input
                       id="secretary-username"
                       type="text"
-                      placeholder="Weka jina la mtumiaji"
+                      placeholder="Enter username"
                       value={secretaryUsername}
                       onChange={(e) => setSecretaryUsername(e.target.value)}
                       className="pl-10 input-enhanced"
@@ -437,13 +437,13 @@ export default function LoginPage() {
                 </div>
 
                 <div className="space-y-2">
-                  <Label htmlFor="secretary-password">Nywila</Label>
+                  <Label htmlFor="secretary-password">Password</Label>
                   <div className="relative">
                     <Lock className="absolute left-3 top-1/2 -translate-y-1/2 w-5 h-5 text-muted-foreground" />
                     <Input
                       id="secretary-password"
                       type={showPassword ? 'text' : 'password'}
-                      placeholder="Weka nywila"
+                      placeholder="Enter password"
                       value={secretaryPassword}
                       onChange={(e) => setSecretaryPassword(e.target.value)}
                       className="pl-10 pr-10 input-enhanced"
@@ -470,10 +470,10 @@ export default function LoginPage() {
                         <circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4" fill="none" />
                         <path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z" />
                       </svg>
-                      Inaingia...
+                      Logging in...
                     </span>
                   ) : (
-                    'Ingia'
+                    'Login'
                   )}
                 </Button>
               </form>
