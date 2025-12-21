@@ -35,7 +35,17 @@ export default function TeachersPage() {
   const [teachers, setTeachers] = useState<Teacher[]>([]);
   const [loading, setLoading] = useState(true);
   const [showAddDialog, setShowAddDialog] = useState(false);
+  const [showViewDialog, setShowViewDialog] = useState(false);
+  const [showEditDialog, setShowEditDialog] = useState(false);
+  const [selectedTeacher, setSelectedTeacher] = useState<Teacher | null>(null);
   const [newTeacher, setNewTeacher] = useState({
+    full_name: '',
+    email: '',
+    password: '',
+    subjects: '',
+    classes: '',
+  });
+  const [editTeacher, setEditTeacher] = useState({
     full_name: '',
     email: '',
     password: '',
@@ -118,6 +128,66 @@ export default function TeachersPage() {
     }
   };
 
+  const handleViewTeacher = (teacher: Teacher) => {
+    setSelectedTeacher(teacher);
+    setShowViewDialog(true);
+  };
+
+  const handleOpenEditDialog = (teacher: Teacher) => {
+    setSelectedTeacher(teacher);
+    setEditTeacher({
+      full_name: teacher.full_name,
+      email: teacher.email,
+      password: '',
+      subjects: teacher.subjects.join(', '),
+      classes: teacher.classes.join(', '),
+    });
+    setShowEditDialog(true);
+  };
+
+  const handleEditTeacher = async () => {
+    if (!selectedTeacher || !editTeacher.full_name || !editTeacher.email) {
+      toast.error('Please fill in all required fields');
+      return;
+    }
+
+    try {
+      setSaving(true);
+      
+      const subjectsArray = editTeacher.subjects.split(',').map(s => s.trim()).filter(Boolean);
+      const classesArray = editTeacher.classes.split(',').map(c => c.trim()).filter(Boolean);
+
+      const updateData: any = {
+        full_name: editTeacher.full_name,
+        email: editTeacher.email,
+        subjects: subjectsArray,
+        classes: classesArray,
+      };
+
+      // Only update password if provided
+      if (editTeacher.password) {
+        updateData.password_hash = editTeacher.password;
+      }
+
+      const { error } = await supabase
+        .from('teachers')
+        .update(updateData)
+        .eq('id', selectedTeacher.id);
+
+      if (error) throw error;
+
+      toast.success('Teacher updated successfully');
+      setShowEditDialog(false);
+      setSelectedTeacher(null);
+      fetchTeachers();
+    } catch (error) {
+      console.error('Error updating teacher:', error);
+      toast.error('Failed to update teacher');
+    } finally {
+      setSaving(false);
+    }
+  };
+
   const filteredTeachers = teachers.filter(teacher =>
     teacher.full_name.toLowerCase().includes(searchQuery.toLowerCase()) ||
     teacher.email.toLowerCase().includes(searchQuery.toLowerCase())
@@ -180,8 +250,12 @@ export default function TeachersPage() {
                     </Button>
                   </DropdownMenuTrigger>
                   <DropdownMenuContent align="end">
-                    <DropdownMenuItem>View Details</DropdownMenuItem>
-                    <DropdownMenuItem>Edit Details</DropdownMenuItem>
+                    <DropdownMenuItem onClick={() => handleViewTeacher(teacher)}>
+                      View Details
+                    </DropdownMenuItem>
+                    <DropdownMenuItem onClick={() => handleOpenEditDialog(teacher)}>
+                      Edit Details
+                    </DropdownMenuItem>
                     <DropdownMenuItem 
                       className="text-destructive"
                       onClick={() => handleDeleteTeacher(teacher.id)}
@@ -301,6 +375,124 @@ export default function TeachersPage() {
             <Button onClick={handleAddTeacher} disabled={saving}>
               {saving && <Loader2 className="w-4 h-4 mr-2 animate-spin" />}
               Save
+            </Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
+
+      {/* View Teacher Dialog */}
+      <Dialog open={showViewDialog} onOpenChange={setShowViewDialog}>
+        <DialogContent>
+          <DialogHeader>
+            <DialogTitle>Teacher Details</DialogTitle>
+            <DialogDescription>
+              Viewing information for {selectedTeacher?.full_name}
+            </DialogDescription>
+          </DialogHeader>
+          {selectedTeacher && (
+            <div className="space-y-4 py-4">
+              <div className="flex items-center gap-4">
+                <div className="w-16 h-16 rounded-xl bg-gradient-to-br from-accent to-success flex items-center justify-center text-primary-foreground font-bold text-xl">
+                  {selectedTeacher.full_name.split(' ').map(n => n[0]).join('')}
+                </div>
+                <div>
+                  <h3 className="font-semibold text-lg">{selectedTeacher.full_name}</h3>
+                  <p className="text-muted-foreground">{selectedTeacher.email}</p>
+                </div>
+              </div>
+              <div className="space-y-3 pt-4 border-t">
+                <div>
+                  <Label className="text-muted-foreground">Subjects</Label>
+                  <p className="font-medium">
+                    {selectedTeacher.subjects.length > 0 ? selectedTeacher.subjects.join(', ') : 'None assigned'}
+                  </p>
+                </div>
+                <div>
+                  <Label className="text-muted-foreground">Classes</Label>
+                  <p className="font-medium">
+                    {selectedTeacher.classes.length > 0 ? selectedTeacher.classes.join(', ') : 'None assigned'}
+                  </p>
+                </div>
+                <div>
+                  <Label className="text-muted-foreground">Joined</Label>
+                  <p className="font-medium">
+                    {new Date(selectedTeacher.created_at).toLocaleDateString()}
+                  </p>
+                </div>
+              </div>
+            </div>
+          )}
+          <DialogFooter>
+            <Button onClick={() => setShowViewDialog(false)}>Close</Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
+
+      {/* Edit Teacher Dialog */}
+      <Dialog open={showEditDialog} onOpenChange={setShowEditDialog}>
+        <DialogContent>
+          <DialogHeader>
+            <DialogTitle>Edit Teacher</DialogTitle>
+            <DialogDescription>
+              Update teacher information below
+            </DialogDescription>
+          </DialogHeader>
+          <div className="space-y-4 py-4">
+            <div className="space-y-2">
+              <Label htmlFor="edit-name">Full Name</Label>
+              <Input
+                id="edit-name"
+                value={editTeacher.full_name}
+                onChange={(e) => setEditTeacher({ ...editTeacher, full_name: e.target.value })}
+                placeholder="e.g. John Doe"
+              />
+            </div>
+            <div className="space-y-2">
+              <Label htmlFor="edit-email">Email</Label>
+              <Input
+                id="edit-email"
+                type="email"
+                value={editTeacher.email}
+                onChange={(e) => setEditTeacher({ ...editTeacher, email: e.target.value })}
+                placeholder="example@school.com"
+              />
+            </div>
+            <div className="space-y-2">
+              <Label htmlFor="edit-password">Password (leave empty to keep current)</Label>
+              <Input
+                id="edit-password"
+                type="password"
+                value={editTeacher.password}
+                onChange={(e) => setEditTeacher({ ...editTeacher, password: e.target.value })}
+                placeholder="New password"
+              />
+            </div>
+            <div className="space-y-2">
+              <Label htmlFor="edit-subjects">Subjects (comma separated)</Label>
+              <Input
+                id="edit-subjects"
+                value={editTeacher.subjects}
+                onChange={(e) => setEditTeacher({ ...editTeacher, subjects: e.target.value })}
+                placeholder="e.g. Mathematics, English, Science"
+              />
+            </div>
+            <div className="space-y-2">
+              <Label htmlFor="edit-classes">Classes (comma separated)</Label>
+              <Input
+                id="edit-classes"
+                value={editTeacher.classes}
+                onChange={(e) => setEditTeacher({ ...editTeacher, classes: e.target.value })}
+                placeholder="e.g. S1, S2, S3"
+              />
+            </div>
+          </div>
+          <DialogFooter>
+            <Button variant="outline" onClick={() => setShowEditDialog(false)}>
+              Cancel
+            </Button>
+            <Button onClick={handleEditTeacher} disabled={saving}>
+              {saving && <Loader2 className="w-4 h-4 mr-2 animate-spin" />}
+              Save Changes
             </Button>
           </DialogFooter>
         </DialogContent>
