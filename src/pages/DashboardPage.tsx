@@ -3,6 +3,7 @@ import { DashboardLayout } from '@/components/layout/DashboardLayout';
 import { AdminDashboard } from '@/components/dashboards/AdminDashboard';
 import { TeacherDashboard } from '@/components/dashboards/TeacherDashboard';
 import { ParentDashboard } from '@/components/dashboards/ParentDashboard';
+import { SecretaryDashboard } from '@/components/dashboards/SecretaryDashboard';
 
 export default function DashboardPage() {
   const { user } = useAuth();
@@ -15,6 +16,8 @@ export default function DashboardPage() {
         return <TeacherDashboard />;
       case 'parent':
         return <ParentDashboard />;
+      case 'secretary':
+        return <SecretaryDashboard />;
       default:
         return <AdminDashboard />;
     }

@@ -35,6 +35,95 @@ export type Database = {
         }
         Relationships: []
       }
+      fee_payments: {
+        Row: {
+          academic_year: string
+          amount: number
+          created_at: string
+          id: string
+          notes: string | null
+          payment_date: string
+          payment_method: string | null
+          receipt_number: string | null
+          recorded_by: string | null
+          student_id: string
+          term: string
+          updated_at: string
+        }
+        Insert: {
+          academic_year: string
+          amount: number
+          created_at?: string
+          id?: string
+          notes?: string | null
+          payment_date?: string
+          payment_method?: string | null
+          receipt_number?: string | null
+          recorded_by?: string | null
+          student_id: string
+          term: string
+          updated_at?: string
+        }
+        Update: {
+          academic_year?: string
+          amount?: number
+          created_at?: string
+          id?: string
+          notes?: string | null
+          payment_date?: string
+          payment_method?: string | null
+          receipt_number?: string | null
+          recorded_by?: string | null
+          student_id?: string
+          term?: string
+          updated_at?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "fee_payments_student_id_fkey"
+            columns: ["student_id"]
+            isOneToOne: false
+            referencedRelation: "students"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      fee_structure: {
+        Row: {
+          academic_year: string
+          boarding_fee: number | null
+          class: string
+          created_at: string
+          id: string
+          other_fees: number | null
+          term: string
+          total_fee: number
+          tuition_fee: number
+        }
+        Insert: {
+          academic_year: string
+          boarding_fee?: number | null
+          class: string
+          created_at?: string
+          id?: string
+          other_fees?: number | null
+          term: string
+          total_fee?: number
+          tuition_fee?: number
+        }
+        Update: {
+          academic_year?: string
+          boarding_fee?: number | null
+          class?: string
+          created_at?: string
+          id?: string
+          other_fees?: number | null
+          term?: string
+          total_fee?: number
+          tuition_fee?: number
+        }
+        Relationships: []
+      }
       feedback: {
         Row: {
           created_at: string
@@ -201,6 +290,30 @@ export type Database = {
           id?: string
           phone?: string | null
           updated_at?: string
+        }
+        Relationships: []
+      }
+      secretary_credentials: {
+        Row: {
+          created_at: string | null
+          full_name: string
+          id: string
+          password_hash: string
+          username: string
+        }
+        Insert: {
+          created_at?: string | null
+          full_name: string
+          id?: string
+          password_hash: string
+          username: string
+        }
+        Update: {
+          created_at?: string | null
+          full_name?: string
+          id?: string
+          password_hash?: string
+          username?: string
         }
         Relationships: []
       }
