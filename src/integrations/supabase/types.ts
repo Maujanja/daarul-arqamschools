@@ -157,13 +157,6 @@ export type Database = {
         }
         Relationships: [
           {
-            foreignKeyName: "feedback_parent_id_fkey"
-            columns: ["parent_id"]
-            isOneToOne: false
-            referencedRelation: "parents"
-            referencedColumns: ["id"]
-          },
-          {
             foreignKeyName: "feedback_student_id_fkey"
             columns: ["student_id"]
             isOneToOne: false
