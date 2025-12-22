@@ -50,7 +50,40 @@ export default function FeedbackPage() {
   const fetchStudentData = async () => {
     if (!user) return;
     
-    // Find parent record first
+    // The user.id from login is either:
+    // 1. parent.id (if student has parent_id set)
+    // 2. student.id (if student has no parent_id)
+    
+    // First try: user.id is a parent.id - find student linked to this parent
+    const { data: studentByParentId } = await supabase
+      .from('students')
+      .select('id, full_name, parent_id')
+      .eq('parent_id', user.id)
+      .maybeSingle();
+    
+    if (studentByParentId) {
+      setStudentId(studentByParentId.id);
+      setStudentName(studentByParentId.full_name);
+      setParentId(user.id);
+      return;
+    }
+    
+    // Second try: user.id is the student.id itself (no parent linked during login)
+    const { data: studentDirect } = await supabase
+      .from('students')
+      .select('id, full_name, parent_id')
+      .eq('id', user.id)
+      .maybeSingle();
+    
+    if (studentDirect) {
+      setStudentId(studentDirect.id);
+      setStudentName(studentDirect.full_name);
+      // Use student.id as parent_id for feedback since no parent record exists
+      setParentId(studentDirect.parent_id || studentDirect.id);
+      return;
+    }
+    
+    // Third try: Check parents table by user_id
     const { data: parentData } = await supabase
       .from('parents')
       .select('id')
@@ -60,7 +93,6 @@ export default function FeedbackPage() {
     if (parentData) {
       setParentId(parentData.id);
       
-      // Find student linked to this parent
       const { data: studentData } = await supabase
         .from('students')
         .select('id, full_name')
@@ -70,21 +102,7 @@ export default function FeedbackPage() {
       if (studentData) {
         setStudentId(studentData.id);
         setStudentName(studentData.full_name);
-        return;
       }
-    }
-    
-    // Fallback: try finding student by user.id as parent_id
-    const { data: studentByParent } = await supabase
-      .from('students')
-      .select('id, full_name, parent_id')
-      .eq('parent_id', user.id)
-      .maybeSingle();
-    
-    if (studentByParent) {
-      setStudentId(studentByParent.id);
-      setStudentName(studentByParent.full_name);
-      setParentId(studentByParent.parent_id || user.id);
     }
   };
 
