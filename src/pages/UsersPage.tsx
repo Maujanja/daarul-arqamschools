@@ -58,13 +58,36 @@ interface Student {
   parent_id: string | null;
 }
 
+interface Secretary {
+  id: string;
+  username: string;
+  full_name: string;
+  password_hash: string;
+}
+
 export default function UsersPage() {
   const [searchQuery, setSearchQuery] = useState('');
   const [teachers, setTeachers] = useState<Teacher[]>([]);
   const [parents, setParents] = useState<Parent[]>([]);
   const [students, setStudents] = useState<Student[]>([]);
+  const [secretaries, setSecretaries] = useState<Secretary[]>([]);
   const [loading, setLoading] = useState(true);
   const [activeTab, setActiveTab] = useState('teachers');
+  
+  // Secretary Management
+  const [showAddSecretaryDialog, setShowAddSecretaryDialog] = useState(false);
+  const [showEditSecretaryDialog, setShowEditSecretaryDialog] = useState(false);
+  const [selectedSecretary, setSelectedSecretary] = useState<Secretary | null>(null);
+  const [newSecretary, setNewSecretary] = useState({
+    username: '',
+    full_name: '',
+    password: '',
+  });
+  const [editSecretary, setEditSecretary] = useState({
+    username: '',
+    full_name: '',
+    password: '',
+  });
   
   // Add Student Dialog
   const [showAddStudentDialog, setShowAddStudentDialog] = useState(false);
@@ -112,10 +135,11 @@ export default function UsersPage() {
     try {
       setLoading(true);
       
-      const [teachersRes, parentsRes, studentsRes] = await Promise.all([
+      const [teachersRes, parentsRes, studentsRes, secretariesRes] = await Promise.all([
         supabase.from('teachers').select('*').order('full_name'),
         supabase.from('parents').select('*').order('full_name'),
         supabase.from('students').select('*').order('full_name'),
+        supabase.from('secretary_credentials').select('*').order('full_name'),
       ]);
 
       if (teachersRes.error) throw teachersRes.error;
@@ -125,6 +149,7 @@ export default function UsersPage() {
       setTeachers(teachersRes.data || []);
       setParents(parentsRes.data || []);
       setStudents(studentsRes.data || []);
+      setSecretaries(secretariesRes.data || []);
     } catch (error) {
       console.error('Error fetching data:', error);
       toast.error('Failed to fetch data');
@@ -341,6 +366,100 @@ export default function UsersPage() {
     s.roll_number.toLowerCase().includes(searchQuery.toLowerCase())
   );
 
+  const filteredSecretaries = secretaries.filter(s =>
+    s.full_name.toLowerCase().includes(searchQuery.toLowerCase()) ||
+    s.username.toLowerCase().includes(searchQuery.toLowerCase())
+  );
+
+  // Secretary Management Functions
+  const handleAddSecretary = async () => {
+    if (!newSecretary.username || !newSecretary.full_name || !newSecretary.password) {
+      toast.error('Please fill in all required fields');
+      return;
+    }
+
+    try {
+      setSaving(true);
+      const { error } = await supabase
+        .from('secretary_credentials')
+        .insert({
+          username: newSecretary.username,
+          full_name: newSecretary.full_name,
+          password_hash: newSecretary.password,
+        });
+
+      if (error) throw error;
+
+      toast.success('Secretary added successfully');
+      setShowAddSecretaryDialog(false);
+      setNewSecretary({ username: '', full_name: '', password: '' });
+      fetchData();
+    } catch (error) {
+      console.error('Error adding secretary:', error);
+      toast.error('Failed to add secretary');
+    } finally {
+      setSaving(false);
+    }
+  };
+
+  const handleOpenEditSecretary = (secretary: Secretary) => {
+    setSelectedSecretary(secretary);
+    setEditSecretary({
+      username: secretary.username,
+      full_name: secretary.full_name,
+      password: '',
+    });
+    setShowEditSecretaryDialog(true);
+  };
+
+  const handleEditSecretary = async () => {
+    if (!selectedSecretary || !editSecretary.username || !editSecretary.full_name) {
+      toast.error('Please fill in all required fields');
+      return;
+    }
+
+    try {
+      setSaving(true);
+      const updateData: any = {
+        username: editSecretary.username,
+        full_name: editSecretary.full_name,
+      };
+
+      if (editSecretary.password) {
+        updateData.password_hash = editSecretary.password;
+      }
+
+      const { error } = await supabase
+        .from('secretary_credentials')
+        .update(updateData)
+        .eq('id', selectedSecretary.id);
+
+      if (error) throw error;
+
+      toast.success('Secretary updated successfully');
+      setShowEditSecretaryDialog(false);
+      setSelectedSecretary(null);
+      fetchData();
+    } catch (error) {
+      console.error('Error updating secretary:', error);
+      toast.error('Failed to update secretary');
+    } finally {
+      setSaving(false);
+    }
+  };
+
+  const handleDeleteSecretary = async (id: string) => {
+    try {
+      const { error } = await supabase.from('secretary_credentials').delete().eq('id', id);
+      if (error) throw error;
+      toast.success('Secretary deleted');
+      fetchData();
+    } catch (error) {
+      console.error('Error deleting secretary:', error);
+      toast.error('Failed to delete secretary');
+    }
+  };
+
   if (loading) {
     return (
       <DashboardLayout>
@@ -375,10 +494,14 @@ export default function UsersPage() {
 
         {/* Tabs */}
         <Tabs value={activeTab} onValueChange={setActiveTab} className="animate-fade-in">
-          <TabsList className="grid w-full grid-cols-3 mb-6">
+          <TabsList className="grid w-full grid-cols-4 mb-6">
             <TabsTrigger value="teachers" className="flex items-center gap-2">
               <Shield className="w-4 h-4" />
               Teachers ({filteredTeachers.length})
+            </TabsTrigger>
+            <TabsTrigger value="secretaries" className="flex items-center gap-2">
+              <UserCog className="w-4 h-4" />
+              Secretaries ({filteredSecretaries.length})
             </TabsTrigger>
             <TabsTrigger value="parents" className="flex items-center gap-2">
               <Users className="w-4 h-4" />
@@ -442,6 +565,56 @@ export default function UsersPage() {
                     </p>
                     <p className="text-xs text-muted-foreground">
                       <span className="font-medium">Classes:</span> {teacher.classes.length > 0 ? teacher.classes.join(', ') : 'None'}
+                    </p>
+                  </div>
+                </div>
+              ))}
+            </div>
+          </TabsContent>
+
+          {/* Secretaries Tab */}
+          <TabsContent value="secretaries">
+            <div className="flex justify-end mb-4">
+              <Button onClick={() => setShowAddSecretaryDialog(true)}>
+                <Plus className="w-4 h-4 mr-2" />
+                Add Secretary
+              </Button>
+            </div>
+            <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
+              {filteredSecretaries.map((secretary) => (
+                <div key={secretary.id} className="card-elevated p-4">
+                  <div className="flex items-start justify-between">
+                    <div className="flex items-center gap-3">
+                      <div className="w-10 h-10 rounded-full bg-warning/20 flex items-center justify-center">
+                        <UserCog className="w-5 h-5 text-warning" />
+                      </div>
+                      <div className="flex-1 min-w-0">
+                        <p className="font-medium text-card-foreground truncate">{secretary.full_name}</p>
+                        <p className="text-xs text-muted-foreground truncate">@{secretary.username}</p>
+                      </div>
+                    </div>
+                    <DropdownMenu>
+                      <DropdownMenuTrigger asChild>
+                        <Button variant="ghost" size="icon" className="h-8 w-8">
+                          <MoreHorizontal className="h-4 w-4" />
+                        </Button>
+                      </DropdownMenuTrigger>
+                      <DropdownMenuContent align="end">
+                        <DropdownMenuItem onClick={() => handleOpenEditSecretary(secretary)}>
+                          Edit Details
+                        </DropdownMenuItem>
+                        <DropdownMenuItem 
+                          className="text-destructive"
+                          onClick={() => handleDeleteSecretary(secretary.id)}
+                        >
+                          Delete
+                        </DropdownMenuItem>
+                      </DropdownMenuContent>
+                    </DropdownMenu>
+                  </div>
+                  <div className="mt-3 pt-3 border-t space-y-1">
+                    <p className="text-xs text-muted-foreground">
+                      <span className="font-medium">Password:</span> {secretary.password_hash}
                     </p>
                   </div>
                 </div>
@@ -837,6 +1010,102 @@ export default function UsersPage() {
             <Button onClick={handleAddTeacher} disabled={saving}>
               {saving && <Loader2 className="w-4 h-4 mr-2 animate-spin" />}
               Save
+            </Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
+
+      {/* Add Secretary Dialog */}
+      <Dialog open={showAddSecretaryDialog} onOpenChange={setShowAddSecretaryDialog}>
+        <DialogContent>
+          <DialogHeader>
+            <DialogTitle>Add Secretary</DialogTitle>
+            <DialogDescription>Fill in the new secretary's information</DialogDescription>
+          </DialogHeader>
+          <div className="space-y-4 py-4">
+            <div className="space-y-2">
+              <Label htmlFor="new_secretary_username">Username</Label>
+              <Input
+                id="new_secretary_username"
+                value={newSecretary.username}
+                onChange={(e) => setNewSecretary({ ...newSecretary, username: e.target.value })}
+                placeholder="e.g. katibu"
+              />
+            </div>
+            <div className="space-y-2">
+              <Label htmlFor="new_secretary_name">Full Name</Label>
+              <Input
+                id="new_secretary_name"
+                value={newSecretary.full_name}
+                onChange={(e) => setNewSecretary({ ...newSecretary, full_name: e.target.value })}
+                placeholder="e.g. Jane Doe"
+              />
+            </div>
+            <div className="space-y-2">
+              <Label htmlFor="new_secretary_password">Password</Label>
+              <Input
+                id="new_secretary_password"
+                type="text"
+                value={newSecretary.password}
+                onChange={(e) => setNewSecretary({ ...newSecretary, password: e.target.value })}
+                placeholder="Login password"
+              />
+            </div>
+          </div>
+          <DialogFooter>
+            <Button variant="outline" onClick={() => setShowAddSecretaryDialog(false)}>
+              Cancel
+            </Button>
+            <Button onClick={handleAddSecretary} disabled={saving}>
+              {saving && <Loader2 className="w-4 h-4 mr-2 animate-spin" />}
+              Save
+            </Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
+
+      {/* Edit Secretary Dialog */}
+      <Dialog open={showEditSecretaryDialog} onOpenChange={setShowEditSecretaryDialog}>
+        <DialogContent>
+          <DialogHeader>
+            <DialogTitle>Edit Secretary</DialogTitle>
+            <DialogDescription>Update secretary information</DialogDescription>
+          </DialogHeader>
+          <div className="space-y-4 py-4">
+            <div className="space-y-2">
+              <Label htmlFor="edit_secretary_username">Username</Label>
+              <Input
+                id="edit_secretary_username"
+                value={editSecretary.username}
+                onChange={(e) => setEditSecretary({ ...editSecretary, username: e.target.value })}
+              />
+            </div>
+            <div className="space-y-2">
+              <Label htmlFor="edit_secretary_name">Full Name</Label>
+              <Input
+                id="edit_secretary_name"
+                value={editSecretary.full_name}
+                onChange={(e) => setEditSecretary({ ...editSecretary, full_name: e.target.value })}
+              />
+            </div>
+            <div className="space-y-2">
+              <Label htmlFor="edit_secretary_password">Password (leave empty to keep current)</Label>
+              <Input
+                id="edit_secretary_password"
+                type="text"
+                value={editSecretary.password}
+                onChange={(e) => setEditSecretary({ ...editSecretary, password: e.target.value })}
+                placeholder="New password"
+              />
+            </div>
+          </div>
+          <DialogFooter>
+            <Button variant="outline" onClick={() => setShowEditSecretaryDialog(false)}>
+              Cancel
+            </Button>
+            <Button onClick={handleEditSecretary} disabled={saving}>
+              {saving && <Loader2 className="w-4 h-4 mr-2 animate-spin" />}
+              Save Changes
             </Button>
           </DialogFooter>
         </DialogContent>
