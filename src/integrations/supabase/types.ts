@@ -130,6 +130,7 @@ export type Database = {
           id: string
           message: string
           parent_id: string
+          recipient_type: string
           status: string
           student_id: string
           updated_at: string
@@ -139,6 +140,7 @@ export type Database = {
           id?: string
           message: string
           parent_id: string
+          recipient_type?: string
           status?: string
           student_id: string
           updated_at?: string
@@ -148,6 +150,7 @@ export type Database = {
           id?: string
           message?: string
           parent_id?: string
+          recipient_type?: string
           status?: string
           student_id?: string
           updated_at?: string

@@ -3,8 +3,10 @@ import { StatCard } from '@/components/dashboard/StatCard';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
+import { Textarea } from '@/components/ui/textarea';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter } from '@/components/ui/dialog';
+import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import { supabase } from '@/integrations/supabase/client';
 import { useToast } from '@/hooks/use-toast';
 import { 
@@ -15,7 +17,11 @@ import {
   Loader2,
   Receipt,
   AlertTriangle,
-  TrendingUp
+  TrendingUp,
+  Bot,
+  Send,
+  ChevronDown,
+  ChevronUp
 } from 'lucide-react';
 
 interface Student {
@@ -49,6 +55,11 @@ interface FeeStructure {
   total_fee: number;
 }
 
+interface ChatMessage {
+  role: 'user' | 'assistant';
+  content: string;
+}
+
 export function SecretaryDashboard() {
   const { toast } = useToast();
   const [isLoading, setIsLoading] = useState(true);
@@ -56,6 +67,13 @@ export function SecretaryDashboard() {
   const [feePayments, setFeePayments] = useState<FeePayment[]>([]);
   const [feeStructure, setFeeStructure] = useState<FeeStructure[]>([]);
   const [searchQuery, setSearchQuery] = useState('');
+  const [selectedClass, setSelectedClass] = useState<string>('all');
+  const [expandedClasses, setExpandedClasses] = useState<Set<string>>(new Set());
+  
+  // AI Assistant state
+  const [aiQuestion, setAiQuestion] = useState('');
+  const [aiLoading, setAiLoading] = useState(false);
+  const [chatHistory, setChatHistory] = useState<ChatMessage[]>([]);
   
   // Add payment dialog
   const [showAddPaymentDialog, setShowAddPaymentDialog] = useState(false);
@@ -74,7 +92,7 @@ export function SecretaryDashboard() {
     setIsLoading(true);
     
     const [studentsRes, paymentsRes, structureRes] = await Promise.all([
-      supabase.from('students').select('*').order('full_name'),
+      supabase.from('students').select('*').order('class').order('full_name'),
       supabase.from('fee_payments').select('*, students(full_name, class)').order('payment_date', { ascending: false }),
       supabase.from('fee_structure').select('*')
     ]);
@@ -150,12 +168,62 @@ export function SecretaryDashboard() {
     return expectedFee - paidAmount;
   };
 
+  const handleAskAI = async () => {
+    if (!aiQuestion.trim()) return;
+    
+    const userMessage = aiQuestion.trim();
+    setAiQuestion('');
+    setChatHistory(prev => [...prev, { role: 'user', content: userMessage }]);
+    setAiLoading(true);
+    
+    try {
+      const response = await supabase.functions.invoke('fee-assistant', {
+        body: { question: userMessage }
+      });
+      
+      if (response.error) throw new Error(response.error.message);
+      
+      const answer = response.data?.answer || 'Sorry, I could not process your question.';
+      setChatHistory(prev => [...prev, { role: 'assistant', content: answer }]);
+    } catch (error) {
+      console.error('AI error:', error);
+      setChatHistory(prev => [...prev, { 
+        role: 'assistant', 
+        content: 'Sorry, there was an error processing your question. Please try again.' 
+      }]);
+    } finally {
+      setAiLoading(false);
+    }
+  };
+
+  const toggleClassExpand = (className: string) => {
+    setExpandedClasses(prev => {
+      const newSet = new Set(prev);
+      if (newSet.has(className)) {
+        newSet.delete(className);
+      } else {
+        newSet.add(className);
+      }
+      return newSet;
+    });
+  };
+
   const totalCollected = feePayments.reduce((sum, p) => sum + Number(p.amount), 0);
   const studentsWithDebt = students.filter(s => getStudentBalance(s.id) > 0).length;
 
+  // Get unique classes
+  const classes = [...new Set(students.map(s => s.class))].sort();
+
+  // Group students by class
+  const studentsByClass = classes.reduce((acc, cls) => {
+    acc[cls] = students.filter(s => s.class === cls);
+    return acc;
+  }, {} as Record<string, Student[]>);
+
   const filteredStudents = students.filter(s => 
-    s.full_name.toLowerCase().includes(searchQuery.toLowerCase()) ||
-    s.roll_number.toLowerCase().includes(searchQuery.toLowerCase())
+    (selectedClass === 'all' || s.class === selectedClass) &&
+    (s.full_name.toLowerCase().includes(searchQuery.toLowerCase()) ||
+    s.roll_number.toLowerCase().includes(searchQuery.toLowerCase()))
   );
 
   if (isLoading) {
@@ -212,73 +280,229 @@ export function SecretaryDashboard() {
         />
       </div>
 
-      {/* Students with Balance */}
+      {/* AI Assistant */}
+      <div className="card-elevated p-6 animate-fade-in">
+        <div className="flex items-center gap-2 mb-4">
+          <Bot className="w-5 h-5 text-primary" />
+          <h3 className="font-display font-semibold text-lg text-card-foreground">AI Fee Assistant</h3>
+        </div>
+        <p className="text-sm text-muted-foreground mb-4">
+          Ask questions about student fees, payments, and balances. For example: "Which students have outstanding balances?" or "How much has Class 1 paid?"
+        </p>
+        
+        {chatHistory.length > 0 && (
+          <div className="max-h-64 overflow-y-auto mb-4 space-y-3 p-4 bg-muted/30 rounded-lg">
+            {chatHistory.map((msg, idx) => (
+              <div key={idx} className={`flex ${msg.role === 'user' ? 'justify-end' : 'justify-start'}`}>
+                <div className={`max-w-[80%] p-3 rounded-lg ${
+                  msg.role === 'user' 
+                    ? 'bg-primary text-primary-foreground' 
+                    : 'bg-background border border-border'
+                }`}>
+                  <p className="text-sm whitespace-pre-wrap">{msg.content}</p>
+                </div>
+              </div>
+            ))}
+            {aiLoading && (
+              <div className="flex justify-start">
+                <div className="bg-background border border-border p-3 rounded-lg">
+                  <Loader2 className="w-4 h-4 animate-spin text-primary" />
+                </div>
+              </div>
+            )}
+          </div>
+        )}
+        
+        <div className="flex gap-2">
+          <Textarea
+            placeholder="Ask about student fees..."
+            value={aiQuestion}
+            onChange={(e) => setAiQuestion(e.target.value)}
+            onKeyDown={(e) => {
+              if (e.key === 'Enter' && !e.shiftKey) {
+                e.preventDefault();
+                handleAskAI();
+              }
+            }}
+            className="min-h-[60px] resize-none"
+          />
+          <Button onClick={handleAskAI} disabled={aiLoading || !aiQuestion.trim()}>
+            {aiLoading ? <Loader2 className="w-4 h-4 animate-spin" /> : <Send className="w-4 h-4" />}
+          </Button>
+        </div>
+      </div>
+
+      {/* Students by Class */}
       <div className="card-elevated p-6 animate-fade-in">
         <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4 mb-6">
-          <h3 className="font-display font-semibold text-lg text-card-foreground">Student Payment Status</h3>
-          <div className="relative w-full sm:w-64">
-            <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-muted-foreground" />
-            <Input
-              placeholder="Search student..."
-              value={searchQuery}
-              onChange={(e) => setSearchQuery(e.target.value)}
-              className="pl-9"
-            />
+          <h3 className="font-display font-semibold text-lg text-card-foreground">Students by Class</h3>
+          <div className="flex gap-2">
+            <Select value={selectedClass} onValueChange={setSelectedClass}>
+              <SelectTrigger className="w-40">
+                <SelectValue placeholder="All Classes" />
+              </SelectTrigger>
+              <SelectContent>
+                <SelectItem value="all">All Classes</SelectItem>
+                {classes.map((cls) => (
+                  <SelectItem key={cls} value={cls}>{cls}</SelectItem>
+                ))}
+              </SelectContent>
+            </Select>
+            <div className="relative w-full sm:w-64">
+              <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-muted-foreground" />
+              <Input
+                placeholder="Search student..."
+                value={searchQuery}
+                onChange={(e) => setSearchQuery(e.target.value)}
+                className="pl-9"
+              />
+            </div>
           </div>
         </div>
         
-        <div className="overflow-x-auto">
-          <table className="w-full">
-            <thead>
-              <tr className="border-b border-border">
-                <th className="text-left py-3 px-4 text-sm font-medium text-muted-foreground">Name</th>
-                <th className="text-left py-3 px-4 text-sm font-medium text-muted-foreground">Class</th>
-                <th className="text-right py-3 px-4 text-sm font-medium text-muted-foreground">Expected Fee</th>
-                <th className="text-right py-3 px-4 text-sm font-medium text-muted-foreground">Paid</th>
-                <th className="text-right py-3 px-4 text-sm font-medium text-muted-foreground">Balance</th>
-                <th className="text-right py-3 px-4 text-sm font-medium text-muted-foreground">Action</th>
-              </tr>
-            </thead>
-            <tbody>
-              {filteredStudents.slice(0, 10).map((student) => {
-                const structure = feeStructure.find(f => f.class === student.class);
-                const expectedFee = structure?.total_fee || 0;
-                const paidAmount = feePayments
-                  .filter(p => p.student_id === student.id)
-                  .reduce((sum, p) => sum + Number(p.amount), 0);
-                const balance = expectedFee - paidAmount;
-                
-                return (
-                  <tr key={student.id} className="border-b border-border/50 table-row-hover">
-                    <td className="py-4 px-4 font-medium text-card-foreground">{student.full_name}</td>
-                    <td className="py-4 px-4 text-card-foreground">{student.class}</td>
-                    <td className="py-4 px-4 text-right text-card-foreground">TZS {expectedFee.toLocaleString()}</td>
-                    <td className="py-4 px-4 text-right text-success font-medium">TZS {paidAmount.toLocaleString()}</td>
-                    <td className="py-4 px-4 text-right">
-                      {balance > 0 ? (
-                        <span className="text-destructive font-medium">TZS {balance.toLocaleString()}</span>
-                      ) : (
-                        <span className="text-success font-medium">None</span>
+        {selectedClass === 'all' && !searchQuery ? (
+          // Grouped view by class
+          <div className="space-y-4">
+            {classes.map((className) => {
+              const classStudents = studentsByClass[className] || [];
+              const isExpanded = expandedClasses.has(className);
+              const classStructure = feeStructure.find(f => f.class === className);
+              const expectedFee = classStructure?.total_fee || 0;
+              const classPaid = classStudents.reduce((sum, s) => {
+                return sum + feePayments
+                  .filter(p => p.student_id === s.id)
+                  .reduce((pSum, p) => pSum + Number(p.amount), 0);
+              }, 0);
+              const classDebt = (expectedFee * classStudents.length) - classPaid;
+              
+              return (
+                <div key={className} className="border border-border rounded-lg overflow-hidden">
+                  <button
+                    onClick={() => toggleClassExpand(className)}
+                    className="w-full flex items-center justify-between p-4 bg-muted/30 hover:bg-muted/50 transition-colors"
+                  >
+                    <div className="flex items-center gap-4">
+                      <span className="font-semibold text-card-foreground">{className}</span>
+                      <span className="text-sm text-muted-foreground">{classStudents.length} students</span>
+                    </div>
+                    <div className="flex items-center gap-4">
+                      <span className="text-sm text-success">Paid: TZS {classPaid.toLocaleString()}</span>
+                      {classDebt > 0 && (
+                        <span className="text-sm text-destructive">Outstanding: TZS {classDebt.toLocaleString()}</span>
                       )}
-                    </td>
-                    <td className="py-4 px-4 text-right">
-                      <Button
-                        size="sm"
-                        onClick={() => {
-                          setSelectedStudentId(student.id);
-                          setShowAddPaymentDialog(true);
-                        }}
-                      >
-                        <Receipt className="w-3 h-3 mr-1" />
-                        Pay
-                      </Button>
-                    </td>
-                  </tr>
-                );
-              })}
-            </tbody>
-          </table>
-        </div>
+                      {isExpanded ? <ChevronUp className="w-4 h-4" /> : <ChevronDown className="w-4 h-4" />}
+                    </div>
+                  </button>
+                  
+                  {isExpanded && (
+                    <div className="overflow-x-auto">
+                      <table className="w-full">
+                        <thead>
+                          <tr className="border-b border-border bg-muted/20">
+                            <th className="text-left py-3 px-4 text-sm font-medium text-muted-foreground">Name</th>
+                            <th className="text-right py-3 px-4 text-sm font-medium text-muted-foreground">Expected</th>
+                            <th className="text-right py-3 px-4 text-sm font-medium text-muted-foreground">Paid</th>
+                            <th className="text-right py-3 px-4 text-sm font-medium text-muted-foreground">Balance</th>
+                            <th className="text-right py-3 px-4 text-sm font-medium text-muted-foreground">Action</th>
+                          </tr>
+                        </thead>
+                        <tbody>
+                          {classStudents.map((student) => {
+                            const paidAmount = feePayments
+                              .filter(p => p.student_id === student.id)
+                              .reduce((sum, p) => sum + Number(p.amount), 0);
+                            const balance = expectedFee - paidAmount;
+                            
+                            return (
+                              <tr key={student.id} className="border-b border-border/50 table-row-hover">
+                                <td className="py-3 px-4 font-medium text-card-foreground">{student.full_name}</td>
+                                <td className="py-3 px-4 text-right text-card-foreground">TZS {expectedFee.toLocaleString()}</td>
+                                <td className="py-3 px-4 text-right text-success font-medium">TZS {paidAmount.toLocaleString()}</td>
+                                <td className="py-3 px-4 text-right">
+                                  {balance > 0 ? (
+                                    <span className="text-destructive font-medium">TZS {balance.toLocaleString()}</span>
+                                  ) : (
+                                    <span className="text-success font-medium">None</span>
+                                  )}
+                                </td>
+                                <td className="py-3 px-4 text-right">
+                                  <Button
+                                    size="sm"
+                                    onClick={() => {
+                                      setSelectedStudentId(student.id);
+                                      setShowAddPaymentDialog(true);
+                                    }}
+                                  >
+                                    <Receipt className="w-3 h-3 mr-1" />
+                                    Pay
+                                  </Button>
+                                </td>
+                              </tr>
+                            );
+                          })}
+                        </tbody>
+                      </table>
+                    </div>
+                  )}
+                </div>
+              );
+            })}
+          </div>
+        ) : (
+          // Filtered/searched view
+          <div className="overflow-x-auto">
+            <table className="w-full">
+              <thead>
+                <tr className="border-b border-border">
+                  <th className="text-left py-3 px-4 text-sm font-medium text-muted-foreground">Name</th>
+                  <th className="text-left py-3 px-4 text-sm font-medium text-muted-foreground">Class</th>
+                  <th className="text-right py-3 px-4 text-sm font-medium text-muted-foreground">Expected Fee</th>
+                  <th className="text-right py-3 px-4 text-sm font-medium text-muted-foreground">Paid</th>
+                  <th className="text-right py-3 px-4 text-sm font-medium text-muted-foreground">Balance</th>
+                  <th className="text-right py-3 px-4 text-sm font-medium text-muted-foreground">Action</th>
+                </tr>
+              </thead>
+              <tbody>
+                {filteredStudents.slice(0, 20).map((student) => {
+                  const structure = feeStructure.find(f => f.class === student.class);
+                  const expectedFee = structure?.total_fee || 0;
+                  const paidAmount = feePayments
+                    .filter(p => p.student_id === student.id)
+                    .reduce((sum, p) => sum + Number(p.amount), 0);
+                  const balance = expectedFee - paidAmount;
+                  
+                  return (
+                    <tr key={student.id} className="border-b border-border/50 table-row-hover">
+                      <td className="py-4 px-4 font-medium text-card-foreground">{student.full_name}</td>
+                      <td className="py-4 px-4 text-card-foreground">{student.class}</td>
+                      <td className="py-4 px-4 text-right text-card-foreground">TZS {expectedFee.toLocaleString()}</td>
+                      <td className="py-4 px-4 text-right text-success font-medium">TZS {paidAmount.toLocaleString()}</td>
+                      <td className="py-4 px-4 text-right">
+                        {balance > 0 ? (
+                          <span className="text-destructive font-medium">TZS {balance.toLocaleString()}</span>
+                        ) : (
+                          <span className="text-success font-medium">None</span>
+                        )}
+                      </td>
+                      <td className="py-4 px-4 text-right">
+                        <Button
+                          size="sm"
+                          onClick={() => {
+                            setSelectedStudentId(student.id);
+                            setShowAddPaymentDialog(true);
+                          }}
+                        >
+                          <Receipt className="w-3 h-3 mr-1" />
+                          Pay
+                        </Button>
+                      </td>
+                    </tr>
+                  );
+                })}
+              </tbody>
+            </table>
+          </div>
+        )}
       </div>
 
       {/* Recent Payments */}

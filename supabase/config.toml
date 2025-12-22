@@ -1,1 +1,4 @@
 project_id = "bdmuudnrytfwkteybbqb"
+
+[functions.fee-assistant]
+verify_jwt = false

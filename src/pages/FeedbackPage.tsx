@@ -2,6 +2,9 @@ import { useState, useEffect } from 'react';
 import { DashboardLayout } from '@/components/layout/DashboardLayout';
 import { Button } from '@/components/ui/button';
 import { Textarea } from '@/components/ui/textarea';
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
+import { Label } from '@/components/ui/label';
+import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import { MessageSquare, Send, Clock, CheckCircle, User, Calendar, Loader2 } from 'lucide-react';
 import { useAuth } from '@/contexts/AuthContext';
 import { useToast } from '@/hooks/use-toast';
@@ -14,6 +17,7 @@ interface FeedbackItem {
   message: string;
   status: string;
   created_at: string;
+  recipient_type: string;
   parentName?: string;
   studentName?: string;
   studentClass?: string;
@@ -23,6 +27,7 @@ export default function FeedbackPage() {
   const { user } = useAuth();
   const { toast } = useToast();
   const [newMessage, setNewMessage] = useState('');
+  const [recipientType, setRecipientType] = useState('teacher');
   const [feedbackList, setFeedbackList] = useState<FeedbackItem[]>([]);
   const [loading, setLoading] = useState(true);
   const [submitting, setSubmitting] = useState(false);
@@ -33,6 +38,7 @@ export default function FeedbackPage() {
   const isParent = user?.role === 'parent';
   const isAdmin = user?.role === 'admin';
   const isTeacher = user?.role === 'teacher';
+  const isSecretary = user?.role === 'secretary';
 
   useEffect(() => {
     if (isParent) {
@@ -44,7 +50,31 @@ export default function FeedbackPage() {
   const fetchStudentData = async () => {
     if (!user) return;
     
-    // Find student linked to this parent
+    // Find parent record first
+    const { data: parentData } = await supabase
+      .from('parents')
+      .select('id')
+      .eq('user_id', user.id)
+      .maybeSingle();
+    
+    if (parentData) {
+      setParentId(parentData.id);
+      
+      // Find student linked to this parent
+      const { data: studentData } = await supabase
+        .from('students')
+        .select('id, full_name')
+        .eq('parent_id', parentData.id)
+        .maybeSingle();
+      
+      if (studentData) {
+        setStudentId(studentData.id);
+        setStudentName(studentData.full_name);
+        return;
+      }
+    }
+    
+    // Fallback: try finding student by user.id as parent_id
     const { data: studentByParent } = await supabase
       .from('students')
       .select('id, full_name, parent_id')
@@ -54,21 +84,7 @@ export default function FeedbackPage() {
     if (studentByParent) {
       setStudentId(studentByParent.id);
       setStudentName(studentByParent.full_name);
-      setParentId(studentByParent.parent_id);
-      return;
-    }
-    
-    // Try finding by student id
-    const { data: studentById } = await supabase
-      .from('students')
-      .select('id, full_name, parent_id')
-      .eq('id', user.id)
-      .maybeSingle();
-    
-    if (studentById) {
-      setStudentId(studentById.id);
-      setStudentName(studentById.full_name);
-      setParentId(studentById.parent_id || user.id);
+      setParentId(studentByParent.parent_id || user.id);
     }
   };
 
@@ -76,12 +92,10 @@ export default function FeedbackPage() {
     try {
       setLoading(true);
       
-      let query = supabase
+      const { data: feedbackData, error: feedbackError } = await supabase
         .from('feedback')
         .select('*')
         .order('created_at', { ascending: false });
-      
-      const { data: feedbackData, error: feedbackError } = await query;
       
       if (feedbackError) throw feedbackError;
 
@@ -93,15 +107,17 @@ export default function FeedbackPage() {
         const student = studentsData?.find(s => s.id === fb.student_id);
         return {
           ...fb,
+          recipient_type: fb.recipient_type || 'teacher',
           parentName: parent?.full_name || 'Parent',
           studentName: student?.full_name || 'Student',
           studentClass: student?.class || ''
         };
       });
 
-      // Filter for teachers - show only their class students' feedback
+      // Filter based on role
       let filteredFeedback = enrichedFeedback;
       
+      // Teachers see feedback sent to teachers for their classes
       if (isTeacher && user) {
         const { data: teacherData } = await supabase
           .from('teachers')
@@ -111,14 +127,24 @@ export default function FeedbackPage() {
         
         if (teacherData?.classes) {
           filteredFeedback = enrichedFeedback.filter(fb => 
-            teacherData.classes.includes(fb.studentClass)
+            fb.recipient_type === 'teacher' && teacherData.classes.includes(fb.studentClass)
           );
         }
       }
       
-      // Filter for parents - show only their own feedback
+      // Secretary sees feedback sent to secretary
+      if (isSecretary) {
+        filteredFeedback = enrichedFeedback.filter(fb => fb.recipient_type === 'secretary');
+      }
+      
+      // Parents see only their own feedback
       if (isParent && studentId) {
         filteredFeedback = enrichedFeedback.filter(fb => fb.student_id === studentId);
+      }
+      
+      // Admin sees all feedback
+      if (isAdmin) {
+        filteredFeedback = enrichedFeedback;
       }
 
       setFeedbackList(filteredFeedback);
@@ -136,7 +162,7 @@ export default function FeedbackPage() {
     if (!studentId) {
       toast({
         title: "Error",
-        description: "No student linked to your account",
+        description: "No student linked to your account. Please contact admin.",
         variant: "destructive"
       });
       return;
@@ -144,23 +170,38 @@ export default function FeedbackPage() {
 
     setSubmitting(true);
     
+    // Use parentId if available, otherwise generate a temporary one
+    const feedbackParentId = parentId || user?.id;
+    
+    if (!feedbackParentId) {
+      toast({
+        title: "Error",
+        description: "Unable to identify parent account",
+        variant: "destructive"
+      });
+      setSubmitting(false);
+      return;
+    }
+    
     const { error } = await supabase.from('feedback').insert({
-      parent_id: parentId || user?.id,
+      parent_id: feedbackParentId,
       student_id: studentId,
       message: newMessage.trim(),
-      status: 'pending'
+      status: 'pending',
+      recipient_type: recipientType
     });
 
     if (error) {
+      console.error('Feedback insert error:', error);
       toast({
         title: "Error",
-        description: "Failed to send feedback",
+        description: "Failed to send feedback. Please try again.",
         variant: "destructive"
       });
     } else {
       toast({
         title: "Success",
-        description: "Your feedback has been sent to Admin and Teacher",
+        description: `Your feedback has been sent to ${recipientType === 'teacher' ? 'the Teacher' : 'the Secretary'}`,
       });
       setNewMessage('');
       fetchFeedback();
@@ -196,7 +237,7 @@ export default function FeedbackPage() {
         <div>
           <h1 className="text-3xl font-display font-bold text-foreground">Feedback</h1>
           <p className="text-muted-foreground mt-1">
-            {isParent ? "Send feedback to teachers and view responses" : "View and respond to parent feedback"}
+            {isParent ? "Send feedback to teachers or secretary and view responses" : "View and respond to parent feedback"}
           </p>
         </div>
 
@@ -210,13 +251,27 @@ export default function FeedbackPage() {
                 </h3>
                 <form onSubmit={handleSubmit} className="space-y-4">
                   <div>
-                    <label className="text-sm font-medium text-muted-foreground">Student</label>
+                    <Label className="text-sm font-medium text-muted-foreground">Student</Label>
                     <div className="mt-1 p-3 rounded-lg bg-muted/50 text-card-foreground">
                       {studentName || 'No student linked'}
                     </div>
                   </div>
+                  
+                  <div className="space-y-2">
+                    <Label className="text-sm font-medium text-muted-foreground">Send To</Label>
+                    <Select value={recipientType} onValueChange={setRecipientType}>
+                      <SelectTrigger>
+                        <SelectValue />
+                      </SelectTrigger>
+                      <SelectContent>
+                        <SelectItem value="teacher">Class Teacher</SelectItem>
+                        <SelectItem value="secretary">Secretary (Fee Related)</SelectItem>
+                      </SelectContent>
+                    </Select>
+                  </div>
+                  
                   <div>
-                    <label className="text-sm font-medium text-muted-foreground">Your Message</label>
+                    <Label className="text-sm font-medium text-muted-foreground">Your Message</Label>
                     <Textarea
                       placeholder="Write your feedback here..."
                       value={newMessage}
@@ -265,7 +320,7 @@ export default function FeedbackPage() {
                   <MessageSquare className="w-12 h-12 text-muted-foreground mx-auto mb-4" />
                   <h3 className="font-display font-semibold text-lg text-card-foreground mb-2">No feedback yet</h3>
                   <p className="text-muted-foreground">
-                    {isParent ? "Send your first feedback to teachers" : "No feedback received from parents"}
+                    {isParent ? "Send your first feedback to teachers or secretary" : "No feedback received from parents"}
                   </p>
                 </div>
               ) : (
@@ -282,6 +337,9 @@ export default function FeedbackPage() {
                               <p className="font-medium text-card-foreground">{feedback.parentName}</p>
                               <p className="text-sm text-muted-foreground">
                                 About: {feedback.studentName} ({feedback.studentClass})
+                              </p>
+                              <p className="text-xs text-primary mt-1">
+                                To: {feedback.recipient_type === 'teacher' ? 'Teacher' : 'Secretary'}
                               </p>
                             </div>
                             <div className="flex items-center gap-2">
@@ -301,7 +359,7 @@ export default function FeedbackPage() {
                             <Calendar className="w-3 h-3" />
                             {new Date(feedback.created_at).toLocaleDateString('en-US', { year: 'numeric', month: 'long', day: 'numeric' })}
                           </div>
-                          {(isAdmin || isTeacher) && feedback.status === 'pending' && (
+                          {(isAdmin || isTeacher || isSecretary) && feedback.status === 'pending' && (
                             <div className="mt-4">
                               <Button 
                                 size="sm"
