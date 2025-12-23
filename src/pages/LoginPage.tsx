@@ -92,8 +92,8 @@ export default function LoginPage() {
       const result = await loginAsParent(studentName, studentRollNumber);
       if (result.success) {
         toast({
-          title: "Karibu Mzazi!",
-          description: "Umeingia kikamilifu.",
+          title: "Welcome Parent!",
+          description: "You have successfully logged in.",
         });
         navigate('/dashboard');
       } else {
@@ -113,8 +113,8 @@ export default function LoginPage() {
       const result = await loginAsSecretary(secretaryUsername, secretaryPassword);
       if (result.success) {
         toast({
-          title: "Karibu Katibu!",
-          description: "Umeingia kikamilifu.",
+          title: "Welcome Secretary!",
+          description: "You have successfully logged in.",
         });
         navigate('/dashboard');
       } else {
