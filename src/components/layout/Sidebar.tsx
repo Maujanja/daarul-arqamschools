@@ -29,14 +29,15 @@ interface NavItem {
 }
 
 const navItems: NavItem[] = [
-  { label: 'Dashboard', icon: LayoutDashboard, href: '/dashboard', roles: ['admin', 'teacher', 'parent'] },
+  { label: 'Dashboard', icon: LayoutDashboard, href: '/dashboard', roles: ['admin', 'teacher', 'parent', 'secretary'] },
   { label: 'Students', icon: GraduationCap, href: '/students', roles: ['admin', 'teacher'] },
   { label: 'Teachers', icon: Users, href: '/teachers', roles: ['admin'] },
   { label: 'Subjects', icon: BookOpen, href: '/subjects', roles: ['admin'] },
   { label: 'Marks Entry', icon: ClipboardList, href: '/marks-entry', roles: ['teacher'] },
   { label: 'Reports', icon: BarChart3, href: '/reports', roles: ['admin', 'teacher', 'parent'] },
   { label: 'Academic Records', icon: FileText, href: '/records', roles: ['parent'] },
-  { label: 'Feedback', icon: MessageSquare, href: '/feedback', roles: ['admin', 'parent'] },
+  { label: 'Feedback', icon: MessageSquare, href: '/feedback', roles: ['admin', 'parent', 'teacher', 'secretary'] },
+  { label: 'Announcements', icon: FileText, href: '/announcements', roles: ['admin', 'parent'] },
   { label: 'User Management', icon: UserCog, href: '/users', roles: ['admin'] },
   { label: 'Settings', icon: Settings, href: '/settings', roles: ['admin'] },
 ];
