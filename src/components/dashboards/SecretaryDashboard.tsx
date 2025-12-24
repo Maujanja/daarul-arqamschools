@@ -1,4 +1,5 @@
 import { useState, useEffect } from 'react';
+import { useNavigate } from 'react-router-dom';
 import { StatCard } from '@/components/dashboard/StatCard';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
@@ -21,7 +22,8 @@ import {
   Bot,
   Send,
   ChevronDown,
-  ChevronUp
+  ChevronUp,
+  GraduationCap
 } from 'lucide-react';
 
 interface Student {
@@ -62,6 +64,7 @@ interface ChatMessage {
 
 export function SecretaryDashboard() {
   const { toast } = useToast();
+  const navigate = useNavigate();
   const [isLoading, setIsLoading] = useState(true);
   const [students, setStudents] = useState<Student[]>([]);
   const [feePayments, setFeePayments] = useState<FeePayment[]>([]);
@@ -246,10 +249,16 @@ export function SecretaryDashboard() {
           <h1 className="text-3xl font-display font-bold text-foreground">Secretary Dashboard</h1>
           <p className="text-muted-foreground mt-1">Fee and Payment Management</p>
         </div>
-        <Button className="btn-gradient" onClick={() => setShowAddPaymentDialog(true)}>
-          <Plus className="w-4 h-4 mr-2" />
-          Record Payment
-        </Button>
+        <div className="flex gap-2 flex-wrap">
+          <Button variant="outline" onClick={() => navigate('/students')}>
+            <GraduationCap className="w-4 h-4 mr-2" />
+            Manage Students
+          </Button>
+          <Button className="btn-gradient" onClick={() => setShowAddPaymentDialog(true)}>
+            <Plus className="w-4 h-4 mr-2" />
+            Record Payment
+          </Button>
+        </div>
       </div>
 
       {/* Stats Grid */}

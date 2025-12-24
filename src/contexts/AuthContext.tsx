@@ -51,7 +51,7 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
         .maybeSingle();
 
       if (error || !data) {
-        return { success: false, error: 'Jina au nywila si sahihi' };
+        return { success: false, error: 'Invalid username or password' };
       }
 
       const authUser: AuthUser = {
@@ -64,7 +64,7 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
       localStorage.setItem(AUTH_STORAGE_KEY, JSON.stringify(authUser));
       return { success: true };
     } catch (error: any) {
-      return { success: false, error: error.message || 'Kuingia kumeshindikana' };
+      return { success: false, error: error.message || 'Login failed' };
     }
   }, []);
 
@@ -78,7 +78,7 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
         .maybeSingle();
 
       if (error || !data) {
-        return { success: false, error: 'Jina au nywila si sahihi' };
+        return { success: false, error: 'Invalid name or password' };
       }
 
       const authUser: AuthUser = {
@@ -91,7 +91,7 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
       localStorage.setItem(AUTH_STORAGE_KEY, JSON.stringify(authUser));
       return { success: true };
     } catch (error: any) {
-      return { success: false, error: error.message || 'Kuingia kumeshindikana' };
+      return { success: false, error: error.message || 'Login failed' };
     }
   }, []);
 
@@ -114,7 +114,7 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
       
       const authUser: AuthUser = {
         id: parent?.id || student.id,
-        name: parent?.full_name || `Mzazi wa ${student.full_name}`,
+        name: parent?.full_name || `Parent of ${student.full_name}`,
         role: 'parent',
       };
 
@@ -122,7 +122,7 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
       localStorage.setItem(AUTH_STORAGE_KEY, JSON.stringify(authUser));
       return { success: true };
     } catch (error: any) {
-      return { success: false, error: error.message || 'Kuingia kumeshindikana' };
+      return { success: false, error: error.message || 'Login failed' };
     }
   }, []);
 
@@ -136,7 +136,7 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
         .maybeSingle();
 
       if (error || !data) {
-        return { success: false, error: 'Jina au nywila si sahihi' };
+        return { success: false, error: 'Invalid username or password' };
       }
 
       const authUser: AuthUser = {
@@ -149,7 +149,7 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
       localStorage.setItem(AUTH_STORAGE_KEY, JSON.stringify(authUser));
       return { success: true };
     } catch (error: any) {
-      return { success: false, error: error.message || 'Kuingia kumeshindikana' };
+      return { success: false, error: error.message || 'Login failed' };
     }
   }, []);
 
