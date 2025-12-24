@@ -1,7 +1,7 @@
 import { useState, useEffect } from 'react';
 import { StatCard } from '@/components/dashboard/StatCard';
 import { GradeBadge } from '@/components/dashboard/GradeBadge';
-import { BookOpen, Award, Download, MessageSquare, Loader2, DollarSign, AlertTriangle, TrendingUp, TrendingDown } from 'lucide-react';
+import { BookOpen, Award, Download, MessageSquare, Loader2, DollarSign, AlertTriangle, TrendingUp, TrendingDown, Megaphone, User, Calendar } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { supabase } from '@/integrations/supabase/client';
 import { useAuth } from '@/contexts/AuthContext';
@@ -28,6 +28,14 @@ interface FeeStructure {
   boarding_type: string;
 }
 
+interface Announcement {
+  id: string;
+  title: string;
+  content: string;
+  created_by: string;
+  created_at: string;
+}
+
 export function ParentDashboard() {
   const { user } = useAuth();
   const [isLoading, setIsLoading] = useState(true);
@@ -40,6 +48,7 @@ export function ParentDashboard() {
   const [feePayments, setFeePayments] = useState<FeePayment[]>([]);
   const [expectedFee, setExpectedFee] = useState(0);
   const [paidAmount, setPaidAmount] = useState(0);
+  const [announcements, setAnnouncements] = useState<Announcement[]>([]);
 
   useEffect(() => {
     const fetchChildData = async () => {
@@ -147,6 +156,18 @@ export function ParentDashboard() {
       
       if (feeStructure) {
         setExpectedFee(Number(feeStructure.total_fee));
+      }
+      
+      // Fetch announcements
+      const { data: announcementsData } = await supabase
+        .from('announcements')
+        .select('*')
+        .eq('is_active', true)
+        .order('created_at', { ascending: false })
+        .limit(5);
+      
+      if (announcementsData) {
+        setAnnouncements(announcementsData);
       }
       
       setIsLoading(false);
@@ -319,6 +340,49 @@ export function ParentDashboard() {
           variant={balance > 0 ? 'warning' : 'success'}
         />
       </div>
+
+      {/* School Announcements */}
+      {announcements.length > 0 && (
+        <div className="card-elevated p-6 animate-fade-in">
+          <h3 className="font-display font-semibold text-lg mb-6 text-card-foreground flex items-center gap-2">
+            <Megaphone className="w-5 h-5 text-primary" />
+            School Notices
+          </h3>
+          <div className="space-y-4">
+            {announcements.map((announcement, index) => (
+              <div 
+                key={announcement.id} 
+                className="p-4 rounded-lg bg-muted/30 border border-border/50 animate-slide-up"
+                style={{ animationDelay: `${index * 100}ms` }}
+              >
+                <div className="flex items-start gap-3">
+                  <div className="w-10 h-10 rounded-lg bg-primary/10 flex items-center justify-center shrink-0">
+                    <Megaphone className="w-5 h-5 text-primary" />
+                  </div>
+                  <div className="flex-1 min-w-0">
+                    <h4 className="font-semibold text-card-foreground">{announcement.title}</h4>
+                    <p className="text-sm text-muted-foreground mt-1 line-clamp-2">{announcement.content}</p>
+                    <div className="flex items-center gap-4 mt-2 text-xs text-muted-foreground">
+                      <span className="flex items-center gap-1">
+                        <User className="w-3 h-3" />
+                        {announcement.created_by}
+                      </span>
+                      <span className="flex items-center gap-1">
+                        <Calendar className="w-3 h-3" />
+                        {new Date(announcement.created_at).toLocaleDateString('en-US', {
+                          year: 'numeric',
+                          month: 'short',
+                          day: 'numeric'
+                        })}
+                      </span>
+                    </div>
+                  </div>
+                </div>
+              </div>
+            ))}
+          </div>
+        </div>
+      )}
 
       {/* Fee Status Card */}
       {expectedFee > 0 && (

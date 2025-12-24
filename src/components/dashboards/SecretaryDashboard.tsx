@@ -23,7 +23,12 @@ import {
   Send,
   ChevronDown,
   ChevronUp,
-  GraduationCap
+  GraduationCap,
+  MessageSquare,
+  User,
+  Calendar,
+  Clock,
+  CheckCircle
 } from 'lucide-react';
 
 interface Student {
@@ -62,6 +67,19 @@ interface ChatMessage {
   content: string;
 }
 
+interface FeedbackItem {
+  id: string;
+  parent_id: string;
+  student_id: string;
+  message: string;
+  status: string;
+  created_at: string;
+  recipient_type: string;
+  parentName?: string;
+  studentName?: string;
+  studentClass?: string;
+}
+
 export function SecretaryDashboard() {
   const { toast } = useToast();
   const navigate = useNavigate();
@@ -86,6 +104,9 @@ export function SecretaryDashboard() {
   const [receiptNumber, setReceiptNumber] = useState('');
   const [paymentNotes, setPaymentNotes] = useState('');
   const [isSubmitting, setIsSubmitting] = useState(false);
+  
+  // Feedback state
+  const [feedback, setFeedback] = useState<FeedbackItem[]>([]);
 
   useEffect(() => {
     fetchData();
@@ -94,17 +115,55 @@ export function SecretaryDashboard() {
   const fetchData = async () => {
     setIsLoading(true);
     
-    const [studentsRes, paymentsRes, structureRes] = await Promise.all([
+    const [studentsRes, paymentsRes, structureRes, feedbackRes] = await Promise.all([
       supabase.from('students').select('*').order('class').order('full_name'),
       supabase.from('fee_payments').select('*, students(full_name, class)').order('payment_date', { ascending: false }),
-      supabase.from('fee_structure').select('*')
+      supabase.from('fee_structure').select('*'),
+      supabase.from('feedback').select('*').eq('recipient_type', 'secretary').order('created_at', { ascending: false })
     ]);
 
     if (studentsRes.data) setStudents(studentsRes.data);
     if (paymentsRes.data) setFeePayments(paymentsRes.data as FeePayment[]);
     if (structureRes.data) setFeeStructure(structureRes.data);
     
+    // Enrich feedback with parent and student names
+    if (feedbackRes.data) {
+      const { data: parentsData } = await supabase.from('parents').select('id, full_name');
+      const enrichedFeedback = feedbackRes.data.map(fb => {
+        const parent = parentsData?.find(p => p.id === fb.parent_id);
+        const student = studentsRes.data?.find(s => s.id === fb.student_id);
+        return {
+          ...fb,
+          parentName: parent?.full_name || 'Parent',
+          studentName: student?.full_name || 'Student',
+          studentClass: student?.class || ''
+        };
+      });
+      setFeedback(enrichedFeedback as FeedbackItem[]);
+    }
+    
     setIsLoading(false);
+  };
+  
+  const handleMarkFeedbackReviewed = async (feedbackId: string) => {
+    const { error } = await supabase
+      .from('feedback')
+      .update({ status: 'reviewed' })
+      .eq('id', feedbackId);
+    
+    if (error) {
+      toast({
+        title: "Error",
+        description: "Failed to update status",
+        variant: "destructive"
+      });
+    } else {
+      toast({
+        title: "Success",
+        description: "Feedback marked as reviewed",
+      });
+      fetchData();
+    }
   };
 
   const handleAddPayment = async () => {
@@ -343,6 +402,76 @@ export function SecretaryDashboard() {
             {aiLoading ? <Loader2 className="w-4 h-4 animate-spin" /> : <Send className="w-4 h-4" />}
           </Button>
         </div>
+      </div>
+
+      {/* Parent Messages */}
+      <div className="card-elevated p-6 animate-fade-in">
+        <div className="flex items-center justify-between mb-6">
+          <h3 className="font-display font-semibold text-lg text-card-foreground flex items-center gap-2">
+            <MessageSquare className="w-5 h-5 text-primary" />
+            Parent Messages
+          </h3>
+          <Button variant="outline" size="sm" onClick={() => navigate('/feedback')}>
+            View All
+          </Button>
+        </div>
+        
+        {feedback.length === 0 ? (
+          <div className="p-8 text-center">
+            <MessageSquare className="w-10 h-10 text-muted-foreground mx-auto mb-3" />
+            <p className="text-muted-foreground">No messages from parents yet</p>
+          </div>
+        ) : (
+          <div className="divide-y divide-border max-h-80 overflow-y-auto">
+            {feedback.slice(0, 5).map((fb) => (
+              <div key={fb.id} className="py-4">
+                <div className="flex items-start gap-4">
+                  <div className="w-10 h-10 rounded-full bg-primary/10 flex items-center justify-center shrink-0">
+                    <User className="w-5 h-5 text-primary" />
+                  </div>
+                  <div className="flex-1 min-w-0">
+                    <div className="flex items-start justify-between gap-4">
+                      <div>
+                        <p className="font-medium text-card-foreground">{fb.parentName}</p>
+                        <p className="text-sm text-muted-foreground">
+                          About: {fb.studentName} ({fb.studentClass})
+                        </p>
+                      </div>
+                      <div className="flex items-center gap-2">
+                        {fb.status === 'pending' ? (
+                          <span className="inline-flex items-center gap-1 px-2 py-1 rounded-full text-xs font-medium bg-warning/10 text-warning">
+                            <Clock className="w-3 h-3" />Pending
+                          </span>
+                        ) : (
+                          <span className="inline-flex items-center gap-1 px-2 py-1 rounded-full text-xs font-medium bg-success/10 text-success">
+                            <CheckCircle className="w-3 h-3" />Reviewed
+                          </span>
+                        )}
+                      </div>
+                    </div>
+                    <p className="mt-2 text-card-foreground line-clamp-2">{fb.message}</p>
+                    <div className="flex items-center justify-between mt-3">
+                      <div className="flex items-center gap-2 text-xs text-muted-foreground">
+                        <Calendar className="w-3 h-3" />
+                        {new Date(fb.created_at).toLocaleDateString('en-US', { year: 'numeric', month: 'short', day: 'numeric' })}
+                      </div>
+                      {fb.status === 'pending' && (
+                        <Button 
+                          size="sm"
+                          variant="outline"
+                          onClick={() => handleMarkFeedbackReviewed(fb.id)}
+                        >
+                          <CheckCircle className="w-3 h-3 mr-1" />
+                          Mark Reviewed
+                        </Button>
+                      )}
+                    </div>
+                  </div>
+                </div>
+              </div>
+            ))}
+          </div>
+        )}
       </div>
 
       {/* Students by Class */}
