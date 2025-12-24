@@ -106,7 +106,7 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
         .maybeSingle();
 
       if (studentError || !student) {
-        return { success: false, error: 'Jina la mwanafunzi au ID si sahihi' };
+        return { success: false, error: 'Student name or ID is incorrect' };
       }
 
       // Get parent info
