@@ -9,6 +9,7 @@ import { supabase } from '@/integrations/supabase/client';
 import { calculateGrade } from '@/types';
 import { Save, Loader2, Upload, Download, FileSpreadsheet, Edit3 } from 'lucide-react';
 import { useToast } from '@/hooks/use-toast';
+import { useAuth } from '@/contexts/AuthContext';
 import * as XLSX from 'xlsx';
 
 interface Student {
@@ -34,14 +35,23 @@ interface StudentMark {
   grade: string;
 }
 
+interface TeacherAssignment {
+  id: string;
+  teacher_id: string;
+  class: string;
+  subject_id: string;
+  academic_year: string;
+}
+
 const terms = ['Term 1', 'Term 2', 'Term 3'];
 const academicYears = ['2024-2025', '2023-2024', '2022-2023'];
 const ALL_CLASSES = ['Nursery', 'P1', 'P2', 'P3', 'P4', 'P5', 'P6', 'P7', 'S1', 'S2', 'S3', 'S4'];
 
 export default function MarksEntryPage() {
   const { toast } = useToast();
+  const { user } = useAuth();
   const fileInputRef = useRef<HTMLInputElement>(null);
-  const [selectedClass, setSelectedClass] = useState('P1');
+  const [selectedClass, setSelectedClass] = useState('');
   const [selectedSubject, setSelectedSubject] = useState('');
   const [selectedTerm, setSelectedTerm] = useState('Term 1');
   const [selectedYear, setSelectedYear] = useState('2024-2025');
@@ -53,31 +63,75 @@ export default function MarksEntryPage() {
   const [students, setStudents] = useState<Student[]>([]);
   const [subjects, setSubjects] = useState<Subject[]>([]);
   const [marks, setMarks] = useState<StudentMark[]>([]);
+  const [teacherAssignments, setTeacherAssignments] = useState<TeacherAssignment[]>([]);
+
+  const isTeacher = user?.role === 'teacher';
+
+  // Get available classes for teacher
+  const availableClasses = isTeacher 
+    ? [...new Set(teacherAssignments.map(a => a.class))]
+    : ALL_CLASSES;
+
+  // Get available subjects for selected class (for teacher, only assigned subjects)
+  const availableSubjects = isTeacher
+    ? subjects.filter(s => 
+        teacherAssignments.some(a => a.class === selectedClass && a.subject_id === s.id)
+      )
+    : subjects;
 
   const selectedSubjectData = subjects.find(s => s.id === selectedSubject);
   const maxMarks = selectedSubjectData?.max_marks || 100;
 
-  // Fetch subjects
+  // Fetch teacher assignments and subjects
   useEffect(() => {
-    const fetchSubjects = async () => {
-      const { data, error } = await supabase
+    const fetchInitialData = async () => {
+      setIsLoading(true);
+      
+      // Fetch subjects
+      const { data: subjectsData, error: subjectsError } = await supabase
         .from('subjects')
         .select('*')
         .order('name');
       
-      if (error) {
-        console.error('Error fetching subjects:', error);
+      if (subjectsError) {
+        console.error('Error fetching subjects:', subjectsError);
+        setIsLoading(false);
         return;
       }
       
-      setSubjects(data || []);
-      if (data && data.length > 0 && !selectedSubject) {
-        setSelectedSubject(data[0].id);
+      setSubjects(subjectsData || []);
+
+      // Fetch teacher assignments if teacher
+      if (isTeacher && user?.id) {
+        const { data: assignmentsData } = await supabase
+          .from('teacher_assignments')
+          .select('*')
+          .eq('teacher_id', user.id);
+        
+        if (assignmentsData && assignmentsData.length > 0) {
+          setTeacherAssignments(assignmentsData);
+          // Set initial class from assignments
+          const firstClass = assignmentsData[0].class;
+          setSelectedClass(firstClass);
+          // Set initial subject for that class
+          const firstSubject = assignmentsData.find(a => a.class === firstClass)?.subject_id;
+          if (firstSubject) {
+            setSelectedSubject(firstSubject);
+          }
+        }
+      } else {
+        // For admin, set default class
+        setSelectedClass('P1');
+        if (subjectsData && subjectsData.length > 0) {
+          setSelectedSubject(subjectsData[0].id);
+        }
       }
+      
+      setIsLoading(false);
     };
     
-    fetchSubjects();
-  }, []);
+    fetchInitialData();
+  }, [isTeacher, user?.id]);
 
   // Fetch students when class changes
   useEffect(() => {
@@ -354,15 +408,29 @@ export default function MarksEntryPage() {
         {/* Filters */}
         <div className="card-elevated p-6 animate-fade-in">
           <h3 className="font-display font-semibold text-lg mb-4 text-card-foreground">Select Class & Subject</h3>
+          {isTeacher && availableClasses.length === 0 && (
+            <div className="p-4 bg-warning/10 text-warning rounded-lg mb-4">
+              No classes assigned to you. Please contact the administrator to assign classes and subjects.
+            </div>
+          )}
           <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
             <div className="space-y-2">
               <label className="text-sm font-medium text-muted-foreground">Class</label>
-              <Select value={selectedClass} onValueChange={setSelectedClass}>
+              <Select value={selectedClass} onValueChange={(value) => {
+                setSelectedClass(value);
+                // Reset subject when class changes for teacher
+                if (isTeacher) {
+                  const firstSubjectForClass = teacherAssignments.find(a => a.class === value)?.subject_id;
+                  if (firstSubjectForClass) {
+                    setSelectedSubject(firstSubjectForClass);
+                  }
+                }
+              }}>
                 <SelectTrigger>
                   <SelectValue placeholder="Select class" />
                 </SelectTrigger>
                 <SelectContent>
-                  {ALL_CLASSES.map((cls) => (
+                  {availableClasses.map((cls) => (
                     <SelectItem key={cls} value={cls}>Class {cls}</SelectItem>
                   ))}
                 </SelectContent>
@@ -375,7 +443,7 @@ export default function MarksEntryPage() {
                   <SelectValue placeholder="Select subject" />
                 </SelectTrigger>
                 <SelectContent>
-                  {subjects.map((subject) => (
+                  {availableSubjects.map((subject) => (
                     <SelectItem key={subject.id} value={subject.id}>{subject.name}</SelectItem>
                   ))}
                 </SelectContent>
