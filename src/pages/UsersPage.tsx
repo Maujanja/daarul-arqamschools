@@ -1029,7 +1029,7 @@ export default function UsersPage() {
                 id="new_secretary_username"
                 value={newSecretary.username}
                 onChange={(e) => setNewSecretary({ ...newSecretary, username: e.target.value })}
-                placeholder="e.g. katibu"
+                placeholder="e.g. secretary"
               />
             </div>
             <div className="space-y-2">
