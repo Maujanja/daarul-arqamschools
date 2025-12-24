@@ -2,12 +2,27 @@ import { useState, useEffect } from 'react';
 import { StatCard } from '@/components/dashboard/StatCard';
 import { PerformanceChart } from '@/components/dashboard/PerformanceChart';
 import { TopStudents } from '@/components/dashboard/TopStudents';
-import { ClipboardList, Users, CheckCircle, Clock, BookOpen, Loader2 } from 'lucide-react';
+import { ClipboardList, Users, CheckCircle, Clock, BookOpen, Loader2, MessageSquare, User, Calendar } from 'lucide-react';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { Button } from '@/components/ui/button';
 import { useNavigate } from 'react-router-dom';
 import { useAuth } from '@/contexts/AuthContext';
 import { supabase } from '@/integrations/supabase/client';
+import { useToast } from '@/hooks/use-toast';
+
+interface FeedbackItem {
+  id: string;
+  parent_id: string;
+  student_id: string;
+  message: string;
+  status: string;
+  created_at: string;
+  recipient_type: string;
+  parentName?: string;
+  studentName?: string;
+  studentClass?: string;
+}
+
 
 interface Subject {
   id: string;
@@ -46,6 +61,7 @@ interface TeacherAssignment {
 export function TeacherDashboard() {
   const { user } = useAuth();
   const navigate = useNavigate();
+  const { toast } = useToast();
   const [isLoading, setIsLoading] = useState(true);
   const [teacherData, setTeacherData] = useState<{
     classes: string[];
@@ -58,6 +74,7 @@ export function TeacherDashboard() {
   const [subjects, setSubjects] = useState<Subject[]>([]);
   const [selectedClass, setSelectedClass] = useState('');
   const [selectedSubject, setSelectedSubject] = useState('');
+  const [feedback, setFeedback] = useState<FeedbackItem[]>([]);
 
   useEffect(() => {
     const fetchData = async () => {
@@ -119,6 +136,31 @@ export function TeacherDashboard() {
         .eq('teacher_id', user.id);
       
       if (marksData) setMarks(marksData as Mark[]);
+      
+      // Get feedback for teacher's classes
+      const { data: feedbackData } = await supabase
+        .from('feedback')
+        .select('*')
+        .eq('recipient_type', 'teacher')
+        .order('created_at', { ascending: false });
+      
+      if (feedbackData && assignedClasses.length > 0) {
+        const { data: parentsData } = await supabase.from('parents').select('id, full_name');
+        const { data: studentsData } = await supabase.from('students').select('id, full_name, class');
+        
+        const enrichedFeedback = feedbackData.map(fb => {
+          const parent = parentsData?.find(p => p.id === fb.parent_id);
+          const student = studentsData?.find(s => s.id === fb.student_id);
+          return {
+            ...fb,
+            parentName: parent?.full_name || 'Parent',
+            studentName: student?.full_name || 'Student',
+            studentClass: student?.class || ''
+          };
+        }).filter(fb => assignedClasses.includes(fb.studentClass));
+        
+        setFeedback(enrichedFeedback as FeedbackItem[]);
+      }
       
       setIsLoading(false);
     };
@@ -377,6 +419,62 @@ export function TeacherDashboard() {
             </tbody>
           </table>
         </div>
+      </div>
+
+      {/* Parent Messages */}
+      <div className="card-elevated p-6 animate-fade-in">
+        <div className="flex items-center justify-between mb-6">
+          <h3 className="font-display font-semibold text-lg text-card-foreground flex items-center gap-2">
+            <MessageSquare className="w-5 h-5 text-primary" />
+            Parent Messages
+          </h3>
+          <Button variant="outline" size="sm" onClick={() => navigate('/feedback')}>
+            View All
+          </Button>
+        </div>
+        
+        {feedback.length === 0 ? (
+          <div className="p-8 text-center">
+            <MessageSquare className="w-10 h-10 text-muted-foreground mx-auto mb-3" />
+            <p className="text-muted-foreground">No messages from parents yet</p>
+          </div>
+        ) : (
+          <div className="divide-y divide-border max-h-80 overflow-y-auto">
+            {feedback.slice(0, 5).map((fb) => (
+              <div key={fb.id} className="py-4">
+                <div className="flex items-start gap-4">
+                  <div className="w-10 h-10 rounded-full bg-primary/10 flex items-center justify-center shrink-0">
+                    <User className="w-5 h-5 text-primary" />
+                  </div>
+                  <div className="flex-1 min-w-0">
+                    <div className="flex items-start justify-between gap-4">
+                      <div>
+                        <p className="font-medium text-card-foreground">{fb.parentName}</p>
+                        <p className="text-sm text-muted-foreground">
+                          About: {fb.studentName} ({fb.studentClass})
+                        </p>
+                      </div>
+                      {fb.status === 'pending' ? (
+                        <span className="inline-flex items-center gap-1 px-2 py-1 rounded-full text-xs font-medium bg-warning/10 text-warning">
+                          <Clock className="w-3 h-3" />Pending
+                        </span>
+                      ) : (
+                        <span className="inline-flex items-center gap-1 px-2 py-1 rounded-full text-xs font-medium bg-success/10 text-success">
+                          <CheckCircle className="w-3 h-3" />Reviewed
+                        </span>
+                      )}
+                    </div>
+                    <p className="mt-2 text-card-foreground line-clamp-2">{fb.message}</p>
+                    <div className="flex items-center gap-2 mt-2 text-xs text-muted-foreground">
+                      <Calendar className="w-3 h-3" />
+                      {new Date(fb.created_at).toLocaleDateString('en-US', { year: 'numeric', month: 'short', day: 'numeric' })}
+                    </div>
+                  </div>
+                </div>
+              </div>
+            ))}
+          </div>
+        )}
       </div>
     </div>
   );
