@@ -4,11 +4,13 @@ import { GradeBadge } from '@/components/dashboard/GradeBadge';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
+import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import { supabase } from '@/integrations/supabase/client';
 import { calculateGrade } from '@/types';
-import { Save, Loader2, Upload, Download, FileSpreadsheet } from 'lucide-react';
+import { Save, Loader2, Upload, Download, FileSpreadsheet, Edit3 } from 'lucide-react';
 import { useToast } from '@/hooks/use-toast';
 import * as XLSX from 'xlsx';
+
 interface Student {
   id: string;
   full_name: string;
@@ -46,6 +48,7 @@ export default function MarksEntryPage() {
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [isLoading, setIsLoading] = useState(true);
   const [isImporting, setIsImporting] = useState(false);
+  const [entryMethod, setEntryMethod] = useState<'manual' | 'excel'>('manual');
   
   const [students, setStudents] = useState<Student[]>([]);
   const [subjects, setSubjects] = useState<Subject[]>([]);
@@ -195,6 +198,13 @@ export default function MarksEntryPage() {
     });
   };
 
+  // Handle file input click
+  const handleImportClick = () => {
+    if (fileInputRef.current) {
+      fileInputRef.current.click();
+    }
+  };
+
   // Excel import function
   const handleImportExcel = async (event: React.ChangeEvent<HTMLInputElement>) => {
     const file = event.target.files?.[0];
@@ -330,6 +340,7 @@ export default function MarksEntryPage() {
           onChange={handleImportExcel}
           accept=".xlsx,.xls"
           className="hidden"
+          id="excel-file-input"
         />
         
         {/* Header */}
@@ -337,33 +348,6 @@ export default function MarksEntryPage() {
           <div>
             <h1 className="text-3xl font-display font-bold text-foreground">Marks Entry</h1>
             <p className="text-muted-foreground mt-1">Enter exam marks for students</p>
-          </div>
-          <div className="flex gap-2">
-            <Button 
-              variant="outline" 
-              onClick={handleExportTemplate}
-              disabled={marks.length === 0}
-            >
-              <Download className="w-4 h-4 mr-2" />
-              Export Template
-            </Button>
-            <Button 
-              variant="outline" 
-              onClick={() => fileInputRef.current?.click()}
-              disabled={marks.length === 0 || isImporting}
-            >
-              {isImporting ? (
-                <>
-                  <Loader2 className="w-4 h-4 mr-2 animate-spin" />
-                  Importing...
-                </>
-              ) : (
-                <>
-                  <Upload className="w-4 h-4 mr-2" />
-                  Import Excel
-                </>
-              )}
-            </Button>
           </div>
         </div>
 
@@ -426,95 +410,192 @@ export default function MarksEntryPage() {
           </div>
         </div>
 
-        {/* Marks Entry Table */}
-        <div className="card-elevated overflow-hidden animate-fade-in">
-          <div className="p-6 border-b border-border">
-            <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4">
-              <div>
-                <h3 className="font-display font-semibold text-lg text-card-foreground">
-                  Class {selectedClass} - {selectedSubjectData?.name || 'Select Subject'}
-                </h3>
-                <p className="text-sm text-muted-foreground">{marks.length} students • {selectedTerm} • {selectedYear}</p>
+        {/* Entry Method Tabs */}
+        <Tabs value={entryMethod} onValueChange={(v) => setEntryMethod(v as 'manual' | 'excel')} className="w-full">
+          <TabsList className="grid w-full grid-cols-2 max-w-md">
+            <TabsTrigger value="manual" className="flex items-center gap-2">
+              <Edit3 className="w-4 h-4" />
+              Manual Entry
+            </TabsTrigger>
+            <TabsTrigger value="excel" className="flex items-center gap-2">
+              <FileSpreadsheet className="w-4 h-4" />
+              Excel Import
+            </TabsTrigger>
+          </TabsList>
+
+          {/* Excel Import Tab */}
+          <TabsContent value="excel" className="mt-6">
+            <div className="card-elevated p-8 animate-fade-in">
+              <div className="text-center space-y-6">
+                <div className="w-20 h-20 mx-auto rounded-2xl bg-gradient-to-br from-primary/20 to-accent/20 flex items-center justify-center">
+                  <FileSpreadsheet className="w-10 h-10 text-primary" />
+                </div>
+                <div>
+                  <h3 className="text-xl font-display font-semibold text-card-foreground">Import Marks from Excel</h3>
+                  <p className="text-muted-foreground mt-2">Download the template, fill in the marks, and upload it back</p>
+                </div>
+                
+                <div className="flex flex-col sm:flex-row items-center justify-center gap-4">
+                  <Button 
+                    variant="outline" 
+                    size="lg"
+                    onClick={handleExportTemplate}
+                    disabled={marks.length === 0}
+                  >
+                    <Download className="w-5 h-5 mr-2" />
+                    Download Template
+                  </Button>
+                  <Button 
+                    size="lg"
+                    className="btn-gradient"
+                    onClick={handleImportClick}
+                    disabled={marks.length === 0 || isImporting}
+                  >
+                    {isImporting ? (
+                      <>
+                        <Loader2 className="w-5 h-5 mr-2 animate-spin" />
+                        Importing...
+                      </>
+                    ) : (
+                      <>
+                        <Upload className="w-5 h-5 mr-2" />
+                        Upload Excel File
+                      </>
+                    )}
+                  </Button>
+                </div>
+
+                <div className="bg-muted/50 rounded-lg p-4 max-w-lg mx-auto">
+                  <h4 className="font-medium text-card-foreground mb-2">Instructions:</h4>
+                  <ol className="text-sm text-muted-foreground text-left space-y-1 list-decimal list-inside">
+                    <li>Click "Download Template" to get the Excel file with student list</li>
+                    <li>Fill in the "Exam Marks" column for each student</li>
+                    <li>Save the Excel file</li>
+                    <li>Click "Upload Excel File" and select your file</li>
+                    <li>Review the imported marks and click "Save Marks"</li>
+                  </ol>
+                </div>
               </div>
-              <Button 
-                className="btn-gradient"
-                onClick={handleSubmit}
-                disabled={isSubmitting || marks.length === 0}
-              >
-                {isSubmitting ? (
-                  <>
-                    <Loader2 className="w-4 h-4 mr-2 animate-spin" />
-                    Saving...
-                  </>
-                ) : (
-                  <>
-                    <Save className="w-4 h-4 mr-2" />
-                    Save Marks
-                  </>
-                )}
-              </Button>
             </div>
+          </TabsContent>
+
+          {/* Manual Entry Tab */}
+          <TabsContent value="manual" className="mt-6">
+            {/* Marks Entry Table */}
+            <div className="card-elevated overflow-hidden animate-fade-in">
+              <div className="p-6 border-b border-border">
+                <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4">
+                  <div>
+                    <h3 className="font-display font-semibold text-lg text-card-foreground">
+                      Class {selectedClass} - {selectedSubjectData?.name || 'Select Subject'}
+                    </h3>
+                    <p className="text-sm text-muted-foreground">{marks.length} students • {selectedTerm} • {selectedYear}</p>
+                  </div>
+                  <Button 
+                    className="btn-gradient"
+                    onClick={handleSubmit}
+                    disabled={isSubmitting || marks.length === 0}
+                  >
+                    {isSubmitting ? (
+                      <>
+                        <Loader2 className="w-4 h-4 mr-2 animate-spin" />
+                        Saving...
+                      </>
+                    ) : (
+                      <>
+                        <Save className="w-4 h-4 mr-2" />
+                        Save Marks
+                      </>
+                    )}
+                  </Button>
+                </div>
+              </div>
+              
+              {isLoading ? (
+                <div className="p-12 text-center">
+                  <Loader2 className="w-8 h-8 animate-spin mx-auto text-primary" />
+                  <p className="text-muted-foreground mt-4">Loading students...</p>
+                </div>
+              ) : marks.length === 0 ? (
+                <div className="p-12 text-center">
+                  <p className="text-muted-foreground">No students in this class. Add students first.</p>
+                </div>
+              ) : (
+                <div className="overflow-x-auto">
+                  <table className="w-full">
+                    <thead>
+                      <tr className="bg-muted/50">
+                        <th className="text-left py-3 px-4 text-sm font-medium text-muted-foreground">Roll No</th>
+                        <th className="text-left py-3 px-4 text-sm font-medium text-muted-foreground">Student Name</th>
+                        <th className="text-center py-3 px-4 text-sm font-medium text-muted-foreground">
+                          <div>Exam</div>
+                          <div className="text-xs font-normal">(Max: {maxMarks})</div>
+                        </th>
+                        <th className="text-center py-3 px-4 text-sm font-medium text-muted-foreground">Total</th>
+                        <th className="text-center py-3 px-4 text-sm font-medium text-muted-foreground">Grade</th>
+                      </tr>
+                    </thead>
+                    <tbody>
+                      {marks.map((mark, index) => (
+                        <tr 
+                          key={mark.studentId} 
+                          className="border-b border-border/50 table-row-hover animate-slide-up"
+                          style={{ animationDelay: `${index * 50}ms` }}
+                        >
+                          <td className="py-4 px-4 font-mono text-sm text-card-foreground">{mark.rollNumber}</td>
+                          <td className="py-4 px-4 font-medium text-card-foreground">{mark.studentName}</td>
+                          <td className="py-4 px-4">
+                            <Input
+                              type="number"
+                              min="0"
+                              max={maxMarks}
+                              value={mark.exam}
+                              onChange={(e) => updateMark(mark.studentId, e.target.value)}
+                              className={`w-24 text-center mx-auto ${getInputClass(mark.exam)}`}
+                              placeholder="-"
+                            />
+                          </td>
+                          <td className="py-4 px-4 text-center">
+                            <span className={`text-lg font-bold ${mark.total >= 75 ? 'text-success' : mark.total >= 50 ? 'text-primary' : mark.total >= 40 ? 'text-warning' : mark.total > 0 ? 'text-destructive' : 'text-muted-foreground'}`}>
+                              {mark.total || '-'}
+                            </span>
+                          </td>
+                          <td className="py-4 px-4 text-center">
+                            <GradeBadge grade={mark.grade} />
+                          </td>
+                        </tr>
+                      ))}
+                    </tbody>
+                  </table>
+                </div>
+              )}
+            </div>
+          </TabsContent>
+        </Tabs>
+
+        {/* Show Save Button for Excel Tab too when marks are loaded */}
+        {entryMethod === 'excel' && marks.some(m => m.exam !== '') && (
+          <div className="flex justify-center">
+            <Button 
+              className="btn-gradient"
+              size="lg"
+              onClick={handleSubmit}
+              disabled={isSubmitting}
+            >
+              {isSubmitting ? (
+                <>
+                  <Loader2 className="w-4 h-4 mr-2 animate-spin" />
+                  Saving...
+                </>
+              ) : (
+                <>
+                  <Save className="w-4 h-4 mr-2" />
+                  Save Imported Marks
+                </>
+              )}
+            </Button>
           </div>
-          
-          {isLoading ? (
-            <div className="p-12 text-center">
-              <Loader2 className="w-8 h-8 animate-spin mx-auto text-primary" />
-              <p className="text-muted-foreground mt-4">Loading students...</p>
-            </div>
-          ) : marks.length === 0 ? (
-            <div className="p-12 text-center">
-              <p className="text-muted-foreground">No students in this class. Add students first.</p>
-            </div>
-          ) : (
-            <div className="overflow-x-auto">
-              <table className="w-full">
-                <thead>
-                  <tr className="bg-muted/50">
-                    <th className="text-left py-3 px-4 text-sm font-medium text-muted-foreground">Roll No</th>
-                    <th className="text-left py-3 px-4 text-sm font-medium text-muted-foreground">Student Name</th>
-                    <th className="text-center py-3 px-4 text-sm font-medium text-muted-foreground">
-                      <div>Exam</div>
-                      <div className="text-xs font-normal">(Max: {maxMarks})</div>
-                    </th>
-                    <th className="text-center py-3 px-4 text-sm font-medium text-muted-foreground">Total</th>
-                    <th className="text-center py-3 px-4 text-sm font-medium text-muted-foreground">Grade</th>
-                  </tr>
-                </thead>
-                <tbody>
-                  {marks.map((mark, index) => (
-                    <tr 
-                      key={mark.studentId} 
-                      className="border-b border-border/50 table-row-hover animate-slide-up"
-                      style={{ animationDelay: `${index * 50}ms` }}
-                    >
-                      <td className="py-4 px-4 font-mono text-sm text-card-foreground">{mark.rollNumber}</td>
-                      <td className="py-4 px-4 font-medium text-card-foreground">{mark.studentName}</td>
-                      <td className="py-4 px-4">
-                        <Input
-                          type="number"
-                          min="0"
-                          max={maxMarks}
-                          value={mark.exam}
-                          onChange={(e) => updateMark(mark.studentId, e.target.value)}
-                          className={`w-24 text-center mx-auto ${getInputClass(mark.exam)}`}
-                          placeholder="-"
-                        />
-                      </td>
-                      <td className="py-4 px-4 text-center">
-                        <span className={`text-lg font-bold ${mark.total >= 75 ? 'text-success' : mark.total >= 50 ? 'text-primary' : mark.total >= 40 ? 'text-warning' : mark.total > 0 ? 'text-destructive' : 'text-muted-foreground'}`}>
-                          {mark.total || '-'}
-                        </span>
-                      </td>
-                      <td className="py-4 px-4 text-center">
-                        <GradeBadge grade={mark.grade} />
-                      </td>
-                    </tr>
-                  ))}
-                </tbody>
-              </table>
-            </div>
-          )}
-        </div>
+        )}
 
         {/* Grading Info */}
         <div className="card-elevated p-6 animate-fade-in">
