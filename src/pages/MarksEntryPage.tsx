@@ -1,4 +1,4 @@
-import { useState, useEffect } from 'react';
+import { useState, useEffect, useRef } from 'react';
 import { DashboardLayout } from '@/components/layout/DashboardLayout';
 import { GradeBadge } from '@/components/dashboard/GradeBadge';
 import { Button } from '@/components/ui/button';
@@ -6,9 +6,9 @@ import { Input } from '@/components/ui/input';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { supabase } from '@/integrations/supabase/client';
 import { calculateGrade } from '@/types';
-import { Save, Loader2 } from 'lucide-react';
+import { Save, Loader2, Upload, Download, FileSpreadsheet } from 'lucide-react';
 import { useToast } from '@/hooks/use-toast';
-
+import * as XLSX from 'xlsx';
 interface Student {
   id: string;
   full_name: string;
@@ -34,16 +34,18 @@ interface StudentMark {
 
 const terms = ['Term 1', 'Term 2', 'Term 3'];
 const academicYears = ['2024-2025', '2023-2024', '2022-2023'];
-const classes = ['10-A', '10-B', '9-A', '9-B', '8-A', '8-B'];
+const classes = ['P1', 'P2', 'P3', 'P4', 'P5', 'P6', 'P7', 'S1', 'S2'];
 
 export default function MarksEntryPage() {
   const { toast } = useToast();
-  const [selectedClass, setSelectedClass] = useState('10-A');
+  const fileInputRef = useRef<HTMLInputElement>(null);
+  const [selectedClass, setSelectedClass] = useState('P1');
   const [selectedSubject, setSelectedSubject] = useState('');
   const [selectedTerm, setSelectedTerm] = useState('Term 1');
   const [selectedYear, setSelectedYear] = useState('2024-2025');
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [isLoading, setIsLoading] = useState(true);
+  const [isImporting, setIsImporting] = useState(false);
   
   const [students, setStudents] = useState<Student[]>([]);
   const [subjects, setSubjects] = useState<Subject[]>([]);
@@ -166,6 +168,93 @@ export default function MarksEntryPage() {
     }));
   };
 
+  // Excel export function
+  const handleExportTemplate = () => {
+    const templateData = marks.map(mark => ({
+      'Roll Number': mark.rollNumber,
+      'Student Name': mark.studentName,
+      'Exam Marks': mark.exam === '' ? '' : mark.exam,
+    }));
+
+    const ws = XLSX.utils.json_to_sheet(templateData);
+    const wb = XLSX.utils.book_new();
+    XLSX.utils.book_append_sheet(wb, ws, 'Marks');
+    
+    // Set column widths
+    ws['!cols'] = [
+      { wch: 15 },  // Roll Number
+      { wch: 30 },  // Student Name
+      { wch: 15 },  // Exam Marks
+    ];
+    
+    XLSX.writeFile(wb, `marks_${selectedClass}_${selectedSubjectData?.name || 'subject'}_${selectedTerm}.xlsx`);
+    
+    toast({
+      title: "Template Downloaded",
+      description: "Fill in the Exam Marks column and import the file back.",
+    });
+  };
+
+  // Excel import function
+  const handleImportExcel = async (event: React.ChangeEvent<HTMLInputElement>) => {
+    const file = event.target.files?.[0];
+    if (!file) return;
+
+    setIsImporting(true);
+    
+    try {
+      const data = await file.arrayBuffer();
+      const workbook = XLSX.read(data);
+      const worksheet = workbook.Sheets[workbook.SheetNames[0]];
+      const jsonData = XLSX.utils.sheet_to_json<{
+        'Roll Number': string;
+        'Student Name': string;
+        'Exam Marks': number | string;
+      }>(worksheet);
+
+      let updatedCount = 0;
+      
+      setMarks(prev => prev.map(mark => {
+        const importedRow = jsonData.find(row => 
+          row['Roll Number']?.toString().trim() === mark.rollNumber.trim()
+        );
+        
+        if (importedRow && importedRow['Exam Marks'] !== undefined && importedRow['Exam Marks'] !== '') {
+          const examScore = Math.min(Math.max(0, parseInt(String(importedRow['Exam Marks'])) || 0), maxMarks);
+          const total = examScore;
+          const percentage = (total / maxMarks) * 100;
+          const grade = total > 0 ? calculateGrade(percentage) : '-';
+          updatedCount++;
+          
+          return {
+            ...mark,
+            exam: examScore,
+            total,
+            grade,
+          };
+        }
+        return mark;
+      }));
+
+      toast({
+        title: "Import Successful",
+        description: `Updated marks for ${updatedCount} students.`,
+      });
+    } catch (error) {
+      console.error('Error importing Excel:', error);
+      toast({
+        title: "Import Failed",
+        description: "Please check the Excel file format and try again.",
+        variant: "destructive",
+      });
+    } finally {
+      setIsImporting(false);
+      if (fileInputRef.current) {
+        fileInputRef.current.value = '';
+      }
+    }
+  };
+
   const handleSubmit = async () => {
     // Validate all marks are entered
     const incomplete = marks.some(m => m.exam === '');
@@ -234,10 +323,48 @@ export default function MarksEntryPage() {
   return (
     <DashboardLayout>
       <div className="space-y-8">
+        {/* Hidden file input for Excel import */}
+        <input
+          type="file"
+          ref={fileInputRef}
+          onChange={handleImportExcel}
+          accept=".xlsx,.xls"
+          className="hidden"
+        />
+        
         {/* Header */}
-        <div>
-          <h1 className="text-3xl font-display font-bold text-foreground">Marks Entry</h1>
-          <p className="text-muted-foreground mt-1">Enter exam marks for students</p>
+        <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4">
+          <div>
+            <h1 className="text-3xl font-display font-bold text-foreground">Marks Entry</h1>
+            <p className="text-muted-foreground mt-1">Enter exam marks for students</p>
+          </div>
+          <div className="flex gap-2">
+            <Button 
+              variant="outline" 
+              onClick={handleExportTemplate}
+              disabled={marks.length === 0}
+            >
+              <Download className="w-4 h-4 mr-2" />
+              Export Template
+            </Button>
+            <Button 
+              variant="outline" 
+              onClick={() => fileInputRef.current?.click()}
+              disabled={marks.length === 0 || isImporting}
+            >
+              {isImporting ? (
+                <>
+                  <Loader2 className="w-4 h-4 mr-2 animate-spin" />
+                  Importing...
+                </>
+              ) : (
+                <>
+                  <Upload className="w-4 h-4 mr-2" />
+                  Import Excel
+                </>
+              )}
+            </Button>
+          </div>
         </div>
 
         {/* Filters */}

@@ -83,8 +83,8 @@ export function AdminDashboard() {
         return {
           ...fb,
           recipient_type: fb.recipient_type || 'teacher',
-          parentName: parent?.full_name || 'Mzazi',
-          studentName: student?.full_name || 'Mwanafunzi',
+          parentName: parent?.full_name || 'Parent',
+          studentName: student?.full_name || 'Student',
           studentClass: student?.class || ''
         };
       }) as FeedbackItem[];
@@ -107,7 +107,7 @@ export function AdminDashboard() {
         const student = studentsData?.find(s => s.id === fp.student_id);
         return {
           ...fp,
-          studentName: student?.full_name || 'Mwanafunzi',
+          studentName: student?.full_name || 'Student',
           studentClass: student?.class || ''
         };
       }) as FeePayment[];
@@ -138,14 +138,14 @@ export function AdminDashboard() {
     <div className="space-y-8">
       <div>
         <h1 className="text-3xl font-display font-bold text-foreground">Dashboard</h1>
-        <p className="text-muted-foreground mt-1">Karibu! Hapa ni muhtasari wa shule yako.</p>
+        <p className="text-muted-foreground mt-1">Welcome! Here is your school overview.</p>
       </div>
 
       <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-6">
-        <StatCard title="Wanafunzi" value={studentsCount.toLocaleString()} subtitle="Madarasa yote" icon={GraduationCap} variant="primary" />
-        <StatCard title="Walimu" value={teachersCount.toLocaleString()} subtitle="Walimu wote" icon={Users} variant="accent" />
-        <StatCard title="Makatibu" value={secretariesCount.toLocaleString()} subtitle="Makatibu wote" icon={UserCog} variant="success" />
-        <StatCard title="Maoni" value={feedbackCount.toLocaleString()} subtitle="Yanasubiri jibu" icon={MessageSquare} variant="warning" />
+        <StatCard title="Students" value={studentsCount.toLocaleString()} subtitle="All classes" icon={GraduationCap} variant="primary" />
+        <StatCard title="Teachers" value={teachersCount.toLocaleString()} subtitle="All teachers" icon={Users} variant="accent" />
+        <StatCard title="Secretaries" value={secretariesCount.toLocaleString()} subtitle="All secretaries" icon={UserCog} variant="success" />
+        <StatCard title="Feedback" value={feedbackCount.toLocaleString()} subtitle="Pending response" icon={MessageSquare} variant="warning" />
       </div>
 
       {/* Fee Overview */}
@@ -153,31 +153,31 @@ export function AdminDashboard() {
         <div className="flex items-center justify-between mb-6">
           <h3 className="font-display font-semibold text-lg text-card-foreground flex items-center gap-2">
             <DollarSign className="w-5 h-5 text-success" />
-            Muhtasari wa Ada
+            Fee Overview
           </h3>
           <Button variant="outline" size="sm" onClick={() => navigate('/records')}>
-            Tazama Yote
+            View All
           </Button>
         </div>
         
         <div className="grid grid-cols-1 md:grid-cols-3 gap-4 mb-6">
           <div className="p-4 rounded-lg bg-success/10">
-            <p className="text-sm text-muted-foreground">Jumla Iliyokusanywa</p>
+            <p className="text-sm text-muted-foreground">Total Collected</p>
             <p className="text-2xl font-bold text-success">TZS {(feeTotals?.totalCollected || 0).toLocaleString()}</p>
           </div>
           <div className="p-4 rounded-lg bg-primary/10">
-            <p className="text-sm text-muted-foreground">Malipo Hivi Karibuni</p>
+            <p className="text-sm text-muted-foreground">Recent Payments</p>
             <p className="text-2xl font-bold text-primary">{feePayments.length}</p>
           </div>
           <div className="p-4 rounded-lg bg-accent/10">
-            <p className="text-sm text-muted-foreground">Wanafunzi</p>
+            <p className="text-sm text-muted-foreground">Students</p>
             <p className="text-2xl font-bold text-accent">{studentsCount}</p>
           </div>
         </div>
 
         {feePayments.length > 0 && (
           <div className="space-y-2">
-            <p className="text-sm font-medium text-muted-foreground mb-3">Malipo ya Hivi Karibuni</p>
+            <p className="text-sm font-medium text-muted-foreground mb-3">Recent Payments</p>
             <div className="divide-y divide-border max-h-48 overflow-y-auto">
               {feePayments.slice(0, 5).map(payment => (
                 <div key={payment.id} className="py-2 flex items-center justify-between">
@@ -187,7 +187,7 @@ export function AdminDashboard() {
                   </div>
                   <div className="text-right">
                     <p className="font-semibold text-success">TZS {Number(payment.amount).toLocaleString()}</p>
-                    <p className="text-xs text-muted-foreground">{new Date(payment.payment_date).toLocaleDateString('sw-TZ')}</p>
+                    <p className="text-xs text-muted-foreground">{new Date(payment.payment_date).toLocaleDateString('en-US')}</p>
                   </div>
                 </div>
               ))}
@@ -200,14 +200,14 @@ export function AdminDashboard() {
       <div className="card-elevated p-6 animate-fade-in">
         <h3 className="font-display font-semibold text-lg mb-4 text-card-foreground flex items-center gap-2">
           <MessageSquare className="w-5 h-5 text-primary" />
-          Maoni Yote ya Wazazi
+          All Parent Feedback
         </h3>
 
         <Tabs defaultValue="all" className="w-full">
           <TabsList className="grid w-full grid-cols-3 mb-4">
-            <TabsTrigger value="all">Yote ({allFeedback.length})</TabsTrigger>
-            <TabsTrigger value="teacher">Kwa Walimu ({teacherFeedback.length})</TabsTrigger>
-            <TabsTrigger value="secretary">Kwa Katibu ({secretaryFeedback.length})</TabsTrigger>
+            <TabsTrigger value="all">All ({allFeedback.length})</TabsTrigger>
+            <TabsTrigger value="teacher">To Teachers ({teacherFeedback.length})</TabsTrigger>
+            <TabsTrigger value="secretary">To Secretary ({secretaryFeedback.length})</TabsTrigger>
           </TabsList>
 
           <TabsContent value="all" className="space-y-0">
@@ -226,19 +226,19 @@ export function AdminDashboard() {
 
       {/* Quick Actions */}
       <div className="card-elevated p-6 animate-fade-in">
-        <h3 className="font-display font-semibold text-lg mb-6 text-card-foreground">Vitendo vya Haraka</h3>
+        <h3 className="font-display font-semibold text-lg mb-6 text-card-foreground">Quick Actions</h3>
         <div className="grid grid-cols-1 md:grid-cols-3 gap-3">
           <button onClick={() => navigate('/reports')} className="flex items-center gap-3 p-4 rounded-lg bg-primary/5 hover:bg-primary/10 transition-colors text-left">
             <div className="w-10 h-10 rounded-lg bg-primary/10 flex items-center justify-center"><FileText className="w-5 h-5 text-primary" /></div>
-            <div><p className="font-medium text-card-foreground">Tengeneza Ripoti</p><p className="text-xs text-muted-foreground">Ripoti za kitaaluma</p></div>
+            <div><p className="font-medium text-card-foreground">Generate Reports</p><p className="text-xs text-muted-foreground">Academic reports</p></div>
           </button>
           <button onClick={() => navigate('/users')} className="flex items-center gap-3 p-4 rounded-lg bg-accent/5 hover:bg-accent/10 transition-colors text-left">
             <div className="w-10 h-10 rounded-lg bg-accent/10 flex items-center justify-center"><Users className="w-5 h-5 text-accent" /></div>
-            <div><p className="font-medium text-card-foreground">Simamia Watumiaji</p><p className="text-xs text-muted-foreground">Walimu, Makatibu, Wazazi</p></div>
+            <div><p className="font-medium text-card-foreground">Manage Users</p><p className="text-xs text-muted-foreground">Teachers, Secretaries, Parents</p></div>
           </button>
           <button onClick={() => navigate('/feedback')} className="flex items-center gap-3 p-4 rounded-lg bg-success/5 hover:bg-success/10 transition-colors text-left">
             <div className="w-10 h-10 rounded-lg bg-success/10 flex items-center justify-center"><MessageSquare className="w-5 h-5 text-success" /></div>
-            <div><p className="font-medium text-card-foreground">Tazama Maoni</p><p className="text-xs text-muted-foreground">{feedbackCount} yanasubiri jibu</p></div>
+            <div><p className="font-medium text-card-foreground">View Feedback</p><p className="text-xs text-muted-foreground">{feedbackCount} pending response</p></div>
           </button>
         </div>
       </div>
@@ -251,7 +251,7 @@ function FeedbackList({ feedback, onMarkReviewed }: { feedback: FeedbackItem[], 
     return (
       <div className="p-8 text-center">
         <MessageSquare className="w-10 h-10 text-muted-foreground mx-auto mb-3" />
-        <p className="text-muted-foreground">Hakuna maoni bado</p>
+        <p className="text-muted-foreground">No feedback yet</p>
       </div>
     );
   }
@@ -269,7 +269,7 @@ function FeedbackList({ feedback, onMarkReviewed }: { feedback: FeedbackItem[], 
                 <div>
                   <p className="font-medium text-card-foreground">{fb.parentName}</p>
                   <p className="text-sm text-muted-foreground">
-                    Mwanafunzi: {fb.studentName} ({fb.studentClass})
+                    Student: {fb.studentName} ({fb.studentClass})
                   </p>
                   <p className="text-xs mt-1">
                     <span className={`inline-flex items-center px-2 py-0.5 rounded-full text-xs font-medium ${
@@ -277,18 +277,18 @@ function FeedbackList({ feedback, onMarkReviewed }: { feedback: FeedbackItem[], 
                         ? 'bg-accent/10 text-accent' 
                         : 'bg-warning/10 text-warning'
                     }`}>
-                      Kwa: {fb.recipient_type === 'teacher' ? 'Mwalimu' : 'Katibu'}
+                      To: {fb.recipient_type === 'teacher' ? 'Teacher' : 'Secretary'}
                     </span>
                   </p>
                 </div>
                 <div className="flex items-center gap-2">
                   {fb.status === 'pending' ? (
                     <span className="inline-flex items-center gap-1 px-2 py-1 rounded-full text-xs font-medium bg-warning/10 text-warning">
-                      <Clock className="w-3 h-3" />Inasubiri
+                      <Clock className="w-3 h-3" />Pending
                     </span>
                   ) : (
                     <span className="inline-flex items-center gap-1 px-2 py-1 rounded-full text-xs font-medium bg-success/10 text-success">
-                      <CheckCircle className="w-3 h-3" />Imejibiwa
+                      <CheckCircle className="w-3 h-3" />Reviewed
                     </span>
                   )}
                 </div>
@@ -297,7 +297,7 @@ function FeedbackList({ feedback, onMarkReviewed }: { feedback: FeedbackItem[], 
               <div className="flex items-center justify-between mt-3">
                 <div className="flex items-center gap-2 text-xs text-muted-foreground">
                   <Calendar className="w-3 h-3" />
-                  {new Date(fb.created_at).toLocaleDateString('sw-TZ', { year: 'numeric', month: 'long', day: 'numeric' })}
+                  {new Date(fb.created_at).toLocaleDateString('en-US', { year: 'numeric', month: 'long', day: 'numeric' })}
                 </div>
                 {fb.status === 'pending' && (
                   <Button 
@@ -306,7 +306,7 @@ function FeedbackList({ feedback, onMarkReviewed }: { feedback: FeedbackItem[], 
                     onClick={() => onMarkReviewed(fb.id)}
                   >
                     <CheckCircle className="w-3 h-3 mr-1" />
-                    Weka Imejibiwa
+                    Mark Reviewed
                   </Button>
                 )}
               </div>
