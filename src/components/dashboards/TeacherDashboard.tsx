@@ -35,6 +35,14 @@ interface Mark {
   };
 }
 
+interface TeacherAssignment {
+  id: string;
+  teacher_id: string;
+  class: string;
+  subject_id: string;
+  academic_year: string;
+}
+
 export function TeacherDashboard() {
   const { user } = useAuth();
   const navigate = useNavigate();
@@ -44,10 +52,12 @@ export function TeacherDashboard() {
     subjects: string[];
     full_name: string;
   } | null>(null);
+  const [assignments, setAssignments] = useState<TeacherAssignment[]>([]);
   const [students, setStudents] = useState<Student[]>([]);
   const [marks, setMarks] = useState<Mark[]>([]);
   const [subjects, setSubjects] = useState<Subject[]>([]);
   const [selectedClass, setSelectedClass] = useState('');
+  const [selectedSubject, setSelectedSubject] = useState('');
 
   useEffect(() => {
     const fetchData = async () => {
@@ -62,15 +72,28 @@ export function TeacherDashboard() {
         .eq('id', user.id)
         .maybeSingle();
       
+      // Get teacher assignments
+      const { data: assignmentsData } = await supabase
+        .from('teacher_assignments')
+        .select('*')
+        .eq('teacher_id', user.id);
+      
+      if (assignmentsData) {
+        setAssignments(assignmentsData);
+      }
+      
+      // Get unique classes from assignments
+      const assignedClasses = [...new Set(assignmentsData?.map(a => a.class) || [])];
+      
       if (teacher) {
         setTeacherData({
-          classes: teacher.classes || [],
+          classes: assignedClasses.length > 0 ? assignedClasses : (teacher.classes || []),
           subjects: teacher.subjects || [],
           full_name: teacher.full_name
         });
         
-        if (teacher.classes && teacher.classes.length > 0) {
-          setSelectedClass(teacher.classes[0]);
+        if (assignedClasses.length > 0) {
+          setSelectedClass(assignedClasses[0]);
         }
       }
       
@@ -103,6 +126,16 @@ export function TeacherDashboard() {
     fetchData();
   }, [user]);
 
+  // Update selected subject when class changes
+  useEffect(() => {
+    if (selectedClass && assignments.length > 0) {
+      const classAssignments = assignments.filter(a => a.class === selectedClass);
+      if (classAssignments.length > 0) {
+        setSelectedSubject(classAssignments[0].subject_id);
+      }
+    }
+  }, [selectedClass, assignments]);
+
   if (isLoading) {
     return (
       <div className="flex items-center justify-center py-12">
@@ -111,34 +144,53 @@ export function TeacherDashboard() {
     );
   }
 
-  const assignedClasses = teacherData?.classes || [];
+  // Get assigned classes
+  const assignedClasses = [...new Set(assignments.map(a => a.class))];
+  
+  // Get subjects assigned for selected class
+  const classSubjectIds = assignments
+    .filter(a => a.class === selectedClass)
+    .map(a => a.subject_id);
+  const classSubjects = subjects.filter(s => classSubjectIds.includes(s.id));
+
   const studentsInClass = students.filter(s => s.class === selectedClass);
   const totalStudents = assignedClasses.reduce((sum, cls) => 
     sum + students.filter(s => s.class === cls).length, 0
   );
   
-  // Calculate marks submitted vs pending
-  const classesWithMarks = new Set(marks.map(m => m.class));
-  const marksSubmitted = assignedClasses.filter(cls => classesWithMarks.has(cls)).length;
-  const pendingClasses = assignedClasses.filter(cls => !classesWithMarks.has(cls)).length;
+  // Calculate marks submitted vs pending for assigned subjects only
+  const classesWithMarks = new Set<string>();
+  assignments.forEach(assignment => {
+    const hasMarks = marks.some(m => m.class === assignment.class && m.subject_id === assignment.subject_id);
+    if (hasMarks) {
+      classesWithMarks.add(`${assignment.class}-${assignment.subject_id}`);
+    }
+  });
   
-  // Performance data for selected class
-  const classMarks = marks.filter(m => m.students?.class === selectedClass);
-  const performanceData = subjects.slice(0, 6).map(sub => {
-    const subjectMarks = classMarks.filter(m => m.subject_id === sub.id);
+  const totalAssignments = assignments.length;
+  const completedAssignments = classesWithMarks.size;
+  const pendingAssignments = totalAssignments - completedAssignments;
+  
+  // Performance data for selected class and subject
+  const selectedSubjectData = subjects.find(s => s.id === selectedSubject);
+  const classMarks = marks.filter(m => m.students?.class === selectedClass && m.subject_id === selectedSubject);
+  
+  // Performance data shows only assigned subjects for the selected class
+  const performanceData = classSubjects.map(sub => {
+    const subjectMarks = marks.filter(m => m.students?.class === selectedClass && m.subject_id === sub.id);
     const avg = subjectMarks.length > 0 
       ? subjectMarks.reduce((sum, m) => sum + m.total, 0) / subjectMarks.length 
       : 0;
     return {
-      name: sub.name.slice(0, 4),
+      name: sub.name.slice(0, 6),
       value: Math.round(avg),
       average: 60
     };
   });
   
-  // Top students
+  // Top students for selected class and subject
   const studentAverages = studentsInClass.map(student => {
-    const studentMarks = marks.filter(m => m.student_id === student.id);
+    const studentMarks = marks.filter(m => m.student_id === student.id && m.subject_id === selectedSubject);
     const avg = studentMarks.length > 0 
       ? studentMarks.reduce((sum, m) => sum + m.total, 0) / studentMarks.length 
       : 0;
@@ -157,13 +209,15 @@ export function TeacherDashboard() {
     grade: s.grade
   }));
 
-  // Classes pending status
-  const classStatus = assignedClasses.map(cls => {
-    const hasMarks = classesWithMarks.has(cls);
-    const studentCount = students.filter(s => s.class === cls).length;
+  // Classes and subjects status
+  const classSubjectStatus = assignments.map(assignment => {
+    const subject = subjects.find(s => s.id === assignment.subject_id);
+    const hasMarks = classesWithMarks.has(`${assignment.class}-${assignment.subject_id}`);
+    const studentCount = students.filter(s => s.class === assignment.class).length;
     return {
-      class: cls,
-      subject: teacherData?.subjects?.[0] || 'Subject',
+      class: assignment.class,
+      subject: subject?.name || 'Unknown',
+      subject_id: assignment.subject_id,
       students: studentCount,
       status: hasMarks ? 'completed' : 'pending'
     };
@@ -203,53 +257,69 @@ export function TeacherDashboard() {
           variant="accent"
         />
         <StatCard
-          title="Marks Submitted"
-          value={marksSubmitted.toString()}
-          subtitle={`Out of ${assignedClasses.length} classes`}
+          title="Completed"
+          value={completedAssignments.toString()}
+          subtitle={`Out of ${totalAssignments} assignments`}
           icon={CheckCircle}
           variant="success"
         />
         <StatCard
           title="Pending"
-          value={pendingClasses.toString()}
-          subtitle="Classes remaining"
+          value={pendingAssignments.toString()}
+          subtitle="Assignments remaining"
           icon={Clock}
           variant="warning"
         />
       </div>
 
-      {/* Class Selector and Performance */}
+      {/* Class & Subject Selector and Performance */}
       <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
         <div className="lg:col-span-2">
           <PerformanceChart 
             data={performanceData} 
-            title={`Class ${selectedClass} Performance`}
+            title={`${selectedClass} - Subject Performance`}
           />
         </div>
         
         <div className="space-y-6">
-          {/* Class Selector */}
+          {/* Class & Subject Selector */}
           <div className="card-elevated p-6 animate-fade-in">
-            <h3 className="font-display font-semibold text-lg mb-4 text-card-foreground">Select Class</h3>
-            <Select value={selectedClass} onValueChange={setSelectedClass}>
-              <SelectTrigger>
-                <SelectValue placeholder="Select a class" />
-              </SelectTrigger>
-              <SelectContent>
-                {assignedClasses.map((cls) => (
-                  <SelectItem key={cls} value={cls}>Class {cls}</SelectItem>
-                ))}
-              </SelectContent>
-            </Select>
-            <div className="mt-4 p-4 rounded-lg bg-muted/50">
-              <p className="text-sm text-muted-foreground">Students in class</p>
-              <p className="text-2xl font-bold text-card-foreground">{studentsInClass.length}</p>
+            <h3 className="font-display font-semibold text-lg mb-4 text-card-foreground">Select Class & Subject</h3>
+            <div className="space-y-4">
+              <Select value={selectedClass} onValueChange={setSelectedClass}>
+                <SelectTrigger>
+                  <SelectValue placeholder="Select a class" />
+                </SelectTrigger>
+                <SelectContent>
+                  {assignedClasses.map((cls) => (
+                    <SelectItem key={cls} value={cls}>Class {cls}</SelectItem>
+                  ))}
+                </SelectContent>
+              </Select>
+              
+              {classSubjects.length > 0 && (
+                <Select value={selectedSubject} onValueChange={setSelectedSubject}>
+                  <SelectTrigger>
+                    <SelectValue placeholder="Select a subject" />
+                  </SelectTrigger>
+                  <SelectContent>
+                    {classSubjects.map((sub) => (
+                      <SelectItem key={sub.id} value={sub.id}>{sub.name}</SelectItem>
+                    ))}
+                  </SelectContent>
+                </Select>
+              )}
+              
+              <div className="p-4 rounded-lg bg-muted/50">
+                <p className="text-sm text-muted-foreground">Students in class</p>
+                <p className="text-2xl font-bold text-card-foreground">{studentsInClass.length}</p>
+              </div>
             </div>
           </div>
 
           <TopStudents 
             students={topStudents} 
-            title={`Top Students - ${selectedClass}`}
+            title={`Top Students - ${selectedSubjectData?.name || ''}`}
           />
         </div>
       </div>
@@ -269,7 +339,7 @@ export function TeacherDashboard() {
               </tr>
             </thead>
             <tbody>
-              {classStatus.length > 0 ? classStatus.map((item, index) => (
+              {classSubjectStatus.length > 0 ? classSubjectStatus.map((item, index) => (
                 <tr key={index} className="border-b border-border/50 table-row-hover">
                   <td className="py-4 px-4 font-medium text-card-foreground">{item.class}</td>
                   <td className="py-4 px-4 text-card-foreground">{item.subject}</td>
