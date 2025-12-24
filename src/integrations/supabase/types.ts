@@ -122,6 +122,7 @@ export type Database = {
         Row: {
           academic_year: string
           boarding_fee: number | null
+          boarding_type: string | null
           class: string
           created_at: string
           id: string
@@ -133,6 +134,7 @@ export type Database = {
         Insert: {
           academic_year: string
           boarding_fee?: number | null
+          boarding_type?: string | null
           class: string
           created_at?: string
           id?: string
@@ -144,6 +146,7 @@ export type Database = {
         Update: {
           academic_year?: string
           boarding_fee?: number | null
+          boarding_type?: string | null
           class?: string
           created_at?: string
           id?: string
@@ -346,6 +349,7 @@ export type Database = {
       students: {
         Row: {
           admission_date: string
+          boarding_type: string | null
           class: string
           created_at: string
           full_name: string
@@ -356,6 +360,7 @@ export type Database = {
         }
         Insert: {
           admission_date?: string
+          boarding_type?: string | null
           class: string
           created_at?: string
           full_name: string
@@ -366,6 +371,7 @@ export type Database = {
         }
         Update: {
           admission_date?: string
+          boarding_type?: string | null
           class?: string
           created_at?: string
           full_name?: string
@@ -407,6 +413,48 @@ export type Database = {
           name?: string
         }
         Relationships: []
+      }
+      teacher_assignments: {
+        Row: {
+          academic_year: string
+          class: string
+          created_at: string
+          id: string
+          subject_id: string
+          teacher_id: string
+        }
+        Insert: {
+          academic_year?: string
+          class: string
+          created_at?: string
+          id?: string
+          subject_id: string
+          teacher_id: string
+        }
+        Update: {
+          academic_year?: string
+          class?: string
+          created_at?: string
+          id?: string
+          subject_id?: string
+          teacher_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "teacher_assignments_subject_id_fkey"
+            columns: ["subject_id"]
+            isOneToOne: false
+            referencedRelation: "subjects"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "teacher_assignments_teacher_id_fkey"
+            columns: ["teacher_id"]
+            isOneToOne: false
+            referencedRelation: "teachers"
+            referencedColumns: ["id"]
+          },
+        ]
       }
       teachers: {
         Row: {
