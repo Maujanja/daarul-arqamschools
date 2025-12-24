@@ -4,8 +4,9 @@ import { GradeBadge } from '@/components/dashboard/GradeBadge';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
+import { Checkbox } from '@/components/ui/checkbox';
 import { supabase } from '@/integrations/supabase/client';
-import { Search, Plus, MoreHorizontal, GraduationCap, Calendar, Loader2, Download, FileText } from 'lucide-react';
+import { Search, Plus, MoreHorizontal, GraduationCap, Calendar, Loader2, Download, FileText, ArrowRightLeft, Users } from 'lucide-react';
 import { generateStudentReportPDF, generateAllStudentsReportPDF } from '@/utils/pdfGenerator';
 import { toast } from 'sonner';
 import {
@@ -24,6 +25,7 @@ import {
 } from '@/components/ui/dialog';
 import { Label } from '@/components/ui/label';
 import { calculateGrade, Grade } from '@/types';
+import { useAuth } from '@/contexts/AuthContext';
 
 interface Student {
   id: string;
@@ -32,6 +34,7 @@ interface Student {
   roll_number: string;
   admission_date: string;
   parent_id: string | null;
+  boarding_type: string;
 }
 
 interface StudentWithMarks extends Student {
@@ -39,20 +42,34 @@ interface StudentWithMarks extends Student {
   grade: Grade;
 }
 
+const ALL_CLASSES = ['Nursery', 'P1', 'P2', 'P3', 'P4', 'P5', 'P6', 'P7', 'S1', 'S2', 'S3', 'S4'];
+
 export default function StudentsPage() {
+  const { user } = useAuth();
   const [searchQuery, setSearchQuery] = useState('');
   const [selectedClass, setSelectedClass] = useState('all');
   const [students, setStudents] = useState<StudentWithMarks[]>([]);
   const [classes, setClasses] = useState<string[]>(['all']);
   const [loading, setLoading] = useState(true);
   const [showAddDialog, setShowAddDialog] = useState(false);
+  const [showBulkTransferDialog, setShowBulkTransferDialog] = useState(false);
   const [saving, setSaving] = useState(false);
   const [newStudent, setNewStudent] = useState({
     full_name: '',
     roll_number: '',
     class: '',
+    boarding_type: 'day',
     admission_date: new Date().toISOString().split('T')[0],
   });
+  
+  // Bulk transfer state
+  const [transferFromClass, setTransferFromClass] = useState('');
+  const [transferToClass, setTransferToClass] = useState('');
+  const [selectedStudentIds, setSelectedStudentIds] = useState<Set<string>>(new Set());
+
+  const isAdmin = user?.role === 'admin';
+  const isSecretary = user?.role === 'secretary';
+  const canManageStudents = isAdmin || isSecretary;
 
   useEffect(() => {
     fetchStudents();
@@ -62,7 +79,6 @@ export default function StudentsPage() {
     try {
       setLoading(true);
       
-      // Fetch students
       const { data: studentsData, error: studentsError } = await supabase
         .from('students')
         .select('*')
@@ -70,14 +86,12 @@ export default function StudentsPage() {
 
       if (studentsError) throw studentsError;
 
-      // Fetch all marks
       const { data: marksData, error: marksError } = await supabase
         .from('marks')
         .select('student_id, total');
 
       if (marksError) throw marksError;
 
-      // Calculate average for each student
       const studentsWithMarks: StudentWithMarks[] = (studentsData || []).map(student => {
         const studentMarks = marksData?.filter(m => m.student_id === student.id) || [];
         const averageMarks = studentMarks.length > 0
@@ -87,6 +101,7 @@ export default function StudentsPage() {
 
         return {
           ...student,
+          boarding_type: student.boarding_type || 'day',
           averageMarks,
           grade
         };
@@ -94,7 +109,6 @@ export default function StudentsPage() {
 
       setStudents(studentsWithMarks);
 
-      // Extract unique classes
       const uniqueClasses = [...new Set(studentsData?.map(s => s.class) || [])].sort();
       setClasses(['all', ...uniqueClasses]);
 
@@ -120,6 +134,7 @@ export default function StudentsPage() {
           full_name: newStudent.full_name.trim(),
           roll_number: newStudent.roll_number.trim(),
           class: newStudent.class.trim(),
+          boarding_type: newStudent.boarding_type,
           admission_date: newStudent.admission_date,
         });
 
@@ -131,6 +146,7 @@ export default function StudentsPage() {
         full_name: '',
         roll_number: '',
         class: '',
+        boarding_type: 'day',
         admission_date: new Date().toISOString().split('T')[0],
       });
       fetchStudents();
@@ -158,6 +174,62 @@ export default function StudentsPage() {
     }
   };
 
+  const handleBulkTransfer = async () => {
+    if (!transferFromClass || !transferToClass || transferFromClass === transferToClass) {
+      toast.error('Please select different source and destination classes');
+      return;
+    }
+
+    const studentsToTransfer = selectedStudentIds.size > 0 
+      ? Array.from(selectedStudentIds)
+      : students.filter(s => s.class === transferFromClass).map(s => s.id);
+
+    if (studentsToTransfer.length === 0) {
+      toast.error('No students to transfer');
+      return;
+    }
+
+    try {
+      setSaving(true);
+
+      const { error } = await supabase
+        .from('students')
+        .update({ class: transferToClass })
+        .in('id', studentsToTransfer);
+
+      if (error) throw error;
+
+      toast.success(`Transferred ${studentsToTransfer.length} students to ${transferToClass}`);
+      setShowBulkTransferDialog(false);
+      setTransferFromClass('');
+      setTransferToClass('');
+      setSelectedStudentIds(new Set());
+      fetchStudents();
+    } catch (error: any) {
+      console.error('Error transferring students:', error);
+      toast.error(error.message || 'Failed to transfer students');
+    } finally {
+      setSaving(false);
+    }
+  };
+
+  const toggleStudentSelection = (studentId: string) => {
+    setSelectedStudentIds(prev => {
+      const newSet = new Set(prev);
+      if (newSet.has(studentId)) {
+        newSet.delete(studentId);
+      } else {
+        newSet.add(studentId);
+      }
+      return newSet;
+    });
+  };
+
+  const selectAllInClass = (className: string) => {
+    const classStudentIds = students.filter(s => s.class === className).map(s => s.id);
+    setSelectedStudentIds(new Set(classStudentIds));
+  };
+
   const filteredStudents = students.filter(student => {
     const matchesSearch = student.full_name.toLowerCase().includes(searchQuery.toLowerCase()) ||
                          student.roll_number.toLowerCase().includes(searchQuery.toLowerCase());
@@ -167,7 +239,6 @@ export default function StudentsPage() {
 
   const handleDownloadStudentReport = async (student: StudentWithMarks) => {
     try {
-      // Fetch marks with subject details for this student
       const { data: marksData, error } = await supabase
         .from('marks')
         .select(`
@@ -247,17 +318,25 @@ export default function StudentsPage() {
             <h1 className="text-3xl font-display font-bold text-foreground">Students</h1>
             <p className="text-muted-foreground mt-1">Manage student records and academic information</p>
           </div>
-          <div className="flex gap-2">
+          <div className="flex gap-2 flex-wrap">
             {filteredStudents.length > 0 && (
               <Button variant="outline" onClick={handleDownloadAllReports}>
                 <Download className="w-4 h-4 mr-2" />
                 Export PDF
               </Button>
             )}
-            <Button className="btn-gradient" onClick={() => setShowAddDialog(true)}>
-              <Plus className="w-4 h-4 mr-2" />
-              Add Student
-            </Button>
+            {canManageStudents && (
+              <>
+                <Button variant="outline" onClick={() => setShowBulkTransferDialog(true)}>
+                  <ArrowRightLeft className="w-4 h-4 mr-2" />
+                  Bulk Transfer
+                </Button>
+                <Button className="btn-gradient" onClick={() => setShowAddDialog(true)}>
+                  <Plus className="w-4 h-4 mr-2" />
+                  Add Student
+                </Button>
+              </>
+            )}
           </div>
         </div>
 
@@ -313,13 +392,17 @@ export default function StudentsPage() {
                         <FileText className="w-4 h-4 mr-2" />
                         Download Report
                       </DropdownMenuItem>
-                      <DropdownMenuItem>Edit</DropdownMenuItem>
-                      <DropdownMenuItem 
-                        className="text-destructive"
-                        onClick={() => handleDeleteStudent(student.id)}
-                      >
-                        Delete
-                      </DropdownMenuItem>
+                      {canManageStudents && (
+                        <>
+                          <DropdownMenuItem>Edit</DropdownMenuItem>
+                          <DropdownMenuItem 
+                            className="text-destructive"
+                            onClick={() => handleDeleteStudent(student.id)}
+                          >
+                            Delete
+                          </DropdownMenuItem>
+                        </>
+                      )}
                     </DropdownMenuContent>
                   </DropdownMenu>
                 </div>
@@ -332,6 +415,13 @@ export default function StudentsPage() {
                     <GraduationCap className="w-4 h-4 text-muted-foreground" />
                     <span className="text-muted-foreground">Class:</span>
                     <span className="font-medium text-card-foreground">{student.class}</span>
+                  </div>
+                  <div className="flex items-center gap-2 text-sm">
+                    <Users className="w-4 h-4 text-muted-foreground" />
+                    <span className="text-muted-foreground">Type:</span>
+                    <span className={`font-medium capitalize ${student.boarding_type === 'boarding' ? 'text-primary' : 'text-card-foreground'}`}>
+                      {student.boarding_type === 'boarding' ? 'Boarding' : 'Day'}
+                    </span>
                   </div>
                   <div className="flex items-center gap-2 text-sm">
                     <Calendar className="w-4 h-4 text-muted-foreground" />
@@ -351,7 +441,6 @@ export default function StudentsPage() {
             ))}
           </div>
         ) : (
-          /* Empty State */
           <div className="card-elevated p-12 text-center animate-fade-in">
             <GraduationCap className="w-16 h-16 text-muted-foreground mx-auto mb-4" />
             <h3 className="font-display font-semibold text-xl text-card-foreground mb-2">
@@ -360,10 +449,12 @@ export default function StudentsPage() {
             <p className="text-muted-foreground mb-6">
               Start by adding new students to the system
             </p>
-            <Button className="btn-gradient" onClick={() => setShowAddDialog(true)}>
-              <Plus className="w-4 h-4 mr-2" />
-              Add First Student
-            </Button>
+            {canManageStudents && (
+              <Button className="btn-gradient" onClick={() => setShowAddDialog(true)}>
+                <Plus className="w-4 h-4 mr-2" />
+                Add First Student
+              </Button>
+            )}
           </div>
         )}
       </div>
@@ -398,12 +489,37 @@ export default function StudentsPage() {
             </div>
             <div className="space-y-2">
               <Label htmlFor="class">Class</Label>
-              <Input
-                id="class"
-                value={newStudent.class}
-                onChange={(e) => setNewStudent({ ...newStudent, class: e.target.value })}
-                placeholder="e.g. Form 1A"
-              />
+              <Select value={newStudent.class} onValueChange={(v) => setNewStudent({ ...newStudent, class: v })}>
+                <SelectTrigger>
+                  <SelectValue placeholder="Select class" />
+                </SelectTrigger>
+                <SelectContent>
+                  {ALL_CLASSES.map((cls) => (
+                    <SelectItem key={cls} value={cls}>{cls}</SelectItem>
+                  ))}
+                </SelectContent>
+              </Select>
+            </div>
+            <div className="space-y-2">
+              <Label htmlFor="boarding_type">Student Type</Label>
+              <Select 
+                value={newStudent.boarding_type} 
+                onValueChange={(v) => setNewStudent({ ...newStudent, boarding_type: v })}
+                disabled={newStudent.class === 'Nursery'}
+              >
+                <SelectTrigger>
+                  <SelectValue placeholder="Select type" />
+                </SelectTrigger>
+                <SelectContent>
+                  <SelectItem value="day">Day Student</SelectItem>
+                  {newStudent.class !== 'Nursery' && (
+                    <SelectItem value="boarding">Boarding Student</SelectItem>
+                  )}
+                </SelectContent>
+              </Select>
+              {newStudent.class === 'Nursery' && (
+                <p className="text-xs text-muted-foreground">Nursery students are day students only</p>
+              )}
             </div>
             <div className="space-y-2">
               <Label htmlFor="admission_date">Admission Date</Label>
@@ -422,6 +538,96 @@ export default function StudentsPage() {
             <Button onClick={handleAddStudent} disabled={saving}>
               {saving && <Loader2 className="w-4 h-4 mr-2 animate-spin" />}
               Save
+            </Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
+
+      {/* Bulk Transfer Dialog */}
+      <Dialog open={showBulkTransferDialog} onOpenChange={setShowBulkTransferDialog}>
+        <DialogContent className="max-w-2xl">
+          <DialogHeader>
+            <DialogTitle>Bulk Transfer Students</DialogTitle>
+            <DialogDescription>
+              Transfer students from one class to another
+            </DialogDescription>
+          </DialogHeader>
+          <div className="space-y-6 py-4">
+            <div className="grid grid-cols-2 gap-4">
+              <div className="space-y-2">
+                <Label>From Class</Label>
+                <Select value={transferFromClass} onValueChange={(v) => {
+                  setTransferFromClass(v);
+                  setSelectedStudentIds(new Set());
+                }}>
+                  <SelectTrigger>
+                    <SelectValue placeholder="Select source class" />
+                  </SelectTrigger>
+                  <SelectContent>
+                    {ALL_CLASSES.map((cls) => (
+                      <SelectItem key={cls} value={cls}>{cls}</SelectItem>
+                    ))}
+                  </SelectContent>
+                </Select>
+              </div>
+              <div className="space-y-2">
+                <Label>To Class</Label>
+                <Select value={transferToClass} onValueChange={setTransferToClass}>
+                  <SelectTrigger>
+                    <SelectValue placeholder="Select destination class" />
+                  </SelectTrigger>
+                  <SelectContent>
+                    {ALL_CLASSES.filter(c => c !== transferFromClass).map((cls) => (
+                      <SelectItem key={cls} value={cls}>{cls}</SelectItem>
+                    ))}
+                  </SelectContent>
+                </Select>
+              </div>
+            </div>
+
+            {transferFromClass && (
+              <div className="space-y-3">
+                <div className="flex items-center justify-between">
+                  <Label>Select Students to Transfer</Label>
+                  <Button 
+                    variant="outline" 
+                    size="sm"
+                    onClick={() => selectAllInClass(transferFromClass)}
+                  >
+                    Select All
+                  </Button>
+                </div>
+                <div className="max-h-64 overflow-y-auto border rounded-lg p-3 space-y-2">
+                  {students.filter(s => s.class === transferFromClass).map(student => (
+                    <div key={student.id} className="flex items-center gap-3 p-2 hover:bg-muted/50 rounded">
+                      <Checkbox 
+                        checked={selectedStudentIds.has(student.id)}
+                        onCheckedChange={() => toggleStudentSelection(student.id)}
+                      />
+                      <span className="font-medium">{student.full_name}</span>
+                      <span className="text-sm text-muted-foreground">({student.roll_number})</span>
+                    </div>
+                  ))}
+                  {students.filter(s => s.class === transferFromClass).length === 0 && (
+                    <p className="text-muted-foreground text-center py-4">No students in this class</p>
+                  )}
+                </div>
+                <p className="text-sm text-muted-foreground">
+                  {selectedStudentIds.size > 0 
+                    ? `${selectedStudentIds.size} students selected`
+                    : 'All students will be transferred if none selected'
+                  }
+                </p>
+              </div>
+            )}
+          </div>
+          <DialogFooter>
+            <Button variant="outline" onClick={() => setShowBulkTransferDialog(false)}>
+              Cancel
+            </Button>
+            <Button onClick={handleBulkTransfer} disabled={saving || !transferFromClass || !transferToClass}>
+              {saving && <Loader2 className="w-4 h-4 mr-2 animate-spin" />}
+              Transfer Students
             </Button>
           </DialogFooter>
         </DialogContent>

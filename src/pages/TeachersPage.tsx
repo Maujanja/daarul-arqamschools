@@ -3,7 +3,7 @@ import { DashboardLayout } from '@/components/layout/DashboardLayout';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { supabase } from '@/integrations/supabase/client';
-import { Search, Plus, MoreHorizontal, Users, BookOpen, Loader2, Mail } from 'lucide-react';
+import { Search, Plus, MoreHorizontal, Users, BookOpen, Loader2, Mail, Settings } from 'lucide-react';
 import {
   DropdownMenu,
   DropdownMenuContent,
@@ -19,7 +19,9 @@ import {
   DialogTitle,
 } from '@/components/ui/dialog';
 import { Label } from '@/components/ui/label';
+import { Checkbox } from '@/components/ui/checkbox';
 import { toast } from 'sonner';
+import { useAuth } from '@/contexts/AuthContext';
 
 interface Teacher {
   id: string;
@@ -30,47 +32,71 @@ interface Teacher {
   created_at: string;
 }
 
+interface Subject {
+  id: string;
+  name: string;
+  code: string;
+}
+
+interface TeacherAssignment {
+  id: string;
+  teacher_id: string;
+  class: string;
+  subject_id: string;
+  academic_year: string;
+}
+
+const ALL_CLASSES = ['Nursery', 'P1', 'P2', 'P3', 'P4', 'P5', 'P6', 'P7', 'S1', 'S2', 'S3', 'S4'];
+
 export default function TeachersPage() {
+  const { user } = useAuth();
   const [searchQuery, setSearchQuery] = useState('');
   const [teachers, setTeachers] = useState<Teacher[]>([]);
+  const [subjects, setSubjects] = useState<Subject[]>([]);
+  const [assignments, setAssignments] = useState<TeacherAssignment[]>([]);
   const [loading, setLoading] = useState(true);
   const [showAddDialog, setShowAddDialog] = useState(false);
   const [showViewDialog, setShowViewDialog] = useState(false);
   const [showEditDialog, setShowEditDialog] = useState(false);
+  const [showAssignDialog, setShowAssignDialog] = useState(false);
   const [selectedTeacher, setSelectedTeacher] = useState<Teacher | null>(null);
   const [newTeacher, setNewTeacher] = useState({
     full_name: '',
     email: '',
     password: '',
-    subjects: '',
-    classes: '',
   });
   const [editTeacher, setEditTeacher] = useState({
     full_name: '',
     email: '',
     password: '',
-    subjects: '',
-    classes: '',
   });
   const [saving, setSaving] = useState(false);
 
+  // Assignment state - class -> subject ids
+  const [classSubjectAssignments, setClassSubjectAssignments] = useState<Record<string, Set<string>>>({});
+
+  const isAdmin = user?.role === 'admin';
+
   useEffect(() => {
-    fetchTeachers();
+    fetchData();
   }, []);
 
-  const fetchTeachers = async () => {
+  const fetchData = async () => {
     try {
       setLoading(true);
-      const { data, error } = await supabase
-        .from('teachers')
-        .select('*')
-        .order('full_name');
+      
+      const [teachersRes, subjectsRes, assignmentsRes] = await Promise.all([
+        supabase.from('teachers').select('*').order('full_name'),
+        supabase.from('subjects').select('*').order('name'),
+        supabase.from('teacher_assignments').select('*')
+      ]);
 
-      if (error) throw error;
-      setTeachers(data || []);
+      if (teachersRes.data) setTeachers(teachersRes.data);
+      if (subjectsRes.data) setSubjects(subjectsRes.data);
+      if (assignmentsRes.data) setAssignments(assignmentsRes.data);
     } catch (error) {
-      console.error('Error fetching teachers:', error);
-      toast.error('Failed to fetch teachers');
+      console.error('Error fetching data:', error);
+      toast.error('Failed to fetch data');
     } finally {
       setLoading(false);
     }
@@ -84,26 +110,23 @@ export default function TeachersPage() {
 
     try {
       setSaving(true);
-      
-      const subjectsArray = newTeacher.subjects.split(',').map(s => s.trim()).filter(Boolean);
-      const classesArray = newTeacher.classes.split(',').map(c => c.trim()).filter(Boolean);
 
       const { error } = await supabase
         .from('teachers')
         .insert({
           full_name: newTeacher.full_name,
           email: newTeacher.email,
-          password_hash: newTeacher.password, // In production, hash this properly
-          subjects: subjectsArray,
-          classes: classesArray,
+          password_hash: newTeacher.password,
+          subjects: [],
+          classes: [],
         });
 
       if (error) throw error;
 
       toast.success('Teacher added successfully');
       setShowAddDialog(false);
-      setNewTeacher({ full_name: '', email: '', password: '', subjects: '', classes: '' });
-      fetchTeachers();
+      setNewTeacher({ full_name: '', email: '', password: '' });
+      fetchData();
     } catch (error) {
       console.error('Error adding teacher:', error);
       toast.error('Failed to add teacher');
@@ -121,7 +144,7 @@ export default function TeachersPage() {
 
       if (error) throw error;
       toast.success('Teacher deleted');
-      fetchTeachers();
+      fetchData();
     } catch (error) {
       console.error('Error deleting teacher:', error);
       toast.error('Failed to delete teacher');
@@ -139,10 +162,114 @@ export default function TeachersPage() {
       full_name: teacher.full_name,
       email: teacher.email,
       password: '',
-      subjects: teacher.subjects.join(', '),
-      classes: teacher.classes.join(', '),
     });
     setShowEditDialog(true);
+  };
+
+  const handleOpenAssignDialog = (teacher: Teacher) => {
+    setSelectedTeacher(teacher);
+    
+    // Load existing assignments for this teacher
+    const teacherAssignments = assignments.filter(a => a.teacher_id === teacher.id);
+    const assignmentMap: Record<string, Set<string>> = {};
+    
+    teacherAssignments.forEach(a => {
+      if (!assignmentMap[a.class]) {
+        assignmentMap[a.class] = new Set();
+      }
+      assignmentMap[a.class].add(a.subject_id);
+    });
+    
+    setClassSubjectAssignments(assignmentMap);
+    setShowAssignDialog(true);
+  };
+
+  const toggleSubjectForClass = (className: string, subjectId: string) => {
+    setClassSubjectAssignments(prev => {
+      const newMap = { ...prev };
+      if (!newMap[className]) {
+        newMap[className] = new Set();
+      } else {
+        newMap[className] = new Set(newMap[className]);
+      }
+      
+      if (newMap[className].has(subjectId)) {
+        newMap[className].delete(subjectId);
+      } else {
+        newMap[className].add(subjectId);
+      }
+      
+      // Remove empty class entries
+      if (newMap[className].size === 0) {
+        delete newMap[className];
+      }
+      
+      return newMap;
+    });
+  };
+
+  const handleSaveAssignments = async () => {
+    if (!selectedTeacher) return;
+
+    try {
+      setSaving(true);
+
+      // Delete existing assignments for this teacher
+      await supabase
+        .from('teacher_assignments')
+        .delete()
+        .eq('teacher_id', selectedTeacher.id);
+
+      // Insert new assignments
+      const newAssignments: { teacher_id: string; class: string; subject_id: string; academic_year: string }[] = [];
+      
+      Object.entries(classSubjectAssignments).forEach(([className, subjectIds]) => {
+        subjectIds.forEach(subjectId => {
+          newAssignments.push({
+            teacher_id: selectedTeacher.id,
+            class: className,
+            subject_id: subjectId,
+            academic_year: '2024-2025'
+          });
+        });
+      });
+
+      if (newAssignments.length > 0) {
+        const { error } = await supabase
+          .from('teacher_assignments')
+          .insert(newAssignments);
+
+        if (error) throw error;
+      }
+
+      // Update teacher's classes and subjects arrays for backwards compatibility
+      const assignedClasses = Object.keys(classSubjectAssignments);
+      const assignedSubjectIds = new Set<string>();
+      Object.values(classSubjectAssignments).forEach(subjectSet => {
+        subjectSet.forEach(id => assignedSubjectIds.add(id));
+      });
+      
+      const assignedSubjectNames = subjects
+        .filter(s => assignedSubjectIds.has(s.id))
+        .map(s => s.name);
+
+      await supabase
+        .from('teachers')
+        .update({
+          classes: assignedClasses,
+          subjects: assignedSubjectNames
+        })
+        .eq('id', selectedTeacher.id);
+
+      toast.success('Teacher assignments saved successfully');
+      setShowAssignDialog(false);
+      fetchData();
+    } catch (error) {
+      console.error('Error saving assignments:', error);
+      toast.error('Failed to save assignments');
+    } finally {
+      setSaving(false);
+    }
   };
 
   const handleEditTeacher = async () => {
@@ -154,17 +281,11 @@ export default function TeachersPage() {
     try {
       setSaving(true);
       
-      const subjectsArray = editTeacher.subjects.split(',').map(s => s.trim()).filter(Boolean);
-      const classesArray = editTeacher.classes.split(',').map(c => c.trim()).filter(Boolean);
-
       const updateData: any = {
         full_name: editTeacher.full_name,
         email: editTeacher.email,
-        subjects: subjectsArray,
-        classes: classesArray,
       };
 
-      // Only update password if provided
       if (editTeacher.password) {
         updateData.password_hash = editTeacher.password;
       }
@@ -179,13 +300,29 @@ export default function TeachersPage() {
       toast.success('Teacher updated successfully');
       setShowEditDialog(false);
       setSelectedTeacher(null);
-      fetchTeachers();
+      fetchData();
     } catch (error) {
       console.error('Error updating teacher:', error);
       toast.error('Failed to update teacher');
     } finally {
       setSaving(false);
     }
+  };
+
+  // Get assignments for a specific teacher
+  const getTeacherAssignments = (teacherId: string) => {
+    const teacherAssigns = assignments.filter(a => a.teacher_id === teacherId);
+    const classSubjectMap: Record<string, string[]> = {};
+    
+    teacherAssigns.forEach(a => {
+      const subjectName = subjects.find(s => s.id === a.subject_id)?.name || 'Unknown';
+      if (!classSubjectMap[a.class]) {
+        classSubjectMap[a.class] = [];
+      }
+      classSubjectMap[a.class].push(subjectName);
+    });
+    
+    return classSubjectMap;
   };
 
   const filteredTeachers = teachers.filter(teacher =>
@@ -210,12 +347,14 @@ export default function TeachersPage() {
         <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4">
           <div>
             <h1 className="text-3xl font-display font-bold text-foreground">Teachers</h1>
-            <p className="text-muted-foreground mt-1">Manage teacher information and their subjects</p>
+            <p className="text-muted-foreground mt-1">Manage teacher information and class assignments</p>
           </div>
-          <Button className="btn-gradient" onClick={() => setShowAddDialog(true)}>
-            <Plus className="w-4 h-4 mr-2" />
-            Add Teacher
-          </Button>
+          {isAdmin && (
+            <Button className="btn-gradient" onClick={() => setShowAddDialog(true)}>
+              <Plus className="w-4 h-4 mr-2" />
+              Add Teacher
+            </Button>
+          )}
         </div>
 
         {/* Filters */}
@@ -233,69 +372,85 @@ export default function TeachersPage() {
 
         {/* Teachers Grid */}
         <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
-          {filteredTeachers.map((teacher, index) => (
-            <div 
-              key={teacher.id} 
-              className="card-elevated p-6 animate-slide-up"
-              style={{ animationDelay: `${index * 50}ms` }}
-            >
-              <div className="flex items-start justify-between mb-4">
-                <div className="w-14 h-14 rounded-xl bg-gradient-to-br from-accent to-success flex items-center justify-center text-primary-foreground font-bold text-lg">
-                  {teacher.full_name.split(' ').map(n => n[0]).join('')}
-                </div>
-                <DropdownMenu>
-                  <DropdownMenuTrigger asChild>
-                    <Button variant="ghost" size="icon" className="h-8 w-8">
-                      <MoreHorizontal className="h-4 w-4" />
-                    </Button>
-                  </DropdownMenuTrigger>
-                  <DropdownMenuContent align="end">
-                    <DropdownMenuItem onClick={() => handleViewTeacher(teacher)}>
-                      View Details
-                    </DropdownMenuItem>
-                    <DropdownMenuItem onClick={() => handleOpenEditDialog(teacher)}>
-                      Edit Details
-                    </DropdownMenuItem>
-                    <DropdownMenuItem 
-                      className="text-destructive"
-                      onClick={() => handleDeleteTeacher(teacher.id)}
-                    >
-                      Delete
-                    </DropdownMenuItem>
-                  </DropdownMenuContent>
-                </DropdownMenu>
-              </div>
-
-              <h3 className="font-display font-semibold text-lg text-card-foreground mb-1">
-                {teacher.full_name}
-              </h3>
-              <p className="text-sm text-muted-foreground mb-4 flex items-center gap-1">
-                <Mail className="w-3 h-3" />
-                {teacher.email}
-              </p>
-
-              <div className="space-y-3">
-                <div className="flex items-start gap-2 text-sm">
-                  <BookOpen className="w-4 h-4 text-muted-foreground mt-0.5" />
-                  <div>
-                    <span className="text-muted-foreground">Subjects: </span>
-                    <span className="font-medium text-card-foreground">
-                      {teacher.subjects.length > 0 ? teacher.subjects.join(', ') : 'None'}
-                    </span>
+          {filteredTeachers.map((teacher, index) => {
+            const teacherAssignments = getTeacherAssignments(teacher.id);
+            const assignedClasses = Object.keys(teacherAssignments);
+            
+            return (
+              <div 
+                key={teacher.id} 
+                className="card-elevated p-6 animate-slide-up"
+                style={{ animationDelay: `${index * 50}ms` }}
+              >
+                <div className="flex items-start justify-between mb-4">
+                  <div className="w-14 h-14 rounded-xl bg-gradient-to-br from-accent to-success flex items-center justify-center text-primary-foreground font-bold text-lg">
+                    {teacher.full_name.split(' ').map(n => n[0]).join('')}
                   </div>
+                  <DropdownMenu>
+                    <DropdownMenuTrigger asChild>
+                      <Button variant="ghost" size="icon" className="h-8 w-8">
+                        <MoreHorizontal className="h-4 w-4" />
+                      </Button>
+                    </DropdownMenuTrigger>
+                    <DropdownMenuContent align="end">
+                      <DropdownMenuItem onClick={() => handleViewTeacher(teacher)}>
+                        View Details
+                      </DropdownMenuItem>
+                      {isAdmin && (
+                        <>
+                          <DropdownMenuItem onClick={() => handleOpenAssignDialog(teacher)}>
+                            <Settings className="w-4 h-4 mr-2" />
+                            Manage Assignments
+                          </DropdownMenuItem>
+                          <DropdownMenuItem onClick={() => handleOpenEditDialog(teacher)}>
+                            Edit Details
+                          </DropdownMenuItem>
+                          <DropdownMenuItem 
+                            className="text-destructive"
+                            onClick={() => handleDeleteTeacher(teacher.id)}
+                          >
+                            Delete
+                          </DropdownMenuItem>
+                        </>
+                      )}
+                    </DropdownMenuContent>
+                  </DropdownMenu>
                 </div>
-                <div className="flex items-start gap-2 text-sm">
-                  <Users className="w-4 h-4 text-muted-foreground mt-0.5" />
-                  <div>
-                    <span className="text-muted-foreground">Classes: </span>
-                    <span className="font-medium text-card-foreground">
-                      {teacher.classes.length > 0 ? teacher.classes.join(', ') : 'None'}
-                    </span>
+
+                <h3 className="font-display font-semibold text-lg text-card-foreground mb-1">
+                  {teacher.full_name}
+                </h3>
+                <p className="text-sm text-muted-foreground mb-4 flex items-center gap-1">
+                  <Mail className="w-3 h-3" />
+                  {teacher.email}
+                </p>
+
+                <div className="space-y-3">
+                  <div className="flex items-start gap-2 text-sm">
+                    <Users className="w-4 h-4 text-muted-foreground mt-0.5" />
+                    <div>
+                      <span className="text-muted-foreground">Classes: </span>
+                      <span className="font-medium text-card-foreground">
+                        {assignedClasses.length > 0 ? assignedClasses.join(', ') : 'None assigned'}
+                      </span>
+                    </div>
                   </div>
+                  {assignedClasses.length > 0 && (
+                    <div className="text-xs text-muted-foreground pl-6 space-y-1">
+                      {assignedClasses.slice(0, 3).map(cls => (
+                        <div key={cls}>
+                          <span className="font-medium">{cls}:</span> {teacherAssignments[cls].join(', ')}
+                        </div>
+                      ))}
+                      {assignedClasses.length > 3 && (
+                        <div className="text-primary">+{assignedClasses.length - 3} more classes</div>
+                      )}
+                    </div>
+                  )}
                 </div>
               </div>
-            </div>
-          ))}
+            );
+          })}
         </div>
 
         {/* Empty State */}
@@ -349,24 +504,6 @@ export default function TeachersPage() {
                 placeholder="Login password"
               />
             </div>
-            <div className="space-y-2">
-              <Label htmlFor="subjects">Subjects (comma separated)</Label>
-              <Input
-                id="subjects"
-                value={newTeacher.subjects}
-                onChange={(e) => setNewTeacher({ ...newTeacher, subjects: e.target.value })}
-                placeholder="e.g. Mathematics, English, Science"
-              />
-            </div>
-            <div className="space-y-2">
-              <Label htmlFor="classes">Classes (comma separated)</Label>
-              <Input
-                id="classes"
-                value={newTeacher.classes}
-                onChange={(e) => setNewTeacher({ ...newTeacher, classes: e.target.value })}
-                placeholder="e.g. 10-A, 10-B, 9-A"
-              />
-            </div>
           </div>
           <DialogFooter>
             <Button variant="outline" onClick={() => setShowAddDialog(false)}>
@@ -382,7 +519,7 @@ export default function TeachersPage() {
 
       {/* View Teacher Dialog */}
       <Dialog open={showViewDialog} onOpenChange={setShowViewDialog}>
-        <DialogContent>
+        <DialogContent className="max-w-2xl">
           <DialogHeader>
             <DialogTitle>Teacher Details</DialogTitle>
             <DialogDescription>
@@ -402,16 +539,19 @@ export default function TeachersPage() {
               </div>
               <div className="space-y-3 pt-4 border-t">
                 <div>
-                  <Label className="text-muted-foreground">Subjects</Label>
-                  <p className="font-medium">
-                    {selectedTeacher.subjects.length > 0 ? selectedTeacher.subjects.join(', ') : 'None assigned'}
-                  </p>
-                </div>
-                <div>
-                  <Label className="text-muted-foreground">Classes</Label>
-                  <p className="font-medium">
-                    {selectedTeacher.classes.length > 0 ? selectedTeacher.classes.join(', ') : 'None assigned'}
-                  </p>
+                  <Label className="text-muted-foreground">Class & Subject Assignments</Label>
+                  <div className="mt-2 space-y-2">
+                    {Object.entries(getTeacherAssignments(selectedTeacher.id)).length > 0 ? (
+                      Object.entries(getTeacherAssignments(selectedTeacher.id)).map(([cls, subjectList]) => (
+                        <div key={cls} className="p-3 rounded-lg bg-muted/50">
+                          <p className="font-medium text-card-foreground">{cls}</p>
+                          <p className="text-sm text-muted-foreground">{subjectList.join(', ')}</p>
+                        </div>
+                      ))
+                    ) : (
+                      <p className="text-muted-foreground">No assignments yet</p>
+                    )}
+                  </div>
                 </div>
                 <div>
                   <Label className="text-muted-foreground">Joined</Label>
@@ -467,24 +607,6 @@ export default function TeachersPage() {
                 placeholder="New password"
               />
             </div>
-            <div className="space-y-2">
-              <Label htmlFor="edit-subjects">Subjects (comma separated)</Label>
-              <Input
-                id="edit-subjects"
-                value={editTeacher.subjects}
-                onChange={(e) => setEditTeacher({ ...editTeacher, subjects: e.target.value })}
-                placeholder="e.g. Mathematics, English, Science"
-              />
-            </div>
-            <div className="space-y-2">
-              <Label htmlFor="edit-classes">Classes (comma separated)</Label>
-              <Input
-                id="edit-classes"
-                value={editTeacher.classes}
-                onChange={(e) => setEditTeacher({ ...editTeacher, classes: e.target.value })}
-                placeholder="e.g. S1, S2, S3"
-              />
-            </div>
           </div>
           <DialogFooter>
             <Button variant="outline" onClick={() => setShowEditDialog(false)}>
@@ -492,7 +614,71 @@ export default function TeachersPage() {
             </Button>
             <Button onClick={handleEditTeacher} disabled={saving}>
               {saving && <Loader2 className="w-4 h-4 mr-2 animate-spin" />}
-              Save Changes
+              Save
+            </Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
+
+      {/* Assign Classes & Subjects Dialog */}
+      <Dialog open={showAssignDialog} onOpenChange={setShowAssignDialog}>
+        <DialogContent className="max-w-4xl max-h-[80vh] overflow-y-auto">
+          <DialogHeader>
+            <DialogTitle>Manage Class & Subject Assignments</DialogTitle>
+            <DialogDescription>
+              Assign {selectedTeacher?.full_name} to classes and specific subjects within each class
+            </DialogDescription>
+          </DialogHeader>
+          <div className="py-4">
+            <p className="text-sm text-muted-foreground mb-4">
+              Select the subjects this teacher will teach in each class. The teacher will only be able to enter marks for their assigned classes and subjects.
+            </p>
+            
+            <div className="space-y-4">
+              {ALL_CLASSES.map(cls => {
+                const assignedSubjects = classSubjectAssignments[cls] || new Set();
+                const hasAssignments = assignedSubjects.size > 0;
+                
+                return (
+                  <div key={cls} className={`border rounded-lg p-4 ${hasAssignments ? 'border-primary/50 bg-primary/5' : 'border-border'}`}>
+                    <div className="flex items-center justify-between mb-3">
+                      <h4 className="font-semibold text-card-foreground">{cls}</h4>
+                      <span className="text-xs text-muted-foreground">
+                        {assignedSubjects.size} subjects selected
+                      </span>
+                    </div>
+                    <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 gap-2">
+                      {subjects.map(subject => (
+                        <div 
+                          key={subject.id} 
+                          className="flex items-center gap-2 p-2 rounded hover:bg-muted/50"
+                        >
+                          <Checkbox
+                            id={`${cls}-${subject.id}`}
+                            checked={assignedSubjects.has(subject.id)}
+                            onCheckedChange={() => toggleSubjectForClass(cls, subject.id)}
+                          />
+                          <label 
+                            htmlFor={`${cls}-${subject.id}`}
+                            className="text-sm cursor-pointer"
+                          >
+                            {subject.name}
+                          </label>
+                        </div>
+                      ))}
+                    </div>
+                  </div>
+                );
+              })}
+            </div>
+          </div>
+          <DialogFooter>
+            <Button variant="outline" onClick={() => setShowAssignDialog(false)}>
+              Cancel
+            </Button>
+            <Button onClick={handleSaveAssignments} disabled={saving}>
+              {saving && <Loader2 className="w-4 h-4 mr-2 animate-spin" />}
+              Save Assignments
             </Button>
           </DialogFooter>
         </DialogContent>

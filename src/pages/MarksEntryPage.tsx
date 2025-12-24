@@ -36,7 +36,7 @@ interface StudentMark {
 
 const terms = ['Term 1', 'Term 2', 'Term 3'];
 const academicYears = ['2024-2025', '2023-2024', '2022-2023'];
-const classes = ['P1', 'P2', 'P3', 'P4', 'P5', 'P6', 'P7', 'S1', 'S2'];
+const ALL_CLASSES = ['Nursery', 'P1', 'P2', 'P3', 'P4', 'P5', 'P6', 'P7', 'S1', 'S2', 'S3', 'S4'];
 
 export default function MarksEntryPage() {
   const { toast } = useToast();
@@ -362,7 +362,7 @@ export default function MarksEntryPage() {
                   <SelectValue placeholder="Select class" />
                 </SelectTrigger>
                 <SelectContent>
-                  {classes.map((cls) => (
+                  {ALL_CLASSES.map((cls) => (
                     <SelectItem key={cls} value={cls}>Class {cls}</SelectItem>
                   ))}
                 </SelectContent>

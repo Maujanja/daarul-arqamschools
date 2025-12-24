@@ -154,11 +154,15 @@ export function SecretaryDashboard() {
     setPaymentNotes('');
   };
 
-  const getStudentBalance = (studentId: string) => {
+  const getStudentBalance = (studentId: string, boardingType: string = 'day') => {
     const student = students.find(s => s.id === studentId);
     if (!student) return 0;
     
-    const structure = feeStructure.find(f => f.class === student.class);
+    // Get fee based on class and boarding type
+    const structure = feeStructure.find(f => 
+      f.class === student.class && 
+      (f as any).boarding_type === boardingType
+    );
     const expectedFee = structure?.total_fee || 0;
     
     const paidAmount = feePayments
