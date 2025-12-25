@@ -64,5 +64,9 @@ export const mockFeedback: Feedback[] = [
 ];
 
 export const classes = ['9-A', '9-B', '10-A', '10-B', '11-A', '11-B', '12-A', '12-B'];
-export const terms = ['Term 1', 'Term 2', 'Term 3'];
+// Generate terms starting from Series 11 - can easily add more
+export const generateTerms = (count: number = 5): string[] => {
+  return Array.from({ length: count }, (_, i) => `Series ${11 + i}`);
+};
+export const terms = generateTerms(5); // Series 11, 12, 13, 14, 15
 export const academicYears = ['2024-2025', '2023-2024', '2022-2023'];

@@ -11,6 +11,7 @@ import { Save, Loader2, Upload, Download, FileSpreadsheet, Edit3 } from 'lucide-
 import { useToast } from '@/hooks/use-toast';
 import { useAuth } from '@/contexts/AuthContext';
 import * as XLSX from 'xlsx';
+import { terms } from '@/data/mockData';
 
 interface Student {
   id: string;
@@ -43,7 +44,7 @@ interface TeacherAssignment {
   academic_year: string;
 }
 
-const terms = ['Term 1', 'Term 2', 'Term 3'];
+
 const academicYears = ['2024-2025', '2023-2024', '2022-2023'];
 const ALL_CLASSES = ['Nursery', 'Primary 1', 'Primary 2', 'Primary 3', 'Primary 4', 'Primary 5', 'Primary 6', 'Primary 7', 'Senior 1', 'Senior 2', 'Senior 3', 'Senior 4'];
 
@@ -72,7 +73,7 @@ export default function MarksEntryPage() {
   const fileInputRef = useRef<HTMLInputElement>(null);
   const [selectedClass, setSelectedClass] = useState('');
   const [selectedSubject, setSelectedSubject] = useState('');
-  const [selectedTerm, setSelectedTerm] = useState('Term 1');
+  const [selectedTerm, setSelectedTerm] = useState(terms[0] || 'Series 11');
   const [selectedYear, setSelectedYear] = useState('2024-2025');
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [isLoading, setIsLoading] = useState(true);

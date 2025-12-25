@@ -5,6 +5,7 @@ import { BookOpen, Award, Download, MessageSquare, Loader2, DollarSign, AlertTri
 import { Button } from '@/components/ui/button';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { supabase } from '@/integrations/supabase/client';
+import { terms } from '@/data/mockData';
 import { useAuth } from '@/contexts/AuthContext';
 import { BarChart, Bar, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer, LineChart, Line, Legend, PieChart, Pie, Cell } from 'recharts';
 import jsPDF from 'jspdf';
@@ -62,7 +63,7 @@ export function ParentDashboard() {
   const [expectedFee, setExpectedFee] = useState(0);
   const [paidAmount, setPaidAmount] = useState(0);
   const [announcements, setAnnouncements] = useState<Announcement[]>([]);
-  const [selectedTerm, setSelectedTerm] = useState('Term 1');
+  const [selectedTerm, setSelectedTerm] = useState(terms[0] || 'Series 11');
   const [selectedYear, setSelectedYear] = useState('2024-2025');
   const [classRank, setClassRank] = useState<number | null>(null);
   const [totalClassStudents, setTotalClassStudents] = useState(0);
@@ -346,8 +347,7 @@ export function ParentDashboard() {
     score: s.average,
   }));
 
-  // Term-wise performance data
-  const terms = ['Term 1', 'Term 2', 'Term 3'];
+  // Term-wise performance data (uses imported terms from mockData)
   const termPerformanceData = terms.map(term => {
     const termMarks = studentMarks.filter(m => m.term === term);
     if (termMarks.length === 0) return null;
@@ -568,9 +568,9 @@ export function ParentDashboard() {
                 <SelectValue placeholder="Select term" />
               </SelectTrigger>
               <SelectContent>
-                <SelectItem value="Term 1">Term 1</SelectItem>
-                <SelectItem value="Term 2">Term 2</SelectItem>
-                <SelectItem value="Term 3">Term 3</SelectItem>
+                {terms.map((term) => (
+                  <SelectItem key={term} value={term}>{term}</SelectItem>
+                ))}
               </SelectContent>
             </Select>
           </div>
