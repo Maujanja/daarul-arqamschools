@@ -9,6 +9,7 @@ import { useNavigate } from 'react-router-dom';
 import { useAuth } from '@/contexts/AuthContext';
 import { supabase } from '@/integrations/supabase/client';
 import { useToast } from '@/hooks/use-toast';
+import { terms, academicYears } from '@/data/mockData';
 
 interface FeedbackItem {
   id: string;
@@ -74,6 +75,8 @@ export function TeacherDashboard() {
   const [subjects, setSubjects] = useState<Subject[]>([]);
   const [selectedClass, setSelectedClass] = useState('');
   const [selectedSubject, setSelectedSubject] = useState('');
+  const [selectedTerm, setSelectedTerm] = useState(terms[0]);
+  const [selectedAcademicYear, setSelectedAcademicYear] = useState(academicYears[0]);
   const [feedback, setFeedback] = useState<FeedbackItem[]>([]);
 
   useEffect(() => {
@@ -166,14 +169,16 @@ export function TeacherDashboard() {
         setSelectedSubject(filteredSubjects[0].id);
       }
       
-      // Get marks only for teacher's classes and subjects
+      // Get marks only for teacher's classes and subjects, filtered by term and academic year
       let filteredMarks: Mark[] = [];
       if (teacherClasses.length > 0 && teacherSubjectIds.length > 0) {
         const { data: marksData } = await supabase
           .from('marks')
           .select('*, students(full_name, class)')
           .in('class', teacherClasses)
-          .in('subject_id', teacherSubjectIds);
+          .in('subject_id', teacherSubjectIds)
+          .eq('term', selectedTerm)
+          .eq('academic_year', selectedAcademicYear);
         
         if (marksData) filteredMarks = marksData as Mark[];
       }
@@ -210,7 +215,7 @@ export function TeacherDashboard() {
     };
     
     fetchData();
-  }, [user]);
+  }, [user, selectedTerm, selectedAcademicYear]);
 
   // Update selected subject when class changes
   useEffect(() => {
@@ -317,13 +322,36 @@ export function TeacherDashboard() {
           <h1 className="text-3xl font-display font-bold text-foreground">Teacher Dashboard</h1>
           <p className="text-muted-foreground mt-1">Welcome back, {teacherData?.full_name || user?.name}!</p>
         </div>
-        <Button 
-          className="btn-gradient"
-          onClick={() => navigate('/marks-entry')}
-        >
-          <ClipboardList className="w-4 h-4 mr-2" />
-          Enter Marks
-        </Button>
+        <div className="flex flex-wrap items-center gap-3">
+          <Select value={selectedAcademicYear} onValueChange={setSelectedAcademicYear}>
+            <SelectTrigger className="w-[130px]">
+              <Calendar className="w-4 h-4 mr-2" />
+              <SelectValue />
+            </SelectTrigger>
+            <SelectContent>
+              {academicYears.map((year) => (
+                <SelectItem key={year} value={year}>{year}</SelectItem>
+              ))}
+            </SelectContent>
+          </Select>
+          <Select value={selectedTerm} onValueChange={setSelectedTerm}>
+            <SelectTrigger className="w-[130px]">
+              <SelectValue />
+            </SelectTrigger>
+            <SelectContent>
+              {terms.map((term) => (
+                <SelectItem key={term} value={term}>{term}</SelectItem>
+              ))}
+            </SelectContent>
+          </Select>
+          <Button 
+            className="btn-gradient"
+            onClick={() => navigate('/marks-entry')}
+          >
+            <ClipboardList className="w-4 h-4 mr-2" />
+            Enter Marks
+          </Button>
+        </div>
       </div>
 
       {/* Stats Grid */}
