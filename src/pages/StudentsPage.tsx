@@ -44,6 +44,25 @@ interface StudentWithMarks extends Student {
 
 const ALL_CLASSES = ['Nursery', 'P1', 'P2', 'P3', 'P4', 'P5', 'P6', 'P7', 'S1', 'S2', 'S3', 'S4'];
 
+// Map short class codes to full class names used in students table
+const mapClassToFullName = (shortCode: string): string => {
+  const mapping: Record<string, string> = {
+    'N': 'Nursery',
+    'P1': 'Primary 1',
+    'P2': 'Primary 2',
+    'P3': 'Primary 3',
+    'P4': 'Primary 4',
+    'P5': 'Primary 5',
+    'P6': 'Primary 6',
+    'P7': 'Primary 7',
+    'S1': 'Senior 1',
+    'S2': 'Senior 2',
+    'S3': 'Senior 3',
+    'S4': 'Senior 4',
+  };
+  return mapping[shortCode] || shortCode;
+};
+
 export default function StudentsPage() {
   const { user } = useAuth();
   const [searchQuery, setSearchQuery] = useState('');
@@ -112,9 +131,10 @@ export default function StudentsPage() {
       // Build query based on role
       let studentsQuery = supabase.from('students').select('*').order('full_name');
       
-      // Teachers only see students from their assigned classes
+      // Teachers only see students from their assigned classes (convert short codes to full names)
       if (isTeacher && teacherClasses.length > 0) {
-        studentsQuery = studentsQuery.in('class', teacherClasses);
+        const mappedClasses = teacherClasses.map(mapClassToFullName);
+        studentsQuery = studentsQuery.in('class', mappedClasses);
       }
       
       const { data: studentsData, error: studentsError } = await studentsQuery;
