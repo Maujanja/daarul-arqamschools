@@ -34,10 +34,9 @@ const navItems: NavItem[] = [
   { label: 'Teachers', icon: Users, href: '/teachers', roles: ['admin'] },
   { label: 'Subjects', icon: BookOpen, href: '/subjects', roles: ['admin'] },
   { label: 'Marks Entry', icon: ClipboardList, href: '/marks-entry', roles: ['teacher'] },
-  { label: 'Reports', icon: BarChart3, href: '/reports', roles: ['admin', 'teacher', 'parent'] },
-  { label: 'Academic Records', icon: FileText, href: '/records', roles: ['parent'] },
+  { label: 'Reports', icon: BarChart3, href: '/reports', roles: ['admin', 'teacher'] },
   { label: 'Feedback', icon: MessageSquare, href: '/feedback', roles: ['admin', 'parent', 'teacher', 'secretary'] },
-  { label: 'Announcements', icon: FileText, href: '/announcements', roles: ['admin', 'parent'] },
+  { label: 'Announcements', icon: FileText, href: '/announcements', roles: ['admin'] },
   { label: 'User Management', icon: UserCog, href: '/users', roles: ['admin'] },
   { label: 'Settings', icon: Settings, href: '/settings', roles: ['admin'] },
 ];
