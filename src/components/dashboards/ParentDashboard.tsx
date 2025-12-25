@@ -1,13 +1,13 @@
-import { useState, useEffect } from 'react';
+import { useState, useEffect, useRef } from 'react';
 import { StatCard } from '@/components/dashboard/StatCard';
 import { GradeBadge } from '@/components/dashboard/GradeBadge';
-import { BookOpen, Award, Download, MessageSquare, Loader2, DollarSign, AlertTriangle, TrendingUp, TrendingDown, Megaphone, User, Calendar } from 'lucide-react';
+import { BookOpen, Award, Download, MessageSquare, Loader2, DollarSign, AlertTriangle, TrendingUp, TrendingDown, Megaphone, User, Calendar, FileDown } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { supabase } from '@/integrations/supabase/client';
 import { useAuth } from '@/contexts/AuthContext';
-import { BarChart, Bar, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer, LineChart, Line, Legend } from 'recharts';
+import { BarChart, Bar, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer, LineChart, Line, Legend, PieChart, Pie, Cell } from 'recharts';
 import jsPDF from 'jspdf';
-
+import autoTable from 'jspdf-autotable';
 interface StudentMark {
   subject: string;
   subject_id: string;
@@ -215,7 +215,122 @@ export function ParentDashboard() {
     return data;
   }).filter(Boolean);
 
-  // Download PDF report
+  // Grade distribution for pie chart
+  const gradeDistribution = subjectAverages.reduce((acc, s) => {
+    const grade = s.average >= 75 ? 'A' : s.average >= 65 ? 'B' : s.average >= 50 ? 'C' : s.average >= 40 ? 'D' : 'F';
+    acc[grade] = (acc[grade] || 0) + 1;
+    return acc;
+  }, {} as Record<string, number>);
+
+  const pieChartData = Object.entries(gradeDistribution).map(([grade, count]) => ({
+    name: `Grade ${grade}`,
+    value: count,
+    grade
+  }));
+
+  const GRADE_COLORS: Record<string, string> = {
+    'A': 'hsl(142, 76%, 36%)',
+    'B': 'hsl(199, 89%, 48%)',
+    'C': 'hsl(48, 96%, 53%)',
+    'D': 'hsl(25, 95%, 53%)',
+    'F': 'hsl(0, 84%, 60%)'
+  };
+
+  // Download Subject Performance PDF
+  const handleDownloadSubjectPerformance = () => {
+    const doc = new jsPDF();
+    
+    doc.setFontSize(18);
+    doc.text('Subject Performance Report', 105, 20, { align: 'center' });
+    
+    doc.setFontSize(12);
+    doc.text(`Student: ${childName}`, 20, 35);
+    doc.text(`Class: ${childClass}`, 20, 43);
+    doc.text(`Date: ${new Date().toLocaleDateString()}`, 20, 51);
+    
+    // Subject table
+    const tableData = subjectAverages.map(s => {
+      const grade = s.average >= 75 ? 'A' : s.average >= 65 ? 'B' : s.average >= 50 ? 'C' : s.average >= 40 ? 'D' : 'F';
+      return [s.subject, `${s.average}%`, grade];
+    });
+    
+    autoTable(doc, {
+      head: [['Subject', 'Average', 'Grade']],
+      body: tableData,
+      startY: 60,
+      theme: 'striped',
+      headStyles: { fillColor: [59, 130, 246] }
+    });
+    
+    doc.save(`${childName}_subject_performance.pdf`);
+  };
+
+  // Download Term Performance PDF
+  const handleDownloadTermPerformance = () => {
+    const doc = new jsPDF();
+    
+    doc.setFontSize(18);
+    doc.text('Term-wise Performance Report', 105, 20, { align: 'center' });
+    
+    doc.setFontSize(12);
+    doc.text(`Student: ${childName}`, 20, 35);
+    doc.text(`Class: ${childClass}`, 20, 43);
+    doc.text(`Date: ${new Date().toLocaleDateString()}`, 20, 51);
+    
+    // Term table
+    const headers = ['Term', ...uniqueSubjects.slice(0, 6), 'Average'];
+    const tableData = termPerformanceData.map((t: any) => {
+      const row = [t.term];
+      uniqueSubjects.slice(0, 6).forEach(subject => {
+        row.push(t[subject] ? `${t[subject]}%` : '-');
+      });
+      row.push(`${Math.round(t.average)}%`);
+      return row;
+    });
+    
+    autoTable(doc, {
+      head: [headers],
+      body: tableData,
+      startY: 60,
+      theme: 'striped',
+      headStyles: { fillColor: [16, 185, 129] }
+    });
+    
+    doc.save(`${childName}_term_performance.pdf`);
+  };
+
+  // Download Grade Distribution PDF
+  const handleDownloadGradeDistribution = () => {
+    const doc = new jsPDF();
+    
+    doc.setFontSize(18);
+    doc.text('Grade Distribution Report', 105, 20, { align: 'center' });
+    
+    doc.setFontSize(12);
+    doc.text(`Student: ${childName}`, 20, 35);
+    doc.text(`Class: ${childClass}`, 20, 43);
+    doc.text(`Date: ${new Date().toLocaleDateString()}`, 20, 51);
+    doc.text(`Overall Average: ${overallAverage.toFixed(1)}%`, 20, 59);
+    
+    // Grade distribution table
+    const gradeLabels = ['A (75-100%)', 'B (65-74%)', 'C (50-64%)', 'D (40-49%)', 'F (0-39%)'];
+    const tableData = Object.entries(gradeDistribution).map(([grade, count]) => {
+      const label = gradeLabels.find(l => l.startsWith(grade)) || grade;
+      return [label, count.toString(), `${Math.round((count / subjectAverages.length) * 100)}%`];
+    });
+    
+    autoTable(doc, {
+      head: [['Grade Range', 'Number of Subjects', 'Percentage']],
+      body: tableData,
+      startY: 70,
+      theme: 'striped',
+      headStyles: { fillColor: [139, 92, 246] }
+    });
+    
+    doc.save(`${childName}_grade_distribution.pdf`);
+  };
+
+  // Download PDF report (main report)
   const handleDownloadReport = () => {
     const doc = new jsPDF();
     
@@ -228,22 +343,29 @@ export function ParentDashboard() {
     doc.text(`Class: ${childClass}`, 20, 50);
     doc.text(`Academic Year: 2024-2025`, 20, 60);
     
-    // Subject Performance
+    // Subject Performance Table
     doc.setFontSize(14);
     doc.text('Subject Performance', 20, 80);
     
-    let yPos = 90;
-    doc.setFontSize(10);
-    subjectAverages.forEach(s => {
-      doc.text(`${s.subject}: ${s.average}%`, 20, yPos);
-      yPos += 8;
+    const tableData = subjectAverages.map(s => {
+      const grade = s.average >= 75 ? 'A' : s.average >= 65 ? 'B' : s.average >= 50 ? 'C' : s.average >= 40 ? 'D' : 'F';
+      return [s.subject, `${s.average}%`, grade];
     });
     
-    // Overall
+    autoTable(doc, {
+      head: [['Subject', 'Average', 'Grade']],
+      body: tableData,
+      startY: 85,
+      theme: 'grid',
+      headStyles: { fillColor: [59, 130, 246] }
+    });
+    
+    // Summary
+    const finalY = (doc as any).lastAutoTable.finalY || 150;
     doc.setFontSize(12);
-    doc.text(`Overall Average: ${overallAverage.toFixed(1)}%`, 20, yPos + 10);
-    doc.text(`Top Subject: ${topSubject?.subject || '-'} (${topSubject?.average || 0}%)`, 20, yPos + 20);
-    doc.text(`Needs Support: ${needSupportSubject?.subject || '-'} (${needSupportSubject?.average || 0}%)`, 20, yPos + 30);
+    doc.text(`Overall Average: ${overallAverage.toFixed(1)}%`, 20, finalY + 15);
+    doc.text(`Top Subject: ${topSubject?.subject || '-'} (${topSubject?.average || 0}%)`, 20, finalY + 25);
+    doc.text(`Needs Support: ${needSupportSubject?.subject || '-'} (${needSupportSubject?.average || 0}%)`, 20, finalY + 35);
     
     doc.save(`${childName}_report.pdf`);
   };
@@ -454,11 +576,66 @@ export function ParentDashboard() {
         )}
       </div>
 
+      {/* Grade Distribution Pie Chart */}
+      <div className="card-elevated p-6 animate-fade-in">
+        <div className="flex items-center justify-between mb-6">
+          <h3 className="font-display font-semibold text-lg text-card-foreground">
+            Grade Distribution
+          </h3>
+          {pieChartData.length > 0 && (
+            <Button variant="outline" size="sm" onClick={handleDownloadGradeDistribution}>
+              <FileDown className="w-4 h-4 mr-2" />
+              Download PDF
+            </Button>
+          )}
+        </div>
+        {pieChartData.length > 0 ? (
+          <div className="h-80">
+            <ResponsiveContainer width="100%" height="100%">
+              <PieChart>
+                <Pie
+                  data={pieChartData}
+                  cx="50%"
+                  cy="50%"
+                  labelLine={false}
+                  label={({ name, percent }) => `${name} (${(percent * 100).toFixed(0)}%)`}
+                  outerRadius={100}
+                  fill="#8884d8"
+                  dataKey="value"
+                >
+                  {pieChartData.map((entry, index) => (
+                    <Cell key={`cell-${index}`} fill={GRADE_COLORS[entry.grade] || '#8884d8'} />
+                  ))}
+                </Pie>
+                <Tooltip 
+                  contentStyle={{ 
+                    backgroundColor: 'hsl(var(--card))',
+                    border: '1px solid hsl(var(--border))',
+                    borderRadius: '8px'
+                  }}
+                />
+                <Legend />
+              </PieChart>
+            </ResponsiveContainer>
+          </div>
+        ) : (
+          <p className="text-muted-foreground text-center py-8">No grade data available yet</p>
+        )}
+      </div>
+
       {/* Subject Performance Chart */}
       <div className="card-elevated p-6 animate-fade-in">
-        <h3 className="font-display font-semibold text-lg mb-6 text-card-foreground">
-          Subject Performance Overview
-        </h3>
+        <div className="flex items-center justify-between mb-6">
+          <h3 className="font-display font-semibold text-lg text-card-foreground">
+            Subject Performance Overview
+          </h3>
+          {performanceData.length > 0 && (
+            <Button variant="outline" size="sm" onClick={handleDownloadSubjectPerformance}>
+              <FileDown className="w-4 h-4 mr-2" />
+              Download PDF
+            </Button>
+          )}
+        </div>
         {performanceData.length > 0 ? (
           <div className="h-80">
             <ResponsiveContainer width="100%" height="100%">
@@ -484,9 +661,17 @@ export function ParentDashboard() {
 
       {/* Term-wise Performance */}
       <div className="card-elevated p-6 animate-fade-in">
-        <h3 className="font-display font-semibold text-lg mb-6 text-card-foreground">
-          Term-wise Performance Trends
-        </h3>
+        <div className="flex items-center justify-between mb-6">
+          <h3 className="font-display font-semibold text-lg text-card-foreground">
+            Term-wise Performance Trends
+          </h3>
+          {termPerformanceData.length > 0 && (
+            <Button variant="outline" size="sm" onClick={handleDownloadTermPerformance}>
+              <FileDown className="w-4 h-4 mr-2" />
+              Download PDF
+            </Button>
+          )}
+        </div>
         {termPerformanceData.length > 0 ? (
           <div className="h-80">
             <ResponsiveContainer width="100%" height="100%">
