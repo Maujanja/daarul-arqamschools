@@ -35,12 +35,9 @@ interface StudentMark {
   grade: string;
 }
 
-interface TeacherAssignment {
-  id: string;
-  teacher_id: string;
-  class: string;
-  subject_id: string;
-  academic_year: string;
+interface TeacherData {
+  classes: string[];
+  subjects: string[];
 }
 
 const terms = ['Term 1', 'Term 2', 'Term 3'];
@@ -63,31 +60,30 @@ export default function MarksEntryPage() {
   const [students, setStudents] = useState<Student[]>([]);
   const [subjects, setSubjects] = useState<Subject[]>([]);
   const [marks, setMarks] = useState<StudentMark[]>([]);
-  const [teacherAssignments, setTeacherAssignments] = useState<TeacherAssignment[]>([]);
+  const [teacherData, setTeacherData] = useState<TeacherData | null>(null);
+  const [teacherSubjects, setTeacherSubjects] = useState<Subject[]>([]);
 
   const isTeacher = user?.role === 'teacher';
 
-  // Get available classes for teacher
-  const availableClasses = isTeacher 
-    ? [...new Set(teacherAssignments.map(a => a.class))]
+  // Get available classes for teacher (from teacher's classes array)
+  const availableClasses = isTeacher && teacherData
+    ? teacherData.classes
     : ALL_CLASSES;
 
-  // Get available subjects for selected class (for teacher, only assigned subjects)
+  // Get available subjects for selected class (for teacher, only their assigned subjects)
   const availableSubjects = isTeacher
-    ? subjects.filter(s => 
-        teacherAssignments.some(a => a.class === selectedClass && a.subject_id === s.id)
-      )
+    ? teacherSubjects
     : subjects;
 
   const selectedSubjectData = subjects.find(s => s.id === selectedSubject);
   const maxMarks = selectedSubjectData?.max_marks || 100;
 
-  // Fetch teacher assignments and subjects
+  // Fetch teacher data and subjects
   useEffect(() => {
     const fetchInitialData = async () => {
       setIsLoading(true);
       
-      // Fetch subjects
+      // Fetch all subjects
       const { data: subjectsData, error: subjectsError } = await supabase
         .from('subjects')
         .select('*')
@@ -101,22 +97,38 @@ export default function MarksEntryPage() {
       
       setSubjects(subjectsData || []);
 
-      // Fetch teacher assignments if teacher
+      // Fetch teacher's classes and subjects from teachers table
       if (isTeacher && user?.id) {
-        const { data: assignmentsData } = await supabase
-          .from('teacher_assignments')
-          .select('*')
-          .eq('teacher_id', user.id);
+        const { data: teacher } = await supabase
+          .from('teachers')
+          .select('classes, subjects')
+          .eq('id', user.id)
+          .maybeSingle();
         
-        if (assignmentsData && assignmentsData.length > 0) {
-          setTeacherAssignments(assignmentsData);
-          // Set initial class from assignments
-          const firstClass = assignmentsData[0].class;
-          setSelectedClass(firstClass);
-          // Set initial subject for that class
-          const firstSubject = assignmentsData.find(a => a.class === firstClass)?.subject_id;
-          if (firstSubject) {
-            setSelectedSubject(firstSubject);
+        if (teacher) {
+          const teacherClasses = teacher.classes || [];
+          const teacherSubjectNames = teacher.subjects || [];
+          
+          setTeacherData({
+            classes: teacherClasses,
+            subjects: teacherSubjectNames
+          });
+          
+          // Filter subjects that match teacher's subject names
+          const matchedSubjects = (subjectsData || []).filter(s =>
+            teacherSubjectNames.some((name: string) =>
+              s.name.toLowerCase().includes(name.toLowerCase()) ||
+              name.toLowerCase().includes(s.name.toLowerCase())
+            )
+          );
+          setTeacherSubjects(matchedSubjects);
+          
+          // Set initial class and subject
+          if (teacherClasses.length > 0) {
+            setSelectedClass(teacherClasses[0]);
+          }
+          if (matchedSubjects.length > 0) {
+            setSelectedSubject(matchedSubjects[0].id);
           }
         }
       } else {
@@ -408,7 +420,7 @@ export default function MarksEntryPage() {
         {/* Filters */}
         <div className="card-elevated p-6 animate-fade-in">
           <h3 className="font-display font-semibold text-lg mb-4 text-card-foreground">Select Class & Subject</h3>
-          {isTeacher && availableClasses.length === 0 && (
+          {isTeacher && (!teacherData || teacherData.classes.length === 0) && (
             <div className="p-4 bg-warning/10 text-warning rounded-lg mb-4">
               No classes assigned to you. Please contact the administrator to assign classes and subjects.
             </div>
@@ -418,13 +430,6 @@ export default function MarksEntryPage() {
               <label className="text-sm font-medium text-muted-foreground">Class</label>
               <Select value={selectedClass} onValueChange={(value) => {
                 setSelectedClass(value);
-                // Reset subject when class changes for teacher
-                if (isTeacher) {
-                  const firstSubjectForClass = teacherAssignments.find(a => a.class === value)?.subject_id;
-                  if (firstSubjectForClass) {
-                    setSelectedSubject(firstSubjectForClass);
-                  }
-                }
               }}>
                 <SelectTrigger>
                   <SelectValue placeholder="Select class" />
