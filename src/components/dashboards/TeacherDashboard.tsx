@@ -82,102 +82,128 @@ export function TeacherDashboard() {
       
       setIsLoading(true);
       
+      // user.id is the teacher's ID from the teachers table (set during login)
+      const teacherId = user.id;
+      
       // Get teacher data
       const { data: teacher } = await supabase
         .from('teachers')
         .select('*')
-        .eq('id', user.id)
+        .eq('id', teacherId)
         .maybeSingle();
       
-      // Get teacher assignments
-      const { data: assignmentsData } = await supabase
-        .from('teacher_assignments')
-        .select('*')
-        .eq('teacher_id', user.id);
-      
-      if (assignmentsData) {
-        setAssignments(assignmentsData);
+      if (!teacher) {
+        setIsLoading(false);
+        return;
       }
       
-      // Get unique classes from assignments
-      const assignedClasses = [...new Set(assignmentsData?.map(a => a.class) || [])];
+      // Use teacher's classes and subjects arrays directly
+      const teacherClasses = teacher.classes || [];
+      const teacherSubjectNames = teacher.subjects || [];
       
-      if (teacher) {
-        setTeacherData({
-          classes: assignedClasses.length > 0 ? assignedClasses : (teacher.classes || []),
-          subjects: teacher.subjects || [],
-          full_name: teacher.full_name
-        });
-        
-        if (assignedClasses.length > 0) {
-          setSelectedClass(assignedClasses[0]);
-        }
+      setTeacherData({
+        classes: teacherClasses,
+        subjects: teacherSubjectNames,
+        full_name: teacher.full_name
+      });
+      
+      if (teacherClasses.length > 0) {
+        setSelectedClass(teacherClasses[0]);
       }
       
-      // Get assigned subject IDs from assignments
-      const assignedSubjectIds = [...new Set(assignmentsData?.map(a => a.subject_id) || [])];
-      
-      // Get ONLY students from assigned classes
+      // Get ONLY students from teacher's classes
       let filteredStudents: Student[] = [];
-      if (assignedClasses.length > 0) {
+      if (teacherClasses.length > 0) {
         const { data: studentsData } = await supabase
           .from('students')
           .select('*')
-          .in('class', assignedClasses)
+          .in('class', teacherClasses)
           .order('full_name');
         
         if (studentsData) filteredStudents = studentsData;
       }
       setStudents(filteredStudents);
       
-      // Get ONLY assigned subjects
+      // Get subjects that match teacher's subject names
       let filteredSubjects: Subject[] = [];
-      if (assignedSubjectIds.length > 0) {
-        const { data: subjectsData } = await supabase
+      if (teacherSubjectNames.length > 0) {
+        const { data: allSubjects } = await supabase
           .from('subjects')
-          .select('*')
-          .in('id', assignedSubjectIds);
+          .select('*');
         
-        if (subjectsData) filteredSubjects = subjectsData;
+        if (allSubjects) {
+          // Match by name (teacher.subjects contains subject names like "Biology", "Mathematics")
+          filteredSubjects = allSubjects.filter(s => 
+            teacherSubjectNames.some((name: string) => 
+              s.name.toLowerCase().includes(name.toLowerCase()) ||
+              name.toLowerCase().includes(s.name.toLowerCase())
+            )
+          );
+        }
       }
       setSubjects(filteredSubjects);
       
-      // Get marks only for assigned classes and subjects
+      // Get subject IDs for filtering marks
+      const teacherSubjectIds = filteredSubjects.map(s => s.id);
+      
+      // Create virtual assignments from teacher's classes and subjects
+      const virtualAssignments: TeacherAssignment[] = [];
+      teacherClasses.forEach((cls: string) => {
+        filteredSubjects.forEach(sub => {
+          virtualAssignments.push({
+            id: `${cls}-${sub.id}`,
+            teacher_id: teacherId,
+            class: cls,
+            subject_id: sub.id,
+            academic_year: '2024-2025'
+          });
+        });
+      });
+      setAssignments(virtualAssignments);
+      
+      // Set first subject for selected class
+      if (filteredSubjects.length > 0) {
+        setSelectedSubject(filteredSubjects[0].id);
+      }
+      
+      // Get marks only for teacher's classes and subjects
       let filteredMarks: Mark[] = [];
-      if (assignedClasses.length > 0 && assignedSubjectIds.length > 0) {
+      if (teacherClasses.length > 0 && teacherSubjectIds.length > 0) {
         const { data: marksData } = await supabase
           .from('marks')
           .select('*, students(full_name, class)')
-          .in('class', assignedClasses)
-          .in('subject_id', assignedSubjectIds);
+          .in('class', teacherClasses)
+          .in('subject_id', teacherSubjectIds);
         
         if (marksData) filteredMarks = marksData as Mark[];
       }
       setMarks(filteredMarks);
       
       // Get feedback for teacher's classes
-      const { data: feedbackData } = await supabase
-        .from('feedback')
-        .select('*')
-        .eq('recipient_type', 'teacher')
-        .order('created_at', { ascending: false });
-      
-      if (feedbackData && assignedClasses.length > 0) {
-        const { data: parentsData } = await supabase.from('parents').select('id, full_name');
-        const { data: studentsData } = await supabase.from('students').select('id, full_name, class');
+      if (teacherClasses.length > 0) {
+        const { data: feedbackData } = await supabase
+          .from('feedback')
+          .select('*')
+          .eq('recipient_type', 'teacher')
+          .order('created_at', { ascending: false });
         
-        const enrichedFeedback = feedbackData.map(fb => {
-          const parent = parentsData?.find(p => p.id === fb.parent_id);
-          const student = studentsData?.find(s => s.id === fb.student_id);
-          return {
-            ...fb,
-            parentName: parent?.full_name || 'Parent',
-            studentName: student?.full_name || 'Student',
-            studentClass: student?.class || ''
-          };
-        }).filter(fb => assignedClasses.includes(fb.studentClass));
-        
-        setFeedback(enrichedFeedback as FeedbackItem[]);
+        if (feedbackData) {
+          const { data: parentsData } = await supabase.from('parents').select('id, full_name');
+          const { data: studentsData } = await supabase.from('students').select('id, full_name, class');
+          
+          const enrichedFeedback = feedbackData.map(fb => {
+            const parent = parentsData?.find(p => p.id === fb.parent_id);
+            const student = studentsData?.find(s => s.id === fb.student_id);
+            return {
+              ...fb,
+              parentName: parent?.full_name || 'Parent',
+              studentName: student?.full_name || 'Student',
+              studentClass: student?.class || ''
+            };
+          }).filter(fb => teacherClasses.includes(fb.studentClass));
+          
+          setFeedback(enrichedFeedback as FeedbackItem[]);
+        }
       }
       
       setIsLoading(false);
