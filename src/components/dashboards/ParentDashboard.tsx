@@ -342,12 +342,12 @@ export function ParentDashboard() {
       </div>
 
       {/* School Announcements */}
-      {announcements.length > 0 && (
-        <div className="card-elevated p-6 animate-fade-in">
-          <h3 className="font-display font-semibold text-lg mb-6 text-card-foreground flex items-center gap-2">
-            <Megaphone className="w-5 h-5 text-primary" />
-            School Notices
-          </h3>
+      <div className="card-elevated p-6 animate-fade-in">
+        <h3 className="font-display font-semibold text-lg mb-6 text-card-foreground flex items-center gap-2">
+          <Megaphone className="w-5 h-5 text-primary" />
+          School Notices
+        </h3>
+        {announcements.length > 0 ? (
           <div className="space-y-4">
             {announcements.map((announcement, index) => (
               <div 
@@ -381,79 +381,85 @@ export function ParentDashboard() {
               </div>
             ))}
           </div>
-        </div>
-      )}
+        ) : (
+          <p className="text-muted-foreground text-center py-8">No announcements at this time</p>
+        )}
+      </div>
 
       {/* Fee Status Card */}
-      {expectedFee > 0 && (
-        <div className="card-elevated p-6 animate-fade-in">
-          <h3 className="font-display font-semibold text-lg mb-6 text-card-foreground flex items-center gap-2">
-            <DollarSign className="w-5 h-5 text-primary" />
-            Fee Status - 2024-2025
-          </h3>
-          <div className="grid grid-cols-1 md:grid-cols-3 gap-6 mb-6">
-            <div className="p-4 rounded-lg bg-muted/50">
-              <p className="text-sm text-muted-foreground">Expected Fee</p>
-              <p className="text-2xl font-bold text-card-foreground">TZS {expectedFee.toLocaleString()}</p>
-            </div>
-            <div className="p-4 rounded-lg bg-success/10">
-              <p className="text-sm text-muted-foreground">Paid Amount</p>
-              <p className="text-2xl font-bold text-success">TZS {paidAmount.toLocaleString()}</p>
-            </div>
-            <div className={`p-4 rounded-lg ${balance > 0 ? 'bg-destructive/10' : 'bg-success/10'}`}>
-              <p className="text-sm text-muted-foreground">Balance</p>
-              <p className={`text-2xl font-bold ${balance > 0 ? 'text-destructive' : 'text-success'}`}>
-                {balance > 0 ? `TZS ${balance.toLocaleString()}` : 'No Balance'}
-              </p>
-            </div>
-          </div>
-          
-          {/* Progress Bar */}
-          <div className="mb-4">
-            <div className="flex justify-between text-sm mb-2">
-              <span className="text-muted-foreground">Payment Progress</span>
-              <span className="font-medium text-card-foreground">
-                {expectedFee > 0 ? Math.round((paidAmount / expectedFee) * 100) : 0}%
-              </span>
-            </div>
-            <div className="h-3 bg-muted rounded-full overflow-hidden">
-              <div 
-                className="h-full bg-gradient-to-r from-primary to-success rounded-full transition-all duration-500"
-                style={{ width: `${expectedFee > 0 ? Math.min((paidAmount / expectedFee) * 100, 100) : 0}%` }}
-              />
-            </div>
-          </div>
-
-          {/* Payment History */}
-          {feePayments.length > 0 && (
-            <div className="mt-6">
-              <h4 className="font-medium text-card-foreground mb-4">Payment History</h4>
-              <div className="space-y-3">
-                {feePayments.map((payment, index) => (
-                  <div key={index} className="flex items-center justify-between p-3 rounded-lg bg-muted/30">
-                    <div>
-                      <p className="font-medium text-card-foreground">TZS {Number(payment.amount).toLocaleString()}</p>
-                      <p className="text-sm text-muted-foreground">{payment.payment_method}</p>
-                    </div>
-                    <div className="text-right">
-                      <p className="text-sm text-muted-foreground">
-                        {new Date(payment.payment_date).toLocaleDateString()}
-                      </p>
-                    </div>
-                  </div>
-                ))}
+      <div className="card-elevated p-6 animate-fade-in">
+        <h3 className="font-display font-semibold text-lg mb-6 text-card-foreground flex items-center gap-2">
+          <DollarSign className="w-5 h-5 text-primary" />
+          Fee Status - 2024-2025
+        </h3>
+        {expectedFee > 0 ? (
+          <>
+            <div className="grid grid-cols-1 md:grid-cols-3 gap-6 mb-6">
+              <div className="p-4 rounded-lg bg-muted/50">
+                <p className="text-sm text-muted-foreground">Expected Fee</p>
+                <p className="text-2xl font-bold text-card-foreground">TZS {expectedFee.toLocaleString()}</p>
+              </div>
+              <div className="p-4 rounded-lg bg-success/10">
+                <p className="text-sm text-muted-foreground">Paid Amount</p>
+                <p className="text-2xl font-bold text-success">TZS {paidAmount.toLocaleString()}</p>
+              </div>
+              <div className={`p-4 rounded-lg ${balance > 0 ? 'bg-destructive/10' : 'bg-success/10'}`}>
+                <p className="text-sm text-muted-foreground">Balance</p>
+                <p className={`text-2xl font-bold ${balance > 0 ? 'text-destructive' : 'text-success'}`}>
+                  {balance > 0 ? `TZS ${balance.toLocaleString()}` : 'No Balance'}
+                </p>
               </div>
             </div>
-          )}
-        </div>
-      )}
+            
+            {/* Progress Bar */}
+            <div className="mb-4">
+              <div className="flex justify-between text-sm mb-2">
+                <span className="text-muted-foreground">Payment Progress</span>
+                <span className="font-medium text-card-foreground">
+                  {expectedFee > 0 ? Math.round((paidAmount / expectedFee) * 100) : 0}%
+                </span>
+              </div>
+              <div className="h-3 bg-muted rounded-full overflow-hidden">
+                <div 
+                  className="h-full bg-gradient-to-r from-primary to-success rounded-full transition-all duration-500"
+                  style={{ width: `${expectedFee > 0 ? Math.min((paidAmount / expectedFee) * 100, 100) : 0}%` }}
+                />
+              </div>
+            </div>
+
+            {/* Payment History */}
+            {feePayments.length > 0 && (
+              <div className="mt-6">
+                <h4 className="font-medium text-card-foreground mb-4">Payment History</h4>
+                <div className="space-y-3">
+                  {feePayments.map((payment, index) => (
+                    <div key={index} className="flex items-center justify-between p-3 rounded-lg bg-muted/30">
+                      <div>
+                        <p className="font-medium text-card-foreground">TZS {Number(payment.amount).toLocaleString()}</p>
+                        <p className="text-sm text-muted-foreground">{payment.payment_method}</p>
+                      </div>
+                      <div className="text-right">
+                        <p className="text-sm text-muted-foreground">
+                          {new Date(payment.payment_date).toLocaleDateString()}
+                        </p>
+                      </div>
+                    </div>
+                  ))}
+                </div>
+              </div>
+            )}
+          </>
+        ) : (
+          <p className="text-muted-foreground text-center py-8">Fee structure not yet configured for this class</p>
+        )}
+      </div>
 
       {/* Subject Performance Chart */}
-      {performanceData.length > 0 && (
-        <div className="card-elevated p-6 animate-fade-in">
-          <h3 className="font-display font-semibold text-lg mb-6 text-card-foreground">
-            Subject Performance Overview
-          </h3>
+      <div className="card-elevated p-6 animate-fade-in">
+        <h3 className="font-display font-semibold text-lg mb-6 text-card-foreground">
+          Subject Performance Overview
+        </h3>
+        {performanceData.length > 0 ? (
           <div className="h-80">
             <ResponsiveContainer width="100%" height="100%">
               <BarChart data={performanceData} margin={{ top: 20, right: 30, left: 20, bottom: 5 }}>
@@ -471,15 +477,17 @@ export function ParentDashboard() {
               </BarChart>
             </ResponsiveContainer>
           </div>
-        </div>
-      )}
+        ) : (
+          <p className="text-muted-foreground text-center py-8">No marks recorded yet for this student</p>
+        )}
+      </div>
 
       {/* Term-wise Performance */}
-      {termPerformanceData.length > 0 && (
-        <div className="card-elevated p-6 animate-fade-in">
-          <h3 className="font-display font-semibold text-lg mb-6 text-card-foreground">
-            Term-wise Performance Trends
-          </h3>
+      <div className="card-elevated p-6 animate-fade-in">
+        <h3 className="font-display font-semibold text-lg mb-6 text-card-foreground">
+          Term-wise Performance Trends
+        </h3>
+        {termPerformanceData.length > 0 ? (
           <div className="h-80">
             <ResponsiveContainer width="100%" height="100%">
               <LineChart data={termPerformanceData} margin={{ top: 20, right: 30, left: 20, bottom: 5 }}>
@@ -507,15 +515,17 @@ export function ParentDashboard() {
               </LineChart>
             </ResponsiveContainer>
           </div>
-        </div>
-      )}
+        ) : (
+          <p className="text-muted-foreground text-center py-8">No term data available yet</p>
+        )}
+      </div>
 
       {/* Subject Analysis Table */}
-      {subjectAverages.length > 0 && (
-        <div className="card-elevated p-6 animate-fade-in">
-          <h3 className="font-display font-semibold text-lg mb-6 text-card-foreground">
-            Subject Analysis
-          </h3>
+      <div className="card-elevated p-6 animate-fade-in">
+        <h3 className="font-display font-semibold text-lg mb-6 text-card-foreground">
+          Subject Analysis
+        </h3>
+        {subjectAverages.length > 0 ? (
           <div className="overflow-x-auto">
             <table className="w-full">
               <thead>
@@ -559,8 +569,10 @@ export function ParentDashboard() {
               </tbody>
             </table>
           </div>
-        </div>
-      )}
+        ) : (
+          <p className="text-muted-foreground text-center py-8">No subject data available yet</p>
+        )}
+      </div>
     </div>
   );
 }
