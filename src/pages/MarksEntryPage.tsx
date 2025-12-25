@@ -133,26 +133,49 @@ export default function MarksEntryPage() {
     fetchInitialData();
   }, [isTeacher, user?.id]);
 
-  // Fetch students when class changes
+  // Fetch students when class changes - for teachers, only fetch their selected students
   useEffect(() => {
     const fetchStudents = async () => {
-      setIsLoading(true);
-      const { data, error } = await supabase
-        .from('students')
-        .select('*')
-        .eq('class', selectedClass)
-        .order('roll_number');
+      if (!selectedClass || !selectedSubject) return;
       
-      if (error) {
-        console.error('Error fetching students:', error);
-        setIsLoading(false);
-        return;
+      setIsLoading(true);
+      
+      let studentsToShow: Student[] = [];
+      
+      if (isTeacher && user?.id) {
+        // For teachers, get only their selected students from teacher_class_students
+        const { data: selectedStudents } = await supabase
+          .from('teacher_class_students')
+          .select('student_id')
+          .eq('teacher_id', user.id)
+          .eq('class', selectedClass)
+          .eq('subject_id', selectedSubject);
+        
+        if (selectedStudents && selectedStudents.length > 0) {
+          const studentIds = selectedStudents.map(s => s.student_id);
+          const { data: students } = await supabase
+            .from('students')
+            .select('*')
+            .in('id', studentIds)
+            .order('roll_number');
+          
+          studentsToShow = students || [];
+        }
+      } else {
+        // For admin, get all students in the class
+        const { data } = await supabase
+          .from('students')
+          .select('*')
+          .eq('class', selectedClass)
+          .order('roll_number');
+        
+        studentsToShow = data || [];
       }
       
-      setStudents(data || []);
+      setStudents(studentsToShow);
       
       // Initialize marks for these students
-      const initialMarks: StudentMark[] = (data || []).map(student => ({
+      const initialMarks: StudentMark[] = studentsToShow.map(student => ({
         studentId: student.id,
         studentName: student.full_name,
         rollNumber: student.roll_number,
@@ -166,7 +189,7 @@ export default function MarksEntryPage() {
     };
     
     fetchStudents();
-  }, [selectedClass]);
+  }, [selectedClass, selectedSubject, isTeacher, user?.id]);
 
   // Load existing marks when subject/term/year changes
   useEffect(() => {
@@ -411,6 +434,17 @@ export default function MarksEntryPage() {
           {isTeacher && availableClasses.length === 0 && (
             <div className="p-4 bg-warning/10 text-warning rounded-lg mb-4">
               No classes assigned to you. Please contact the administrator to assign classes and subjects.
+            </div>
+          )}
+          {isTeacher && students.length === 0 && selectedClass && selectedSubject && !isLoading && (
+            <div className="p-4 bg-accent/10 text-accent-foreground rounded-lg mb-4 flex items-center justify-between">
+              <div>
+                <p className="font-medium">Hujachagua wanafunzi bado</p>
+                <p className="text-sm text-muted-foreground">Nenda "Wanafunzi Wangu" kuchagua wanafunzi utakaowaingiza maksi</p>
+              </div>
+              <Button variant="outline" size="sm" onClick={() => window.location.href = '/my-class-students'}>
+                Chagua Wanafunzi
+              </Button>
             </div>
           )}
           <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">

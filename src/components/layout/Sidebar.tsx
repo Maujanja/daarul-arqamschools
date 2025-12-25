@@ -31,6 +31,7 @@ interface NavItem {
 const navItems: NavItem[] = [
   { label: 'Dashboard', icon: LayoutDashboard, href: '/dashboard', roles: ['admin', 'teacher', 'parent', 'secretary'] },
   { label: 'Students', icon: GraduationCap, href: '/students', roles: ['admin', 'teacher', 'secretary'] },
+  { label: 'My Class Students', icon: Users, href: '/my-class-students', roles: ['teacher'] },
   { label: 'Teachers', icon: Users, href: '/teachers', roles: ['admin'] },
   { label: 'Subjects', icon: BookOpen, href: '/subjects', roles: ['admin'] },
   { label: 'Marks Entry', icon: ClipboardList, href: '/marks-entry', roles: ['teacher'] },
