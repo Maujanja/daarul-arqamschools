@@ -125,8 +125,10 @@ export default function ReportsPage() {
       const uniqueClasses = [...new Set(students?.map(s => s.class) || [])].sort();
       setAvailableClasses(uniqueClasses);
 
-      // Fetch marks - filter by teacher's subjects if teacher
-      let marksQuery = supabase.from('marks').select('*');
+      // Fetch marks - filter by term, year, teacher's subjects if teacher
+      let marksQuery = supabase.from('marks').select('*')
+        .eq('term', selectedTerm)
+        .eq('academic_year', selectedYear);
       if (isTeacher && teacherSubjectIds.length > 0) {
         marksQuery = marksQuery.in('subject_id', teacherSubjectIds);
       }
