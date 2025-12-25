@@ -58,24 +58,29 @@ export function ParentDashboard() {
       
       let studentData = null;
       
-      const { data: studentByParent } = await supabase
+      // First check if user.id is a student ID directly (for students without parent record)
+      const { data: studentById } = await supabase
         .from('students')
         .select('*')
-        .eq('parent_id', user.id)
+        .eq('id', user.id)
         .maybeSingle();
       
-      if (studentByParent) {
-        studentData = studentByParent;
+      if (studentById) {
+        studentData = studentById;
       } else {
-        const { data: studentById } = await supabase
+        // Then check if user.id is a parent_id
+        const { data: studentByParent } = await supabase
           .from('students')
           .select('*')
-          .eq('id', user.id)
+          .eq('parent_id', user.id)
           .maybeSingle();
         
-        studentData = studentById;
+        if (studentByParent) {
+          studentData = studentByParent;
+        }
       }
       
+      // Fallback: search by user name in parents table
       if (!studentData) {
         const { data: parentRecord } = await supabase
           .from('parents')
