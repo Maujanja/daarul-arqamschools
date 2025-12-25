@@ -114,28 +114,46 @@ export function TeacherDashboard() {
         }
       }
       
-      // Get all students
-      const { data: studentsData } = await supabase
-        .from('students')
-        .select('*')
-        .order('full_name');
+      // Get assigned subject IDs from assignments
+      const assignedSubjectIds = [...new Set(assignmentsData?.map(a => a.subject_id) || [])];
       
-      if (studentsData) setStudents(studentsData);
+      // Get ONLY students from assigned classes
+      let filteredStudents: Student[] = [];
+      if (assignedClasses.length > 0) {
+        const { data: studentsData } = await supabase
+          .from('students')
+          .select('*')
+          .in('class', assignedClasses)
+          .order('full_name');
+        
+        if (studentsData) filteredStudents = studentsData;
+      }
+      setStudents(filteredStudents);
       
-      // Get all subjects
-      const { data: subjectsData } = await supabase
-        .from('subjects')
-        .select('*');
+      // Get ONLY assigned subjects
+      let filteredSubjects: Subject[] = [];
+      if (assignedSubjectIds.length > 0) {
+        const { data: subjectsData } = await supabase
+          .from('subjects')
+          .select('*')
+          .in('id', assignedSubjectIds);
+        
+        if (subjectsData) filteredSubjects = subjectsData;
+      }
+      setSubjects(filteredSubjects);
       
-      if (subjectsData) setSubjects(subjectsData);
-      
-      // Get marks with student info
-      const { data: marksData } = await supabase
-        .from('marks')
-        .select('*, students(full_name, class)')
-        .eq('teacher_id', user.id);
-      
-      if (marksData) setMarks(marksData as Mark[]);
+      // Get marks only for assigned classes and subjects
+      let filteredMarks: Mark[] = [];
+      if (assignedClasses.length > 0 && assignedSubjectIds.length > 0) {
+        const { data: marksData } = await supabase
+          .from('marks')
+          .select('*, students(full_name, class)')
+          .in('class', assignedClasses)
+          .in('subject_id', assignedSubjectIds);
+        
+        if (marksData) filteredMarks = marksData as Mark[];
+      }
+      setMarks(filteredMarks);
       
       // Get feedback for teacher's classes
       const { data: feedbackData } = await supabase
