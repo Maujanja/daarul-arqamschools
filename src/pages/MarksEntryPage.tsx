@@ -163,26 +163,36 @@ export default function MarksEntryPage() {
       if (!selectedClass || !selectedSubject) return;
       
       setIsLoading(true);
+      console.log('Fetching students for:', { selectedClass, selectedSubject, userId: user?.id, isTeacher });
       
       let studentsToShow: Student[] = [];
       
       if (isTeacher && user?.id) {
         // For teachers, get only their selected students from teacher_class_students
-        const { data: selectedStudents } = await supabase
+        console.log('Teacher query params:', {
+          teacher_id: user.id,
+          class: selectedClass,
+          subject_id: selectedSubject
+        });
+        
+        const { data: selectedStudents, error: selectError } = await supabase
           .from('teacher_class_students')
           .select('student_id')
           .eq('teacher_id', user.id)
           .eq('class', selectedClass)
           .eq('subject_id', selectedSubject);
         
+        console.log('Selected students from teacher_class_students:', selectedStudents, 'Error:', selectError);
+        
         if (selectedStudents && selectedStudents.length > 0) {
           const studentIds = selectedStudents.map(s => s.student_id);
-          const { data: students } = await supabase
+          const { data: students, error: studentsError } = await supabase
             .from('students')
             .select('*')
             .in('id', studentIds)
             .order('roll_number');
           
+          console.log('Fetched students:', students?.length, 'Error:', studentsError);
           studentsToShow = students || [];
         }
       } else {
@@ -196,6 +206,7 @@ export default function MarksEntryPage() {
         studentsToShow = data || [];
       }
       
+      console.log('Final students to show:', studentsToShow.length);
       setStudents(studentsToShow);
       
       // Initialize marks for these students
