@@ -12,12 +12,13 @@ import { supabase } from '@/integrations/supabase/client';
 import { generateClassReportPDF, generateAllStudentsReportPDF } from '@/utils/pdfGenerator';
 import { toast } from 'sonner';
 import { calculateGrade } from '@/types';
+import { terms } from '@/data/mockData';
 import { useAuth } from '@/contexts/AuthContext';
 
 export default function ReportsPage() {
   const { user } = useAuth();
   const [selectedClass, setSelectedClass] = useState('all');
-  const [selectedTerm, setSelectedTerm] = useState('Term 1');
+  const [selectedTerm, setSelectedTerm] = useState(terms[0] || 'Series 11');
   const [selectedYear, setSelectedYear] = useState('2024-2025');
   const [loading, setLoading] = useState(false);
   const [studentsData, setStudentsData] = useState<any[]>([]);
@@ -281,9 +282,9 @@ export default function ReportsPage() {
                   <SelectValue placeholder="Select term" />
                 </SelectTrigger>
                 <SelectContent>
-                  <SelectItem value="Term 1">Term 1</SelectItem>
-                  <SelectItem value="Term 2">Term 2</SelectItem>
-                  <SelectItem value="Term 3">Term 3</SelectItem>
+                  {terms.map((term) => (
+                    <SelectItem key={term} value={term}>{term}</SelectItem>
+                  ))}
                 </SelectContent>
               </Select>
             </div>
