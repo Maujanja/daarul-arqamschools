@@ -1,7 +1,7 @@
 import { useState, useEffect, useRef } from 'react';
 import { StatCard } from '@/components/dashboard/StatCard';
 import { GradeBadge } from '@/components/dashboard/GradeBadge';
-import { BookOpen, Award, Download, MessageSquare, Loader2, DollarSign, AlertTriangle, TrendingUp, TrendingDown, Megaphone, User, Calendar, FileDown } from 'lucide-react';
+import { BookOpen, Award, Download, MessageSquare, Loader2, DollarSign, AlertTriangle, TrendingUp, TrendingDown, Megaphone, User, Calendar, FileDown, Trophy, Users, Target } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { supabase } from '@/integrations/supabase/client';
@@ -39,6 +39,15 @@ interface Announcement {
   created_at: string;
 }
 
+interface SubjectRanking {
+  subject: string;
+  subject_id: string;
+  score: number;
+  grade: string;
+  rank: number;
+  totalStudents: number;
+}
+
 export function ParentDashboard() {
   const { user } = useAuth();
   const [isLoading, setIsLoading] = useState(true);
@@ -55,6 +64,97 @@ export function ParentDashboard() {
   const [announcements, setAnnouncements] = useState<Announcement[]>([]);
   const [selectedTerm, setSelectedTerm] = useState('Term 1');
   const [selectedYear, setSelectedYear] = useState('2024-2025');
+  const [classRank, setClassRank] = useState<number | null>(null);
+  const [totalClassStudents, setTotalClassStudents] = useState(0);
+  const [subjectRankings, setSubjectRankings] = useState<SubjectRanking[]>([]);
+
+  // Calculate class rank and subject rankings
+  const calculateRankings = async (studentId: string, studentClass: string, term: string, year: string) => {
+    // Get all marks for students in the same class for the selected term/year
+    const { data: classMarks } = await supabase
+      .from('marks')
+      .select(`
+        student_id,
+        subject_id,
+        total,
+        grade,
+        subjects (name)
+      `)
+      .eq('class', studentClass)
+      .eq('term', term)
+      .eq('academic_year', year);
+
+    if (!classMarks || classMarks.length === 0) {
+      setClassRank(null);
+      setTotalClassStudents(0);
+      setSubjectRankings([]);
+      return;
+    }
+
+    // Calculate average for each student
+    const studentAverages: Record<string, { total: number; count: number }> = {};
+    classMarks.forEach((mark: any) => {
+      if (!studentAverages[mark.student_id]) {
+        studentAverages[mark.student_id] = { total: 0, count: 0 };
+      }
+      studentAverages[mark.student_id].total += mark.total;
+      studentAverages[mark.student_id].count += 1;
+    });
+
+    // Sort students by average
+    const rankedStudents = Object.entries(studentAverages)
+      .map(([id, data]) => ({
+        studentId: id,
+        average: data.total / data.count
+      }))
+      .sort((a, b) => b.average - a.average);
+
+    // Find current student's rank
+    const studentRankIndex = rankedStudents.findIndex(s => s.studentId === studentId);
+    if (studentRankIndex !== -1) {
+      setClassRank(studentRankIndex + 1);
+      setTotalClassStudents(rankedStudents.length);
+    }
+
+    // Calculate subject-wise rankings
+    const subjectScores: Record<string, { studentId: string; score: number; grade: string; subjectName: string }[]> = {};
+    classMarks.forEach((mark: any) => {
+      const subjectId = mark.subject_id;
+      if (!subjectScores[subjectId]) {
+        subjectScores[subjectId] = [];
+      }
+      subjectScores[subjectId].push({
+        studentId: mark.student_id,
+        score: mark.total,
+        grade: mark.grade,
+        subjectName: (mark.subjects as any)?.name || 'Unknown'
+      });
+    });
+
+    // Calculate rank for each subject
+    const rankings: SubjectRanking[] = [];
+    Object.entries(subjectScores).forEach(([subjectId, scores]) => {
+      // Sort by score descending
+      const sorted = [...scores].sort((a, b) => b.score - a.score);
+      const studentScore = sorted.find(s => s.studentId === studentId);
+      
+      if (studentScore) {
+        const rank = sorted.findIndex(s => s.studentId === studentId) + 1;
+        rankings.push({
+          subject: studentScore.subjectName,
+          subject_id: subjectId,
+          score: studentScore.score,
+          grade: studentScore.grade,
+          rank,
+          totalStudents: sorted.length
+        });
+      }
+    });
+
+    // Sort by score descending (best subjects first)
+    rankings.sort((a, b) => b.score - a.score);
+    setSubjectRankings(rankings);
+  };
 
   useEffect(() => {
     const fetchChildData = async () => {
@@ -154,6 +254,9 @@ export function ParentDashboard() {
           setOverallAverage(0);
         }
       }
+
+      // Calculate class rank and subject rankings
+      await calculateRankings(studentData.id, studentData.class, selectedTerm, selectedYear);
       
       // Get fee payments for this student
       const { data: payments } = await supabase
@@ -197,7 +300,7 @@ export function ParentDashboard() {
     fetchChildData();
   }, [user, selectedTerm, selectedYear]);
 
-  // Update filtered marks when term/year changes
+  // Update filtered marks and rankings when term/year changes
   useEffect(() => {
     if (allMarks.length > 0) {
       const filtered = allMarks.filter(
@@ -212,7 +315,12 @@ export function ParentDashboard() {
         setOverallAverage(0);
       }
     }
-  }, [selectedTerm, selectedYear, allMarks]);
+    
+    // Recalculate rankings when term/year changes
+    if (studentId && childClass) {
+      calculateRankings(studentId, childClass, selectedTerm, selectedYear);
+    }
+  }, [selectedTerm, selectedYear, allMarks, studentId, childClass]);
 
   const balance = expectedFee - paidAmount;
 
@@ -502,7 +610,14 @@ export function ParentDashboard() {
       </div>
 
       {/* Stats Grid */}
-      <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-6">
+      <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-5 gap-6">
+        <StatCard
+          title="Class Rank"
+          value={classRank ? `${classRank}/${totalClassStudents}` : '-'}
+          subtitle={classRank === 1 ? 'Top of class!' : classRank && classRank <= 3 ? 'Top 3!' : 'Overall position'}
+          icon={Trophy}
+          variant={classRank === 1 ? 'success' : classRank && classRank <= 3 ? 'primary' : 'default'}
+        />
         <StatCard
           title="Subjects"
           value={uniqueSubjects.length.toString()}
@@ -775,12 +890,74 @@ export function ParentDashboard() {
         )}
       </div>
 
-      {/* Subject Analysis Table */}
+      {/* Subject Analysis Table with Class Ranking */}
       <div className="card-elevated p-6 animate-fade-in">
-        <h3 className="font-display font-semibold text-lg mb-6 text-card-foreground">
-          Subject Analysis
+        <h3 className="font-display font-semibold text-lg mb-6 text-card-foreground flex items-center gap-2">
+          <Target className="w-5 h-5 text-primary" />
+          Subject Analysis & Class Ranking
         </h3>
-        {subjectAverages.length > 0 ? (
+        {subjectRankings.length > 0 ? (
+          <div className="overflow-x-auto">
+            <table className="w-full">
+              <thead>
+                <tr className="border-b border-border">
+                  <th className="text-left py-3 px-4 text-sm font-medium text-muted-foreground">Subject</th>
+                  <th className="text-center py-3 px-4 text-sm font-medium text-muted-foreground">Score</th>
+                  <th className="text-center py-3 px-4 text-sm font-medium text-muted-foreground">Grade</th>
+                  <th className="text-center py-3 px-4 text-sm font-medium text-muted-foreground">Class Rank</th>
+                  <th className="text-center py-3 px-4 text-sm font-medium text-muted-foreground">Status</th>
+                </tr>
+              </thead>
+              <tbody>
+                {subjectRankings.map((item, index) => {
+                  const isTop = index === 0;
+                  const isFirst = item.rank === 1;
+                  const needsSupport = index === subjectRankings.length - 1 && item.score < 50;
+                  
+                  return (
+                    <tr key={item.subject_id} className="border-b border-border/50 table-row-hover">
+                      <td className="py-4 px-4 font-medium text-card-foreground">{item.subject}</td>
+                      <td className="py-4 px-4 text-center font-semibold text-card-foreground">{item.score}%</td>
+                      <td className="py-4 px-4 text-center">
+                        <GradeBadge grade={item.grade} />
+                      </td>
+                      <td className="py-4 px-4 text-center">
+                        <span className={`inline-flex items-center gap-1 px-3 py-1 rounded-full text-sm font-medium ${
+                          item.rank === 1 ? 'bg-yellow-500/10 text-yellow-600' :
+                          item.rank <= 3 ? 'bg-primary/10 text-primary' :
+                          'bg-muted text-muted-foreground'
+                        }`}>
+                          {item.rank === 1 && <Trophy className="w-3 h-3" />}
+                          {item.rank}/{item.totalStudents}
+                        </span>
+                      </td>
+                      <td className="py-4 px-4 text-center">
+                        {isFirst && (
+                          <span className="inline-flex items-center gap-1 px-2 py-1 rounded-full text-xs font-medium bg-yellow-500/10 text-yellow-600">
+                            <Trophy className="w-3 h-3" />
+                            1st in Class
+                          </span>
+                        )}
+                        {isTop && !isFirst && (
+                          <span className="inline-flex items-center gap-1 px-2 py-1 rounded-full text-xs font-medium bg-success/10 text-success">
+                            <TrendingUp className="w-3 h-3" />
+                            Best Subject
+                          </span>
+                        )}
+                        {needsSupport && (
+                          <span className="inline-flex items-center gap-1 px-2 py-1 rounded-full text-xs font-medium bg-warning/10 text-warning">
+                            <AlertTriangle className="w-3 h-3" />
+                            Needs Support
+                          </span>
+                        )}
+                      </td>
+                    </tr>
+                  );
+                })}
+              </tbody>
+            </table>
+          </div>
+        ) : subjectAverages.length > 0 ? (
           <div className="overflow-x-auto">
             <table className="w-full">
               <thead>
