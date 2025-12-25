@@ -456,6 +456,58 @@ export type Database = {
           },
         ]
       }
+      teacher_class_students: {
+        Row: {
+          academic_year: string
+          class: string
+          created_at: string
+          id: string
+          student_id: string
+          subject_id: string
+          teacher_id: string
+        }
+        Insert: {
+          academic_year?: string
+          class: string
+          created_at?: string
+          id?: string
+          student_id: string
+          subject_id: string
+          teacher_id: string
+        }
+        Update: {
+          academic_year?: string
+          class?: string
+          created_at?: string
+          id?: string
+          student_id?: string
+          subject_id?: string
+          teacher_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "teacher_class_students_student_id_fkey"
+            columns: ["student_id"]
+            isOneToOne: false
+            referencedRelation: "students"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "teacher_class_students_subject_id_fkey"
+            columns: ["subject_id"]
+            isOneToOne: false
+            referencedRelation: "subjects"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "teacher_class_students_teacher_id_fkey"
+            columns: ["teacher_id"]
+            isOneToOne: false
+            referencedRelation: "teachers"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       teachers: {
         Row: {
           classes: string[]
