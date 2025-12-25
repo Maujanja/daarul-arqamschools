@@ -65,15 +65,15 @@ export const mockFeedback: Feedback[] = [
 
 export const classes = ['9-A', '9-B', '10-A', '10-B', '11-A', '11-B', '12-A', '12-B'];
 
-// Default series count - starts from Series 1
-export const DEFAULT_SERIES_COUNT = 11;
+// Default term count - starts from Term 1
+export const DEFAULT_TERM_COUNT = 11;
 
-// Generate series (Series 1, Series 2, ... Series N)
-export const generateTerms = (count: number = DEFAULT_SERIES_COUNT): string[] => {
-  return Array.from({ length: count }, (_, i) => `Series ${i + 1}`);
+// Generate terms (Term 1, Term 2, ... Term N)
+export const generateTerms = (count: number = DEFAULT_TERM_COUNT): string[] => {
+  return Array.from({ length: count }, (_, i) => `Term ${i + 1}`);
 };
 
-// Default terms - Series 1 to 11
-export const terms = generateTerms(DEFAULT_SERIES_COUNT);
+// Default terms - Term 1 to 11
+export const terms = generateTerms(DEFAULT_TERM_COUNT);
 
 export const academicYears = ['2024-2025', '2023-2024', '2022-2023'];
