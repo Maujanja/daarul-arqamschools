@@ -18,7 +18,7 @@ import { useAuth } from '@/contexts/AuthContext';
 export default function ReportsPage() {
   const { user } = useAuth();
   const [selectedClass, setSelectedClass] = useState('all');
-  const [selectedTerm, setSelectedTerm] = useState(terms[0] || 'Series 11');
+  const [selectedTerm, setSelectedTerm] = useState(terms[0] || 'Series 1');
   const [selectedYear, setSelectedYear] = useState('2024-2025');
   const [loading, setLoading] = useState(false);
   const [studentsData, setStudentsData] = useState<any[]>([]);

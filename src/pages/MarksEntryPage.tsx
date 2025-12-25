@@ -11,7 +11,9 @@ import { Save, Loader2, Upload, Download, FileSpreadsheet, Edit3 } from 'lucide-
 import { useToast } from '@/hooks/use-toast';
 import { useAuth } from '@/contexts/AuthContext';
 import * as XLSX from 'xlsx';
-import { terms } from '@/data/mockData';
+import { terms, generateTerms, DEFAULT_SERIES_COUNT } from '@/data/mockData';
+import { Plus } from 'lucide-react';
+import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger } from '@/components/ui/dialog';
 
 interface Student {
   id: string;
@@ -73,12 +75,15 @@ export default function MarksEntryPage() {
   const fileInputRef = useRef<HTMLInputElement>(null);
   const [selectedClass, setSelectedClass] = useState('');
   const [selectedSubject, setSelectedSubject] = useState('');
-  const [selectedTerm, setSelectedTerm] = useState(terms[0] || 'Series 11');
+  const [selectedTerm, setSelectedTerm] = useState(terms[0] || 'Series 1');
   const [selectedYear, setSelectedYear] = useState('2024-2025');
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [isLoading, setIsLoading] = useState(true);
   const [isImporting, setIsImporting] = useState(false);
   const [entryMethod, setEntryMethod] = useState<'manual' | 'excel'>('manual');
+  const [availableTerms, setAvailableTerms] = useState<string[]>(terms);
+  const [showAddSeriesDialog, setShowAddSeriesDialog] = useState(false);
+  const [newSeriesNumber, setNewSeriesNumber] = useState(DEFAULT_SERIES_COUNT + 1);
   
   const [students, setStudents] = useState<Student[]>([]);
   const [subjects, setSubjects] = useState<Subject[]>([]);
@@ -86,6 +91,20 @@ export default function MarksEntryPage() {
   const [teacherAssignments, setTeacherAssignments] = useState<TeacherAssignment[]>([]);
 
   const isTeacher = user?.role === 'teacher';
+  
+  // Add new series
+  const handleAddSeries = () => {
+    const newSeries = `Series ${newSeriesNumber}`;
+    if (!availableTerms.includes(newSeries)) {
+      setAvailableTerms(prev => [...prev, newSeries]);
+      setNewSeriesNumber(prev => prev + 1);
+      toast({
+        title: "Series Imeongezwa",
+        description: `${newSeries} imeongezwa kwenye orodha.`,
+      });
+    }
+    setShowAddSeriesDialog(false);
+  };
 
   // Get available classes for teacher
   const availableClasses = isTeacher 
@@ -521,16 +540,47 @@ export default function MarksEntryPage() {
             </div>
             <div className="space-y-2">
               <label className="text-sm font-medium text-muted-foreground">Term</label>
-              <Select value={selectedTerm} onValueChange={setSelectedTerm}>
-                <SelectTrigger>
-                  <SelectValue placeholder="Select term" />
-                </SelectTrigger>
-                <SelectContent>
-                  {terms.map((term) => (
-                    <SelectItem key={term} value={term}>{term}</SelectItem>
-                  ))}
-                </SelectContent>
-              </Select>
+              <div className="flex gap-2">
+                <Select value={selectedTerm} onValueChange={setSelectedTerm}>
+                  <SelectTrigger className="flex-1">
+                    <SelectValue placeholder="Select term" />
+                  </SelectTrigger>
+                  <SelectContent>
+                    {availableTerms.map((term) => (
+                      <SelectItem key={term} value={term}>{term}</SelectItem>
+                    ))}
+                  </SelectContent>
+                </Select>
+                <Dialog open={showAddSeriesDialog} onOpenChange={setShowAddSeriesDialog}>
+                  <DialogTrigger asChild>
+                    <Button variant="outline" size="icon" title="Ongeza Series">
+                      <Plus className="h-4 w-4" />
+                    </Button>
+                  </DialogTrigger>
+                  <DialogContent>
+                    <DialogHeader>
+                      <DialogTitle>Ongeza Series Mpya</DialogTitle>
+                    </DialogHeader>
+                    <div className="space-y-4 pt-4">
+                      <div className="space-y-2">
+                        <label className="text-sm font-medium">Nambari ya Series</label>
+                        <Input
+                          type="number"
+                          min={1}
+                          value={newSeriesNumber}
+                          onChange={(e) => setNewSeriesNumber(parseInt(e.target.value) || 1)}
+                        />
+                      </div>
+                      <p className="text-sm text-muted-foreground">
+                        Itaongeza: Series {newSeriesNumber}
+                      </p>
+                      <Button onClick={handleAddSeries} className="w-full">
+                        Ongeza Series
+                      </Button>
+                    </div>
+                  </DialogContent>
+                </Dialog>
+              </div>
             </div>
             <div className="space-y-2">
               <label className="text-sm font-medium text-muted-foreground">Academic Year</label>
