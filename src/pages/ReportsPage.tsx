@@ -12,9 +12,10 @@ import { supabase } from '@/integrations/supabase/client';
 import { generateClassReportPDF, generateAllStudentsReportPDF } from '@/utils/pdfGenerator';
 import { toast } from 'sonner';
 import { calculateGrade } from '@/types';
-
+import { useAuth } from '@/contexts/AuthContext';
 
 export default function ReportsPage() {
+  const { user } = useAuth();
   const [selectedClass, setSelectedClass] = useState('all');
   const [selectedTerm, setSelectedTerm] = useState('Term 1');
   const [selectedYear, setSelectedYear] = useState('2024-2025');
@@ -22,6 +23,9 @@ export default function ReportsPage() {
   const [studentsData, setStudentsData] = useState<any[]>([]);
   const [classStats, setClassStats] = useState<any[]>([]);
   const [subjectsData, setSubjectsData] = useState<any[]>([]);
+  const [availableClasses, setAvailableClasses] = useState<string[]>([]);
+  
+  const isTeacher = user?.role === 'teacher';
 
   // Computed data from studentsData
   const gradeDistribution = useMemo(() => {
@@ -73,28 +77,72 @@ export default function ReportsPage() {
 
   useEffect(() => {
     fetchReportData();
-  }, [selectedClass, selectedTerm, selectedYear]);
+  }, [selectedClass, selectedTerm, selectedYear, user]);
 
   const fetchReportData = async () => {
     try {
       setLoading(true);
+      
+      let teacherClasses: string[] = [];
+      let teacherSubjectIds: string[] = [];
+      
+      // If teacher, get their assigned classes and subjects
+      if (isTeacher && user) {
+        const { data: teacher } = await supabase
+          .from('teachers')
+          .select('classes, subjects')
+          .eq('id', user.id)
+          .maybeSingle();
+        
+        if (teacher) {
+          teacherClasses = teacher.classes || [];
+          
+          // Get subject IDs that match teacher's subject names
+          if (teacher.subjects && teacher.subjects.length > 0) {
+            const { data: allSubjects } = await supabase.from('subjects').select('*');
+            if (allSubjects) {
+              teacherSubjectIds = allSubjects
+                .filter(s => teacher.subjects.some((name: string) => 
+                  s.name.toLowerCase().includes(name.toLowerCase()) ||
+                  name.toLowerCase().includes(s.name.toLowerCase())
+                ))
+                .map(s => s.id);
+            }
+          }
+        }
+      }
 
-      // Fetch students with their marks
-      const { data: students, error: studentsError } = await supabase
-        .from('students')
-        .select('*');
+      // Fetch students - filter by teacher's classes if teacher
+      let studentsQuery = supabase.from('students').select('*');
+      if (isTeacher && teacherClasses.length > 0) {
+        studentsQuery = studentsQuery.in('class', teacherClasses);
+      }
+      const { data: students, error: studentsError } = await studentsQuery;
 
       if (studentsError) throw studentsError;
+      
+      // Set available classes based on fetched students
+      const uniqueClasses = [...new Set(students?.map(s => s.class) || [])].sort();
+      setAvailableClasses(uniqueClasses);
 
-      const { data: marks, error: marksError } = await supabase
-        .from('marks')
-        .select('*');
+      // Fetch marks - filter by teacher's subjects if teacher
+      let marksQuery = supabase.from('marks').select('*');
+      if (isTeacher && teacherSubjectIds.length > 0) {
+        marksQuery = marksQuery.in('subject_id', teacherSubjectIds);
+      }
+      if (isTeacher && teacherClasses.length > 0) {
+        marksQuery = marksQuery.in('class', teacherClasses);
+      }
+      const { data: marks, error: marksError } = await marksQuery;
 
       if (marksError) throw marksError;
 
-      const { data: subjects, error: subjectsError } = await supabase
-        .from('subjects')
-        .select('*');
+      // Fetch subjects - filter by teacher's subjects if teacher
+      let subjectsQuery = supabase.from('subjects').select('*');
+      if (isTeacher && teacherSubjectIds.length > 0) {
+        subjectsQuery = subjectsQuery.in('id', teacherSubjectIds);
+      }
+      const { data: subjects, error: subjectsError } = await subjectsQuery;
 
       if (subjectsError) throw subjectsError;
 
@@ -218,10 +266,9 @@ export default function ReportsPage() {
                 </SelectTrigger>
                 <SelectContent>
                   <SelectItem value="all">All Classes</SelectItem>
-                  <SelectItem value="10-A">Class 10-A</SelectItem>
-                  <SelectItem value="10-B">Class 10-B</SelectItem>
-                  <SelectItem value="9-A">Class 9-A</SelectItem>
-                  <SelectItem value="9-B">Class 9-B</SelectItem>
+                  {availableClasses.map((cls) => (
+                    <SelectItem key={cls} value={cls}>Class {cls}</SelectItem>
+                  ))}
                 </SelectContent>
               </Select>
             </div>

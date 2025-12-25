@@ -69,26 +69,66 @@ export default function StudentsPage() {
 
   const isAdmin = user?.role === 'admin';
   const isSecretary = user?.role === 'secretary';
+  const isTeacher = user?.role === 'teacher';
   const canManageStudents = isAdmin || isSecretary;
 
   useEffect(() => {
     fetchStudents();
-  }, []);
+  }, [user]);
 
   const fetchStudents = async () => {
     try {
       setLoading(true);
       
-      const { data: studentsData, error: studentsError } = await supabase
-        .from('students')
-        .select('*')
-        .order('full_name');
+      let teacherClasses: string[] = [];
+      let teacherSubjectIds: string[] = [];
+      
+      // If teacher, get their assigned classes and subjects
+      if (isTeacher && user) {
+        const { data: teacher } = await supabase
+          .from('teachers')
+          .select('classes, subjects')
+          .eq('id', user.id)
+          .maybeSingle();
+        
+        if (teacher) {
+          teacherClasses = teacher.classes || [];
+          
+          // Get subject IDs that match teacher's subject names
+          if (teacher.subjects && teacher.subjects.length > 0) {
+            const { data: allSubjects } = await supabase.from('subjects').select('*');
+            if (allSubjects) {
+              teacherSubjectIds = allSubjects
+                .filter(s => teacher.subjects.some((name: string) => 
+                  s.name.toLowerCase().includes(name.toLowerCase()) ||
+                  name.toLowerCase().includes(s.name.toLowerCase())
+                ))
+                .map(s => s.id);
+            }
+          }
+        }
+      }
+
+      // Build query based on role
+      let studentsQuery = supabase.from('students').select('*').order('full_name');
+      
+      // Teachers only see students from their assigned classes
+      if (isTeacher && teacherClasses.length > 0) {
+        studentsQuery = studentsQuery.in('class', teacherClasses);
+      }
+      
+      const { data: studentsData, error: studentsError } = await studentsQuery;
 
       if (studentsError) throw studentsError;
 
-      const { data: marksData, error: marksError } = await supabase
-        .from('marks')
-        .select('student_id, total');
+      // Get marks - filter by teacher's subjects if teacher
+      let marksQuery = supabase.from('marks').select('student_id, total, subject_id');
+      
+      if (isTeacher && teacherSubjectIds.length > 0) {
+        marksQuery = marksQuery.in('subject_id', teacherSubjectIds);
+      }
+      
+      const { data: marksData, error: marksError } = await marksQuery;
 
       if (marksError) throw marksError;
 
