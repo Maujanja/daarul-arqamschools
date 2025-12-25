@@ -45,7 +45,26 @@ interface TeacherAssignment {
 
 const terms = ['Term 1', 'Term 2', 'Term 3'];
 const academicYears = ['2024-2025', '2023-2024', '2022-2023'];
-const ALL_CLASSES = ['Nursery', 'P1', 'P2', 'P3', 'P4', 'P5', 'P6', 'P7', 'S1', 'S2', 'S3', 'S4'];
+const ALL_CLASSES = ['Nursery', 'Primary 1', 'Primary 2', 'Primary 3', 'Primary 4', 'Primary 5', 'Primary 6', 'Primary 7', 'Senior 1', 'Senior 2', 'Senior 3', 'Senior 4'];
+
+// Map short class codes to full class names (for teacher assignments compatibility)
+const mapClassToFullName = (shortClass: string): string => {
+  const mappings: Record<string, string> = {
+    'S1': 'Senior 1',
+    'S2': 'Senior 2',
+    'S3': 'Senior 3',
+    'S4': 'Senior 4',
+    'P1': 'Primary 1',
+    'P2': 'Primary 2',
+    'P3': 'Primary 3',
+    'P4': 'Primary 4',
+    'P5': 'Primary 5',
+    'P6': 'Primary 6',
+    'P7': 'Primary 7',
+    'F3A': 'Form 3 A',
+  };
+  return mappings[shortClass] || shortClass;
+};
 
 export default function MarksEntryPage() {
   const { toast } = useToast();
@@ -109,19 +128,24 @@ export default function MarksEntryPage() {
           .eq('teacher_id', user.id);
         
         if (assignmentsData && assignmentsData.length > 0) {
-          setTeacherAssignments(assignmentsData);
+          // Map assignment classes to full names
+          const mappedAssignments = assignmentsData.map(a => ({
+            ...a,
+            class: mapClassToFullName(a.class)
+          }));
+          setTeacherAssignments(mappedAssignments);
           // Set initial class from assignments
-          const firstClass = assignmentsData[0].class;
+          const firstClass = mappedAssignments[0].class;
           setSelectedClass(firstClass);
           // Set initial subject for that class
-          const firstSubject = assignmentsData.find(a => a.class === firstClass)?.subject_id;
+          const firstSubject = mappedAssignments.find(a => a.class === firstClass)?.subject_id;
           if (firstSubject) {
             setSelectedSubject(firstSubject);
           }
         }
       } else {
         // For admin, set default class
-        setSelectedClass('P1');
+        setSelectedClass('Primary 1');
         if (subjectsData && subjectsData.length > 0) {
           setSelectedSubject(subjectsData[0].id);
         }
