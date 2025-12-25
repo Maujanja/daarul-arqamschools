@@ -258,8 +258,8 @@ export default function MyClassStudentsPage() {
       <DashboardLayout>
         <div className="text-center py-12">
           <Users className="w-16 h-16 text-muted-foreground mx-auto mb-4" />
-          <h2 className="text-xl font-semibold text-foreground mb-2">Hakuna Madarasa</h2>
-          <p className="text-muted-foreground">Hujapewa darasa lolote. Wasiliana na Admin.</p>
+          <h2 className="text-xl font-semibold text-foreground mb-2">No Classes Assigned</h2>
+          <p className="text-muted-foreground">You haven't been assigned any classes. Please contact the Admin.</p>
         </div>
       </DashboardLayout>
     );
@@ -271,8 +271,8 @@ export default function MyClassStudentsPage() {
         {/* Header */}
         <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4">
           <div>
-            <h1 className="text-3xl font-display font-bold text-foreground">Wanafunzi Wangu</h1>
-            <p className="text-muted-foreground mt-1">Chagua wanafunzi utakaowaingiza maksi</p>
+            <h1 className="text-3xl font-display font-bold text-foreground">My Students</h1>
+            <p className="text-muted-foreground mt-1">Select students you will enter marks for</p>
           </div>
           <Button 
             className="btn-gradient" 
@@ -284,32 +284,32 @@ export default function MyClassStudentsPage() {
             ) : (
               <Save className="w-4 h-4 mr-2" />
             )}
-            Hifadhi Wanafunzi ({selectedStudentIds.size})
+            Save Students ({selectedStudentIds.size})
           </Button>
         </div>
 
         {/* Filters */}
         <div className="card-elevated p-6 animate-fade-in">
-          <h3 className="font-display font-semibold text-lg mb-4 text-card-foreground">Chagua Darasa na Somo</h3>
+          <h3 className="font-display font-semibold text-lg mb-4 text-card-foreground">Select Class and Subject</h3>
           <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4">
             <div className="space-y-2">
-              <label className="text-sm font-medium text-muted-foreground">Darasa</label>
+              <label className="text-sm font-medium text-muted-foreground">Class</label>
               <Select value={selectedClass} onValueChange={setSelectedClass}>
                 <SelectTrigger>
-                  <SelectValue placeholder="Chagua darasa" />
+                  <SelectValue placeholder="Select class" />
                 </SelectTrigger>
                 <SelectContent>
                   {teacherClasses.map((cls) => (
-                    <SelectItem key={cls} value={cls}>Darasa {cls}</SelectItem>
+                    <SelectItem key={cls} value={cls}>Class {cls}</SelectItem>
                   ))}
                 </SelectContent>
               </Select>
             </div>
             <div className="space-y-2">
-              <label className="text-sm font-medium text-muted-foreground">Somo</label>
+              <label className="text-sm font-medium text-muted-foreground">Subject</label>
               <Select value={selectedSubject} onValueChange={setSelectedSubject}>
                 <SelectTrigger>
-                  <SelectValue placeholder="Chagua somo" />
+                  <SelectValue placeholder="Select subject" />
                 </SelectTrigger>
                 <SelectContent>
                   {teacherSubjects.map((subject) => (
@@ -319,11 +319,11 @@ export default function MyClassStudentsPage() {
               </Select>
             </div>
             <div className="space-y-2">
-              <label className="text-sm font-medium text-muted-foreground">Tafuta</label>
+              <label className="text-sm font-medium text-muted-foreground">Search</label>
               <div className="relative">
                 <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 w-4 h-4 text-muted-foreground" />
                 <Input
-                  placeholder="Jina au namba..."
+                  placeholder="Name or number..."
                   value={searchQuery}
                   onChange={(e) => setSearchQuery(e.target.value)}
                   className="pl-10"
@@ -341,7 +341,7 @@ export default function MyClassStudentsPage() {
                 <Users className="w-5 h-5 text-primary" />
               </div>
               <div>
-                <p className="text-sm text-muted-foreground">Wanafunzi Wote</p>
+                <p className="text-sm text-muted-foreground">All Students</p>
                 <p className="text-2xl font-bold text-foreground">{allStudentsInClass.length}</p>
               </div>
             </div>
@@ -352,7 +352,7 @@ export default function MyClassStudentsPage() {
                 <CheckCircle className="w-5 h-5 text-success" />
               </div>
               <div>
-                <p className="text-sm text-muted-foreground">Wamechaguliwa</p>
+                <p className="text-sm text-muted-foreground">Selected</p>
                 <p className="text-2xl font-bold text-foreground">{selectedStudentIds.size}</p>
               </div>
             </div>
@@ -363,7 +363,7 @@ export default function MyClassStudentsPage() {
                 <UserPlus className="w-5 h-5 text-accent" />
               </div>
               <div>
-                <p className="text-sm text-muted-foreground">Hawajachaguliwa</p>
+                <p className="text-sm text-muted-foreground">Not Selected</p>
                 <p className="text-2xl font-bold text-foreground">{allStudentsInClass.length - selectedStudentIds.size}</p>
               </div>
             </div>
@@ -373,23 +373,23 @@ export default function MyClassStudentsPage() {
         {/* Quick Actions */}
         <div className="flex gap-2">
           <Button variant="outline" size="sm" onClick={selectAll}>
-            Chagua Wote
+            Select All
           </Button>
           <Button variant="outline" size="sm" onClick={deselectAll}>
-            Ondoa Wote
+            Deselect All
           </Button>
         </div>
 
         {/* Students List */}
         <div className="card-elevated p-6 animate-fade-in">
           <h3 className="font-display font-semibold text-lg mb-6 text-card-foreground">
-            Wanafunzi wa {selectedClass} ({filteredStudents.length})
+            Students in {selectedClass} ({filteredStudents.length})
           </h3>
           
           {filteredStudents.length === 0 ? (
             <div className="text-center py-12">
               <Users className="w-12 h-12 text-muted-foreground mx-auto mb-4" />
-              <p className="text-muted-foreground">Hakuna wanafunzi katika darasa hili</p>
+              <p className="text-muted-foreground">No students in this class</p>
             </div>
           ) : (
             <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4">
