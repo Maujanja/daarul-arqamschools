@@ -10,6 +10,7 @@ import { useAuth } from '@/contexts/AuthContext';
 import { BarChart, Bar, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer, LineChart, Line, Legend, PieChart, Pie, Cell } from 'recharts';
 import jsPDF from 'jspdf';
 import autoTable from 'jspdf-autotable';
+import html2canvas from 'html2canvas';
 
 interface StudentMark {
   subject: string;
@@ -63,11 +64,16 @@ export function ParentDashboard() {
   const [expectedFee, setExpectedFee] = useState(0);
   const [paidAmount, setPaidAmount] = useState(0);
   const [announcements, setAnnouncements] = useState<Announcement[]>([]);
-  const [selectedTerm, setSelectedTerm] = useState(terms[0] || 'Series 1');
+  const [selectedTerm, setSelectedTerm] = useState(terms[0] || 'Term 1');
   const [selectedYear, setSelectedYear] = useState('2024-2025');
   const [classRank, setClassRank] = useState<number | null>(null);
   const [totalClassStudents, setTotalClassStudents] = useState(0);
   const [subjectRankings, setSubjectRankings] = useState<SubjectRanking[]>([]);
+  
+  // Chart refs for capturing as images
+  const subjectChartRef = useRef<HTMLDivElement>(null);
+  const termChartRef = useRef<HTMLDivElement>(null);
+  const gradeChartRef = useRef<HTMLDivElement>(null);
 
   // Calculate class rank and subject rankings
   const calculateRankings = async (studentId: string, studentClass: string, term: string, year: string) => {
@@ -382,8 +388,8 @@ export function ParentDashboard() {
     'F': 'hsl(0, 84%, 60%)'
   };
 
-  // Download Subject Performance PDF
-  const handleDownloadSubjectPerformance = () => {
+  // Download Subject Performance PDF with chart image
+  const handleDownloadSubjectPerformance = async () => {
     const doc = new jsPDF();
     
     doc.setFontSize(18);
@@ -392,9 +398,24 @@ export function ParentDashboard() {
     doc.setFontSize(12);
     doc.text(`Student: ${childName}`, 20, 35);
     doc.text(`Class: ${childClass}`, 20, 43);
-    doc.text(`Date: ${new Date().toLocaleDateString()}`, 20, 51);
+    doc.text(`Term: ${selectedTerm} - ${selectedYear}`, 20, 51);
+    doc.text(`Date: ${new Date().toLocaleDateString()}`, 20, 59);
     
-    // Subject table
+    // Capture chart as image
+    if (subjectChartRef.current) {
+      try {
+        const canvas = await html2canvas(subjectChartRef.current, {
+          backgroundColor: '#ffffff',
+          scale: 2
+        });
+        const imgData = canvas.toDataURL('image/png');
+        doc.addImage(imgData, 'PNG', 15, 70, 180, 100);
+      } catch (error) {
+        console.error('Error capturing chart:', error);
+      }
+    }
+    
+    // Subject table below chart
     const tableData = subjectAverages.map(s => {
       const grade = s.average >= 75 ? 'A' : s.average >= 65 ? 'B' : s.average >= 50 ? 'C' : s.average >= 40 ? 'D' : 'F';
       return [s.subject, `${s.average}%`, grade];
@@ -403,7 +424,7 @@ export function ParentDashboard() {
     autoTable(doc, {
       head: [['Subject', 'Average', 'Grade']],
       body: tableData,
-      startY: 60,
+      startY: 180,
       theme: 'striped',
       headStyles: { fillColor: [59, 130, 246] }
     });
@@ -411,8 +432,8 @@ export function ParentDashboard() {
     doc.save(`${childName}_subject_performance.pdf`);
   };
 
-  // Download Term Performance PDF
-  const handleDownloadTermPerformance = () => {
+  // Download Term Performance PDF with chart image
+  const handleDownloadTermPerformance = async () => {
     const doc = new jsPDF();
     
     doc.setFontSize(18);
@@ -421,9 +442,24 @@ export function ParentDashboard() {
     doc.setFontSize(12);
     doc.text(`Student: ${childName}`, 20, 35);
     doc.text(`Class: ${childClass}`, 20, 43);
-    doc.text(`Date: ${new Date().toLocaleDateString()}`, 20, 51);
+    doc.text(`Term: ${selectedTerm} - ${selectedYear}`, 20, 51);
+    doc.text(`Date: ${new Date().toLocaleDateString()}`, 20, 59);
     
-    // Term table
+    // Capture chart as image
+    if (termChartRef.current) {
+      try {
+        const canvas = await html2canvas(termChartRef.current, {
+          backgroundColor: '#ffffff',
+          scale: 2
+        });
+        const imgData = canvas.toDataURL('image/png');
+        doc.addImage(imgData, 'PNG', 15, 70, 180, 100);
+      } catch (error) {
+        console.error('Error capturing chart:', error);
+      }
+    }
+    
+    // Term table below chart
     const headers = ['Term', ...uniqueSubjects.slice(0, 6), 'Average'];
     const tableData = termPerformanceData.map((t: any) => {
       const row = [t.term];
@@ -437,7 +473,7 @@ export function ParentDashboard() {
     autoTable(doc, {
       head: [headers],
       body: tableData,
-      startY: 60,
+      startY: 180,
       theme: 'striped',
       headStyles: { fillColor: [16, 185, 129] }
     });
@@ -445,8 +481,8 @@ export function ParentDashboard() {
     doc.save(`${childName}_term_performance.pdf`);
   };
 
-  // Download Grade Distribution PDF
-  const handleDownloadGradeDistribution = () => {
+  // Download Grade Distribution PDF with chart image
+  const handleDownloadGradeDistribution = async () => {
     const doc = new jsPDF();
     
     doc.setFontSize(18);
@@ -455,10 +491,25 @@ export function ParentDashboard() {
     doc.setFontSize(12);
     doc.text(`Student: ${childName}`, 20, 35);
     doc.text(`Class: ${childClass}`, 20, 43);
-    doc.text(`Date: ${new Date().toLocaleDateString()}`, 20, 51);
+    doc.text(`Term: ${selectedTerm} - ${selectedYear}`, 20, 51);
     doc.text(`Overall Average: ${overallAverage.toFixed(1)}%`, 20, 59);
+    doc.text(`Date: ${new Date().toLocaleDateString()}`, 20, 67);
     
-    // Grade distribution table
+    // Capture chart as image
+    if (gradeChartRef.current) {
+      try {
+        const canvas = await html2canvas(gradeChartRef.current, {
+          backgroundColor: '#ffffff',
+          scale: 2
+        });
+        const imgData = canvas.toDataURL('image/png');
+        doc.addImage(imgData, 'PNG', 15, 80, 180, 100);
+      } catch (error) {
+        console.error('Error capturing chart:', error);
+      }
+    }
+    
+    // Grade distribution table below chart
     const gradeLabels = ['A (75-100%)', 'B (65-74%)', 'C (50-64%)', 'D (40-49%)', 'F (0-39%)'];
     const tableData = Object.entries(gradeDistribution).map(([grade, count]) => {
       const label = gradeLabels.find(l => l.startsWith(grade)) || grade;
@@ -468,7 +519,7 @@ export function ParentDashboard() {
     autoTable(doc, {
       head: [['Grade Range', 'Number of Subjects', 'Percentage']],
       body: tableData,
-      startY: 70,
+      startY: 190,
       theme: 'striped',
       headStyles: { fillColor: [139, 92, 246] }
     });
@@ -775,7 +826,7 @@ export function ParentDashboard() {
           )}
         </div>
         {pieChartData.length > 0 ? (
-          <div className="h-80">
+          <div ref={gradeChartRef} className="h-80 bg-white dark:bg-gray-900 rounded-lg p-2">
             <ResponsiveContainer width="100%" height="100%">
               <PieChart>
                 <Pie
@@ -822,7 +873,7 @@ export function ParentDashboard() {
           )}
         </div>
         {performanceData.length > 0 ? (
-          <div className="h-80">
+          <div ref={subjectChartRef} className="h-80 bg-white dark:bg-gray-900 rounded-lg p-2">
             <ResponsiveContainer width="100%" height="100%">
               <BarChart data={performanceData} margin={{ top: 20, right: 30, left: 20, bottom: 5 }}>
                 <CartesianGrid strokeDasharray="3 3" className="opacity-30" />
@@ -858,7 +909,7 @@ export function ParentDashboard() {
           )}
         </div>
         {termPerformanceData.length > 0 ? (
-          <div className="h-80">
+          <div ref={termChartRef} className="h-80 bg-white dark:bg-gray-900 rounded-lg p-2">
             <ResponsiveContainer width="100%" height="100%">
               <LineChart data={termPerformanceData} margin={{ top: 20, right: 30, left: 20, bottom: 5 }}>
                 <CartesianGrid strokeDasharray="3 3" className="opacity-30" />
