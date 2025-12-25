@@ -3,15 +3,18 @@ import { StatCard } from '@/components/dashboard/StatCard';
 import { GradeBadge } from '@/components/dashboard/GradeBadge';
 import { BookOpen, Award, Download, MessageSquare, Loader2, DollarSign, AlertTriangle, TrendingUp, TrendingDown, Megaphone, User, Calendar, FileDown } from 'lucide-react';
 import { Button } from '@/components/ui/button';
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { supabase } from '@/integrations/supabase/client';
 import { useAuth } from '@/contexts/AuthContext';
 import { BarChart, Bar, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer, LineChart, Line, Legend, PieChart, Pie, Cell } from 'recharts';
 import jsPDF from 'jspdf';
 import autoTable from 'jspdf-autotable';
+
 interface StudentMark {
   subject: string;
   subject_id: string;
   term: string;
+  academic_year: string;
   exam: number;
   total: number;
   grade: string;
@@ -44,11 +47,14 @@ export function ParentDashboard() {
   const [childBoardingType, setChildBoardingType] = useState('day');
   const [studentId, setStudentId] = useState('');
   const [studentMarks, setStudentMarks] = useState<StudentMark[]>([]);
+  const [allMarks, setAllMarks] = useState<StudentMark[]>([]);
   const [overallAverage, setOverallAverage] = useState(0);
   const [feePayments, setFeePayments] = useState<FeePayment[]>([]);
   const [expectedFee, setExpectedFee] = useState(0);
   const [paidAmount, setPaidAmount] = useState(0);
   const [announcements, setAnnouncements] = useState<Announcement[]>([]);
+  const [selectedTerm, setSelectedTerm] = useState('Term 1');
+  const [selectedYear, setSelectedYear] = useState('2024-2025');
 
   useEffect(() => {
     const fetchChildData = async () => {
@@ -117,6 +123,7 @@ export function ParentDashboard() {
           total,
           grade,
           term,
+          academic_year,
           subject_id,
           subjects (name)
         `)
@@ -127,15 +134,24 @@ export function ParentDashboard() {
           subject: m.subjects?.name || 'Unknown',
           subject_id: m.subject_id,
           term: m.term,
+          academic_year: m.academic_year,
           exam: m.exam,
           total: m.total,
           grade: m.grade,
         }));
-        setStudentMarks(formattedMarks);
+        setAllMarks(formattedMarks);
         
-        if (formattedMarks.length > 0) {
-          const avg = formattedMarks.reduce((sum, m) => sum + m.total, 0) / formattedMarks.length;
+        // Filter by selected term and year
+        const filtered = formattedMarks.filter(
+          m => m.term === selectedTerm && m.academic_year === selectedYear
+        );
+        setStudentMarks(filtered);
+        
+        if (filtered.length > 0) {
+          const avg = filtered.reduce((sum, m) => sum + m.total, 0) / filtered.length;
           setOverallAverage(avg);
+        } else {
+          setOverallAverage(0);
         }
       }
       
@@ -179,7 +195,24 @@ export function ParentDashboard() {
     };
     
     fetchChildData();
-  }, [user]);
+  }, [user, selectedTerm, selectedYear]);
+
+  // Update filtered marks when term/year changes
+  useEffect(() => {
+    if (allMarks.length > 0) {
+      const filtered = allMarks.filter(
+        m => m.term === selectedTerm && m.academic_year === selectedYear
+      );
+      setStudentMarks(filtered);
+      
+      if (filtered.length > 0) {
+        const avg = filtered.reduce((sum, m) => sum + m.total, 0) / filtered.length;
+        setOverallAverage(avg);
+      } else {
+        setOverallAverage(0);
+      }
+    }
+  }, [selectedTerm, selectedYear, allMarks]);
 
   const balance = expectedFee - paidAmount;
 
@@ -413,6 +446,38 @@ export function ParentDashboard() {
             <Download className="w-4 h-4 mr-2" />
             Download Report
           </Button>
+        </div>
+      </div>
+
+      {/* Term and Year Filters */}
+      <div className="card-elevated p-6 animate-fade-in">
+        <h3 className="font-display font-semibold text-lg mb-4 text-card-foreground">Filter Results</h3>
+        <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+          <div className="space-y-2">
+            <label className="text-sm font-medium text-muted-foreground">Term</label>
+            <Select value={selectedTerm} onValueChange={setSelectedTerm}>
+              <SelectTrigger>
+                <SelectValue placeholder="Select term" />
+              </SelectTrigger>
+              <SelectContent>
+                <SelectItem value="Term 1">Term 1</SelectItem>
+                <SelectItem value="Term 2">Term 2</SelectItem>
+                <SelectItem value="Term 3">Term 3</SelectItem>
+              </SelectContent>
+            </Select>
+          </div>
+          <div className="space-y-2">
+            <label className="text-sm font-medium text-muted-foreground">Academic Year</label>
+            <Select value={selectedYear} onValueChange={setSelectedYear}>
+              <SelectTrigger>
+                <SelectValue placeholder="Select year" />
+              </SelectTrigger>
+              <SelectContent>
+                <SelectItem value="2024-2025">2024-2025</SelectItem>
+                <SelectItem value="2023-2024">2023-2024</SelectItem>
+              </SelectContent>
+            </Select>
+          </div>
         </div>
       </div>
 
