@@ -47,6 +47,24 @@ export default function MyClassStudentsPage() {
   const [selectedStudentIds, setSelectedStudentIds] = useState<Set<string>>(new Set());
   const [existingSelections, setExistingSelections] = useState<TeacherClassStudent[]>([]);
 
+  // Map short class codes to full class names
+  const mapClassToFullName = (shortClass: string): string => {
+    const mappings: Record<string, string> = {
+      'S1': 'Senior 1',
+      'S2': 'Senior 2',
+      'S3': 'Senior 3',
+      'S4': 'Senior 4',
+      'P1': 'Primary 1',
+      'P2': 'Primary 2',
+      'P3': 'Primary 3',
+      'P4': 'Primary 4',
+      'P5': 'Primary 5',
+      'P6': 'Primary 6',
+      'F3A': 'Form 3 A',
+    };
+    return mappings[shortClass] || shortClass;
+  };
+
   // Fetch teacher's assigned classes and subjects
   useEffect(() => {
     const fetchTeacherData = async () => {
@@ -66,13 +84,15 @@ export default function MyClassStudentsPage() {
         return;
       }
       
-      const classes = teacher.classes || [];
+      // Map short class codes to full names
+      const rawClasses = teacher.classes || [];
+      const mappedClasses = rawClasses.map((cls: string) => mapClassToFullName(cls));
       const subjectNames = teacher.subjects || [];
       
-      setTeacherClasses(classes);
+      setTeacherClasses(mappedClasses);
       
-      if (classes.length > 0) {
-        setSelectedClass(classes[0]);
+      if (mappedClasses.length > 0) {
+        setSelectedClass(mappedClasses[0]);
       }
       
       // Get subjects matching teacher's subject names
