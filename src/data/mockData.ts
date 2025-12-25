@@ -64,9 +64,16 @@ export const mockFeedback: Feedback[] = [
 ];
 
 export const classes = ['9-A', '9-B', '10-A', '10-B', '11-A', '11-B', '12-A', '12-B'];
-// Generate terms starting from Series 11 - can easily add more
-export const generateTerms = (count: number = 5): string[] => {
-  return Array.from({ length: count }, (_, i) => `Series ${11 + i}`);
+
+// Default series count - starts from Series 1
+export const DEFAULT_SERIES_COUNT = 11;
+
+// Generate series (Series 1, Series 2, ... Series N)
+export const generateTerms = (count: number = DEFAULT_SERIES_COUNT): string[] => {
+  return Array.from({ length: count }, (_, i) => `Series ${i + 1}`);
 };
-export const terms = generateTerms(5); // Series 11, 12, 13, 14, 15
+
+// Default terms - Series 1 to 11
+export const terms = generateTerms(DEFAULT_SERIES_COUNT);
+
 export const academicYears = ['2024-2025', '2023-2024', '2022-2023'];
