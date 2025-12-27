@@ -1,7 +1,8 @@
-import { useState, useEffect } from 'react';
+import { useState, useEffect, useMemo } from 'react';
 import { StatCard } from '@/components/dashboard/StatCard';
 import { PerformanceChart } from '@/components/dashboard/PerformanceChart';
 import { TopStudents } from '@/components/dashboard/TopStudents';
+import { SeriesSummaryTable } from '@/components/dashboard/SeriesSummaryTable';
 import { ClipboardList, Users, CheckCircle, Clock, BookOpen, Loader2, MessageSquare, User, Calendar } from 'lucide-react';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { Button } from '@/components/ui/button';
@@ -45,6 +46,8 @@ interface Mark {
   class: string;
   total: number;
   grade: string;
+  term?: string;
+  academic_year?: string;
   students?: {
     full_name: string;
     class: string;
@@ -169,7 +172,7 @@ export function TeacherDashboard() {
         setSelectedSubject(filteredSubjects[0].id);
       }
       
-      // Get marks only for teacher's classes and subjects, filtered by term and academic year
+      // Get ALL marks for teacher's classes and subjects (for series summary)
       let filteredMarks: Mark[] = [];
       if (teacherClasses.length > 0 && teacherSubjectIds.length > 0) {
         const { data: marksData } = await supabase
@@ -177,7 +180,6 @@ export function TeacherDashboard() {
           .select('*, students(full_name, class)')
           .in('class', teacherClasses)
           .in('subject_id', teacherSubjectIds)
-          .eq('term', selectedTerm)
           .eq('academic_year', selectedAcademicYear);
         
         if (marksData) filteredMarks = marksData as Mark[];
@@ -314,6 +316,76 @@ export function TeacherDashboard() {
     };
   });
 
+  // Series Summary Data for Teacher - Subjects assigned to teacher for selected class
+  // Get all terms with marks for this teacher's subjects
+  const teacherTerms = useMemo(() => {
+    const termsSet = new Set(marks.map(m => m.term));
+    return Array.from(termsSet).sort((a, b) => {
+      const numA = parseInt(a?.replace(/\D/g, '') || '0');
+      const numB = parseInt(b?.replace(/\D/g, '') || '0');
+      return numA - numB;
+    });
+  }, [marks]);
+
+  const teacherSeriesLabels = useMemo(() => {
+    return teacherTerms.map((_, index) => `S${index + 1}`);
+  }, [teacherTerms]);
+
+  // Series summary for teacher's subjects in selected class
+  const teacherSubjectSummary = useMemo(() => {
+    if (!selectedClass) return [];
+
+    return classSubjects.map((subject, index) => {
+      const seriesData: { [key: string]: number | null } = {};
+      let totalSum = 0;
+      let totalCount = 0;
+
+      teacherTerms.forEach((term, termIndex) => {
+        const termMarks = marks.filter(m => 
+          m.students?.class === selectedClass && 
+          m.subject_id === subject.id && 
+          m.term === term
+        );
+        if (termMarks.length > 0) {
+          const avg = termMarks.reduce((sum, m) => sum + m.total, 0) / termMarks.length;
+          seriesData[`S${termIndex + 1}`] = Math.round(avg);
+          totalSum += avg;
+          totalCount++;
+        } else {
+          seriesData[`S${termIndex + 1}`] = null;
+        }
+      });
+
+      const average = totalCount > 0 ? totalSum / totalCount : 0;
+      const grade = average >= 75 ? 'A' : average >= 65 ? 'B' : average >= 50 ? 'C' : average >= 40 ? 'D' : 'F';
+
+      return {
+        sn: index + 1,
+        name: subject.name,
+        seriesData,
+        average,
+        grade,
+      };
+    }).sort((a, b) => b.average - a.average)
+      .map((item, index) => ({ ...item, position: index + 1, sn: index + 1 }));
+  }, [classSubjects, marks, selectedClass, teacherTerms]);
+
+  // Average per series for teacher's class
+  const teacherAveragePerSeries = useMemo(() => {
+    if (!selectedClass) return {};
+    const result: { [key: string]: number } = {};
+    
+    teacherTerms.forEach((term, termIndex) => {
+      const termMarks = marks.filter(m => m.students?.class === selectedClass && m.term === term);
+      if (termMarks.length > 0) {
+        const avg = termMarks.reduce((sum, m) => sum + m.total, 0) / termMarks.length;
+        result[`S${termIndex + 1}`] = avg;
+      }
+    });
+
+    return result;
+  }, [marks, selectedClass, teacherTerms]);
+
   return (
     <div className="space-y-8">
       {/* Header */}
@@ -437,6 +509,20 @@ export function TeacherDashboard() {
           />
         </div>
       </div>
+
+      {/* Series Summary Table - Teacher's Subjects in Selected Class */}
+      {teacherSubjectSummary.length > 0 && teacherSeriesLabels.length > 0 && (
+        <SeriesSummaryTable
+          title={`SUMMARY OF SERIES - ${selectedClass}`}
+          subtitle={`My Subjects | Academic Year: ${selectedAcademicYear}`}
+          data={teacherSubjectSummary}
+          seriesLabels={teacherSeriesLabels}
+          showPosition={true}
+          showAveragePerSeries={true}
+          averagePerSeries={teacherAveragePerSeries}
+          pdfFileName={`teacher_series_summary_${selectedClass}_${selectedAcademicYear}`}
+        />
+      )}
 
       {/* Marks Entry Status */}
       <div className="card-elevated p-6 animate-fade-in">

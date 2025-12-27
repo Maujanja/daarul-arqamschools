@@ -1,6 +1,7 @@
-import { useState, useEffect, useRef } from 'react';
+import { useState, useEffect, useRef, useMemo } from 'react';
 import { StatCard } from '@/components/dashboard/StatCard';
 import { GradeBadge } from '@/components/dashboard/GradeBadge';
+import { SeriesSummaryTable } from '@/components/dashboard/SeriesSummaryTable';
 import { BookOpen, Award, Download, MessageSquare, Loader2, DollarSign, AlertTriangle, TrendingUp, TrendingDown, Megaphone, User, Calendar, FileDown, Trophy, Users, Target } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
@@ -388,6 +389,76 @@ export function ParentDashboard() {
     'F': 'hsl(0, 84%, 60%)'
   };
 
+  // Series Summary for Student - All subjects across all terms
+  const studentTerms = useMemo(() => {
+    const termsSet = new Set(allMarks.map(m => m.term));
+    return Array.from(termsSet).sort((a, b) => {
+      const numA = parseInt(a?.replace(/\D/g, '') || '0');
+      const numB = parseInt(b?.replace(/\D/g, '') || '0');
+      return numA - numB;
+    });
+  }, [allMarks]);
+
+  const studentSeriesLabels = useMemo(() => {
+    return studentTerms.map((_, index) => `S${index + 1}`);
+  }, [studentTerms]);
+
+  // Series summary for student's subjects
+  const studentSubjectSummary = useMemo(() => {
+    const subjectsMap = new Map<string, { name: string; marks: { term: string; total: number }[] }>();
+    
+    allMarks.forEach(mark => {
+      if (!subjectsMap.has(mark.subject_id)) {
+        subjectsMap.set(mark.subject_id, { name: mark.subject, marks: [] });
+      }
+      subjectsMap.get(mark.subject_id)?.marks.push({ term: mark.term, total: mark.total });
+    });
+
+    return Array.from(subjectsMap.entries()).map(([subjectId, data], index) => {
+      const seriesData: { [key: string]: number | null } = {};
+      let totalSum = 0;
+      let totalCount = 0;
+
+      studentTerms.forEach((term, termIndex) => {
+        const mark = data.marks.find(m => m.term === term);
+        if (mark) {
+          seriesData[`S${termIndex + 1}`] = mark.total;
+          totalSum += mark.total;
+          totalCount++;
+        } else {
+          seriesData[`S${termIndex + 1}`] = null;
+        }
+      });
+
+      const average = totalCount > 0 ? totalSum / totalCount : 0;
+      const grade = average >= 75 ? 'A' : average >= 65 ? 'B' : average >= 50 ? 'C' : average >= 40 ? 'D' : 'F';
+
+      return {
+        sn: index + 1,
+        name: data.name,
+        seriesData,
+        average,
+        grade,
+      };
+    }).sort((a, b) => b.average - a.average)
+      .map((item, index) => ({ ...item, position: index + 1, sn: index + 1 }));
+  }, [allMarks, studentTerms]);
+
+  // Average per series for student
+  const studentAveragePerSeries = useMemo(() => {
+    const result: { [key: string]: number } = {};
+    
+    studentTerms.forEach((term, termIndex) => {
+      const termMarks = allMarks.filter(m => m.term === term);
+      if (termMarks.length > 0) {
+        const avg = termMarks.reduce((sum, m) => sum + m.total, 0) / termMarks.length;
+        result[`S${termIndex + 1}`] = avg;
+      }
+    });
+
+    return result;
+  }, [allMarks, studentTerms]);
+
   // Download Subject Performance PDF with chart image
   const handleDownloadSubjectPerformance = async () => {
     const doc = new jsPDF();
@@ -640,7 +711,20 @@ export function ParentDashboard() {
         </div>
       </div>
 
-      {/* Student Info Card */}
+      {/* Series Summary Table - Student's Subjects */}
+      {studentSubjectSummary.length > 0 && studentSeriesLabels.length > 0 && (
+        <SeriesSummaryTable
+          title={`SUMMARY OF SERIES - ${childName.toUpperCase()}`}
+          subtitle={`Class: ${childClass} | All Series Results`}
+          data={studentSubjectSummary}
+          seriesLabels={studentSeriesLabels}
+          showPosition={true}
+          showAveragePerSeries={true}
+          averagePerSeries={studentAveragePerSeries}
+          pdfFileName={`${childName.replace(/\s+/g, '_')}_series_summary`}
+        />
+      )}
+
       <div className="card-elevated p-6 animate-fade-in">
         <div className="flex flex-col md:flex-row md:items-center gap-6">
           <div className="w-20 h-20 rounded-2xl bg-gradient-to-br from-primary to-accent flex items-center justify-center text-primary-foreground text-2xl font-bold">
