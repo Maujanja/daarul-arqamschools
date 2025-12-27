@@ -3,6 +3,7 @@ import { StatCard } from '@/components/dashboard/StatCard';
 import { PerformanceChart } from '@/components/dashboard/PerformanceChart';
 import { TopStudents } from '@/components/dashboard/TopStudents';
 import { SeriesSummaryTable } from '@/components/dashboard/SeriesSummaryTable';
+import { SeriesPerformanceChart } from '@/components/dashboard/SeriesPerformanceChart';
 import { ClipboardList, Users, CheckCircle, Clock, BookOpen, Loader2, MessageSquare, User, Calendar } from 'lucide-react';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { Button } from '@/components/ui/button';
@@ -386,6 +387,30 @@ export function TeacherDashboard() {
     return result;
   }, [marks, selectedClass, teacherTerms]);
 
+  // Generate chart data for series performance trend (subjects as lines, series as X-axis)
+  const teacherSeriesChartData = useMemo(() => {
+    if (!selectedClass || teacherTerms.length === 0 || classSubjects.length === 0) return [];
+    
+    return teacherTerms.map((term, termIndex) => {
+      const seriesLabel = `S${termIndex + 1}`;
+      const dataPoint: { name: string; [key: string]: number | string } = { name: seriesLabel };
+      
+      classSubjects.forEach((subject) => {
+        const subjectTermMarks = marks.filter(m => 
+          m.students?.class === selectedClass && 
+          m.subject_id === subject.id && 
+          m.term === term
+        );
+        if (subjectTermMarks.length > 0) {
+          const avg = subjectTermMarks.reduce((sum, m) => sum + m.total, 0) / subjectTermMarks.length;
+          dataPoint[subject.name] = Math.round(avg);
+        }
+      });
+      
+      return dataPoint;
+    });
+  }, [marks, teacherTerms, classSubjects, selectedClass]);
+
   return (
     <div className="space-y-8">
       {/* Header */}
@@ -509,6 +534,16 @@ export function TeacherDashboard() {
           />
         </div>
       </div>
+
+      {/* Series Performance Chart */}
+      {teacherSeriesChartData.length > 0 && classSubjects.length > 0 && (
+        <SeriesPerformanceChart
+          title={`Performance Trend by Series - ${selectedClass}`}
+          subtitle={`Academic Year: ${selectedAcademicYear} | Subject Average Per Series`}
+          data={teacherSeriesChartData}
+          seriesKeys={classSubjects.map(s => s.name)}
+        />
+      )}
 
       {/* Series Summary Table - Teacher's Subjects in Selected Class */}
       {teacherSubjectSummary.length > 0 && teacherSeriesLabels.length > 0 && (
