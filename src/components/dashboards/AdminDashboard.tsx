@@ -1,11 +1,14 @@
+import { useState, useEffect, useMemo } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { useQuery } from '@tanstack/react-query';
 import { supabase } from '@/integrations/supabase/client';
 import { StatCard } from '@/components/dashboard/StatCard';
+import { SeriesSummaryTable } from '@/components/dashboard/SeriesSummaryTable';
 import { Users, GraduationCap, BookOpen, MessageSquare, FileText, DollarSign, Clock, CheckCircle, User, Calendar, UserCog } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
-
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
+import { academicYears } from '@/data/mockData';
 interface FeedbackItem {
   id: string;
   parent_id: string;
@@ -32,7 +35,91 @@ interface FeePayment {
 
 export function AdminDashboard() {
   const navigate = useNavigate();
+  const [selectedYear, setSelectedYear] = useState(academicYears[0]);
 
+  // Fetch all marks for series summary
+  const { data: allMarks = [] } = useQuery({
+    queryKey: ['admin-all-marks', selectedYear],
+    queryFn: async () => {
+      const { data } = await supabase
+        .from('marks')
+        .select('class, term, total, academic_year')
+        .eq('academic_year', selectedYear);
+      return data || [];
+    },
+  });
+
+  // Get unique classes and terms
+  const uniqueClasses = useMemo(() => {
+    const classes = [...new Set(allMarks.map(m => m.class))];
+    return classes.sort();
+  }, [allMarks]);
+
+  const uniqueTerms = useMemo(() => {
+    const terms = [...new Set(allMarks.map(m => m.term))];
+    // Sort terms by number (Term 1, Term 2, etc.)
+    return terms.sort((a, b) => {
+      const numA = parseInt(a.replace(/\D/g, '')) || 0;
+      const numB = parseInt(b.replace(/\D/g, '')) || 0;
+      return numA - numB;
+    });
+  }, [allMarks]);
+
+  // Generate series labels (S1, S2, etc.) from terms
+  const seriesLabels = useMemo(() => {
+    return uniqueTerms.map((_, index) => `S${index + 1}`);
+  }, [uniqueTerms]);
+
+  // Calculate class-based series summary data
+  const classSummaryData = useMemo(() => {
+    return uniqueClasses.map((className, index) => {
+      const classMarks = allMarks.filter(m => m.class === className);
+      
+      // Calculate average per series/term for this class
+      const seriesData: { [key: string]: number | null } = {};
+      let totalSum = 0;
+      let totalCount = 0;
+
+      uniqueTerms.forEach((term, termIndex) => {
+        const termMarks = classMarks.filter(m => m.term === term);
+        if (termMarks.length > 0) {
+          const avg = termMarks.reduce((sum, m) => sum + m.total, 0) / termMarks.length;
+          seriesData[`S${termIndex + 1}`] = Math.round(avg);
+          totalSum += avg;
+          totalCount++;
+        } else {
+          seriesData[`S${termIndex + 1}`] = null;
+        }
+      });
+
+      const average = totalCount > 0 ? totalSum / totalCount : 0;
+      const grade = average >= 75 ? 'A' : average >= 65 ? 'B' : average >= 50 ? 'C' : average >= 40 ? 'D' : 'F';
+
+      return {
+        sn: index + 1,
+        name: className,
+        seriesData,
+        average,
+        grade,
+      };
+    }).sort((a, b) => b.average - a.average)
+      .map((item, index) => ({ ...item, position: index + 1, sn: index + 1 }));
+  }, [allMarks, uniqueClasses, uniqueTerms]);
+
+  // Calculate average per series across all classes
+  const averagePerSeries = useMemo(() => {
+    const result: { [key: string]: number } = {};
+    
+    uniqueTerms.forEach((term, termIndex) => {
+      const termMarks = allMarks.filter(m => m.term === term);
+      if (termMarks.length > 0) {
+        const avg = termMarks.reduce((sum, m) => sum + m.total, 0) / termMarks.length;
+        result[`S${termIndex + 1}`] = avg;
+      }
+    });
+
+    return result;
+  }, [allMarks, uniqueTerms]);
   const { data: studentsCount = 0 } = useQuery({
     queryKey: ['students-count'],
     queryFn: async () => {
@@ -136,9 +223,22 @@ export function AdminDashboard() {
 
   return (
     <div className="space-y-8">
-      <div>
-        <h1 className="text-3xl font-display font-bold text-foreground">Dashboard</h1>
-        <p className="text-muted-foreground mt-1">Welcome! Here is your school overview.</p>
+      <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4">
+        <div>
+          <h1 className="text-3xl font-display font-bold text-foreground">Dashboard</h1>
+          <p className="text-muted-foreground mt-1">Welcome! Here is your school overview.</p>
+        </div>
+        <Select value={selectedYear} onValueChange={setSelectedYear}>
+          <SelectTrigger className="w-[140px]">
+            <Calendar className="w-4 h-4 mr-2" />
+            <SelectValue />
+          </SelectTrigger>
+          <SelectContent>
+            {academicYears.map((year) => (
+              <SelectItem key={year} value={year}>{year}</SelectItem>
+            ))}
+          </SelectContent>
+        </Select>
       </div>
 
       <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-6">
@@ -147,6 +247,20 @@ export function AdminDashboard() {
         <StatCard title="Secretaries" value={secretariesCount.toLocaleString()} subtitle="All secretaries" icon={UserCog} variant="success" />
         <StatCard title="Feedback" value={feedbackCount.toLocaleString()} subtitle="Pending response" icon={MessageSquare} variant="warning" />
       </div>
+
+      {/* Series Summary Table - Class Average Per Series */}
+      {classSummaryData.length > 0 && seriesLabels.length > 0 && (
+        <SeriesSummaryTable
+          title="SUMMARY OF SERIES - ALL CLASSES"
+          subtitle={`Academic Year: ${selectedYear} | Class Average Per Series`}
+          data={classSummaryData}
+          seriesLabels={seriesLabels}
+          showPosition={true}
+          showAveragePerSeries={true}
+          averagePerSeries={averagePerSeries}
+          pdfFileName={`class_series_summary_${selectedYear}`}
+        />
+      )}
 
       {/* Fee Overview */}
       <div className="card-elevated p-6 animate-fade-in">
