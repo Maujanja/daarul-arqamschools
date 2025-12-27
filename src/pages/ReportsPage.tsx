@@ -149,9 +149,19 @@ export default function ReportsPage() {
 
       if (subjectsError) throw subjectsError;
 
-      // Calculate student averages
-      const studentsWithAvg = (students || []).map(student => {
-        const studentMarks = marks?.filter(m => m.student_id === student.id) || [];
+      // Filter students based on selected class
+      const filteredStudents = selectedClass === 'all' 
+        ? (students || [])
+        : (students || []).filter(s => s.class === selectedClass);
+
+      // Filter marks based on selected class
+      const filteredMarks = selectedClass === 'all'
+        ? (marks || [])
+        : (marks || []).filter(m => m.class === selectedClass);
+
+      // Calculate student averages using filtered data
+      const studentsWithAvg = filteredStudents.map(student => {
+        const studentMarks = filteredMarks.filter(m => m.student_id === student.id);
         const average = studentMarks.length > 0
           ? Math.round(studentMarks.reduce((sum, m) => sum + m.total, 0) / studentMarks.length)
           : 0;
@@ -164,9 +174,12 @@ export default function ReportsPage() {
 
       setStudentsData(studentsWithAvg);
 
-      // Calculate class statistics
-      const classes = [...new Set(students?.map(s => s.class) || [])];
-      const stats = classes.map(cls => {
+      // Calculate class statistics using filtered data
+      const classesToAnalyze = selectedClass === 'all' 
+        ? [...new Set(students?.map(s => s.class) || [])]
+        : [selectedClass];
+      
+      const stats = classesToAnalyze.map(cls => {
         const classStudents = studentsWithAvg.filter(s => s.class === cls);
         const averages = classStudents.map(s => s.average).filter(a => a > 0);
         return {
@@ -174,7 +187,7 @@ export default function ReportsPage() {
           students: classStudents.length,
           average: averages.length > 0 ? Math.round(averages.reduce((a, b) => a + b, 0) / averages.length) : 0,
           highest: Math.max(...averages, 0),
-          lowest: Math.min(...averages.filter(a => a > 0), 0),
+          lowest: averages.length > 0 ? Math.min(...averages.filter(a => a > 0)) : 0,
           passRate: averages.length > 0 
             ? Math.round((averages.filter(a => a >= 40).length / averages.length) * 100) 
             : 0,
@@ -183,9 +196,9 @@ export default function ReportsPage() {
 
       setClassStats(stats);
 
-      // Calculate subject statistics
+      // Calculate subject statistics using filtered marks
       const subjectStats = (subjects || []).map(subject => {
-        const subjectMarks = marks?.filter(m => m.subject_id === subject.id) || [];
+        const subjectMarks = filteredMarks.filter(m => m.subject_id === subject.id);
         const totals = subjectMarks.map(m => m.total).filter(t => t > 0);
         return {
           name: subject.name,

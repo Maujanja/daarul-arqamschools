@@ -4,6 +4,7 @@ import { useQuery } from '@tanstack/react-query';
 import { supabase } from '@/integrations/supabase/client';
 import { StatCard } from '@/components/dashboard/StatCard';
 import { SeriesSummaryTable } from '@/components/dashboard/SeriesSummaryTable';
+import { SeriesPerformanceChart } from '@/components/dashboard/SeriesPerformanceChart';
 import { Users, GraduationCap, BookOpen, MessageSquare, FileText, DollarSign, Clock, CheckCircle, User, Calendar, UserCog } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
@@ -120,6 +121,26 @@ export function AdminDashboard() {
 
     return result;
   }, [allMarks, uniqueTerms]);
+
+  // Generate chart data for series performance trend (classes as lines, series as X-axis)
+  const seriesChartData = useMemo(() => {
+    if (uniqueTerms.length === 0 || uniqueClasses.length === 0) return [];
+    
+    return uniqueTerms.map((term, termIndex) => {
+      const seriesLabel = `S${termIndex + 1}`;
+      const dataPoint: { name: string; [key: string]: number | string } = { name: seriesLabel };
+      
+      uniqueClasses.forEach((className) => {
+        const classTermMarks = allMarks.filter(m => m.class === className && m.term === term);
+        if (classTermMarks.length > 0) {
+          const avg = classTermMarks.reduce((sum, m) => sum + m.total, 0) / classTermMarks.length;
+          dataPoint[className] = Math.round(avg);
+        }
+      });
+      
+      return dataPoint;
+    });
+  }, [allMarks, uniqueTerms, uniqueClasses]);
   const { data: studentsCount = 0 } = useQuery({
     queryKey: ['students-count'],
     queryFn: async () => {
@@ -247,6 +268,16 @@ export function AdminDashboard() {
         <StatCard title="Secretaries" value={secretariesCount.toLocaleString()} subtitle="All secretaries" icon={UserCog} variant="success" />
         <StatCard title="Feedback" value={feedbackCount.toLocaleString()} subtitle="Pending response" icon={MessageSquare} variant="warning" />
       </div>
+
+      {/* Series Performance Chart */}
+      {seriesChartData.length > 0 && uniqueClasses.length > 0 && (
+        <SeriesPerformanceChart
+          title="Performance Trend by Series"
+          subtitle={`Academic Year: ${selectedYear} | Class Average Per Series`}
+          data={seriesChartData}
+          seriesKeys={uniqueClasses}
+        />
+      )}
 
       {/* Series Summary Table - Class Average Per Series */}
       {classSummaryData.length > 0 && seriesLabels.length > 0 && (
