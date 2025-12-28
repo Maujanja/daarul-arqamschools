@@ -154,19 +154,21 @@ export function AdminDashboard() {
     });
   }, [allMarks, uniqueTerms, uniqueClasses]);
 
-  // Get valid subjects for the selected class
-  const validSubjectsForClass = useMemo(() => {
-    return allSubjects.filter(s => isSubjectForClass(s.name, selectedClass));
-  }, [allSubjects, selectedClass]);
+  // Get subjects that actually have marks for the selected class (instead of filtering by isSubjectForClass)
+  const classMarksOnly = useMemo(() => {
+    return allMarks.filter(m => m.class === selectedClass);
+  }, [allMarks, selectedClass]);
 
-  // Filter marks for selected class - only include subjects valid for that class
+  // Get unique subject IDs that have marks for this class
+  const validSubjectsForClass = useMemo(() => {
+    const subjectIdsWithMarks = [...new Set(classMarksOnly.map(m => m.subject_id))];
+    return allSubjects.filter(s => subjectIdsWithMarks.includes(s.id));
+  }, [allSubjects, classMarksOnly]);
+
+  // Filter marks for selected class - use all marks for this class
   const classFilteredMarks = useMemo(() => {
-    const validSubjectIds = validSubjectsForClass.map(s => s.id);
-    return allMarks.filter(m => 
-      m.class === selectedClass && 
-      validSubjectIds.includes(m.subject_id)
-    );
-  }, [allMarks, selectedClass, validSubjectsForClass]);
+    return classMarksOnly;
+  }, [classMarksOnly]);
 
   // Subject performance data for selected class
   const subjectSummaryData = useMemo(() => {
