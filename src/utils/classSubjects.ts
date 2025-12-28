@@ -1,59 +1,6 @@
 // Class to Subject mapping - names MUST match database exactly
 // Each class level has specific subjects assigned to it
 
-// Subject name aliases to handle variations in database
-export const SUBJECT_ALIASES: { [key: string]: string[] } = {
-  // P1-P2 subjects
-  'Arithmetics': ['Arithmetics', 'Arithmetic'],
-  'E.D.K': ['E.D.K', 'EDK'],
-  'English Reading': ['English Reading'],
-  'English Writing': ['English Writing'],
-  'Health Care': ['Health Care'],
-  'Kusoma': ['Kusoma'],
-  'Kuandika': ['Kuandika'],
-  'Arts & Sports': ['Arts & Sports'],
-  
-  // P3-P7 subjects
-  'English': ['English'],
-  'Mathematics': ['Mathematics', 'Math', 'Maths'],
-  'Science & Technology': ['Science & Technology', 'Science'],
-  'Historia ya Tanzania na Maadili': ['Historia ya Tanzania na Maadili', 'Historia ya T.Z na Maadili'],
-  'Kiswahili': ['Kiswahili'],
-  'Geography': ['Geography'],
-  'Arabic': ['Arabic'],
-  'Civics': ['Civics'],
-  
-  // Secondary subjects
-  'English Language': ['English Language'],
-  'Arabic Language': ['Arabic Language'],
-  'Chemistry': ['Chemistry'],
-  'Biology': ['Biology'],
-  'Book Keeping': ['Book Keeping', 'Bookkeeping'],
-  'Commerce': ['Commerce'],
-  'Physics': ['Physics'],
-  'Literature in English': ['Literature in English'],
-  'History': ['History'],
-};
-
-// Normalize subject name for comparison
-function normalizeSubjectName(name: string): string {
-  return name.toLowerCase().trim()
-    .replace(/\s+/g, ' ')
-    .replace(/\./g, '')
-    .replace(/t\.z/gi, 'tanzania')
-    .replace(/tz/gi, 'tanzania');
-}
-
-// Get all possible variations of a subject name
-export function getSubjectVariations(subjectName: string): string[] {
-  for (const [canonical, aliases] of Object.entries(SUBJECT_ALIASES)) {
-    if (aliases.some(a => normalizeSubjectName(a) === normalizeSubjectName(subjectName))) {
-      return aliases;
-    }
-  }
-  return [subjectName];
-}
-
 // P1-P2 subjects (exact database names)
 const P12_SUBJECTS = [
   'Arithmetics',
@@ -72,6 +19,7 @@ const P37_SUBJECTS = [
   'English',
   'Mathematics',
   'Science & Technology',
+  'Science', // Alias in database
   'Historia ya Tanzania na Maadili',
   'Historia ya T.Z na Maadili', // Alias in database
   'Kiswahili',
@@ -123,21 +71,17 @@ export function getSubjectsForClass(className: string): string[] {
   return CLASS_SUBJECTS[className] || [];
 }
 
-// Check if a subject belongs to a class (with improved matching)
+// Check if a subject belongs to a class - simple direct matching
 export function isSubjectForClass(subjectName: string, className: string): boolean {
-  const classSubjects = CLASS_SUBJECTS[className] || [];
-  const normalizedInput = normalizeSubjectName(subjectName);
+  const classSubjects = CLASS_SUBJECTS[className];
+  if (!classSubjects) return false;
+  
+  const inputLower = subjectName.toLowerCase().trim();
   
   return classSubjects.some(cs => {
-    const normalizedClassSubject = normalizeSubjectName(cs);
-    
-    // Direct match after normalization
-    if (normalizedClassSubject === normalizedInput) return true;
-    
-    // Check aliases
-    const variations = SUBJECT_ALIASES[cs] || [cs];
-    if (variations.some(v => normalizeSubjectName(v) === normalizedInput)) return true;
-    
+    const csLower = cs.toLowerCase().trim();
+    // Direct match
+    if (csLower === inputLower) return true;
     return false;
   });
 }
@@ -157,10 +101,10 @@ export function getClassLevel(className: string): 'primary_lower' | 'primary_upp
 }
 
 // Get subject IDs that are valid for a class
-export async function getValidSubjectIdsForClass(
+export function getValidSubjectIdsForClass(
   className: string, 
   allSubjects: { id: string; name: string }[]
-): Promise<string[]> {
+): string[] {
   return allSubjects
     .filter(s => isSubjectForClass(s.name, className))
     .map(s => s.id);
