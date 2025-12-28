@@ -12,6 +12,7 @@ import { useAuth } from '@/contexts/AuthContext';
 import { supabase } from '@/integrations/supabase/client';
 import { useToast } from '@/hooks/use-toast';
 import { terms, academicYears } from '@/data/mockData';
+import { getSubjectsForClass, isSubjectForClass } from '@/utils/classSubjects';
 
 interface FeedbackItem {
   id: string;
@@ -154,9 +155,13 @@ export function TeacherDashboard() {
       const teacherSubjectIds = filteredSubjects.map(s => s.id);
       
       // Create virtual assignments from teacher's classes and subjects
+      // Only assign subjects that are valid for each class
       const virtualAssignments: TeacherAssignment[] = [];
       teacherClasses.forEach((cls: string) => {
-        filteredSubjects.forEach(sub => {
+        const validSubjectsForClass = filteredSubjects.filter(sub => 
+          isSubjectForClass(sub.name, cls)
+        );
+        validSubjectsForClass.forEach(sub => {
           virtualAssignments.push({
             id: `${cls}-${sub.id}`,
             teacher_id: teacherId,
@@ -241,11 +246,18 @@ export function TeacherDashboard() {
   // Get assigned classes
   const assignedClasses = [...new Set(assignments.map(a => a.class))];
   
-  // Get subjects assigned for selected class
+  // Get subjects assigned for selected class - filter by class-subject mapping
+  const validSubjectsForSelectedClass = getSubjectsForClass(selectedClass);
   const classSubjectIds = assignments
     .filter(a => a.class === selectedClass)
     .map(a => a.subject_id);
-  const classSubjects = subjects.filter(s => classSubjectIds.includes(s.id));
+  const classSubjects = subjects.filter(s => 
+    classSubjectIds.includes(s.id) && 
+    validSubjectsForSelectedClass.some(vs => 
+      s.name.toLowerCase().includes(vs.toLowerCase()) ||
+      vs.toLowerCase().includes(s.name.toLowerCase())
+    )
+  );
 
   const studentsInClass = students.filter(s => s.class === selectedClass);
   const totalStudents = assignedClasses.reduce((sum, cls) => 
