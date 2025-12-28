@@ -404,6 +404,7 @@ export function AdminDashboard() {
           subtitle={`Academic Year: ${selectedYear} | Class Average Per Series`}
           data={seriesChartData}
           seriesKeys={uniqueClasses}
+          pdfFileName={`performance_trend_all_classes_${selectedYear}`}
         />
       )}
 
@@ -452,6 +453,7 @@ export function AdminDashboard() {
               subtitle={`Academic Year: ${selectedYear} | Subject Average Per Series`}
               data={subjectChartData}
               seriesKeys={validSubjectsForClass.map(s => s.name)}
+              pdfFileName={`subject_performance_${selectedClass.replace(/\s+/g, '_')}_${selectedYear}`}
             />
           </div>
         )}
