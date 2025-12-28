@@ -56,7 +56,8 @@ export function AdminDashboard() {
       const { data } = await supabase
         .from('marks')
         .select('class, term, total, academic_year, subject_id')
-        .eq('academic_year', selectedYear);
+        .eq('academic_year', selectedYear)
+        .limit(50000); // Increase limit from default 1000
       return data || [];
     },
   });

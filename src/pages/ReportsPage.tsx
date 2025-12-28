@@ -127,16 +127,27 @@ export default function ReportsPage() {
       const uniqueClasses = [...new Set(students?.map(s => s.class) || [])].sort();
       setAvailableClasses(uniqueClasses);
 
-      // Fetch marks - filter by term, year, teacher's subjects if teacher
+      // Fetch marks - filter by term, year, class, and teacher's subjects if teacher
+      // Also apply .limit() to get more than default 1000 rows
       let marksQuery = supabase.from('marks').select('*')
         .eq('term', selectedTerm)
         .eq('academic_year', selectedYear);
+      
+      // Filter by selected class if not 'all'
+      if (selectedClass !== 'all') {
+        marksQuery = marksQuery.eq('class', selectedClass);
+      }
+      
       if (isTeacher && teacherSubjectIds.length > 0) {
         marksQuery = marksQuery.in('subject_id', teacherSubjectIds);
       }
       if (isTeacher && teacherClasses.length > 0) {
         marksQuery = marksQuery.in('class', teacherClasses);
       }
+      
+      // Increase limit to get all marks (default is 1000)
+      marksQuery = marksQuery.limit(10000);
+      
       const { data: marks, error: marksError } = await marksQuery;
 
       if (marksError) throw marksError;
