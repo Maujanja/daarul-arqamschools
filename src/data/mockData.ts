@@ -63,7 +63,10 @@ export const mockFeedback: Feedback[] = [
   { id: 'fb-3', parentId: 'parent-3', studentId: 'std-3', message: 'James needs extra help with Science.', date: '2024-12-17', status: 'pending' },
 ];
 
-export const classes = ['9-A', '9-B', '10-A', '10-B', '11-A', '11-B', '12-A', '12-B'];
+export const classes = [
+  'Primary 1', 'Primary 2', 'Primary 3', 'Primary 4', 'Primary 5', 'Primary 6',
+  'Senior 1', 'Senior 2', 'Senior 3', 'Form 3 A'
+];
 
 // Default term count - starts from Term 1
 export const DEFAULT_TERM_COUNT = 11;
