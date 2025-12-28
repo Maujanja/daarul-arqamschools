@@ -198,9 +198,16 @@ export default function ReportsPage() {
       setClassStats(stats);
 
       // Calculate subject statistics using filtered marks - filter by class subjects
-      const filteredSubjects = selectedClass === 'all'
-        ? (subjects || [])
-        : (subjects || []).filter(s => isSubjectForClass(s.name, selectedClass));
+      let filteredSubjects = subjects || [];
+      
+      if (selectedClass !== 'all') {
+        filteredSubjects = (subjects || []).filter(s => {
+          const isValid = isSubjectForClass(s.name, selectedClass);
+          return isValid;
+        });
+        console.log('Selected class:', selectedClass);
+        console.log('Filtered subjects for class:', filteredSubjects.map(s => s.name));
+      }
 
       const subjectStats = filteredSubjects.map(subject => {
         const subjectMarks = filteredMarks.filter(m => m.subject_id === subject.id);
@@ -211,7 +218,7 @@ export default function ReportsPage() {
           highest: totals.length > 0 ? Math.max(...totals) : 0,
           lowest: totals.length > 0 ? Math.min(...totals) : 0,
         };
-      }).filter(s => s.average > 0 || selectedClass !== 'all');
+      });
 
       setSubjectsData(subjectStats);
     } catch (error) {
