@@ -12,7 +12,7 @@ import { useAuth } from '@/contexts/AuthContext';
 import { supabase } from '@/integrations/supabase/client';
 import { useToast } from '@/hooks/use-toast';
 import { terms, academicYears } from '@/data/mockData';
-import { getSubjectsForClass, isSubjectForClass } from '@/utils/classSubjects';
+import { isSubjectForClass } from '@/utils/classSubjects';
 
 interface FeedbackItem {
   id: string;
@@ -247,16 +247,13 @@ export function TeacherDashboard() {
   const assignedClasses = [...new Set(assignments.map(a => a.class))];
   
   // Get subjects assigned for selected class - filter by class-subject mapping
-  const validSubjectsForSelectedClass = getSubjectsForClass(selectedClass);
   const classSubjectIds = assignments
     .filter(a => a.class === selectedClass)
     .map(a => a.subject_id);
+  // Filter subjects to only those valid for the selected class
   const classSubjects = subjects.filter(s => 
     classSubjectIds.includes(s.id) && 
-    validSubjectsForSelectedClass.some(vs => 
-      s.name.toLowerCase().includes(vs.toLowerCase()) ||
-      vs.toLowerCase().includes(s.name.toLowerCase())
-    )
+    isSubjectForClass(s.name, selectedClass)
   );
 
   const studentsInClass = students.filter(s => s.class === selectedClass);

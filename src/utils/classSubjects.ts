@@ -1,32 +1,53 @@
-// Class to Subject mapping
+// Class to Subject mapping - names MUST match database exactly
 // Each class level has specific subjects assigned to it
 
+// Subject name aliases to handle variations in database
+export const SUBJECT_ALIASES: { [key: string]: string[] } = {
+  'Arithmetic': ['Arithmetics', 'Arithmetic'],
+  'EDK': ['E.D.K', 'EDK'],
+  'Science & Technology': ['Science & Technology', 'Science'],
+  'Historia ya Tanzania na Maadili': ['Historia ya Tanzania na Maadili', 'Historia ya T.Z na Maadili'],
+  'Historia ya Tanzania': ['Historia ya Tanzania', 'History of Tanzania'],
+  'English': ['English', 'English Language'],
+  'Arabic': ['Arabic', 'Arabic Language'],
+};
+
+// Get all possible variations of a subject name
+export function getSubjectVariations(subjectName: string): string[] {
+  for (const [canonical, aliases] of Object.entries(SUBJECT_ALIASES)) {
+    if (aliases.some(a => a.toLowerCase() === subjectName.toLowerCase())) {
+      return aliases;
+    }
+  }
+  return [subjectName];
+}
+
 export const CLASS_SUBJECTS: { [classLevel: string]: string[] } = {
-  // Primary 1-2: 9 subjects
+  // Primary 1-2: 9 subjects (names match database)
   'Primary 1': [
-    'Arithmetic',
+    'Arithmetics',
     'English Reading',
     'English Writing',
     'Health Care',
     'Kusoma',
     'Kuandika',
     'Arts & Sports',
-    'EDK',
+    'E.D.K',
     'Arabic'
   ],
   'Primary 2': [
-    'Arithmetic',
+    'Arithmetics',
     'English Reading',
     'English Writing',
     'Health Care',
     'Kusoma',
     'Kuandika',
     'Arts & Sports',
-    'EDK',
+    'E.D.K',
     'Arabic'
   ],
   
-  // Primary 3-7: 9 subjects
+  // Primary 3-7: 9 subjects (names match database)
   'Primary 3': [
     'English',
     'Mathematics',
@@ -35,7 +56,7 @@ export const CLASS_SUBJECTS: { [classLevel: string]: string[] } = {
     'Kiswahili',
     'Geography',
     'Arabic',
-    'EDK',
+    'E.D.K',
     'Civics'
   ],
   'Primary 4': [
@@ -46,7 +67,7 @@ export const CLASS_SUBJECTS: { [classLevel: string]: string[] } = {
     'Kiswahili',
     'Geography',
     'Arabic',
-    'EDK',
+    'E.D.K',
     'Civics'
   ],
   'Primary 5': [
@@ -57,7 +78,7 @@ export const CLASS_SUBJECTS: { [classLevel: string]: string[] } = {
     'Kiswahili',
     'Geography',
     'Arabic',
-    'EDK',
+    'E.D.K',
     'Civics'
   ],
   'Primary 6': [
@@ -68,7 +89,7 @@ export const CLASS_SUBJECTS: { [classLevel: string]: string[] } = {
     'Kiswahili',
     'Geography',
     'Arabic',
-    'EDK',
+    'E.D.K',
     'Civics'
   ],
   'Primary 7': [
@@ -79,16 +100,16 @@ export const CLASS_SUBJECTS: { [classLevel: string]: string[] } = {
     'Kiswahili',
     'Geography',
     'Arabic',
-    'EDK',
+    'E.D.K',
     'Civics'
   ],
   
-  // Secondary (Senior 1-4 and Form 3 A): 13 subjects
+  // Secondary (Senior 1-4 and Form 3 A): 13 subjects (names match database)
   'Senior 1': [
-    'English',
+    'English Language',
     'Arabic Language',
     'Kiswahili',
-    'Historia ya Tanzania',
+    'Historia ya Tanzania na Maadili',
     'Chemistry',
     'Biology',
     'Mathematics',
@@ -100,10 +121,10 @@ export const CLASS_SUBJECTS: { [classLevel: string]: string[] } = {
     'Geography'
   ],
   'Senior 2': [
-    'English',
+    'English Language',
     'Arabic Language',
     'Kiswahili',
-    'Historia ya Tanzania',
+    'Historia ya Tanzania na Maadili',
     'Chemistry',
     'Biology',
     'Mathematics',
@@ -115,10 +136,10 @@ export const CLASS_SUBJECTS: { [classLevel: string]: string[] } = {
     'Geography'
   ],
   'Senior 3': [
-    'English',
+    'English Language',
     'Arabic Language',
     'Kiswahili',
-    'Historia ya Tanzania',
+    'Historia ya Tanzania na Maadili',
     'Chemistry',
     'Biology',
     'Mathematics',
@@ -130,10 +151,10 @@ export const CLASS_SUBJECTS: { [classLevel: string]: string[] } = {
     'Geography'
   ],
   'Senior 4': [
-    'English',
+    'English Language',
     'Arabic Language',
     'Kiswahili',
-    'Historia ya Tanzania',
+    'Historia ya Tanzania na Maadili',
     'Chemistry',
     'Biology',
     'Mathematics',
@@ -145,10 +166,10 @@ export const CLASS_SUBJECTS: { [classLevel: string]: string[] } = {
     'Geography'
   ],
   'Form 3 A': [
-    'English',
+    'English Language',
     'Arabic Language',
     'Kiswahili',
-    'Historia ya Tanzania',
+    'Historia ya Tanzania na Maadili',
     'Chemistry',
     'Biology',
     'Mathematics',
@@ -166,14 +187,25 @@ export function getSubjectsForClass(className: string): string[] {
   return CLASS_SUBJECTS[className] || [];
 }
 
-// Check if a subject belongs to a class
+// Check if a subject belongs to a class (with alias matching)
 export function isSubjectForClass(subjectName: string, className: string): boolean {
   const classSubjects = CLASS_SUBJECTS[className] || [];
-  return classSubjects.some(s => 
-    s.toLowerCase() === subjectName.toLowerCase() ||
-    subjectName.toLowerCase().includes(s.toLowerCase()) ||
-    s.toLowerCase().includes(subjectName.toLowerCase())
-  );
+  const subjectLower = subjectName.toLowerCase();
+  
+  return classSubjects.some(cs => {
+    const csLower = cs.toLowerCase();
+    // Direct match
+    if (csLower === subjectLower) return true;
+    
+    // Check aliases
+    const variations = getSubjectVariations(cs);
+    if (variations.some(v => v.toLowerCase() === subjectLower)) return true;
+    
+    // Partial match for similar names
+    if (csLower.includes(subjectLower) || subjectLower.includes(csLower)) return true;
+    
+    return false;
+  });
 }
 
 // Get class level category
@@ -188,4 +220,16 @@ export function getClassLevel(className: string): 'primary_lower' | 'primary_upp
     return 'secondary';
   }
   return 'unknown';
+}
+
+// Get subject IDs that are valid for a class
+export async function getValidSubjectIdsForClass(
+  className: string, 
+  allSubjects: { id: string; name: string }[]
+): Promise<string[]> {
+  const validSubjectNames = getSubjectsForClass(className);
+  
+  return allSubjects
+    .filter(s => isSubjectForClass(s.name, className))
+    .map(s => s.id);
 }

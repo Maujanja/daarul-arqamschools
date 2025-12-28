@@ -9,7 +9,8 @@ import { Users, GraduationCap, BookOpen, MessageSquare, FileText, DollarSign, Cl
 import { Button } from '@/components/ui/button';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
-import { academicYears } from '@/data/mockData';
+import { academicYears, classes } from '@/data/mockData';
+import { isSubjectForClass, getSubjectsForClass } from '@/utils/classSubjects';
 interface FeedbackItem {
   id: string;
   parent_id: string;
@@ -37,14 +38,24 @@ interface FeePayment {
 export function AdminDashboard() {
   const navigate = useNavigate();
   const [selectedYear, setSelectedYear] = useState(academicYears[0]);
+  const [selectedClass, setSelectedClass] = useState(classes[0]);
 
-  // Fetch all marks for series summary
+  // Fetch all subjects
+  const { data: allSubjects = [] } = useQuery({
+    queryKey: ['all-subjects'],
+    queryFn: async () => {
+      const { data } = await supabase.from('subjects').select('id, name, code');
+      return data || [];
+    },
+  });
+
+  // Fetch all marks for series summary (with subject_id for filtering)
   const { data: allMarks = [] } = useQuery({
     queryKey: ['admin-all-marks', selectedYear],
     queryFn: async () => {
       const { data } = await supabase
         .from('marks')
-        .select('class, term, total, academic_year')
+        .select('class, term, total, academic_year, subject_id')
         .eq('academic_year', selectedYear);
       return data || [];
     },
@@ -141,6 +152,97 @@ export function AdminDashboard() {
       return dataPoint;
     });
   }, [allMarks, uniqueTerms, uniqueClasses]);
+
+  // Get valid subjects for the selected class
+  const validSubjectsForClass = useMemo(() => {
+    return allSubjects.filter(s => isSubjectForClass(s.name, selectedClass));
+  }, [allSubjects, selectedClass]);
+
+  // Filter marks for selected class - only include subjects valid for that class
+  const classFilteredMarks = useMemo(() => {
+    const validSubjectIds = validSubjectsForClass.map(s => s.id);
+    return allMarks.filter(m => 
+      m.class === selectedClass && 
+      validSubjectIds.includes(m.subject_id)
+    );
+  }, [allMarks, selectedClass, validSubjectsForClass]);
+
+  // Subject performance data for selected class
+  const subjectSummaryData = useMemo(() => {
+    if (!selectedClass || validSubjectsForClass.length === 0) return [];
+
+    return validSubjectsForClass.map((subject, index) => {
+      const seriesData: { [key: string]: number | null } = {};
+      let totalSum = 0;
+      let totalCount = 0;
+
+      uniqueTerms.forEach((term, termIndex) => {
+        const termMarks = classFilteredMarks.filter(m => 
+          m.subject_id === subject.id && 
+          m.term === term
+        );
+        if (termMarks.length > 0) {
+          const avg = termMarks.reduce((sum, m) => sum + m.total, 0) / termMarks.length;
+          seriesData[`S${termIndex + 1}`] = Math.round(avg);
+          totalSum += avg;
+          totalCount++;
+        } else {
+          seriesData[`S${termIndex + 1}`] = null;
+        }
+      });
+
+      const average = totalCount > 0 ? totalSum / totalCount : 0;
+      const grade = average >= 75 ? 'A' : average >= 65 ? 'B' : average >= 50 ? 'C' : average >= 40 ? 'D' : 'F';
+
+      return {
+        sn: index + 1,
+        name: subject.name,
+        seriesData,
+        average,
+        grade,
+      };
+    }).sort((a, b) => b.average - a.average)
+      .map((item, index) => ({ ...item, position: index + 1, sn: index + 1 }));
+  }, [classFilteredMarks, validSubjectsForClass, uniqueTerms, selectedClass]);
+
+  // Subject chart data for selected class
+  const subjectChartData = useMemo(() => {
+    if (uniqueTerms.length === 0 || validSubjectsForClass.length === 0) return [];
+    
+    return uniqueTerms.map((term, termIndex) => {
+      const seriesLabel = `S${termIndex + 1}`;
+      const dataPoint: { name: string; [key: string]: number | string } = { name: seriesLabel };
+      
+      validSubjectsForClass.forEach((subject) => {
+        const subjectTermMarks = classFilteredMarks.filter(m => 
+          m.subject_id === subject.id && 
+          m.term === term
+        );
+        if (subjectTermMarks.length > 0) {
+          const avg = subjectTermMarks.reduce((sum, m) => sum + m.total, 0) / subjectTermMarks.length;
+          dataPoint[subject.name] = Math.round(avg);
+        }
+      });
+      
+      return dataPoint;
+    });
+  }, [classFilteredMarks, uniqueTerms, validSubjectsForClass]);
+
+  // Average per series for selected class subjects
+  const subjectAveragePerSeries = useMemo(() => {
+    const result: { [key: string]: number } = {};
+    
+    uniqueTerms.forEach((term, termIndex) => {
+      const termMarks = classFilteredMarks.filter(m => m.term === term);
+      if (termMarks.length > 0) {
+        const avg = termMarks.reduce((sum, m) => sum + m.total, 0) / termMarks.length;
+        result[`S${termIndex + 1}`] = avg;
+      }
+    });
+
+    return result;
+  }, [classFilteredMarks, uniqueTerms]);
+
   const { data: studentsCount = 0 } = useQuery({
     queryKey: ['students-count'],
     queryFn: async () => {
@@ -269,10 +371,10 @@ export function AdminDashboard() {
         <StatCard title="Feedback" value={feedbackCount.toLocaleString()} subtitle="Pending response" icon={MessageSquare} variant="warning" />
       </div>
 
-      {/* Series Performance Chart */}
+      {/* Series Performance Chart - All Classes */}
       {seriesChartData.length > 0 && uniqueClasses.length > 0 && (
         <SeriesPerformanceChart
-          title="Performance Trend by Series"
+          title="Performance Trend by Series - All Classes"
           subtitle={`Academic Year: ${selectedYear} | Class Average Per Series`}
           data={seriesChartData}
           seriesKeys={uniqueClasses}
@@ -292,6 +394,63 @@ export function AdminDashboard() {
           pdfFileName={`class_series_summary_${selectedYear}`}
         />
       )}
+
+      {/* Subject Performance per Class */}
+      <div className="card-elevated p-6 animate-fade-in">
+        <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4 mb-6">
+          <h3 className="font-display font-semibold text-lg text-card-foreground flex items-center gap-2">
+            <BookOpen className="w-5 h-5 text-primary" />
+            Subject Performance by Class
+          </h3>
+          <Select value={selectedClass} onValueChange={setSelectedClass}>
+            <SelectTrigger className="w-[160px]">
+              <SelectValue placeholder="Select Class" />
+            </SelectTrigger>
+            <SelectContent>
+              {classes.map((cls) => (
+                <SelectItem key={cls} value={cls}>{cls}</SelectItem>
+              ))}
+            </SelectContent>
+          </Select>
+        </div>
+
+        <div className="text-sm text-muted-foreground mb-4">
+          Showing {validSubjectsForClass.length} subjects for {selectedClass}
+        </div>
+
+        {/* Subject Chart for Selected Class */}
+        {subjectChartData.length > 0 && validSubjectsForClass.length > 0 && (
+          <div className="mb-6">
+            <SeriesPerformanceChart
+              title={`${selectedClass} - Subject Performance Trend`}
+              subtitle={`Academic Year: ${selectedYear} | Subject Average Per Series`}
+              data={subjectChartData}
+              seriesKeys={validSubjectsForClass.map(s => s.name)}
+            />
+          </div>
+        )}
+
+        {/* Subject Summary Table for Selected Class */}
+        {subjectSummaryData.length > 0 && seriesLabels.length > 0 && (
+          <SeriesSummaryTable
+            title={`SUBJECT SUMMARY - ${selectedClass.toUpperCase()}`}
+            subtitle={`Academic Year: ${selectedYear} | Subject Average Per Series`}
+            data={subjectSummaryData}
+            seriesLabels={seriesLabels}
+            showPosition={true}
+            showAveragePerSeries={true}
+            averagePerSeries={subjectAveragePerSeries}
+            pdfFileName={`subject_series_summary_${selectedClass}_${selectedYear}`}
+          />
+        )}
+
+        {subjectSummaryData.length === 0 && (
+          <div className="text-center py-8 text-muted-foreground">
+            <BookOpen className="w-12 h-12 mx-auto mb-3 opacity-50" />
+            <p>No marks data available for {selectedClass}</p>
+          </div>
+        )}
+      </div>
 
       {/* Fee Overview */}
       <div className="card-elevated p-6 animate-fade-in">
