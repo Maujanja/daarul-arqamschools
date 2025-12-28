@@ -445,15 +445,18 @@ export function AdminDashboard() {
           Showing {validSubjectsForClass.length} subjects for {selectedClass}
         </div>
 
-        {/* Subject Chart for Selected Class */}
-        {subjectChartData.length > 0 && validSubjectsForClass.length > 0 && (
+      {/* Class Average Performance Chart - Single Line */}
+        {Object.keys(subjectAveragePerSeries).length > 0 && (
           <div className="mb-6">
             <SeriesPerformanceChart
-              title={`${selectedClass} - Subject Performance Trend`}
-              subtitle={`Academic Year: ${selectedYear} | Subject Average Per Series`}
-              data={subjectChartData}
-              seriesKeys={validSubjectsForClass.map(s => s.name)}
-              pdfFileName={`subject_performance_${selectedClass.replace(/\s+/g, '_')}_${selectedYear}`}
+              title={`${selectedClass} - Class Average Performance`}
+              subtitle={`Academic Year: ${selectedYear} | Overall Class Average Per Series`}
+              data={Object.entries(subjectAveragePerSeries).map(([series, avg]) => ({
+                name: series,
+                'Class Average': Math.round(avg)
+              }))}
+              seriesKeys={['Class Average']}
+              pdfFileName={`class_average_${selectedClass.replace(/\s+/g, '_')}_${selectedYear}`}
             />
           </div>
         )}
