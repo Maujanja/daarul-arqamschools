@@ -29,11 +29,9 @@ const P37_SUBJECTS = [
   'Civics'
 ];
 
-// Secondary subjects (exact database names)
+// Secondary subjects - 13 subjects (exact database names with SEC- codes)
 const SECONDARY_SUBJECTS = [
-  'English',
   'English Language',
-  'Arabic',
   'Arabic Language',
   'Kiswahili',
   'Historia ya Tanzania na Maadili',
@@ -45,9 +43,7 @@ const SECONDARY_SUBJECTS = [
   'Physics',
   'Literature in English',
   'History',
-  'Geography',
-  'Civics',
-  'Computer Science'
+  'Geography'
 ];
 
 export const CLASS_SUBJECTS: { [classLevel: string]: string[] } = {
