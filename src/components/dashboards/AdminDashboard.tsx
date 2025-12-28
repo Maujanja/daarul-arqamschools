@@ -50,15 +50,38 @@ export function AdminDashboard() {
   });
 
   // Fetch all marks for series summary (with subject_id for filtering)
+  // Use pagination to get all data since Supabase has response size limits
   const { data: allMarks = [] } = useQuery({
     queryKey: ['admin-all-marks', selectedYear],
     queryFn: async () => {
-      const { data } = await supabase
-        .from('marks')
-        .select('class, term, total, academic_year, subject_id')
-        .eq('academic_year', selectedYear)
-        .limit(50000); // Increase limit from default 1000
-      return data || [];
+      const allData: any[] = [];
+      const pageSize = 1000;
+      let page = 0;
+      let hasMore = true;
+
+      while (hasMore) {
+        const { data, error } = await supabase
+          .from('marks')
+          .select('class, term, total, academic_year, subject_id')
+          .eq('academic_year', selectedYear)
+          .range(page * pageSize, (page + 1) * pageSize - 1);
+        
+        if (error) {
+          console.error('Error fetching marks:', error);
+          break;
+        }
+        
+        if (data && data.length > 0) {
+          allData.push(...data);
+          page++;
+          hasMore = data.length === pageSize;
+        } else {
+          hasMore = false;
+        }
+      }
+      
+      console.log(`Fetched ${allData.length} marks for ${selectedYear}`);
+      return allData;
     },
   });
 
