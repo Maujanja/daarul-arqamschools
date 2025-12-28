@@ -14,6 +14,7 @@ import { toast } from 'sonner';
 import { calculateGrade } from '@/types';
 import { terms } from '@/data/mockData';
 import { useAuth } from '@/contexts/AuthContext';
+import { isSubjectForClass } from '@/utils/classSubjects';
 
 export default function ReportsPage() {
   const { user } = useAuth();
@@ -196,8 +197,12 @@ export default function ReportsPage() {
 
       setClassStats(stats);
 
-      // Calculate subject statistics using filtered marks
-      const subjectStats = (subjects || []).map(subject => {
+      // Calculate subject statistics using filtered marks - filter by class subjects
+      const filteredSubjects = selectedClass === 'all'
+        ? (subjects || [])
+        : (subjects || []).filter(s => isSubjectForClass(s.name, selectedClass));
+
+      const subjectStats = filteredSubjects.map(subject => {
         const subjectMarks = filteredMarks.filter(m => m.subject_id === subject.id);
         const totals = subjectMarks.map(m => m.total).filter(t => t > 0);
         return {
@@ -206,7 +211,7 @@ export default function ReportsPage() {
           highest: totals.length > 0 ? Math.max(...totals) : 0,
           lowest: totals.length > 0 ? Math.min(...totals) : 0,
         };
-      });
+      }).filter(s => s.average > 0 || selectedClass !== 'all');
 
       setSubjectsData(subjectStats);
     } catch (error) {
