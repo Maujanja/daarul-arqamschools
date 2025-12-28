@@ -197,21 +197,36 @@ export default function ReportsPage() {
 
       setClassStats(stats);
 
-      // Calculate subject statistics using filtered marks - filter by class subjects
+      // Calculate subject statistics - filter by class subjects and remove duplicates
       let filteredSubjects = subjects || [];
       
       if (selectedClass !== 'all') {
-        filteredSubjects = (subjects || []).filter(s => {
-          const isValid = isSubjectForClass(s.name, selectedClass);
-          return isValid;
+        // Filter subjects that belong to the selected class
+        filteredSubjects = (subjects || []).filter(s => isSubjectForClass(s.name, selectedClass));
+        
+        // Remove duplicate subject names (keep first occurrence)
+        const uniqueNames = new Set<string>();
+        filteredSubjects = filteredSubjects.filter(s => {
+          const nameLower = s.name.toLowerCase().trim();
+          if (uniqueNames.has(nameLower)) {
+            return false;
+          }
+          uniqueNames.add(nameLower);
+          return true;
         });
-        console.log('Selected class:', selectedClass);
-        console.log('Filtered subjects for class:', filteredSubjects.map(s => s.name));
       }
 
+      // Group marks by subject name to handle duplicate subject IDs
       const subjectStats = filteredSubjects.map(subject => {
-        const subjectMarks = filteredMarks.filter(m => m.subject_id === subject.id);
+        // Get all subject IDs with the same name
+        const sameNameSubjectIds = (subjects || [])
+          .filter(s => s.name.toLowerCase().trim() === subject.name.toLowerCase().trim())
+          .map(s => s.id);
+        
+        // Get marks for all matching subject IDs
+        const subjectMarks = filteredMarks.filter(m => sameNameSubjectIds.includes(m.subject_id));
         const totals = subjectMarks.map(m => m.total).filter(t => t > 0);
+        
         return {
           name: subject.name,
           average: totals.length > 0 ? Math.round(totals.reduce((a, b) => a + b, 0) / totals.length) : 0,
