@@ -243,6 +243,44 @@ export function TeacherDashboard() {
     );
   }
 
+  // Check if teacher data was found
+  if (!teacherData) {
+    return (
+      <div className="flex flex-col items-center justify-center py-12 space-y-4">
+        <Users className="w-16 h-16 text-muted-foreground" />
+        <h2 className="text-xl font-semibold text-foreground">Taarifa za Mwalimu Hazijapatikana</h2>
+        <p className="text-muted-foreground text-center max-w-md">
+          Hatukuweza kupata taarifa zako kwenye mfumo. Tafadhali wasiliana na Admin kwa msaada.
+        </p>
+      </div>
+    );
+  }
+
+  // Check if teacher has any assignments
+  if (assignments.length === 0 && teacherData.classes.length === 0) {
+    return (
+      <div className="space-y-8">
+        {/* Header */}
+        <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4">
+          <div>
+            <h1 className="text-3xl font-display font-bold text-foreground">
+              Karibu, {teacherData.full_name}
+            </h1>
+            <p className="text-muted-foreground mt-1">Teacher Dashboard</p>
+          </div>
+        </div>
+        
+        <div className="card-elevated p-12 text-center animate-fade-in">
+          <BookOpen className="w-16 h-16 text-muted-foreground mx-auto mb-4" />
+          <h2 className="text-xl font-semibold text-foreground mb-2">Hakuna Madarasa Yaliyopangwa</h2>
+          <p className="text-muted-foreground max-w-md mx-auto">
+            Bado haujapangiwa madarasa na masomo yoyote. Tafadhali wasiliana na Admin ili akupangie madarasa na masomo.
+          </p>
+        </div>
+      </div>
+    );
+  }
+
   // Get assigned classes
   const assignedClasses = [...new Set(assignments.map(a => a.class))];
   
