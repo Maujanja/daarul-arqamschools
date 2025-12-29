@@ -86,21 +86,28 @@ export function TeacherDashboard() {
 
   useEffect(() => {
     const fetchData = async () => {
-      if (!user) return;
+      if (!user) {
+        console.log('TeacherDashboard: No user found');
+        return;
+      }
       
       setIsLoading(true);
       
       // user.id is the teacher's ID from the teachers table (set during login)
       const teacherId = user.id;
+      console.log('TeacherDashboard: Fetching data for teacher ID:', teacherId, 'User:', user);
       
       // Get teacher data
-      const { data: teacher } = await supabase
+      const { data: teacher, error: teacherError } = await supabase
         .from('teachers')
         .select('*')
         .eq('id', teacherId)
         .maybeSingle();
       
+      console.log('TeacherDashboard: Teacher fetch result:', { teacher, error: teacherError });
+      
       if (!teacher) {
+        console.log('TeacherDashboard: No teacher data found for ID:', teacherId);
         setIsLoading(false);
         return;
       }
