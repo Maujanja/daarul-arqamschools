@@ -84,6 +84,7 @@ export default function TeachersPage() {
   const fetchData = async () => {
     try {
       setLoading(true);
+      console.log('Fetching teachers data...');
       
       const [teachersRes, subjectsRes, assignmentsRes] = await Promise.all([
         supabase.from('teachers').select('*').order('full_name'),
@@ -91,9 +92,23 @@ export default function TeachersPage() {
         supabase.from('teacher_assignments').select('*')
       ]);
 
-      if (teachersRes.data) setTeachers(teachersRes.data);
-      if (subjectsRes.data) setSubjects(subjectsRes.data);
-      if (assignmentsRes.data) setAssignments(assignmentsRes.data);
+      console.log('Teachers response:', teachersRes);
+      console.log('Subjects response:', subjectsRes);
+      console.log('Assignments response:', assignmentsRes);
+
+      if (teachersRes.error) {
+        console.error('Teachers fetch error:', teachersRes.error);
+      }
+      if (subjectsRes.error) {
+        console.error('Subjects fetch error:', subjectsRes.error);
+      }
+      if (assignmentsRes.error) {
+        console.error('Assignments fetch error:', assignmentsRes.error);
+      }
+
+      setTeachers(teachersRes.data || []);
+      setSubjects(subjectsRes.data || []);
+      setAssignments(assignmentsRes.data || []);
     } catch (error) {
       console.error('Error fetching data:', error);
       toast.error('Failed to fetch data');
