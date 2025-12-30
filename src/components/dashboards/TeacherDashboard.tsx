@@ -69,6 +69,7 @@ export function TeacherDashboard() {
   const navigate = useNavigate();
   const { toast } = useToast();
   const [isLoading, setIsLoading] = useState(true);
+  const [loadingError, setLoadingError] = useState<string | null>(null);
   const [teacherData, setTeacherData] = useState<{
     classes: string[];
     subjects: string[];
@@ -84,33 +85,50 @@ export function TeacherDashboard() {
   const [selectedAcademicYear, setSelectedAcademicYear] = useState(academicYears[0]);
   const [feedback, setFeedback] = useState<FeedbackItem[]>([]);
 
+  // Handle case where user is not yet loaded
+  useEffect(() => {
+    if (!user) {
+      setIsLoading(true);
+    }
+  }, [user]);
+
   useEffect(() => {
     const fetchData = async () => {
       if (!user) {
-        console.log('TeacherDashboard: No user found');
+        console.log('TeacherDashboard: No user found, waiting...');
+        setLoadingError('Inasubiri taarifa za mtumiaji...');
         return;
       }
       
       setIsLoading(true);
+      setLoadingError(null);
       
-      // user.id is the teacher's ID from the teachers table (set during login)
-      const teacherId = user.id;
-      console.log('TeacherDashboard: Fetching data for teacher ID:', teacherId, 'User:', user);
-      
-      // Get teacher data
-      const { data: teacher, error: teacherError } = await supabase
-        .from('teachers')
-        .select('*')
-        .eq('id', teacherId)
-        .maybeSingle();
-      
-      console.log('TeacherDashboard: Teacher fetch result:', { teacher, error: teacherError });
-      
-      if (!teacher) {
-        console.log('TeacherDashboard: No teacher data found for ID:', teacherId);
-        setIsLoading(false);
-        return;
-      }
+      try {
+        // user.id is the teacher's ID from the teachers table (set during login)
+        const teacherId = user.id;
+        console.log('TeacherDashboard: Fetching data for teacher ID:', teacherId, 'User:', user);
+        
+        // Get teacher data
+        const { data: teacher, error: teacherError } = await supabase
+          .from('teachers')
+          .select('*')
+          .eq('id', teacherId)
+          .maybeSingle();
+        
+        console.log('TeacherDashboard: Teacher fetch result:', { teacher, error: teacherError });
+        
+        if (teacherError) {
+          console.error('TeacherDashboard: Error fetching teacher:', teacherError);
+          setLoadingError(`Hitilafu wakati wa kupata taarifa: ${teacherError.message}`);
+          setIsLoading(false);
+          return;
+        }
+        
+        if (!teacher) {
+          console.log('TeacherDashboard: No teacher data found for ID:', teacherId);
+          setIsLoading(false);
+          return;
+        }
       
       // Use teacher's classes and subjects arrays directly
       const teacherClasses = teacher.classes || [];
@@ -226,7 +244,12 @@ export function TeacherDashboard() {
         }
       }
       
-      setIsLoading(false);
+      } catch (error: any) {
+        console.error('TeacherDashboard: Error fetching data:', error);
+        setLoadingError(`Hitilafu: ${error.message || 'Unknown error'}`);
+      } finally {
+        setIsLoading(false);
+      }
     };
     
     fetchData();
@@ -244,8 +267,26 @@ export function TeacherDashboard() {
 
   if (isLoading) {
     return (
-      <div className="flex items-center justify-center py-12">
+      <div className="flex flex-col items-center justify-center py-12 space-y-4">
         <Loader2 className="w-8 h-8 animate-spin text-primary" />
+        <p className="text-muted-foreground">Inapakia taarifa za mwalimu...</p>
+        {loadingError && (
+          <p className="text-sm text-muted-foreground">{loadingError}</p>
+        )}
+      </div>
+    );
+  }
+
+  // Check for errors
+  if (loadingError && !teacherData) {
+    return (
+      <div className="flex flex-col items-center justify-center py-12 space-y-4">
+        <Users className="w-16 h-16 text-destructive" />
+        <h2 className="text-xl font-semibold text-foreground">Hitilafu Imetokea</h2>
+        <p className="text-muted-foreground text-center max-w-md">{loadingError}</p>
+        <Button onClick={() => window.location.reload()} variant="outline">
+          Jaribu Tena
+        </Button>
       </div>
     );
   }
@@ -259,6 +300,7 @@ export function TeacherDashboard() {
         <p className="text-muted-foreground text-center max-w-md">
           Hatukuweza kupata taarifa zako kwenye mfumo. Tafadhali wasiliana na Admin kwa msaada.
         </p>
+        <p className="text-xs text-muted-foreground">User ID: {user?.id}</p>
       </div>
     );
   }
