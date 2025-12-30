@@ -55,6 +55,7 @@ export default function TeachersPage() {
   const [subjects, setSubjects] = useState<Subject[]>([]);
   const [assignments, setAssignments] = useState<TeacherAssignment[]>([]);
   const [loading, setLoading] = useState(true);
+  const [error, setError] = useState<string | null>(null);
   const [showAddDialog, setShowAddDialog] = useState(false);
   const [showViewDialog, setShowViewDialog] = useState(false);
   const [showEditDialog, setShowEditDialog] = useState(false);
@@ -78,13 +79,15 @@ export default function TeachersPage() {
   const isAdmin = user?.role === 'admin';
 
   useEffect(() => {
+    console.log('TeachersPage: Component mounted, fetching data...');
     fetchData();
   }, []);
 
   const fetchData = async () => {
     try {
       setLoading(true);
-      console.log('Fetching teachers data...');
+      setError(null);
+      console.log('TeachersPage: Fetching teachers data...');
       
       const [teachersRes, subjectsRes, assignmentsRes] = await Promise.all([
         supabase.from('teachers').select('*').order('full_name'),
@@ -92,27 +95,32 @@ export default function TeachersPage() {
         supabase.from('teacher_assignments').select('*')
       ]);
 
-      console.log('Teachers response:', teachersRes);
-      console.log('Subjects response:', subjectsRes);
-      console.log('Assignments response:', assignmentsRes);
+      console.log('TeachersPage: Teachers response:', teachersRes);
+      console.log('TeachersPage: Subjects response:', subjectsRes);
+      console.log('TeachersPage: Assignments response:', assignmentsRes);
 
       if (teachersRes.error) {
-        console.error('Teachers fetch error:', teachersRes.error);
+        console.error('TeachersPage: Teachers fetch error:', teachersRes.error);
+        setError(`Hitilafu: ${teachersRes.error.message}`);
+        return;
       }
       if (subjectsRes.error) {
-        console.error('Subjects fetch error:', subjectsRes.error);
+        console.error('TeachersPage: Subjects fetch error:', subjectsRes.error);
       }
       if (assignmentsRes.error) {
-        console.error('Assignments fetch error:', assignmentsRes.error);
+        console.error('TeachersPage: Assignments fetch error:', assignmentsRes.error);
       }
 
+      console.log('TeachersPage: Setting teachers data, count:', teachersRes.data?.length || 0);
       setTeachers(teachersRes.data || []);
       setSubjects(subjectsRes.data || []);
       setAssignments(assignmentsRes.data || []);
-    } catch (error) {
-      console.error('Error fetching data:', error);
+    } catch (err: any) {
+      console.error('TeachersPage: Error fetching data:', err);
+      setError(`Hitilafu: ${err.message || 'Unknown error'}`);
       toast.error('Failed to fetch data');
     } finally {
+      console.log('TeachersPage: Data fetch complete, setting loading to false');
       setLoading(false);
     }
   };
@@ -348,8 +356,24 @@ export default function TeachersPage() {
   if (loading) {
     return (
       <DashboardLayout>
-        <div className="flex items-center justify-center min-h-[400px]">
+        <div className="flex flex-col items-center justify-center min-h-[400px] space-y-4">
           <Loader2 className="w-8 h-8 animate-spin text-primary" />
+          <p className="text-muted-foreground">Inapakia taarifa za walimu...</p>
+        </div>
+      </DashboardLayout>
+    );
+  }
+
+  if (error) {
+    return (
+      <DashboardLayout>
+        <div className="flex flex-col items-center justify-center min-h-[400px] space-y-4">
+          <Users className="w-16 h-16 text-destructive" />
+          <h2 className="text-xl font-semibold text-foreground">Hitilafu Imetokea</h2>
+          <p className="text-muted-foreground text-center max-w-md">{error}</p>
+          <Button onClick={fetchData} variant="outline">
+            Jaribu Tena
+          </Button>
         </div>
       </DashboardLayout>
     );
