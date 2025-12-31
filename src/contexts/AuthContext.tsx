@@ -70,27 +70,45 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
 
   const loginAsTeacher = useCallback(async (name: string, password: string) => {
     try {
-      const { data, error } = await supabase
+      console.log('AuthContext: Teacher login attempt for:', name.trim());
+      
+      // First find teacher by name (case-insensitive)
+      const { data: teacher, error } = await supabase
         .from('teachers')
-        .select('*')
-        .ilike('full_name', name)
-        .eq('password_hash', password)
+        .select('id, full_name, email, password_hash')
+        .ilike('full_name', name.trim())
         .maybeSingle();
 
-      if (error || !data) {
-        return { success: false, error: 'Invalid name or password' };
+      console.log('AuthContext: Teacher query result:', { teacher, error });
+
+      if (error) {
+        console.error('AuthContext: Database error:', error);
+        return { success: false, error: 'Hitilafu ya database' };
+      }
+
+      if (!teacher) {
+        console.log('AuthContext: Teacher not found:', name);
+        return { success: false, error: 'Jina la mwalimu halijulikani' };
+      }
+
+      // Check password
+      console.log('AuthContext: Checking password. Expected:', teacher.password_hash, 'Got:', password.trim());
+      if (teacher.password_hash !== password.trim()) {
+        return { success: false, error: 'Password si sahihi' };
       }
 
       const authUser: AuthUser = {
-        id: data.id,
-        name: data.full_name,
+        id: teacher.id,
+        name: teacher.full_name,
         role: 'teacher',
       };
 
+      console.log('AuthContext: Teacher login successful:', authUser);
       setUser(authUser);
       localStorage.setItem(AUTH_STORAGE_KEY, JSON.stringify(authUser));
       return { success: true };
     } catch (error: any) {
+      console.error('AuthContext: Login error:', error);
       return { success: false, error: error.message || 'Login failed' };
     }
   }, []);
