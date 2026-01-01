@@ -9,6 +9,7 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@
 import { supabase } from '@/integrations/supabase/client';
 import { terms } from '@/data/mockData';
 import { useAuth } from '@/contexts/AuthContext';
+import { useAcademicYears } from '@/hooks/useAcademicYears';
 import { BarChart, Bar, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer, LineChart, Line, Legend, PieChart, Pie, Cell } from 'recharts';
 import jsPDF from 'jspdf';
 import autoTable from 'jspdf-autotable';
@@ -54,6 +55,7 @@ interface SubjectRanking {
 
 export function ParentDashboard() {
   const { user } = useAuth();
+  const { academicYears, currentYear, loading: yearsLoading } = useAcademicYears();
   const [isLoading, setIsLoading] = useState(true);
   const [childName, setChildName] = useState('');
   const [childClass, setChildClass] = useState('');
@@ -67,7 +69,7 @@ export function ParentDashboard() {
   const [paidAmount, setPaidAmount] = useState(0);
   const [announcements, setAnnouncements] = useState<Announcement[]>([]);
   const [selectedTerm, setSelectedTerm] = useState(terms[0] || 'Term 1');
-  const [selectedYear, setSelectedYear] = useState('2024-2025');
+  const [selectedYear, setSelectedYear] = useState('');
   const [classRank, setClassRank] = useState<number | null>(null);
   const [totalClassStudents, setTotalClassStudents] = useState(0);
   const [subjectRankings, setSubjectRankings] = useState<SubjectRanking[]>([]);
@@ -165,9 +167,16 @@ export function ParentDashboard() {
     setSubjectRankings(rankings);
   };
 
+  // Set initial year when academic years load
+  useEffect(() => {
+    if (currentYear && !selectedYear) {
+      setSelectedYear(currentYear);
+    }
+  }, [currentYear, selectedYear]);
+
   useEffect(() => {
     const fetchChildData = async () => {
-      if (!user) return;
+      if (!user || !selectedYear) return;
       
       setIsLoading(true);
       
@@ -460,27 +469,22 @@ export function ParentDashboard() {
     return result;
   }, [allMarks, studentTerms]);
 
-  // Generate chart data for series performance trend (subjects as lines, series as X-axis)
+  // Generate chart data for series performance trend - ONLY AVERAGE per series
   const studentSeriesChartData = useMemo(() => {
-    if (studentTerms.length === 0 || uniqueSubjects.length === 0) return [];
-    
-    const subjectIds = [...new Set(allMarks.map(m => m.subject_id))];
-    const subjectNames = [...new Set(allMarks.map(m => m.subject))];
+    if (studentTerms.length === 0) return [];
     
     return studentTerms.map((term, termIndex) => {
       const seriesLabel = `S${termIndex + 1}`;
-      const dataPoint: { name: string; [key: string]: number | string } = { name: seriesLabel };
+      const termMarks = allMarks.filter(m => m.term === term);
       
-      subjectNames.forEach((subjectName) => {
-        const mark = allMarks.find(m => m.term === term && m.subject === subjectName);
-        if (mark) {
-          dataPoint[subjectName] = mark.total;
-        }
-      });
+      if (termMarks.length === 0) {
+        return { name: seriesLabel, Average: 0 };
+      }
       
-      return dataPoint;
+      const avg = termMarks.reduce((sum, m) => sum + m.total, 0) / termMarks.length;
+      return { name: seriesLabel, Average: Math.round(avg * 10) / 10 };
     });
-  }, [allMarks, studentTerms, uniqueSubjects]);
+  }, [allMarks, studentTerms]);
 
   // Download Subject Performance PDF with chart image
   const handleDownloadSubjectPerformance = async () => {
@@ -726,21 +730,22 @@ export function ParentDashboard() {
                 <SelectValue placeholder="Select year" />
               </SelectTrigger>
               <SelectContent>
-                <SelectItem value="2024-2025">2024-2025</SelectItem>
-                <SelectItem value="2023-2024">2023-2024</SelectItem>
+                {academicYears.map((year) => (
+                  <SelectItem key={year} value={year}>{year}</SelectItem>
+                ))}
               </SelectContent>
             </Select>
           </div>
         </div>
       </div>
 
-      {/* Series Performance Chart */}
-      {studentSeriesChartData.length > 0 && uniqueSubjects.length > 0 && (
+      {/* Series Performance Chart - Shows Average per Series */}
+      {studentSeriesChartData.length > 0 && (
         <SeriesPerformanceChart
           title={`Performance Trend by Series`}
-          subtitle={`${childName} | Class: ${childClass}`}
+          subtitle={`${childName} | Class: ${childClass} | Average Per Series`}
           data={studentSeriesChartData}
-          seriesKeys={uniqueSubjects}
+          seriesKeys={['Average']}
         />
       )}
 
