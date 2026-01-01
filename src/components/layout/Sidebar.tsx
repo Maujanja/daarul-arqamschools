@@ -15,7 +15,8 @@ import {
   UserCog,
   Menu,
   X,
-  ChevronRight
+  ChevronRight,
+  Calendar
 } from 'lucide-react';
 import { cn } from '@/lib/utils';
 import { Button } from '@/components/ui/button';
@@ -38,6 +39,7 @@ const navItems: NavItem[] = [
   { label: 'Reports', icon: BarChart3, href: '/reports', roles: ['admin', 'teacher'] },
   { label: 'Feedback', icon: MessageSquare, href: '/feedback', roles: ['admin', 'parent', 'teacher', 'secretary'] },
   { label: 'Announcements', icon: FileText, href: '/announcements', roles: ['admin'] },
+  { label: 'Academic Years', icon: Calendar, href: '/academic-years', roles: ['admin'] },
   { label: 'User Management', icon: UserCog, href: '/users', roles: ['admin'] },
   { label: 'Settings', icon: Settings, href: '/settings', roles: ['admin'] },
 ];
