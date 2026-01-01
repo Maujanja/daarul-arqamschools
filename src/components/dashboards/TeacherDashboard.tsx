@@ -2,8 +2,11 @@ import { useState, useEffect } from 'react';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Users, BookOpen, ClipboardList, Loader2, AlertCircle, RefreshCw } from 'lucide-react';
 import { Button } from '@/components/ui/button';
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { useAuth } from '@/contexts/AuthContext';
 import { supabase } from '@/integrations/supabase/client';
+import { terms } from '@/data/mockData';
+import { useAcademicYears } from '@/hooks/useAcademicYears';
 
 interface TeacherInfo {
   id: string;
@@ -19,10 +22,13 @@ interface StudentCount {
 
 export function TeacherDashboard() {
   const { user } = useAuth();
+  const { academicYears, currentYear, loading: yearsLoading } = useAcademicYears();
   const [isLoading, setIsLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
   const [teacher, setTeacher] = useState<TeacherInfo | null>(null);
   const [studentCounts, setStudentCounts] = useState<StudentCount[]>([]);
+  const [selectedTerm, setSelectedTerm] = useState(terms[0] || 'Term 1');
+  const [selectedYear, setSelectedYear] = useState('');
 
   const fetchData = async () => {
     if (!user) {
@@ -85,6 +91,13 @@ export function TeacherDashboard() {
     }
   };
 
+  // Set initial year when academic years load
+  useEffect(() => {
+    if (currentYear && !selectedYear) {
+      setSelectedYear(currentYear);
+    }
+  }, [currentYear, selectedYear]);
+
   useEffect(() => {
     fetchData();
   }, [user]);
@@ -138,6 +151,43 @@ export function TeacherDashboard() {
         </h1>
         <p className="text-muted-foreground mt-1">Teacher Dashboard</p>
       </div>
+
+      {/* Term and Year Filters */}
+      <Card>
+        <CardHeader>
+          <CardTitle className="text-base">Filter Results</CardTitle>
+        </CardHeader>
+        <CardContent>
+          <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+            <div className="space-y-2">
+              <label className="text-sm font-medium text-muted-foreground">Term</label>
+              <Select value={selectedTerm} onValueChange={setSelectedTerm}>
+                <SelectTrigger>
+                  <SelectValue placeholder="Select term" />
+                </SelectTrigger>
+                <SelectContent>
+                  {terms.map((term) => (
+                    <SelectItem key={term} value={term}>{term}</SelectItem>
+                  ))}
+                </SelectContent>
+              </Select>
+            </div>
+            <div className="space-y-2">
+              <label className="text-sm font-medium text-muted-foreground">Academic Year</label>
+              <Select value={selectedYear} onValueChange={setSelectedYear}>
+                <SelectTrigger>
+                  <SelectValue placeholder="Select year" />
+                </SelectTrigger>
+                <SelectContent>
+                  {academicYears.map((year) => (
+                    <SelectItem key={year} value={year}>{year}</SelectItem>
+                  ))}
+                </SelectContent>
+              </Select>
+            </div>
+          </div>
+        </CardContent>
+      </Card>
 
       {/* Stats Cards */}
       <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
