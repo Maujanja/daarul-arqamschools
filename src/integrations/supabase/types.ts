@@ -14,6 +14,33 @@ export type Database = {
   }
   public: {
     Tables: {
+      academic_years: {
+        Row: {
+          created_at: string
+          end_date: string | null
+          id: string
+          is_current: boolean
+          start_date: string | null
+          year_name: string
+        }
+        Insert: {
+          created_at?: string
+          end_date?: string | null
+          id?: string
+          is_current?: boolean
+          start_date?: string | null
+          year_name: string
+        }
+        Update: {
+          created_at?: string
+          end_date?: string | null
+          id?: string
+          is_current?: boolean
+          start_date?: string | null
+          year_name?: string
+        }
+        Relationships: []
+      }
       admin_credentials: {
         Row: {
           created_at: string | null

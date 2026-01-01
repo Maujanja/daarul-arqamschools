@@ -15,12 +15,22 @@ import { calculateGrade } from '@/types';
 import { terms } from '@/data/mockData';
 import { useAuth } from '@/contexts/AuthContext';
 import { isSubjectForClass } from '@/utils/classSubjects';
+import { useAcademicYears } from '@/hooks/useAcademicYears';
 
 export default function ReportsPage() {
   const { user } = useAuth();
+  const { academicYears, currentYear } = useAcademicYears();
   const [selectedClass, setSelectedClass] = useState('all');
   const [selectedTerm, setSelectedTerm] = useState(terms[0] || 'Series 1');
-  const [selectedYear, setSelectedYear] = useState('2024-2025');
+  const [selectedYear, setSelectedYear] = useState(currentYear);
+
+  // Update selectedYear when currentYear is loaded
+  useEffect(() => {
+    if (currentYear) {
+      setSelectedYear(currentYear);
+    }
+  }, [currentYear]);
+  
   const [loading, setLoading] = useState(false);
   const [studentsData, setStudentsData] = useState<any[]>([]);
   const [classStats, setClassStats] = useState<any[]>([]);
@@ -346,8 +356,9 @@ export default function ReportsPage() {
                   <SelectValue placeholder="Select year" />
                 </SelectTrigger>
                 <SelectContent>
-                  <SelectItem value="2024-2025">2024-2025</SelectItem>
-                  <SelectItem value="2023-2024">2023-2024</SelectItem>
+                  {academicYears.map((year) => (
+                    <SelectItem key={year} value={year}>{year}</SelectItem>
+                  ))}
                 </SelectContent>
               </Select>
             </div>
