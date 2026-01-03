@@ -75,7 +75,6 @@ export function ParentDashboard() {
   
   // Chart refs for capturing as images
   const subjectChartRef = useRef<HTMLDivElement>(null);
-  const termChartRef = useRef<HTMLDivElement>(null);
   const gradeChartRef = useRef<HTMLDivElement>(null);
 
   // Calculate class rank and subject rankings
@@ -363,19 +362,6 @@ export function ParentDashboard() {
     score: s.average,
   }));
 
-  // Term-wise performance data (uses imported terms from mockData)
-  const termPerformanceData = terms.map(term => {
-    const termMarks = studentMarks.filter(m => m.term === term);
-    if (termMarks.length === 0) return null;
-    
-    const data: any = { term };
-    uniqueSubjects.forEach(subject => {
-      const mark = termMarks.find(m => m.subject === subject);
-      data[subject] = mark?.total || 0;
-    });
-    data.average = termMarks.reduce((sum, m) => sum + m.total, 0) / termMarks.length;
-    return data;
-  }).filter(Boolean);
 
   // Grade distribution for pie chart
   const gradeDistribution = subjectAverages.reduce((acc, s) => {
@@ -513,54 +499,6 @@ export function ParentDashboard() {
     doc.save(`${childName}_subject_performance.pdf`);
   };
 
-  // Download Term Performance PDF with chart image
-  const handleDownloadTermPerformance = async () => {
-    const doc = new jsPDF();
-    
-    doc.setFontSize(18);
-    doc.text('Term-wise Performance Report', 105, 20, { align: 'center' });
-    
-    doc.setFontSize(12);
-    doc.text(`Student: ${childName}`, 20, 35);
-    doc.text(`Class: ${childClass}`, 20, 43);
-    doc.text(`Term: ${selectedTerm} - ${selectedYear}`, 20, 51);
-    doc.text(`Date: ${new Date().toLocaleDateString()}`, 20, 59);
-    
-    // Capture chart as image
-    if (termChartRef.current) {
-      try {
-        const canvas = await html2canvas(termChartRef.current, {
-          backgroundColor: '#ffffff',
-          scale: 2
-        });
-        const imgData = canvas.toDataURL('image/png');
-        doc.addImage(imgData, 'PNG', 15, 70, 180, 100);
-      } catch (error) {
-        console.error('Error capturing chart:', error);
-      }
-    }
-    
-    // Term table below chart
-    const headers = ['Term', ...uniqueSubjects.slice(0, 6), 'Average'];
-    const tableData = termPerformanceData.map((t: any) => {
-      const row = [t.term];
-      uniqueSubjects.slice(0, 6).forEach(subject => {
-        row.push(t[subject] ? `${t[subject]}%` : '-');
-      });
-      row.push(`${Math.round(t.average)}%`);
-      return row;
-    });
-    
-    autoTable(doc, {
-      head: [headers],
-      body: tableData,
-      startY: 180,
-      theme: 'striped',
-      headStyles: { fillColor: [16, 185, 129] }
-    });
-    
-    doc.save(`${childName}_term_performance.pdf`);
-  };
 
   // Download Grade Distribution PDF with chart image
   const handleDownloadGradeDistribution = async () => {
@@ -991,51 +929,6 @@ export function ParentDashboard() {
         )}
       </div>
 
-      {/* Term-wise Performance */}
-      <div className="card-elevated p-6 animate-fade-in">
-        <div className="flex items-center justify-between mb-6">
-          <h3 className="font-display font-semibold text-lg text-card-foreground">
-            Term-wise Performance Trends
-          </h3>
-          {termPerformanceData.length > 0 && (
-            <Button variant="outline" size="sm" onClick={handleDownloadTermPerformance}>
-              <FileDown className="w-4 h-4 mr-2" />
-              Download PDF
-            </Button>
-          )}
-        </div>
-        {termPerformanceData.length > 0 ? (
-          <div ref={termChartRef} className="h-80 bg-white dark:bg-gray-900 rounded-lg p-2">
-            <ResponsiveContainer width="100%" height="100%">
-              <LineChart data={termPerformanceData} margin={{ top: 20, right: 30, left: 20, bottom: 5 }}>
-                <CartesianGrid strokeDasharray="3 3" className="opacity-30" />
-                <XAxis dataKey="term" tick={{ fontSize: 12 }} />
-                <YAxis domain={[0, 100]} tick={{ fontSize: 12 }} />
-                <Tooltip 
-                  contentStyle={{ 
-                    backgroundColor: 'hsl(var(--card))',
-                    border: '1px solid hsl(var(--border))',
-                    borderRadius: '8px'
-                  }}
-                />
-                <Legend />
-                {uniqueSubjects.slice(0, 6).map((subject, idx) => (
-                  <Line 
-                    key={subject}
-                    type="monotone" 
-                    dataKey={subject} 
-                    stroke={`hsl(${(idx * 60) % 360}, 70%, 50%)`}
-                    strokeWidth={2}
-                    dot={{ r: 4 }}
-                  />
-                ))}
-              </LineChart>
-            </ResponsiveContainer>
-          </div>
-        ) : (
-          <p className="text-muted-foreground text-center py-8">No term data available yet</p>
-        )}
-      </div>
 
       {/* Subject Analysis Table with Class Ranking */}
       <div className="card-elevated p-6 animate-fade-in">
