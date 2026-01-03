@@ -2,6 +2,7 @@ import { useState, useEffect, useRef, useMemo } from 'react';
 import { StatCard } from '@/components/dashboard/StatCard';
 import { GradeBadge } from '@/components/dashboard/GradeBadge';
 import { SeriesSummaryTable } from '@/components/dashboard/SeriesSummaryTable';
+import { SeriesPerformanceChart } from '@/components/dashboard/SeriesPerformanceChart';
 import { BookOpen, Award, Download, MessageSquare, Loader2, DollarSign, AlertTriangle, TrendingUp, TrendingDown, Megaphone, User, Calendar, FileDown, Trophy, Users, Target } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
@@ -929,6 +930,19 @@ export function ParentDashboard() {
         )}
       </div>
 
+
+      {/* Performance Trend by Series - Average per series */}
+      {Object.keys(studentAveragePerSeries).length > 0 && (
+        <SeriesPerformanceChart
+          data={Object.entries(studentAveragePerSeries).map(([series, avg]) => ({
+            name: series,
+            Average: Number(avg.toFixed(1))
+          }))}
+          title="Performance Trend by Series"
+          seriesKeys={['Average']}
+          pdfFileName={`${childName}_series_performance.pdf`}
+        />
+      )}
 
       {/* Subject Analysis Table with Class Ranking */}
       <div className="card-elevated p-6 animate-fade-in">
