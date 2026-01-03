@@ -2,7 +2,6 @@ import { useState, useEffect, useRef, useMemo } from 'react';
 import { StatCard } from '@/components/dashboard/StatCard';
 import { GradeBadge } from '@/components/dashboard/GradeBadge';
 import { SeriesSummaryTable } from '@/components/dashboard/SeriesSummaryTable';
-import { SeriesPerformanceChart } from '@/components/dashboard/SeriesPerformanceChart';
 import { BookOpen, Award, Download, MessageSquare, Loader2, DollarSign, AlertTriangle, TrendingUp, TrendingDown, Megaphone, User, Calendar, FileDown, Trophy, Users, Target } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
@@ -469,22 +468,6 @@ export function ParentDashboard() {
     return result;
   }, [allMarks, studentTerms]);
 
-  // Generate chart data for series performance trend - ONLY AVERAGE per series
-  const studentSeriesChartData = useMemo(() => {
-    if (studentTerms.length === 0) return [];
-    
-    return studentTerms.map((term, termIndex) => {
-      const seriesLabel = `S${termIndex + 1}`;
-      const termMarks = allMarks.filter(m => m.term === term);
-      
-      if (termMarks.length === 0) {
-        return { name: seriesLabel, Average: 0 };
-      }
-      
-      const avg = termMarks.reduce((sum, m) => sum + m.total, 0) / termMarks.length;
-      return { name: seriesLabel, Average: Math.round(avg * 10) / 10 };
-    });
-  }, [allMarks, studentTerms]);
 
   // Download Subject Performance PDF with chart image
   const handleDownloadSubjectPerformance = async () => {
@@ -739,15 +722,6 @@ export function ParentDashboard() {
         </div>
       </div>
 
-      {/* Series Performance Chart - Shows Average per Series */}
-      {studentSeriesChartData.length > 0 && (
-        <SeriesPerformanceChart
-          title={`Performance Trend by Series`}
-          subtitle={`${childName} | Class: ${childClass} | Average Per Series`}
-          data={studentSeriesChartData}
-          seriesKeys={['Average']}
-        />
-      )}
 
       {/* Series Summary Table - Student's Subjects */}
       {studentSubjectSummary.length > 0 && studentSeriesLabels.length > 0 && (

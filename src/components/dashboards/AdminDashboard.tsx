@@ -4,7 +4,6 @@ import { useQuery } from '@tanstack/react-query';
 import { supabase } from '@/integrations/supabase/client';
 import { StatCard } from '@/components/dashboard/StatCard';
 import { SeriesSummaryTable } from '@/components/dashboard/SeriesSummaryTable';
-import { SeriesPerformanceChart } from '@/components/dashboard/SeriesPerformanceChart';
 import { Users, GraduationCap, BookOpen, MessageSquare, FileText, DollarSign, Clock, CheckCircle, User, Calendar, UserCog } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
@@ -157,25 +156,6 @@ export function AdminDashboard() {
     return result;
   }, [allMarks, uniqueTerms]);
 
-  // Generate chart data for series performance trend (classes as lines, series as X-axis)
-  const seriesChartData = useMemo(() => {
-    if (uniqueTerms.length === 0 || uniqueClasses.length === 0) return [];
-    
-    return uniqueTerms.map((term, termIndex) => {
-      const seriesLabel = `S${termIndex + 1}`;
-      const dataPoint: { name: string; [key: string]: number | string } = { name: seriesLabel };
-      
-      uniqueClasses.forEach((className) => {
-        const classTermMarks = allMarks.filter(m => m.class === className && m.term === term);
-        if (classTermMarks.length > 0) {
-          const avg = classTermMarks.reduce((sum, m) => sum + m.total, 0) / classTermMarks.length;
-          dataPoint[className] = Math.round(avg);
-        }
-      });
-      
-      return dataPoint;
-    });
-  }, [allMarks, uniqueTerms, uniqueClasses]);
 
   // Get subjects that actually have marks for the selected class (instead of filtering by isSubjectForClass)
   const classMarksOnly = useMemo(() => {
@@ -231,28 +211,6 @@ export function AdminDashboard() {
       .map((item, index) => ({ ...item, position: index + 1, sn: index + 1 }));
   }, [classFilteredMarks, validSubjectsForClass, uniqueTerms, selectedClass]);
 
-  // Subject chart data for selected class
-  const subjectChartData = useMemo(() => {
-    if (uniqueTerms.length === 0 || validSubjectsForClass.length === 0) return [];
-    
-    return uniqueTerms.map((term, termIndex) => {
-      const seriesLabel = `S${termIndex + 1}`;
-      const dataPoint: { name: string; [key: string]: number | string } = { name: seriesLabel };
-      
-      validSubjectsForClass.forEach((subject) => {
-        const subjectTermMarks = classFilteredMarks.filter(m => 
-          m.subject_id === subject.id && 
-          m.term === term
-        );
-        if (subjectTermMarks.length > 0) {
-          const avg = subjectTermMarks.reduce((sum, m) => sum + m.total, 0) / subjectTermMarks.length;
-          dataPoint[subject.name] = Math.round(avg);
-        }
-      });
-      
-      return dataPoint;
-    });
-  }, [classFilteredMarks, uniqueTerms, validSubjectsForClass]);
 
   // Average per series for selected class subjects
   const subjectAveragePerSeries = useMemo(() => {
@@ -397,16 +355,6 @@ export function AdminDashboard() {
         <StatCard title="Feedback" value={feedbackCount.toLocaleString()} subtitle="Pending response" icon={MessageSquare} variant="warning" />
       </div>
 
-      {/* Series Performance Chart - All Classes */}
-      {seriesChartData.length > 0 && uniqueClasses.length > 0 && (
-        <SeriesPerformanceChart
-          title="Performance Trend by Series - All Classes"
-          subtitle={`Academic Year: ${selectedYear} | Class Average Per Series`}
-          data={seriesChartData}
-          seriesKeys={uniqueClasses}
-          pdfFileName={`performance_trend_all_classes_${selectedYear}`}
-        />
-      )}
 
       {/* Series Summary Table - Class Average Per Series */}
       {classSummaryData.length > 0 && seriesLabels.length > 0 && (
@@ -445,21 +393,6 @@ export function AdminDashboard() {
           Showing {validSubjectsForClass.length} subjects for {selectedClass}
         </div>
 
-      {/* Class Average Performance Chart - Single Line */}
-        {Object.keys(subjectAveragePerSeries).length > 0 && (
-          <div className="mb-6">
-            <SeriesPerformanceChart
-              title={`${selectedClass} - Class Average Performance`}
-              subtitle={`Academic Year: ${selectedYear} | Overall Class Average Per Series`}
-              data={Object.entries(subjectAveragePerSeries).map(([series, avg]) => ({
-                name: series,
-                'Class Average': Math.round(avg)
-              }))}
-              seriesKeys={['Class Average']}
-              pdfFileName={`class_average_${selectedClass.replace(/\s+/g, '_')}_${selectedYear}`}
-            />
-          </div>
-        )}
 
         {/* Subject Summary Table for Selected Class */}
         {subjectSummaryData.length > 0 && seriesLabels.length > 0 && (
