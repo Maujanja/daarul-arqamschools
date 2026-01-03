@@ -14,6 +14,7 @@ import * as XLSX from 'xlsx';
 import { terms, generateTerms, DEFAULT_TERM_COUNT } from '@/data/mockData';
 import { Plus } from 'lucide-react';
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger } from '@/components/ui/dialog';
+import { useAcademicYears } from '@/hooks/useAcademicYears';
 
 interface Student {
   id: string;
@@ -47,7 +48,7 @@ interface TeacherAssignment {
 }
 
 
-const academicYears = ['2024-2025', '2023-2024', '2022-2023'];
+// Academic years now fetched from database via useAcademicYears hook
 const ALL_CLASSES = ['Nursery', 'Primary 1', 'Primary 2', 'Primary 3', 'Primary 4', 'Primary 5', 'Primary 6', 'Primary 7', 'Senior 1', 'Senior 2', 'Senior 3', 'Senior 4'];
 
 // Map short class codes to full class names (for teacher assignments compatibility)
@@ -72,11 +73,12 @@ const mapClassToFullName = (shortClass: string): string => {
 export default function MarksEntryPage() {
   const { toast } = useToast();
   const { user } = useAuth();
+  const { academicYears, currentYear, loading: yearsLoading } = useAcademicYears();
   const fileInputRef = useRef<HTMLInputElement>(null);
   const [selectedClass, setSelectedClass] = useState('');
   const [selectedSubject, setSelectedSubject] = useState('');
   const [selectedTerm, setSelectedTerm] = useState(terms[0] || 'Series 1');
-  const [selectedYear, setSelectedYear] = useState('2024-2025');
+  const [selectedYear, setSelectedYear] = useState('');
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [isLoading, setIsLoading] = useState(true);
   const [isImporting, setIsImporting] = useState(false);
@@ -120,6 +122,13 @@ export default function MarksEntryPage() {
 
   const selectedSubjectData = subjects.find(s => s.id === selectedSubject);
   const maxMarks = selectedSubjectData?.max_marks || 100;
+
+  // Set initial year when academic years load
+  useEffect(() => {
+    if (currentYear && !selectedYear) {
+      setSelectedYear(currentYear);
+    }
+  }, [currentYear, selectedYear]);
 
   // Fetch teacher assignments and subjects
   useEffect(() => {
