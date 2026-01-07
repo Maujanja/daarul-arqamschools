@@ -6,6 +6,7 @@ import { Input } from '@/components/ui/input';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { Checkbox } from '@/components/ui/checkbox';
 import { supabase } from '@/integrations/supabase/client';
+import { useAcademicYears } from '@/hooks/useAcademicYears';
 import { Search, Plus, MoreHorizontal, GraduationCap, Calendar, Loader2, Download, FileText, ArrowRightLeft, Users } from 'lucide-react';
 import { generateStudentReportPDF, generateAllStudentsReportPDF } from '@/utils/pdfGenerator';
 import { toast } from 'sonner';
@@ -65,6 +66,7 @@ const mapClassToFullName = (shortCode: string): string => {
 
 export default function StudentsPage() {
   const { user } = useAuth();
+  const { academicYears, currentYear } = useAcademicYears();
   const [searchQuery, setSearchQuery] = useState('');
   const [selectedClass, setSelectedClass] = useState('all');
   const [students, setStudents] = useState<StudentWithMarks[]>([]);
@@ -355,7 +357,7 @@ export default function StudentsPage() {
       grade: s.grade,
     }));
 
-    generateAllStudentsReportPDF(studentsData, 'Term 1', '2024-2025');
+      generateAllStudentsReportPDF(studentsData, 'Term 1', currentYear);
     toast.success('All students report downloaded!');
   };
 
