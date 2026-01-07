@@ -3,6 +3,7 @@ import { DashboardLayout } from '@/components/layout/DashboardLayout';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { supabase } from '@/integrations/supabase/client';
+import { useAcademicYears } from '@/hooks/useAcademicYears';
 import { Search, Plus, MoreHorizontal, Users, BookOpen, Loader2, Mail, Settings } from 'lucide-react';
 import {
   DropdownMenu,
@@ -50,6 +51,7 @@ const ALL_CLASSES = ['Nursery', 'P1', 'P2', 'P3', 'P4', 'P5', 'P6', 'P7', 'S1', 
 
 export default function TeachersPage() {
   const { user } = useAuth();
+  const { currentYear } = useAcademicYears();
   const [searchQuery, setSearchQuery] = useState('');
   const [teachers, setTeachers] = useState<Teacher[]>([]);
   const [subjects, setSubjects] = useState<Subject[]>([]);
@@ -252,7 +254,7 @@ export default function TeachersPage() {
             teacher_id: selectedTeacher.id,
             class: className,
             subject_id: subjectId,
-            academic_year: '2024-2025'
+            academic_year: currentYear
           });
         });
       });
