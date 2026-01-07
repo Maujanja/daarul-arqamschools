@@ -13,7 +13,7 @@ interface RowData {
   sn: number;
   name: string; // Subject name for student/teacher, Class name for admin
   seriesData: SeriesData;
-  average: number;
+  average: number | null;
   grade: string;
   position?: number;
 }
@@ -81,7 +81,7 @@ export function SeriesSummaryTable({
         row.sn,
         row.name,
         ...seriesLabels.map(series => row.seriesData[series] ?? '-'),
-        row.average.toFixed(2),
+        row.average !== null ? row.average.toFixed(2) : '-',
         row.grade,
       ];
       if (showPosition) rowData.push(row.position ?? '-');
@@ -165,7 +165,7 @@ export function SeriesSummaryTable({
                   </td>
                 ))}
                 <td className="py-2 px-2 text-center font-semibold text-primary">
-                  {row.average.toFixed(2)}
+                  {row.average !== null ? row.average.toFixed(2) : '-'}
                 </td>
                 <td className={`py-2 px-2 text-center ${getGradeColor(row.grade)}`}>
                   {row.grade}
