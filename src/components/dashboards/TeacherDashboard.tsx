@@ -231,51 +231,18 @@ export function TeacherDashboard() {
           setSeriesSummaryData(classSummary);
           setSeriesLabels(allSeriesLabels);
 
-          // Calculate performance trend per class with all 11 series - showing only Average line
-          const classChartData: ClassSeriesData[] = [];
-          
-          teacherData.classes.forEach((cls: string) => {
-            const classMarks = marksData.filter((m: any) => m.class === cls);
-            const chartData: SeriesData[] = [];
+          // Build performance trend chart data from the same classSummary data
+          const classChartData: ClassSeriesData[] = classSummary.map((classItem: any) => {
+            const chartData: SeriesData[] = allSeriesLabels.map(series => ({
+              name: series,
+              Average: classItem.seriesData[series] ?? null
+            }));
             
-            // Sample data configuration (consistent with table)
-            const baseScores: Record<string, number> = {
-              'Form 1': 55,
-              'Form 2': 58,
-              'Form 3': 62,
-              'Form 4': 65,
+            return {
+              className: classItem.name,
+              data: chartData,
+              seriesKeys: ['Average']
             };
-            const base = baseScores[cls] || 60;
-            const variations = [0, 2, -1, 3, 1, 4, 2, 5, 3, 6, 4];
-            
-            // Build chart data for ALL series (S1-S11)
-            allSeriesLabels.forEach((series, idx) => {
-              const seriesMarks = classMarks.filter((m: any) => m.term === series);
-              
-              if (seriesMarks.length > 0) {
-                // Use real data when available
-                const avg = seriesMarks.reduce((sum: number, m: any) => sum + m.total, 0) / seriesMarks.length;
-                chartData.push({
-                  name: series,
-                  Average: Math.round(avg * 10) / 10
-                });
-              } else {
-                // Use sample data for this series
-                const trendBonus = Math.floor(idx * 0.8);
-                chartData.push({
-                  name: series,
-                  Average: Math.min(90, Math.max(40, base + variations[idx] + trendBonus))
-                });
-              }
-            });
-
-            if (chartData.length > 0) {
-              classChartData.push({
-                className: cls,
-                data: chartData,
-                seriesKeys: ['Average']
-              });
-            }
           });
 
           setClassPerformanceData(classChartData);
