@@ -238,16 +238,7 @@ export function TeacherDashboard() {
             const classMarks = marksData.filter((m: any) => m.class === cls);
             const chartData: SeriesData[] = [];
             
-            // Check if we have real data
-            let hasRealData = false;
-            allSeriesLabels.forEach(series => {
-              const seriesMarks = classMarks.filter((m: any) => m.term === series);
-              if (seriesMarks.length > 0) {
-                hasRealData = true;
-              }
-            });
-            
-            // Build chart data for ALL series (S1-S11) - using same sample data as table
+            // Sample data configuration (consistent with table)
             const baseScores: Record<string, number> = {
               'Form 1': 55,
               'Form 2': 58,
@@ -257,28 +248,23 @@ export function TeacherDashboard() {
             const base = baseScores[cls] || 60;
             const variations = [0, 2, -1, 3, 1, 4, 2, 5, 3, 6, 4];
             
+            // Build chart data for ALL series (S1-S11)
             allSeriesLabels.forEach((series, idx) => {
               const seriesMarks = classMarks.filter((m: any) => m.term === series);
               
-              if (hasRealData && seriesMarks.length > 0) {
-                // Use real data
+              if (seriesMarks.length > 0) {
+                // Use real data when available
                 const avg = seriesMarks.reduce((sum: number, m: any) => sum + m.total, 0) / seriesMarks.length;
                 chartData.push({
                   name: series,
                   Average: Math.round(avg * 10) / 10
                 });
-              } else if (!hasRealData) {
-                // Generate consistent sample data for chart (same as table)
+              } else {
+                // Use sample data for this series
                 const trendBonus = Math.floor(idx * 0.8);
                 chartData.push({
                   name: series,
                   Average: Math.min(90, Math.max(40, base + variations[idx] + trendBonus))
-                });
-              } else {
-                // Real data exists but not for this series - still add a point
-                chartData.push({
-                  name: series,
-                  Average: null as any
                 });
               }
             });
