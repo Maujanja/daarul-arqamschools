@@ -231,7 +231,7 @@ export function TeacherDashboard() {
           setSeriesSummaryData(classSummary);
           setSeriesLabels(allSeriesLabels);
 
-          // Calculate performance trend per class with all 11 series
+          // Calculate performance trend per class with all 11 series - showing only Average line
           const classChartData: ClassSeriesData[] = [];
           
           teacherData.classes.forEach((cls: string) => {
@@ -247,43 +247,46 @@ export function TeacherDashboard() {
               }
             });
             
-            if (hasRealData) {
-              // Use real data
-              allSeriesLabels.forEach(series => {
-                const seriesMarks = classMarks.filter((m: any) => m.term === series);
-                if (seriesMarks.length > 0) {
-                  const avg = seriesMarks.reduce((sum: number, m: any) => sum + m.total, 0) / seriesMarks.length;
-                  chartData.push({
-                    name: series,
-                    average: Math.round(avg * 10) / 10
-                  });
-                }
-              });
-            } else {
-              // Generate sample data for chart
-              const baseScores: Record<string, number> = {
-                'Form 1': 55,
-                'Form 2': 58,
-                'Form 3': 62,
-                'Form 4': 65,
-              };
-              const base = baseScores[cls] || 60;
+            // Build chart data for ALL series (S1-S11)
+            allSeriesLabels.forEach((series, idx) => {
+              const seriesMarks = classMarks.filter((m: any) => m.term === series);
               
-              allSeriesLabels.forEach((series, idx) => {
+              if (hasRealData && seriesMarks.length > 0) {
+                // Use real data
+                const avg = seriesMarks.reduce((sum: number, m: any) => sum + m.total, 0) / seriesMarks.length;
+                chartData.push({
+                  name: series,
+                  Average: Math.round(avg * 10) / 10
+                });
+              } else if (!hasRealData) {
+                // Generate sample data for chart
+                const baseScores: Record<string, number> = {
+                  'Form 1': 55,
+                  'Form 2': 58,
+                  'Form 3': 62,
+                  'Form 4': 65,
+                };
+                const base = baseScores[cls] || 60;
                 const variation = Math.floor(Math.random() * 10) - 3;
                 const trendBonus = Math.floor(idx * 1.2);
                 chartData.push({
                   name: series,
-                  average: Math.min(90, Math.max(40, base + variation + trendBonus))
+                  Average: Math.min(90, Math.max(40, base + variation + trendBonus))
                 });
-              });
-            }
+              } else {
+                // Real data exists but not for this series - still add a point
+                chartData.push({
+                  name: series,
+                  Average: null as any
+                });
+              }
+            });
 
             if (chartData.length > 0) {
               classChartData.push({
                 className: cls,
                 data: chartData,
-                seriesKeys: ['average']
+                seriesKeys: ['Average']
               });
             }
           });
