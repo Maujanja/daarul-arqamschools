@@ -173,8 +173,8 @@ export function TeacherDashboard() {
           const allSeriesLabels = ['S1', 'S2', 'S3', 'S4', 'S5', 'S6', 'S7', 'S8', 'S9', 'S10', 'S11'];
           const classSummary: any[] = [];
           
-          // Generate sample data for demonstration if no real data exists
-          const generateSampleData = (className: string): Record<string, number | null> => {
+          // Generate consistent sample data for demonstration if no real data exists
+          const generateSampleData = (className: string): Record<string, number> => {
             const baseScores: Record<string, number> = {
               'Form 1': 55,
               'Form 2': 58,
@@ -182,13 +182,13 @@ export function TeacherDashboard() {
               'Form 4': 65,
             };
             const base = baseScores[className] || 60;
-            const sampleData: Record<string, number | null> = {};
+            // Consistent variations per series (not random)
+            const variations = [0, 2, -1, 3, 1, 4, 2, 5, 3, 6, 4];
+            const sampleData: Record<string, number> = {};
             
             allSeriesLabels.forEach((series, idx) => {
-              // Create varying scores with a slight upward trend
-              const variation = Math.floor(Math.random() * 15) - 5;
               const trendBonus = Math.floor(idx * 0.8);
-              sampleData[series] = Math.min(95, Math.max(35, base + variation + trendBonus));
+              sampleData[series] = Math.min(95, Math.max(35, base + variations[idx] + trendBonus));
             });
             
             return sampleData;
@@ -247,7 +247,16 @@ export function TeacherDashboard() {
               }
             });
             
-            // Build chart data for ALL series (S1-S11)
+            // Build chart data for ALL series (S1-S11) - using same sample data as table
+            const baseScores: Record<string, number> = {
+              'Form 1': 55,
+              'Form 2': 58,
+              'Form 3': 62,
+              'Form 4': 65,
+            };
+            const base = baseScores[cls] || 60;
+            const variations = [0, 2, -1, 3, 1, 4, 2, 5, 3, 6, 4];
+            
             allSeriesLabels.forEach((series, idx) => {
               const seriesMarks = classMarks.filter((m: any) => m.term === series);
               
@@ -259,19 +268,11 @@ export function TeacherDashboard() {
                   Average: Math.round(avg * 10) / 10
                 });
               } else if (!hasRealData) {
-                // Generate sample data for chart
-                const baseScores: Record<string, number> = {
-                  'Form 1': 55,
-                  'Form 2': 58,
-                  'Form 3': 62,
-                  'Form 4': 65,
-                };
-                const base = baseScores[cls] || 60;
-                const variation = Math.floor(Math.random() * 10) - 3;
-                const trendBonus = Math.floor(idx * 1.2);
+                // Generate consistent sample data for chart (same as table)
+                const trendBonus = Math.floor(idx * 0.8);
                 chartData.push({
                   name: series,
-                  Average: Math.min(90, Math.max(40, base + variation + trendBonus))
+                  Average: Math.min(90, Math.max(40, base + variations[idx] + trendBonus))
                 });
               } else {
                 // Real data exists but not for this series - still add a point
