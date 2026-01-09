@@ -254,12 +254,26 @@ export default function StudentsPage() {
     try {
       setSaving(true);
 
-      const { error } = await supabase
+      // 1. Update students' class
+      const { error: studentError } = await supabase
         .from('students')
         .update({ class: transferToClass })
         .in('id', studentsToTransfer);
 
-      if (error) throw error;
+      if (studentError) throw studentError;
+
+      // 2. Update teacher_class_students - change class for transferred students
+      // This ensures teachers see students in their new classes
+      const { error: teacherStudentError } = await supabase
+        .from('teacher_class_students')
+        .update({ class: transferToClass })
+        .in('student_id', studentsToTransfer)
+        .eq('class', transferFromClass);
+
+      if (teacherStudentError) {
+        console.error('Error updating teacher_class_students:', teacherStudentError);
+        // Don't throw - students are already transferred, just log the error
+      }
 
       toast.success(`Transferred ${studentsToTransfer.length} students to ${transferToClass}`);
       setShowBulkTransferDialog(false);
