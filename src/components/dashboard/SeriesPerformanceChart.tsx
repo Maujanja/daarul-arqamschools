@@ -7,7 +7,7 @@ import { toast } from 'sonner';
 
 interface SeriesData {
   name: string;
-  [key: string]: number | string;
+  [key: string]: number | string | null;
 }
 
 interface SeriesPerformanceChartProps {

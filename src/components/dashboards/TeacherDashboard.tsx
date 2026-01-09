@@ -232,11 +232,15 @@ export function TeacherDashboard() {
           setSeriesLabels(allSeriesLabels);
 
           // Build performance trend chart data from the same classSummary data
+          // Ensure we use the actual number values from seriesData (not null)
           const classChartData: ClassSeriesData[] = classSummary.map((classItem: any) => {
-            const chartData: SeriesData[] = allSeriesLabels.map(series => ({
-              name: series,
-              Average: classItem.seriesData[series] ?? null
-            }));
+            const chartData: SeriesData[] = allSeriesLabels.map(series => {
+              const value = classItem.seriesData[series];
+              return {
+                name: series,
+                Average: typeof value === 'number' ? value : null
+              };
+            });
             
             return {
               className: classItem.name,
