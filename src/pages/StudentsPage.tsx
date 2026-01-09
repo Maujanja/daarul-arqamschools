@@ -254,6 +254,15 @@ export default function StudentsPage() {
     try {
       setSaving(true);
 
+      // Get current academic year
+      const { data: currentAcademicYear } = await supabase
+        .from('academic_years')
+        .select('year_name')
+        .eq('is_current', true)
+        .maybeSingle();
+      
+      const academicYear = currentAcademicYear?.year_name || '2024-2025';
+
       // 1. Update students' class
       const { error: studentError } = await supabase
         .from('students')
@@ -262,17 +271,58 @@ export default function StudentsPage() {
 
       if (studentError) throw studentError;
 
-      // 2. Update teacher_class_students - change class for transferred students
-      // This ensures teachers see students in their new classes
-      const { error: teacherStudentError } = await supabase
+      // 2. Get all teachers assigned to the NEW class
+      const { data: teachersForNewClass } = await supabase
+        .from('teachers')
+        .select('id, classes')
+        .contains('classes', [transferToClass.replace(/\D/g, '') ? 
+          (transferToClass.includes('Primary') ? `P${transferToClass.replace(/\D/g, '')}` : 
+           transferToClass.includes('Senior') ? `S${transferToClass.replace(/\D/g, '')}` : transferToClass)
+          : transferToClass]);
+
+      const teacherIdsForNewClass = new Set(teachersForNewClass?.map(t => t.id) || []);
+
+      // 3. Delete teacher_class_students entries where teacher is NOT assigned to the new class
+      // This ensures teachers who don't have the new class won't see these students anymore
+      const { data: existingAssignments } = await supabase
         .from('teacher_class_students')
-        .update({ class: transferToClass })
+        .select('id, teacher_id')
         .in('student_id', studentsToTransfer)
         .eq('class', transferFromClass);
 
-      if (teacherStudentError) {
-        console.error('Error updating teacher_class_students:', teacherStudentError);
-        // Don't throw - students are already transferred, just log the error
+      if (existingAssignments) {
+        // Find assignments where teacher is NOT assigned to the new class - delete these
+        const assignmentsToDelete = existingAssignments
+          .filter(a => !teacherIdsForNewClass.has(a.teacher_id))
+          .map(a => a.id);
+
+        if (assignmentsToDelete.length > 0) {
+          await supabase
+            .from('teacher_class_students')
+            .delete()
+            .in('id', assignmentsToDelete);
+        }
+
+        // Update class for remaining assignments (where teacher HAS the new class)
+        const assignmentsToUpdate = existingAssignments
+          .filter(a => teacherIdsForNewClass.has(a.teacher_id))
+          .map(a => a.id);
+
+        if (assignmentsToUpdate.length > 0) {
+          await supabase
+            .from('teacher_class_students')
+            .update({ class: transferToClass })
+            .in('id', assignmentsToUpdate);
+        }
+      }
+
+      // 4. Check if transferring to Senior 4 complete (graduation) - mark for archival
+      const isGraduating = transferToClass.toLowerCase().includes('senior 4') || 
+                           transferToClass.toLowerCase().includes('s4');
+      
+      if (isGraduating) {
+        // Log graduation info - these students will be archived
+        console.log(`Graduating ${studentsToTransfer.length} students to ${transferToClass}`);
       }
 
       toast.success(`Transferred ${studentsToTransfer.length} students to ${transferToClass}`);
