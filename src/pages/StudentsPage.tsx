@@ -263,6 +263,49 @@ export default function StudentsPage() {
       
       const academicYear = currentAcademicYear?.year_name || '2024-2025';
 
+      // Get fee structure and payments to calculate outstanding debts
+      const { data: feeStructures } = await supabase
+        .from('fee_structure')
+        .select('*')
+        .eq('class', transferFromClass)
+        .eq('academic_year', academicYear);
+      
+      const { data: feePayments } = await supabase
+        .from('fee_payments')
+        .select('*')
+        .in('student_id', studentsToTransfer)
+        .eq('academic_year', academicYear);
+
+      // Calculate and save outstanding debts for each student
+      const terms = ['Term 1', 'Term 2', 'Term 3'];
+      for (const studentId of studentsToTransfer) {
+        for (const term of terms) {
+          const structure = feeStructures?.find(f => f.term === term);
+          if (!structure) continue;
+          
+          const expectedFee = structure.total_fee || 0;
+          const paidAmount = feePayments
+            ?.filter(p => p.student_id === studentId && p.term === term)
+            .reduce((sum, p) => sum + Number(p.amount), 0) || 0;
+          
+          const outstanding = expectedFee - paidAmount;
+          
+          // If there's outstanding debt, save it to history
+          if (outstanding > 0) {
+            await supabase.from('student_debt_history').insert({
+              student_id: studentId,
+              academic_year: academicYear,
+              term: term,
+              original_amount: expectedFee,
+              amount_paid: paidAmount,
+              outstanding_balance: outstanding,
+              is_cleared: false,
+              notes: `Debt carried forward from ${transferFromClass} to ${transferToClass}`
+            });
+          }
+        }
+      }
+
       // 1. Update students' class
       const { error: studentError } = await supabase
         .from('students')
@@ -283,7 +326,6 @@ export default function StudentsPage() {
       const teacherIdsForNewClass = new Set(teachersForNewClass?.map(t => t.id) || []);
 
       // 3. Delete teacher_class_students entries where teacher is NOT assigned to the new class
-      // This ensures teachers who don't have the new class won't see these students anymore
       const { data: existingAssignments } = await supabase
         .from('teacher_class_students')
         .select('id, teacher_id')
@@ -291,7 +333,6 @@ export default function StudentsPage() {
         .eq('class', transferFromClass);
 
       if (existingAssignments) {
-        // Find assignments where teacher is NOT assigned to the new class - delete these
         const assignmentsToDelete = existingAssignments
           .filter(a => !teacherIdsForNewClass.has(a.teacher_id))
           .map(a => a.id);
@@ -303,7 +344,6 @@ export default function StudentsPage() {
             .in('id', assignmentsToDelete);
         }
 
-        // Update class for remaining assignments (where teacher HAS the new class)
         const assignmentsToUpdate = existingAssignments
           .filter(a => teacherIdsForNewClass.has(a.teacher_id))
           .map(a => a.id);
@@ -316,12 +356,11 @@ export default function StudentsPage() {
         }
       }
 
-      // 4. Check if transferring to Senior 4 complete (graduation) - mark for archival
+      // 4. Check if graduating
       const isGraduating = transferToClass.toLowerCase().includes('senior 4') || 
                            transferToClass.toLowerCase().includes('s4');
       
       if (isGraduating) {
-        // Log graduation info - these students will be archived
         console.log(`Graduating ${studentsToTransfer.length} students to ${transferToClass}`);
       }
 

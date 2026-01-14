@@ -373,6 +373,62 @@ export type Database = {
         }
         Relationships: []
       }
+      student_debt_history: {
+        Row: {
+          academic_year: string
+          amount_paid: number
+          cleared_at: string | null
+          cleared_by: string | null
+          created_at: string
+          id: string
+          is_cleared: boolean
+          notes: string | null
+          original_amount: number
+          outstanding_balance: number
+          student_id: string
+          term: string
+          updated_at: string
+        }
+        Insert: {
+          academic_year: string
+          amount_paid?: number
+          cleared_at?: string | null
+          cleared_by?: string | null
+          created_at?: string
+          id?: string
+          is_cleared?: boolean
+          notes?: string | null
+          original_amount?: number
+          outstanding_balance?: number
+          student_id: string
+          term: string
+          updated_at?: string
+        }
+        Update: {
+          academic_year?: string
+          amount_paid?: number
+          cleared_at?: string | null
+          cleared_by?: string | null
+          created_at?: string
+          id?: string
+          is_cleared?: boolean
+          notes?: string | null
+          original_amount?: number
+          outstanding_balance?: number
+          student_id?: string
+          term?: string
+          updated_at?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "student_debt_history_student_id_fkey"
+            columns: ["student_id"]
+            isOneToOne: false
+            referencedRelation: "students"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       students: {
         Row: {
           admission_date: string
