@@ -275,24 +275,31 @@ export function ParentDashboard() {
       // Calculate class rank and subject rankings
       await calculateRankings(studentData.id, studentData.class, selectedTerm, selectedYear);
       
-      // Get fee payments for this student
+      // Get fee payments for this student for selected year and term
       const { data: payments } = await supabase
         .from('fee_payments')
         .select('amount, payment_date, payment_method')
-        .eq('student_id', studentData.id);
+        .eq('student_id', studentData.id)
+        .eq('academic_year', selectedYear)
+        .eq('term', selectedTerm);
       
       if (payments) {
         setFeePayments(payments);
         const totalPaid = payments.reduce((sum, p) => sum + Number(p.amount), 0);
         setPaidAmount(totalPaid);
+      } else {
+        setFeePayments([]);
+        setPaidAmount(0);
       }
       
-      // Get fee structure for this class and boarding type
+      // Get fee structure for this class, boarding type, year and term
       const { data: feeStructure } = await supabase
         .from('fee_structure')
         .select('total_fee, boarding_type')
         .eq('class', studentData.class)
         .eq('boarding_type', studentData.boarding_type || 'day')
+        .eq('academic_year', selectedYear)
+        .eq('term', selectedTerm)
         .maybeSingle();
       
       if (feeStructure) {
