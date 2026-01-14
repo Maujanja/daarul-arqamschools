@@ -28,7 +28,10 @@ import {
   User,
   Calendar,
   Clock,
-  CheckCircle
+  CheckCircle,
+  History,
+  XCircle,
+  Trash2
 } from 'lucide-react';
 
 interface Student {
@@ -80,6 +83,23 @@ interface FeedbackItem {
   studentClass?: string;
 }
 
+interface DebtHistory {
+  id: string;
+  student_id: string;
+  academic_year: string;
+  term: string;
+  original_amount: number;
+  amount_paid: number;
+  outstanding_balance: number;
+  is_cleared: boolean;
+  cleared_by: string | null;
+  cleared_at: string | null;
+  notes: string | null;
+  created_at: string;
+  studentName?: string;
+  studentClass?: string;
+}
+
 export function SecretaryDashboard() {
   const { toast } = useToast();
   const navigate = useNavigate();
@@ -107,6 +127,10 @@ export function SecretaryDashboard() {
   
   // Feedback state
   const [feedback, setFeedback] = useState<FeedbackItem[]>([]);
+  
+  // Debt history state
+  const [debtHistory, setDebtHistory] = useState<DebtHistory[]>([]);
+  const [showDebtManagement, setShowDebtManagement] = useState(false);
 
   useEffect(() => {
     fetchData();
@@ -115,11 +139,12 @@ export function SecretaryDashboard() {
   const fetchData = async () => {
     setIsLoading(true);
     
-    const [studentsRes, paymentsRes, structureRes, feedbackRes] = await Promise.all([
+    const [studentsRes, paymentsRes, structureRes, feedbackRes, debtHistoryRes] = await Promise.all([
       supabase.from('students').select('*').order('class').order('full_name'),
       supabase.from('fee_payments').select('*, students(full_name, class)').order('payment_date', { ascending: false }),
       supabase.from('fee_structure').select('*'),
-      supabase.from('feedback').select('*').eq('recipient_type', 'secretary').order('created_at', { ascending: false })
+      supabase.from('feedback').select('*').eq('recipient_type', 'secretary').order('created_at', { ascending: false }),
+      supabase.from('student_debt_history').select('*').eq('is_cleared', false).order('created_at', { ascending: false })
     ]);
 
     if (studentsRes.data) setStudents(studentsRes.data);
@@ -142,7 +167,45 @@ export function SecretaryDashboard() {
       setFeedback(enrichedFeedback as FeedbackItem[]);
     }
     
+    // Enrich debt history with student names
+    if (debtHistoryRes.data && studentsRes.data) {
+      const enrichedDebts = debtHistoryRes.data.map(debt => {
+        const student = studentsRes.data?.find(s => s.id === debt.student_id);
+        return {
+          ...debt,
+          studentName: student?.full_name || 'Unknown',
+          studentClass: student?.class || ''
+        };
+      });
+      setDebtHistory(enrichedDebts as DebtHistory[]);
+    }
+    
     setIsLoading(false);
+  };
+  
+  const handleClearDebt = async (debtId: string) => {
+    const { error } = await supabase
+      .from('student_debt_history')
+      .update({ 
+        is_cleared: true, 
+        cleared_by: 'Secretary',
+        cleared_at: new Date().toISOString()
+      })
+      .eq('id', debtId);
+    
+    if (error) {
+      toast({
+        title: "Error",
+        description: "Failed to clear debt",
+        variant: "destructive"
+      });
+    } else {
+      toast({
+        title: "Success",
+        description: "Debt cleared successfully",
+      });
+      fetchData();
+    }
   };
   
   const handleMarkFeedbackReviewed = async (feedbackId: string) => {
@@ -309,6 +372,10 @@ export function SecretaryDashboard() {
           <p className="text-muted-foreground mt-1">Fee and Payment Management</p>
         </div>
         <div className="flex gap-2 flex-wrap">
+          <Button variant="outline" onClick={() => setShowDebtManagement(!showDebtManagement)}>
+            <History className="w-4 h-4 mr-2" />
+            Madeni ya Zamani ({debtHistory.length})
+          </Button>
           <Button variant="outline" onClick={() => navigate('/students')}>
             <GraduationCap className="w-4 h-4 mr-2" />
             Manage Students
@@ -319,6 +386,72 @@ export function SecretaryDashboard() {
           </Button>
         </div>
       </div>
+
+      {/* Historical Debt Management */}
+      {showDebtManagement && debtHistory.length > 0 && (
+        <div className="card-elevated p-6 animate-fade-in border-2 border-warning/30">
+          <div className="flex items-center justify-between mb-4">
+            <div className="flex items-center gap-2">
+              <History className="w-5 h-5 text-warning" />
+              <h3 className="font-display font-semibold text-lg text-card-foreground">
+                Madeni ya Mwaka Uliopita
+              </h3>
+            </div>
+            <Button variant="ghost" size="sm" onClick={() => setShowDebtManagement(false)}>
+              <XCircle className="w-4 h-4" />
+            </Button>
+          </div>
+          
+          <p className="text-sm text-muted-foreground mb-4">
+            Wanafunzi hawa wana madeni kutoka mwaka uliopita. Unaweza kufuta deni baada ya kulipwa.
+          </p>
+          
+          <div className="overflow-x-auto">
+            <table className="w-full">
+              <thead>
+                <tr className="border-b border-border">
+                  <th className="text-left py-3 px-4 text-sm font-medium text-muted-foreground">Mwanafunzi</th>
+                  <th className="text-left py-3 px-4 text-sm font-medium text-muted-foreground">Darasa</th>
+                  <th className="text-left py-3 px-4 text-sm font-medium text-muted-foreground">Mwaka</th>
+                  <th className="text-left py-3 px-4 text-sm font-medium text-muted-foreground">Muhula</th>
+                  <th className="text-right py-3 px-4 text-sm font-medium text-muted-foreground">Deni</th>
+                  <th className="text-right py-3 px-4 text-sm font-medium text-muted-foreground">Kitendo</th>
+                </tr>
+              </thead>
+              <tbody>
+                {debtHistory.map((debt) => (
+                  <tr key={debt.id} className="border-b border-border/50 table-row-hover">
+                    <td className="py-4 px-4 font-medium text-card-foreground">{debt.studentName}</td>
+                    <td className="py-4 px-4 text-card-foreground">{debt.studentClass}</td>
+                    <td className="py-4 px-4 text-card-foreground">{debt.academic_year}</td>
+                    <td className="py-4 px-4 text-card-foreground">{debt.term}</td>
+                    <td className="py-4 px-4 text-right text-destructive font-medium">
+                      TZS {Number(debt.outstanding_balance).toLocaleString()}
+                    </td>
+                    <td className="py-4 px-4 text-right">
+                      <Button
+                        size="sm"
+                        variant="outline"
+                        className="text-success hover:text-success"
+                        onClick={() => handleClearDebt(debt.id)}
+                      >
+                        <Trash2 className="w-3 h-3 mr-1" />
+                        Futa Deni
+                      </Button>
+                    </td>
+                  </tr>
+                ))}
+              </tbody>
+            </table>
+          </div>
+          
+          <div className="mt-4 p-3 bg-warning/10 rounded-lg">
+            <p className="text-sm text-warning font-medium">
+              Jumla ya Madeni ya Zamani: TZS {debtHistory.reduce((sum, d) => sum + Number(d.outstanding_balance), 0).toLocaleString()}
+            </p>
+          </div>
+        </div>
+      )}
 
       {/* Stats Grid */}
       <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-6">
