@@ -53,6 +53,16 @@ interface SubjectRanking {
   totalStudents: number;
 }
 
+interface DebtHistory {
+  id: string;
+  academic_year: string;
+  term: string;
+  original_amount: number;
+  amount_paid: number;
+  outstanding_balance: number;
+  is_cleared: boolean;
+}
+
 export function ParentDashboard() {
   const { user } = useAuth();
   const { academicYears, currentYear, loading: yearsLoading } = useAcademicYears();
@@ -73,6 +83,7 @@ export function ParentDashboard() {
   const [classRank, setClassRank] = useState<number | null>(null);
   const [totalClassStudents, setTotalClassStudents] = useState(0);
   const [subjectRankings, setSubjectRankings] = useState<SubjectRanking[]>([]);
+  const [historicalDebts, setHistoricalDebts] = useState<DebtHistory[]>([]);
   
   // Chart refs for capturing as images
   const subjectChartRef = useRef<HTMLDivElement>(null);
@@ -304,6 +315,22 @@ export function ParentDashboard() {
       
       if (feeStructure) {
         setExpectedFee(Number(feeStructure.total_fee));
+      } else {
+        setExpectedFee(0);
+      }
+      
+      // Fetch historical debts for this student (unpaid balances from previous years/terms)
+      const { data: debtsData } = await supabase
+        .from('student_debt_history')
+        .select('*')
+        .eq('student_id', studentData.id)
+        .eq('is_cleared', false)
+        .order('academic_year', { ascending: false });
+      
+      if (debtsData) {
+        setHistoricalDebts(debtsData);
+      } else {
+        setHistoricalDebts([]);
       }
       
       // Fetch announcements
@@ -786,18 +813,61 @@ export function ParentDashboard() {
         )}
       </div>
 
+      {/* Historical Debts Card */}
+      {historicalDebts.length > 0 && (
+        <div className="card-elevated p-6 animate-fade-in border-l-4 border-l-destructive">
+          <h3 className="font-display font-semibold text-lg mb-6 text-card-foreground flex items-center gap-2">
+            <AlertTriangle className="w-5 h-5 text-destructive" />
+            Outstanding Debts from Previous Periods
+          </h3>
+          <div className="space-y-4">
+            {historicalDebts.map((debt) => (
+              <div key={debt.id} className="p-4 rounded-lg bg-destructive/10 border border-destructive/20">
+                <div className="flex items-center justify-between">
+                  <div>
+                    <p className="font-medium text-card-foreground">
+                      {debt.academic_year} - {debt.term}
+                    </p>
+                    <p className="text-sm text-muted-foreground">
+                      Original: TZS {Number(debt.original_amount).toLocaleString()} | 
+                      Paid: TZS {Number(debt.amount_paid).toLocaleString()}
+                    </p>
+                  </div>
+                  <div className="text-right">
+                    <p className="text-xl font-bold text-destructive">
+                      TZS {Number(debt.outstanding_balance).toLocaleString()}
+                    </p>
+                    <p className="text-sm text-muted-foreground">Outstanding</p>
+                  </div>
+                </div>
+              </div>
+            ))}
+            <div className="p-4 rounded-lg bg-destructive/20 border border-destructive/30">
+              <div className="flex items-center justify-between">
+                <p className="font-semibold text-card-foreground">Total Outstanding Debt</p>
+                <p className="text-2xl font-bold text-destructive">
+                  TZS {historicalDebts.reduce((sum, d) => sum + Number(d.outstanding_balance), 0).toLocaleString()}
+                </p>
+              </div>
+            </div>
+          </div>
+        </div>
+      )}
+
       {/* Fee Status Card */}
       <div className="card-elevated p-6 animate-fade-in">
         <h3 className="font-display font-semibold text-lg mb-6 text-card-foreground flex items-center gap-2">
           <DollarSign className="w-5 h-5 text-primary" />
-          Fee Status - 2024-2025
+          Fee Status - {selectedYear} ({selectedTerm})
         </h3>
-        {expectedFee > 0 ? (
+        {expectedFee > 0 || paidAmount > 0 ? (
           <>
             <div className="grid grid-cols-1 md:grid-cols-3 gap-6 mb-6">
               <div className="p-4 rounded-lg bg-muted/50">
                 <p className="text-sm text-muted-foreground">Expected Fee</p>
-                <p className="text-2xl font-bold text-card-foreground">TZS {expectedFee.toLocaleString()}</p>
+                <p className="text-2xl font-bold text-card-foreground">
+                  {expectedFee > 0 ? `TZS ${expectedFee.toLocaleString()}` : 'Not Set'}
+                </p>
               </div>
               <div className="p-4 rounded-lg bg-success/10">
                 <p className="text-sm text-muted-foreground">Paid Amount</p>
@@ -806,26 +876,28 @@ export function ParentDashboard() {
               <div className={`p-4 rounded-lg ${balance > 0 ? 'bg-destructive/10' : 'bg-success/10'}`}>
                 <p className="text-sm text-muted-foreground">Balance</p>
                 <p className={`text-2xl font-bold ${balance > 0 ? 'text-destructive' : 'text-success'}`}>
-                  {balance > 0 ? `TZS ${balance.toLocaleString()}` : 'No Balance'}
+                  {expectedFee > 0 ? (balance > 0 ? `TZS ${balance.toLocaleString()}` : 'Fully Paid') : 'N/A'}
                 </p>
               </div>
             </div>
             
             {/* Progress Bar */}
-            <div className="mb-4">
-              <div className="flex justify-between text-sm mb-2">
-                <span className="text-muted-foreground">Payment Progress</span>
-                <span className="font-medium text-card-foreground">
-                  {expectedFee > 0 ? Math.round((paidAmount / expectedFee) * 100) : 0}%
-                </span>
+            {expectedFee > 0 && (
+              <div className="mb-4">
+                <div className="flex justify-between text-sm mb-2">
+                  <span className="text-muted-foreground">Payment Progress</span>
+                  <span className="font-medium text-card-foreground">
+                    {Math.round((paidAmount / expectedFee) * 100)}%
+                  </span>
+                </div>
+                <div className="h-3 bg-muted rounded-full overflow-hidden">
+                  <div 
+                    className="h-full bg-gradient-to-r from-primary to-success rounded-full transition-all duration-500"
+                    style={{ width: `${Math.min((paidAmount / expectedFee) * 100, 100)}%` }}
+                  />
+                </div>
               </div>
-              <div className="h-3 bg-muted rounded-full overflow-hidden">
-                <div 
-                  className="h-full bg-gradient-to-r from-primary to-success rounded-full transition-all duration-500"
-                  style={{ width: `${expectedFee > 0 ? Math.min((paidAmount / expectedFee) * 100, 100) : 0}%` }}
-                />
-              </div>
-            </div>
+            )}
 
             {/* Payment History */}
             {feePayments.length > 0 && (
@@ -850,7 +922,9 @@ export function ParentDashboard() {
             )}
           </>
         ) : (
-          <p className="text-muted-foreground text-center py-8">Fee structure not yet configured for this class</p>
+          <p className="text-muted-foreground text-center py-8">
+            No fee information available for {selectedYear} - {selectedTerm}
+          </p>
         )}
       </div>
 
