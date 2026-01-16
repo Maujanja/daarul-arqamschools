@@ -7,9 +7,11 @@ import { Label } from '@/components/ui/label';
 import { Textarea } from '@/components/ui/textarea';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter } from '@/components/ui/dialog';
-import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
+import { Tabs, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import { supabase } from '@/integrations/supabase/client';
 import { useToast } from '@/hooks/use-toast';
+import { useAcademicYears } from '@/hooks/useAcademicYears';
+import { terms } from '@/data/mockData';
 import { 
   Users, 
   DollarSign, 
@@ -39,6 +41,7 @@ interface Student {
   full_name: string;
   class: string;
   roll_number: string;
+  boarding_type?: string;
 }
 
 interface FeePayment {
@@ -54,6 +57,7 @@ interface FeePayment {
   students?: {
     full_name: string;
     class: string;
+    boarding_type?: string;
   };
 }
 
@@ -63,6 +67,7 @@ interface FeeStructure {
   academic_year: string;
   term: string;
   total_fee: number;
+  boarding_type: string;
 }
 
 interface ChatMessage {
@@ -103,6 +108,8 @@ interface DebtHistory {
 export function SecretaryDashboard() {
   const { toast } = useToast();
   const navigate = useNavigate();
+  const { academicYears, currentYear, loading: yearsLoading } = useAcademicYears();
+  
   const [isLoading, setIsLoading] = useState(true);
   const [students, setStudents] = useState<Student[]>([]);
   const [feePayments, setFeePayments] = useState<FeePayment[]>([]);
@@ -110,6 +117,10 @@ export function SecretaryDashboard() {
   const [searchQuery, setSearchQuery] = useState('');
   const [selectedClass, setSelectedClass] = useState<string>('all');
   const [expandedClasses, setExpandedClasses] = useState<Set<string>>(new Set());
+  
+  // Filter state for academic year and term
+  const [selectedYear, setSelectedYear] = useState('');
+  const [selectedTerm, setSelectedTerm] = useState(terms[0] || 'Term 1');
   
   // AI Assistant state
   const [aiQuestion, setAiQuestion] = useState('');
@@ -132,24 +143,42 @@ export function SecretaryDashboard() {
   const [debtHistory, setDebtHistory] = useState<DebtHistory[]>([]);
   const [showDebtManagement, setShowDebtManagement] = useState(false);
 
+  // Set initial year when academic years load
   useEffect(() => {
-    fetchData();
-  }, []);
+    if (currentYear && !selectedYear) {
+      setSelectedYear(currentYear);
+    }
+  }, [currentYear, selectedYear]);
+
+  useEffect(() => {
+    if (selectedYear) {
+      fetchData();
+    }
+  }, [selectedYear, selectedTerm]);
 
   const fetchData = async () => {
+    if (!selectedYear) return;
+    
     setIsLoading(true);
     
     const [studentsRes, paymentsRes, structureRes, feedbackRes, debtHistoryRes] = await Promise.all([
       supabase.from('students').select('*').order('class').order('full_name'),
-      supabase.from('fee_payments').select('*, students(full_name, class)').order('payment_date', { ascending: false }),
-      supabase.from('fee_structure').select('*'),
+      supabase.from('fee_payments')
+        .select('*, students(full_name, class, boarding_type)')
+        .eq('academic_year', selectedYear)
+        .eq('term', selectedTerm)
+        .order('payment_date', { ascending: false }),
+      supabase.from('fee_structure')
+        .select('*')
+        .eq('academic_year', selectedYear)
+        .eq('term', selectedTerm),
       supabase.from('feedback').select('*').eq('recipient_type', 'secretary').order('created_at', { ascending: false }),
       supabase.from('student_debt_history').select('*').eq('is_cleared', false).order('created_at', { ascending: false })
     ]);
 
     if (studentsRes.data) setStudents(studentsRes.data);
     if (paymentsRes.data) setFeePayments(paymentsRes.data as FeePayment[]);
-    if (structureRes.data) setFeeStructure(structureRes.data);
+    if (structureRes.data) setFeeStructure(structureRes.data as FeeStructure[]);
     
     // Enrich feedback with parent and student names
     if (feedbackRes.data) {
@@ -246,8 +275,8 @@ export function SecretaryDashboard() {
       amount: parseFloat(paymentAmount),
       payment_method: paymentMethod,
       receipt_number: receiptNumber || null,
-      academic_year: '2024-2025',
-      term: 'Term 1',
+      academic_year: selectedYear,
+      term: selectedTerm,
       notes: paymentNotes || null,
       recorded_by: 'Secretary'
     });
@@ -279,21 +308,27 @@ export function SecretaryDashboard() {
     setPaymentNotes('');
   };
 
-  const getStudentBalance = (studentId: string, boardingType: string = 'day') => {
-    const student = students.find(s => s.id === studentId);
-    if (!student) return 0;
-    
-    // Get fee based on class and boarding type
+  // Get expected fee for a student based on their class and boarding type
+  const getStudentExpectedFee = (student: Student) => {
+    const boardingType = student.boarding_type || 'day';
     const structure = feeStructure.find(f => 
       f.class === student.class && 
-      (f as any).boarding_type === boardingType
+      f.boarding_type === boardingType
     );
-    const expectedFee = structure?.total_fee || 0;
-    
-    const paidAmount = feePayments
+    return structure?.total_fee || 0;
+  };
+
+  // Get paid amount for a student (already filtered by year/term in fetchData)
+  const getStudentPaidAmount = (studentId: string) => {
+    return feePayments
       .filter(p => p.student_id === studentId)
       .reduce((sum, p) => sum + Number(p.amount), 0);
-    
+  };
+
+  // Get balance for a student
+  const getStudentBalance = (student: Student) => {
+    const expectedFee = getStudentExpectedFee(student);
+    const paidAmount = getStudentPaidAmount(student.id);
     return expectedFee - paidAmount;
   };
 
@@ -338,7 +373,7 @@ export function SecretaryDashboard() {
   };
 
   const totalCollected = feePayments.reduce((sum, p) => sum + Number(p.amount), 0);
-  const studentsWithDebt = students.filter(s => getStudentBalance(s.id) > 0).length;
+  const studentsWithDebt = students.filter(s => getStudentBalance(s) > 0).length;
 
   // Get unique classes
   const classes = [...new Set(students.map(s => s.class))].sort();
@@ -611,7 +646,30 @@ export function SecretaryDashboard() {
       <div className="card-elevated p-6 animate-fade-in">
         <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4 mb-6">
           <h3 className="font-display font-semibold text-lg text-card-foreground">Students by Class</h3>
-          <div className="flex gap-2">
+          <div className="flex gap-2 flex-wrap">
+            {/* Year Filter */}
+            <Select value={selectedYear} onValueChange={setSelectedYear}>
+              <SelectTrigger className="w-32">
+                <SelectValue placeholder="Year" />
+              </SelectTrigger>
+              <SelectContent>
+                {academicYears.map((year) => (
+                  <SelectItem key={year} value={year}>{year}</SelectItem>
+                ))}
+              </SelectContent>
+            </Select>
+            {/* Term Filter */}
+            <Select value={selectedTerm} onValueChange={setSelectedTerm}>
+              <SelectTrigger className="w-28">
+                <SelectValue placeholder="Term" />
+              </SelectTrigger>
+              <SelectContent>
+                {terms.map((term) => (
+                  <SelectItem key={term} value={term}>{term}</SelectItem>
+                ))}
+              </SelectContent>
+            </Select>
+            {/* Class Filter */}
             <Select value={selectedClass} onValueChange={setSelectedClass}>
               <SelectTrigger className="w-40">
                 <SelectValue placeholder="All Classes" />
@@ -641,14 +699,18 @@ export function SecretaryDashboard() {
             {classes.map((className) => {
               const classStudents = studentsByClass[className] || [];
               const isExpanded = expandedClasses.has(className);
-              const classStructure = feeStructure.find(f => f.class === className);
-              const expectedFee = classStructure?.total_fee || 0;
-              const classPaid = classStudents.reduce((sum, s) => {
-                return sum + feePayments
-                  .filter(p => p.student_id === s.id)
-                  .reduce((pSum, p) => pSum + Number(p.amount), 0);
-              }, 0);
-              const classDebt = (expectedFee * classStudents.length) - classPaid;
+              
+              // Calculate total expected and paid for this class considering boarding types
+              const classTotals = classStudents.reduce((acc, student) => {
+                const expectedFee = getStudentExpectedFee(student);
+                const paidAmount = getStudentPaidAmount(student.id);
+                return {
+                  expected: acc.expected + expectedFee,
+                  paid: acc.paid + paidAmount
+                };
+              }, { expected: 0, paid: 0 });
+              
+              const classDebt = classTotals.expected - classTotals.paid;
               
               return (
                 <div key={className} className="border border-border rounded-lg overflow-hidden">
@@ -661,7 +723,7 @@ export function SecretaryDashboard() {
                       <span className="text-sm text-muted-foreground">{classStudents.length} students</span>
                     </div>
                     <div className="flex items-center gap-4">
-                      <span className="text-sm text-success">Paid: TZS {classPaid.toLocaleString()}</span>
+                      <span className="text-sm text-success">Paid: TZS {classTotals.paid.toLocaleString()}</span>
                       {classDebt > 0 && (
                         <span className="text-sm text-destructive">Outstanding: TZS {classDebt.toLocaleString()}</span>
                       )}
@@ -675,6 +737,7 @@ export function SecretaryDashboard() {
                         <thead>
                           <tr className="border-b border-border bg-muted/20">
                             <th className="text-left py-3 px-4 text-sm font-medium text-muted-foreground">Name</th>
+                            <th className="text-left py-3 px-4 text-sm font-medium text-muted-foreground">Type</th>
                             <th className="text-right py-3 px-4 text-sm font-medium text-muted-foreground">Expected</th>
                             <th className="text-right py-3 px-4 text-sm font-medium text-muted-foreground">Paid</th>
                             <th className="text-right py-3 px-4 text-sm font-medium text-muted-foreground">Balance</th>
@@ -683,14 +746,14 @@ export function SecretaryDashboard() {
                         </thead>
                         <tbody>
                           {classStudents.map((student) => {
-                            const paidAmount = feePayments
-                              .filter(p => p.student_id === student.id)
-                              .reduce((sum, p) => sum + Number(p.amount), 0);
+                            const expectedFee = getStudentExpectedFee(student);
+                            const paidAmount = getStudentPaidAmount(student.id);
                             const balance = expectedFee - paidAmount;
                             
                             return (
                               <tr key={student.id} className="border-b border-border/50 table-row-hover">
                                 <td className="py-3 px-4 font-medium text-card-foreground">{student.full_name}</td>
+                                <td className="py-3 px-4 text-card-foreground capitalize">{student.boarding_type || 'day'}</td>
                                 <td className="py-3 px-4 text-right text-card-foreground">TZS {expectedFee.toLocaleString()}</td>
                                 <td className="py-3 px-4 text-right text-success font-medium">TZS {paidAmount.toLocaleString()}</td>
                                 <td className="py-3 px-4 text-right">
@@ -739,11 +802,8 @@ export function SecretaryDashboard() {
               </thead>
               <tbody>
                 {filteredStudents.slice(0, 20).map((student) => {
-                  const structure = feeStructure.find(f => f.class === student.class);
-                  const expectedFee = structure?.total_fee || 0;
-                  const paidAmount = feePayments
-                    .filter(p => p.student_id === student.id)
-                    .reduce((sum, p) => sum + Number(p.amount), 0);
+                  const expectedFee = getStudentExpectedFee(student);
+                  const paidAmount = getStudentPaidAmount(student.id);
                   const balance = expectedFee - paidAmount;
                   
                   return (
