@@ -49,7 +49,7 @@ interface TeacherAssignment {
 
 
 // Academic years now fetched from database via useAcademicYears hook
-const ALL_CLASSES = ['Nursery', 'Primary 1', 'Primary 2', 'Primary 3', 'Primary 4', 'Primary 5', 'Primary 6', 'Primary 7', 'Senior 1', 'Senior 2', 'Senior 3', 'Senior 4'];
+const ALL_CLASSES = ['Primary 1', 'Primary 2', 'Primary 3', 'Primary 4', 'Primary 5', 'Primary 6', 'Primary 7', 'Senior 1', 'Senior 2', 'Senior 3', 'Senior 4'];
 
 // Map short class codes to full class names (for teacher assignments compatibility)
 const mapClassToFullName = (shortClass: string): string => {
@@ -548,7 +548,7 @@ export default function MarksEntryPage() {
               </Select>
             </div>
             <div className="space-y-2">
-              <label className="text-sm font-medium text-muted-foreground">Term</label>
+              <label className="text-sm font-medium text-muted-foreground">Test</label>
               <div className="flex gap-2">
                 <Select value={selectedTerm} onValueChange={setSelectedTerm}>
                   <SelectTrigger className="flex-1">

@@ -33,7 +33,10 @@ import {
   CheckCircle,
   History,
   XCircle,
-  Trash2
+  Trash2,
+  Settings,
+  Percent,
+  Edit
 } from 'lucide-react';
 
 interface Student {
@@ -42,6 +45,8 @@ interface Student {
   class: string;
   roll_number: string;
   boarding_type?: string;
+  custom_fee?: number | null;
+  discount_notes?: string | null;
 }
 
 interface FeePayment {
@@ -142,6 +147,19 @@ export function SecretaryDashboard() {
   // Debt history state
   const [debtHistory, setDebtHistory] = useState<DebtHistory[]>([]);
   const [showDebtManagement, setShowDebtManagement] = useState(false);
+  
+  // Fee structure management
+  const [showFeeStructureDialog, setShowFeeStructureDialog] = useState(false);
+  const [editingFeeStructure, setEditingFeeStructure] = useState<FeeStructure | null>(null);
+  const [newFeeClass, setNewFeeClass] = useState('');
+  const [newBoardingType, setNewBoardingType] = useState('day');
+  const [newTotalFee, setNewTotalFee] = useState('');
+  
+  // Student discount management
+  const [showDiscountDialog, setShowDiscountDialog] = useState(false);
+  const [selectedStudentForDiscount, setSelectedStudentForDiscount] = useState<Student | null>(null);
+  const [discountAmount, setDiscountAmount] = useState('');
+  const [discountNotes, setDiscountNotes] = useState('');
 
   // Set initial year when academic years load
   useEffect(() => {
@@ -162,7 +180,7 @@ export function SecretaryDashboard() {
     setIsLoading(true);
     
     const [studentsRes, paymentsRes, structureRes, feedbackRes, debtHistoryRes] = await Promise.all([
-      supabase.from('students').select('*').order('class').order('full_name'),
+      supabase.from('students').select('id, full_name, class, roll_number, boarding_type, custom_fee, discount_notes').order('class').order('full_name'),
       supabase.from('fee_payments')
         .select('*, students(full_name, class, boarding_type)')
         .eq('academic_year', selectedYear)
@@ -308,14 +326,154 @@ export function SecretaryDashboard() {
     setPaymentNotes('');
   };
 
-  // Get expected fee for a student based on their class and boarding type
+  // Get expected fee for a student based on their class and boarding type OR custom fee
   const getStudentExpectedFee = (student: Student) => {
+    // If student has custom fee (discount), use that instead
+    if (student.custom_fee !== null && student.custom_fee !== undefined) {
+      return Number(student.custom_fee);
+    }
+    
     const boardingType = student.boarding_type || 'day';
     const structure = feeStructure.find(f => 
       f.class === student.class && 
       f.boarding_type === boardingType
     );
     return structure?.total_fee || 0;
+  };
+
+  // Fee structure management functions
+  const handleSaveFeeStructure = async () => {
+    if (!newFeeClass || !newTotalFee) {
+      toast({ title: "Error", description: "Tafadhali jaza darasa na kiasi cha ada", variant: "destructive" });
+      return;
+    }
+
+    setIsSubmitting(true);
+    
+    try {
+      if (editingFeeStructure) {
+        // Update existing
+        const { error } = await supabase
+          .from('fee_structure')
+          .update({ total_fee: parseFloat(newTotalFee) })
+          .eq('id', editingFeeStructure.id);
+        
+        if (error) throw error;
+        toast({ title: "Imefanikiwa", description: "Ada imebadilishwa" });
+      } else {
+        // Insert new
+        const { error } = await supabase
+          .from('fee_structure')
+          .insert({
+            class: newFeeClass,
+            boarding_type: newBoardingType,
+            total_fee: parseFloat(newTotalFee),
+            tuition_fee: parseFloat(newTotalFee),
+            academic_year: selectedYear,
+            term: selectedTerm
+          });
+        
+        if (error) throw error;
+        toast({ title: "Imefanikiwa", description: "Ada imeongezwa" });
+      }
+      
+      setShowFeeStructureDialog(false);
+      setEditingFeeStructure(null);
+      setNewFeeClass('');
+      setNewBoardingType('day');
+      setNewTotalFee('');
+      fetchData();
+    } catch (error: any) {
+      toast({ title: "Error", description: error.message, variant: "destructive" });
+    } finally {
+      setIsSubmitting(false);
+    }
+  };
+
+  const handleDeleteFeeStructure = async (id: string) => {
+    const { error } = await supabase.from('fee_structure').delete().eq('id', id);
+    if (error) {
+      toast({ title: "Error", description: "Imeshindwa kufuta ada", variant: "destructive" });
+    } else {
+      toast({ title: "Imefanikiwa", description: "Ada imefutwa" });
+      fetchData();
+    }
+  };
+
+  const openEditFeeStructure = (fs: FeeStructure) => {
+    setEditingFeeStructure(fs);
+    setNewFeeClass(fs.class);
+    setNewBoardingType(fs.boarding_type);
+    setNewTotalFee(fs.total_fee.toString());
+    setShowFeeStructureDialog(true);
+  };
+
+  // Student discount functions
+  const openDiscountDialog = (student: Student) => {
+    setSelectedStudentForDiscount(student);
+    setDiscountAmount(student.custom_fee?.toString() || '');
+    setDiscountNotes(student.discount_notes || '');
+    setShowDiscountDialog(true);
+  };
+
+  const handleSaveDiscount = async () => {
+    if (!selectedStudentForDiscount) return;
+
+    setIsSubmitting(true);
+    
+    try {
+      const customFee = discountAmount ? parseFloat(discountAmount) : null;
+      
+      const { error } = await supabase
+        .from('students')
+        .update({ 
+          custom_fee: customFee,
+          discount_notes: discountNotes || null
+        })
+        .eq('id', selectedStudentForDiscount.id);
+      
+      if (error) throw error;
+      
+      toast({ 
+        title: "Imefanikiwa", 
+        description: customFee ? `Ada maalumu imewekwa: TZS ${customFee.toLocaleString()}` : "Discount imeondolewa" 
+      });
+      
+      setShowDiscountDialog(false);
+      setSelectedStudentForDiscount(null);
+      setDiscountAmount('');
+      setDiscountNotes('');
+      fetchData();
+    } catch (error: any) {
+      toast({ title: "Error", description: error.message, variant: "destructive" });
+    } finally {
+      setIsSubmitting(false);
+    }
+  };
+
+  const handleRemoveDiscount = async () => {
+    if (!selectedStudentForDiscount) return;
+    
+    setIsSubmitting(true);
+    
+    try {
+      const { error } = await supabase
+        .from('students')
+        .update({ custom_fee: null, discount_notes: null })
+        .eq('id', selectedStudentForDiscount.id);
+      
+      if (error) throw error;
+      
+      toast({ title: "Imefanikiwa", description: "Discount imeondolewa" });
+      
+      setShowDiscountDialog(false);
+      setSelectedStudentForDiscount(null);
+      fetchData();
+    } catch (error: any) {
+      toast({ title: "Error", description: error.message, variant: "destructive" });
+    } finally {
+      setIsSubmitting(false);
+    }
   };
 
   // Get paid amount for a student (already filtered by year/term in fetchData)
@@ -407,6 +565,10 @@ export function SecretaryDashboard() {
           <p className="text-muted-foreground mt-1">Fee and Payment Management</p>
         </div>
         <div className="flex gap-2 flex-wrap">
+          <Button variant="outline" onClick={() => setShowFeeStructureDialog(true)}>
+            <Settings className="w-4 h-4 mr-2" />
+            Simamia Ada
+          </Button>
           <Button variant="outline" onClick={() => setShowDebtManagement(!showDebtManagement)}>
             <History className="w-4 h-4 mr-2" />
             Madeni ya Zamani ({debtHistory.length})
@@ -658,10 +820,10 @@ export function SecretaryDashboard() {
                 ))}
               </SelectContent>
             </Select>
-            {/* Term Filter */}
+            {/* Test Filter */}
             <Select value={selectedTerm} onValueChange={setSelectedTerm}>
               <SelectTrigger className="w-28">
-                <SelectValue placeholder="Term" />
+                <SelectValue placeholder="Test" />
               </SelectTrigger>
               <SelectContent>
                 {terms.map((term) => (
@@ -749,10 +911,21 @@ export function SecretaryDashboard() {
                             const expectedFee = getStudentExpectedFee(student);
                             const paidAmount = getStudentPaidAmount(student.id);
                             const balance = expectedFee - paidAmount;
+                            const hasDiscount = student.custom_fee !== null && student.custom_fee !== undefined;
                             
                             return (
                               <tr key={student.id} className="border-b border-border/50 table-row-hover">
-                                <td className="py-3 px-4 font-medium text-card-foreground">{student.full_name}</td>
+                                <td className="py-3 px-4 font-medium text-card-foreground">
+                                  <div className="flex items-center gap-2">
+                                    {student.full_name}
+                                    {hasDiscount && (
+                                      <span className="inline-flex items-center gap-1 px-1.5 py-0.5 rounded text-xs font-medium bg-success/10 text-success">
+                                        <Percent className="w-3 h-3" />
+                                        Discount
+                                      </span>
+                                    )}
+                                  </div>
+                                </td>
                                 <td className="py-3 px-4 text-card-foreground capitalize">{student.boarding_type || 'day'}</td>
                                 <td className="py-3 px-4 text-right text-card-foreground">TZS {expectedFee.toLocaleString()}</td>
                                 <td className="py-3 px-4 text-right text-success font-medium">TZS {paidAmount.toLocaleString()}</td>
@@ -764,16 +937,25 @@ export function SecretaryDashboard() {
                                   )}
                                 </td>
                                 <td className="py-3 px-4 text-right">
-                                  <Button
-                                    size="sm"
-                                    onClick={() => {
-                                      setSelectedStudentId(student.id);
-                                      setShowAddPaymentDialog(true);
-                                    }}
-                                  >
-                                    <Receipt className="w-3 h-3 mr-1" />
-                                    Pay
-                                  </Button>
+                                  <div className="flex gap-1 justify-end">
+                                    <Button
+                                      size="sm"
+                                      variant="outline"
+                                      onClick={() => openDiscountDialog(student)}
+                                    >
+                                      <Percent className="w-3 h-3" />
+                                    </Button>
+                                    <Button
+                                      size="sm"
+                                      onClick={() => {
+                                        setSelectedStudentId(student.id);
+                                        setShowAddPaymentDialog(true);
+                                      }}
+                                    >
+                                      <Receipt className="w-3 h-3 mr-1" />
+                                      Pay
+                                    </Button>
+                                  </div>
                                 </td>
                               </tr>
                             );
@@ -954,6 +1136,183 @@ export function SecretaryDashboard() {
               ) : (
                 'Save Payment'
               )}
+            </Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
+
+      {/* Fee Structure Management Dialog */}
+      <Dialog open={showFeeStructureDialog} onOpenChange={setShowFeeStructureDialog}>
+        <DialogContent className="max-w-3xl max-h-[80vh] overflow-y-auto">
+          <DialogHeader>
+            <DialogTitle>Simamia Ada - {selectedYear} / {selectedTerm}</DialogTitle>
+          </DialogHeader>
+          <div className="space-y-6 py-4">
+            {/* Current Fee Structure */}
+            <div>
+              <h4 className="font-medium mb-3">Ada Zilizopo</h4>
+              {feeStructure.length > 0 ? (
+                <div className="overflow-x-auto">
+                  <table className="w-full text-sm">
+                    <thead>
+                      <tr className="border-b">
+                        <th className="text-left py-2 px-3">Darasa</th>
+                        <th className="text-left py-2 px-3">Aina</th>
+                        <th className="text-right py-2 px-3">Ada (TZS)</th>
+                        <th className="text-right py-2 px-3">Kitendo</th>
+                      </tr>
+                    </thead>
+                    <tbody>
+                      {feeStructure.map((fs) => (
+                        <tr key={fs.id} className="border-b">
+                          <td className="py-2 px-3">{fs.class}</td>
+                          <td className="py-2 px-3 capitalize">{fs.boarding_type}</td>
+                          <td className="py-2 px-3 text-right font-medium">{Number(fs.total_fee).toLocaleString()}</td>
+                          <td className="py-2 px-3 text-right">
+                            <div className="flex gap-1 justify-end">
+                              <Button size="sm" variant="outline" onClick={() => openEditFeeStructure(fs)}>
+                                <Edit className="w-3 h-3" />
+                              </Button>
+                              <Button size="sm" variant="outline" className="text-destructive" onClick={() => handleDeleteFeeStructure(fs.id)}>
+                                <Trash2 className="w-3 h-3" />
+                              </Button>
+                            </div>
+                          </td>
+                        </tr>
+                      ))}
+                    </tbody>
+                  </table>
+                </div>
+              ) : (
+                <p className="text-sm text-muted-foreground">Hakuna ada zilizowekwa kwa mwaka/test hii.</p>
+              )}
+            </div>
+
+            {/* Add/Edit Fee Structure Form */}
+            <div className="border-t pt-4">
+              <h4 className="font-medium mb-3">{editingFeeStructure ? 'Badilisha Ada' : 'Ongeza Ada Mpya'}</h4>
+              <div className="grid grid-cols-1 sm:grid-cols-3 gap-4">
+                <div className="space-y-2">
+                  <Label>Darasa</Label>
+                  <Select value={newFeeClass} onValueChange={setNewFeeClass} disabled={!!editingFeeStructure}>
+                    <SelectTrigger>
+                      <SelectValue placeholder="Chagua darasa" />
+                    </SelectTrigger>
+                    <SelectContent>
+                      {['Primary 1', 'Primary 2', 'Primary 3', 'Primary 4', 'Primary 5', 'Primary 6', 'Primary 7', 'Senior 1', 'Senior 2', 'Senior 3', 'Senior 4'].map((cls) => (
+                        <SelectItem key={cls} value={cls}>{cls}</SelectItem>
+                      ))}
+                    </SelectContent>
+                  </Select>
+                </div>
+                <div className="space-y-2">
+                  <Label>Aina</Label>
+                  <Select value={newBoardingType} onValueChange={setNewBoardingType} disabled={!!editingFeeStructure}>
+                    <SelectTrigger>
+                      <SelectValue />
+                    </SelectTrigger>
+                    <SelectContent>
+                      <SelectItem value="day">Day</SelectItem>
+                      <SelectItem value="boarding">Boarding</SelectItem>
+                    </SelectContent>
+                  </Select>
+                </div>
+                <div className="space-y-2">
+                  <Label>Kiasi (TZS)</Label>
+                  <Input
+                    type="number"
+                    placeholder="e.g. 1960000"
+                    value={newTotalFee}
+                    onChange={(e) => setNewTotalFee(e.target.value)}
+                  />
+                </div>
+              </div>
+              <div className="flex gap-2 mt-4">
+                {editingFeeStructure && (
+                  <Button variant="outline" onClick={() => { setEditingFeeStructure(null); setNewFeeClass(''); setNewBoardingType('day'); setNewTotalFee(''); }}>
+                    Cancel Edit
+                  </Button>
+                )}
+                <Button onClick={handleSaveFeeStructure} disabled={isSubmitting}>
+                  {isSubmitting ? <Loader2 className="w-4 h-4 animate-spin mr-2" /> : null}
+                  {editingFeeStructure ? 'Badilisha' : 'Ongeza'}
+                </Button>
+              </div>
+            </div>
+          </div>
+          <DialogFooter>
+            <Button variant="outline" onClick={() => { setShowFeeStructureDialog(false); setEditingFeeStructure(null); }}>
+              Funga
+            </Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
+
+      {/* Student Discount Dialog */}
+      <Dialog open={showDiscountDialog} onOpenChange={setShowDiscountDialog}>
+        <DialogContent>
+          <DialogHeader>
+            <DialogTitle>
+              <div className="flex items-center gap-2">
+                <Percent className="w-5 h-5 text-success" />
+                Ada Maalumu / Discount
+              </div>
+            </DialogTitle>
+          </DialogHeader>
+          {selectedStudentForDiscount && (
+            <div className="space-y-4 py-4">
+              <div className="p-3 bg-muted rounded-lg">
+                <p className="font-medium">{selectedStudentForDiscount.full_name}</p>
+                <p className="text-sm text-muted-foreground">{selectedStudentForDiscount.class} • {selectedStudentForDiscount.boarding_type || 'Day'}</p>
+              </div>
+              
+              <div className="space-y-2">
+                <Label>Kiasi cha Ada Maalumu (TZS)</Label>
+                <Input
+                  type="number"
+                  placeholder="Weka kiasi cha ada (e.g. 1500000)"
+                  value={discountAmount}
+                  onChange={(e) => setDiscountAmount(e.target.value)}
+                />
+                <p className="text-xs text-muted-foreground">
+                  Kama mwanafunzi ana discount, weka kiasi kamili atakacholipa (e.g. ikiwa ada ni 2M na discount 500K, weka 1500000).
+                  Kiasi hiki kitakuwa ada yake ya mwaka - akikilipia, mfumo utaonyesha amemaliza.
+                </p>
+              </div>
+              
+              <div className="space-y-2">
+                <Label>Sababu ya Discount (Optional)</Label>
+                <Input
+                  placeholder="e.g. Mtoto wa mfanyakazi, Scholarship"
+                  value={discountNotes}
+                  onChange={(e) => setDiscountNotes(e.target.value)}
+                />
+              </div>
+
+              {selectedStudentForDiscount.custom_fee !== null && selectedStudentForDiscount.custom_fee !== undefined && (
+                <div className="p-3 bg-success/10 rounded-lg">
+                  <p className="text-sm text-success font-medium">
+                    Ada ya sasa: TZS {Number(selectedStudentForDiscount.custom_fee).toLocaleString()}
+                  </p>
+                  {selectedStudentForDiscount.discount_notes && (
+                    <p className="text-xs text-muted-foreground mt-1">{selectedStudentForDiscount.discount_notes}</p>
+                  )}
+                </div>
+              )}
+            </div>
+          )}
+          <DialogFooter className="flex-col sm:flex-row gap-2">
+            {selectedStudentForDiscount?.custom_fee !== null && selectedStudentForDiscount?.custom_fee !== undefined && (
+              <Button variant="outline" className="text-destructive" onClick={handleRemoveDiscount} disabled={isSubmitting}>
+                Ondoa Discount
+              </Button>
+            )}
+            <Button variant="outline" onClick={() => setShowDiscountDialog(false)}>
+              Cancel
+            </Button>
+            <Button onClick={handleSaveDiscount} disabled={isSubmitting}>
+              {isSubmitting ? <Loader2 className="w-4 h-4 animate-spin mr-2" /> : null}
+              Hifadhi
             </Button>
           </DialogFooter>
         </DialogContent>

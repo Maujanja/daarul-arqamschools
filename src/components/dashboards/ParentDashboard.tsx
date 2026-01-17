@@ -667,7 +667,7 @@ export function ParentDashboard() {
         <h3 className="font-display font-semibold text-lg mb-4 text-card-foreground">Filter Results</h3>
         <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
           <div className="space-y-2">
-            <label className="text-sm font-medium text-muted-foreground">Term</label>
+            <label className="text-sm font-medium text-muted-foreground">Test</label>
             <Select value={selectedTerm} onValueChange={setSelectedTerm}>
               <SelectTrigger>
                 <SelectValue placeholder="Select term" />

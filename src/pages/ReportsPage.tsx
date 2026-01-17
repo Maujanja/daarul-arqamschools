@@ -337,7 +337,7 @@ export default function ReportsPage() {
               </Select>
             </div>
             <div className="space-y-2">
-              <label className="text-sm font-medium text-muted-foreground">Term</label>
+              <label className="text-sm font-medium text-muted-foreground">Test</label>
               <Select value={selectedTerm} onValueChange={setSelectedTerm}>
                 <SelectTrigger>
                   <SelectValue placeholder="Select term" />
