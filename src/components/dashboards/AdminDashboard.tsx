@@ -8,8 +8,9 @@ import { Users, GraduationCap, BookOpen, MessageSquare, FileText, DollarSign, Cl
 import { Button } from '@/components/ui/button';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
-import { academicYears, classes } from '@/data/mockData';
+import { classes } from '@/data/mockData';
 import { isSubjectForClass, getSubjectsForClass } from '@/utils/classSubjects';
+import { useAcademicYears } from '@/hooks/useAcademicYears';
 interface FeedbackItem {
   id: string;
   parent_id: string;
@@ -36,8 +37,16 @@ interface FeePayment {
 
 export function AdminDashboard() {
   const navigate = useNavigate();
-  const [selectedYear, setSelectedYear] = useState(academicYears[0]);
+  const { academicYears, currentYear, loading: yearsLoading } = useAcademicYears();
+  const [selectedYear, setSelectedYear] = useState('');
   const [selectedClass, setSelectedClass] = useState(classes[0]);
+
+  // Set initial year when academic years load
+  useEffect(() => {
+    if (currentYear && !selectedYear) {
+      setSelectedYear(currentYear);
+    }
+  }, [currentYear, selectedYear]);
 
   // Fetch all subjects
   const { data: allSubjects = [] } = useQuery({

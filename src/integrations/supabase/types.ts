@@ -435,6 +435,8 @@ export type Database = {
           boarding_type: string | null
           class: string
           created_at: string
+          custom_fee: number | null
+          discount_notes: string | null
           full_name: string
           id: string
           parent_id: string | null
@@ -446,6 +448,8 @@ export type Database = {
           boarding_type?: string | null
           class: string
           created_at?: string
+          custom_fee?: number | null
+          discount_notes?: string | null
           full_name: string
           id?: string
           parent_id?: string | null
@@ -457,6 +461,8 @@ export type Database = {
           boarding_type?: string | null
           class?: string
           created_at?: string
+          custom_fee?: number | null
+          discount_notes?: string | null
           full_name?: string
           id?: string
           parent_id?: string | null
