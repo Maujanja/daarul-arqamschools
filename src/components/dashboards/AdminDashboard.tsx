@@ -294,15 +294,21 @@ export function AdminDashboard() {
     },
   });
 
-  // Fetch fee payments summary
+  // Fetch fee payments summary - filtered by selected year
   const { data: feePayments = [] } = useQuery({
-    queryKey: ['admin-fee-payments'],
+    queryKey: ['admin-fee-payments', selectedYear],
     queryFn: async () => {
-      const { data: paymentsData } = await supabase
+      let query = supabase
         .from('fee_payments')
         .select('*')
         .order('payment_date', { ascending: false })
         .limit(20);
+      
+      if (selectedYear) {
+        query = query.eq('academic_year', selectedYear);
+      }
+      
+      const { data: paymentsData } = await query;
 
       const { data: studentsData } = await supabase.from('students').select('id, full_name, class');
 
@@ -317,11 +323,15 @@ export function AdminDashboard() {
     },
   });
 
-  // Calculate fee totals
+  // Calculate fee totals - filtered by selected year
   const { data: feeTotals } = useQuery({
-    queryKey: ['admin-fee-totals'],
+    queryKey: ['admin-fee-totals', selectedYear],
     queryFn: async () => {
-      const { data: paymentsData } = await supabase.from('fee_payments').select('amount');
+      let query = supabase.from('fee_payments').select('amount');
+      if (selectedYear) {
+        query = query.eq('academic_year', selectedYear);
+      }
+      const { data: paymentsData } = await query;
       const totalCollected = (paymentsData || []).reduce((sum, p) => sum + Number(p.amount), 0);
       return { totalCollected };
     },
@@ -439,7 +449,7 @@ export function AdminDashboard() {
         
         <div className="grid grid-cols-1 md:grid-cols-3 gap-4 mb-6">
           <div className="p-4 rounded-lg bg-success/10">
-            <p className="text-sm text-muted-foreground">Total Collected</p>
+            <p className="text-sm text-muted-foreground">Total Collected ({selectedYear})</p>
             <p className="text-2xl font-bold text-success">TZS {(feeTotals?.totalCollected || 0).toLocaleString()}</p>
           </div>
           <div className="p-4 rounded-lg bg-primary/10">
