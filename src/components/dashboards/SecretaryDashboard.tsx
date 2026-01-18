@@ -567,11 +567,11 @@ export function SecretaryDashboard() {
         <div className="flex gap-2 flex-wrap">
           <Button variant="outline" onClick={() => setShowFeeStructureDialog(true)}>
             <Settings className="w-4 h-4 mr-2" />
-            Simamia Ada
+            Manage Fees
           </Button>
           <Button variant="outline" onClick={() => setShowDebtManagement(!showDebtManagement)}>
             <History className="w-4 h-4 mr-2" />
-            Madeni ya Zamani ({debtHistory.length})
+            Previous Debts ({debtHistory.length})
           </Button>
           <Button variant="outline" onClick={() => navigate('/students')}>
             <GraduationCap className="w-4 h-4 mr-2" />
@@ -600,7 +600,7 @@ export function SecretaryDashboard() {
           </div>
           
           <p className="text-sm text-muted-foreground mb-4">
-            These students have outstanding debts from previous years/tests. You can clear the debt once paid.
+            These students have outstanding debts from previous years/tests. Click "Clear Debt" when paid.
           </p>
           
           <div className="overflow-x-auto">

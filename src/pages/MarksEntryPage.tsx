@@ -503,11 +503,11 @@ export default function MarksEntryPage() {
           {isTeacher && students.length === 0 && selectedClass && selectedSubject && !isLoading && (
             <div className="p-4 bg-accent/10 text-accent-foreground rounded-lg mb-4 flex items-center justify-between">
               <div>
-                <p className="font-medium">Hujachagua wanafunzi bado</p>
-                <p className="text-sm text-muted-foreground">Nenda "Wanafunzi Wangu" kuchagua wanafunzi utakaowaingiza maksi</p>
+                <p className="font-medium">No students selected yet</p>
+                <p className="text-sm text-muted-foreground">Go to "My Students" to select students for marks entry</p>
               </div>
               <Button variant="outline" size="sm" onClick={() => window.location.href = '/my-class-students'}>
-                Chagua Wanafunzi
+                Select Students
               </Button>
             </div>
           )}

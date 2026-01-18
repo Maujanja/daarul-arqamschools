@@ -7,6 +7,7 @@ import { Checkbox } from '@/components/ui/checkbox';
 import { supabase } from '@/integrations/supabase/client';
 import { useAuth } from '@/contexts/AuthContext';
 import { useToast } from '@/hooks/use-toast';
+import { useAcademicYears } from '@/hooks/useAcademicYears';
 import { Loader2, Search, Save, Users, UserPlus, CheckCircle } from 'lucide-react';
 
 interface Student {
@@ -34,6 +35,7 @@ interface TeacherClassStudent {
 export default function MyClassStudentsPage() {
   const { user } = useAuth();
   const { toast } = useToast();
+  const { currentYear } = useAcademicYears();
   const [isLoading, setIsLoading] = useState(true);
   const [isSaving, setIsSaving] = useState(false);
   const [searchQuery, setSearchQuery] = useState('');
@@ -201,7 +203,7 @@ export default function MyClassStudentsPage() {
           student_id: studentId,
           class: selectedClass,
           subject_id: selectedSubject,
-          academic_year: '2024-2025',
+          academic_year: currentYear || '2024-2025',
         }));
         
         const { error } = await supabase
@@ -212,8 +214,8 @@ export default function MyClassStudentsPage() {
       }
       
       toast({
-        title: "Wanafunzi Wamehifadhiwa!",
-        description: `Umechagua wanafunzi ${selectedStudentIds.size} kwa ${selectedClass} - ${teacherSubjects.find(s => s.id === selectedSubject)?.name}`,
+        title: "Students Saved!",
+        description: `You have selected ${selectedStudentIds.size} students for ${selectedClass} - ${teacherSubjects.find(s => s.id === selectedSubject)?.name}`,
       });
       
       // Refresh existing selections
@@ -229,8 +231,8 @@ export default function MyClassStudentsPage() {
     } catch (error: any) {
       console.error('Error saving students:', error);
       toast({
-        title: "Kosa",
-        description: error.message || "Imeshindwa kuhifadhi. Jaribu tena.",
+        title: "Error",
+        description: error.message || "Failed to save. Please try again.",
         variant: "destructive",
       });
     } finally {

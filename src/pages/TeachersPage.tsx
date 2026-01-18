@@ -103,7 +103,7 @@ export default function TeachersPage() {
 
       if (teachersRes.error) {
         console.error('TeachersPage: Teachers fetch error:', teachersRes.error);
-        setError(`Hitilafu: ${teachersRes.error.message}`);
+        setError(`Error: ${teachersRes.error.message}`);
         return;
       }
       if (subjectsRes.error) {
@@ -119,7 +119,7 @@ export default function TeachersPage() {
       setAssignments(assignmentsRes.data || []);
     } catch (err: any) {
       console.error('TeachersPage: Error fetching data:', err);
-      setError(`Hitilafu: ${err.message || 'Unknown error'}`);
+      setError(`Error: ${err.message || 'Unknown error'}`);
       toast.error('Failed to fetch data');
     } finally {
       console.log('TeachersPage: Data fetch complete, setting loading to false');
@@ -360,7 +360,7 @@ export default function TeachersPage() {
       <DashboardLayout>
         <div className="flex flex-col items-center justify-center min-h-[400px] space-y-4">
           <Loader2 className="w-8 h-8 animate-spin text-primary" />
-          <p className="text-muted-foreground">Inapakia taarifa za walimu...</p>
+          <p className="text-muted-foreground">Loading teachers data...</p>
         </div>
       </DashboardLayout>
     );
@@ -371,10 +371,10 @@ export default function TeachersPage() {
       <DashboardLayout>
         <div className="flex flex-col items-center justify-center min-h-[400px] space-y-4">
           <Users className="w-16 h-16 text-destructive" />
-          <h2 className="text-xl font-semibold text-foreground">Hitilafu Imetokea</h2>
+          <h2 className="text-xl font-semibold text-foreground">An Error Occurred</h2>
           <p className="text-muted-foreground text-center max-w-md">{error}</p>
           <Button onClick={fetchData} variant="outline">
-            Jaribu Tena
+            Try Again
           </Button>
         </div>
       </DashboardLayout>
