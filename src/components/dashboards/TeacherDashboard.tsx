@@ -448,16 +448,16 @@ export function TeacherDashboard() {
         />
       )}
 
-      {/* Performance Trend Charts per Class */}
+      {/* General Performance Trend Charts per Class */}
       {classPerformanceData.length > 0 && (
         <div className="space-y-4">
-          <h2 className="text-xl font-semibold">Performance Trend by Series</h2>
+          <h2 className="text-xl font-semibold">General Performance Trend</h2>
           <div className="grid grid-cols-1 lg:grid-cols-2 gap-4">
             {classPerformanceData.map((classData) => (
               <SeriesPerformanceChart
                 key={classData.className}
                 data={classData.data}
-                title={`${classData.className} - Performance Trend`}
+                title={`${classData.className} - General Performance Trend`}
                 seriesKeys={classData.seriesKeys}
                 colors={['hsl(var(--primary))']}
                 pdfFileName={`${classData.className}_performance_trend_${selectedYear}`}

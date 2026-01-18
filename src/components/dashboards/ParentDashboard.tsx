@@ -1012,14 +1012,14 @@ export function ParentDashboard() {
       </div>
 
 
-      {/* Performance Trend by Series - Average per series */}
+      {/* General Performance Trend Chart */}
       {Object.keys(studentAveragePerSeries).length > 0 && (
         <SeriesPerformanceChart
           data={Object.entries(studentAveragePerSeries).map(([series, avg]) => ({
             name: series,
             Average: Number(avg.toFixed(1))
           }))}
-          title="Performance Trend by Series"
+          title="General Performance Trend"
           seriesKeys={['Average']}
           pdfFileName={`${childName}_series_performance.pdf`}
         />

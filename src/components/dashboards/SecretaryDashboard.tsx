@@ -344,7 +344,7 @@ export function SecretaryDashboard() {
   // Fee structure management functions
   const handleSaveFeeStructure = async () => {
     if (!newFeeClass || !newTotalFee) {
-      toast({ title: "Error", description: "Tafadhali jaza darasa na kiasi cha ada", variant: "destructive" });
+      toast({ title: "Error", description: "Please fill in class and fee amount", variant: "destructive" });
       return;
     }
 
@@ -359,7 +359,7 @@ export function SecretaryDashboard() {
           .eq('id', editingFeeStructure.id);
         
         if (error) throw error;
-        toast({ title: "Imefanikiwa", description: "Ada imebadilishwa" });
+        toast({ title: "Success", description: "Fee structure updated" });
       } else {
         // Insert new
         const { error } = await supabase
@@ -374,7 +374,7 @@ export function SecretaryDashboard() {
           });
         
         if (error) throw error;
-        toast({ title: "Imefanikiwa", description: "Ada imeongezwa" });
+        toast({ title: "Success", description: "Fee structure added" });
       }
       
       setShowFeeStructureDialog(false);
@@ -393,9 +393,9 @@ export function SecretaryDashboard() {
   const handleDeleteFeeStructure = async (id: string) => {
     const { error } = await supabase.from('fee_structure').delete().eq('id', id);
     if (error) {
-      toast({ title: "Error", description: "Imeshindwa kufuta ada", variant: "destructive" });
+      toast({ title: "Error", description: "Failed to delete fee structure", variant: "destructive" });
     } else {
-      toast({ title: "Imefanikiwa", description: "Ada imefutwa" });
+      toast({ title: "Success", description: "Fee structure deleted" });
       fetchData();
     }
   };
@@ -435,8 +435,8 @@ export function SecretaryDashboard() {
       if (error) throw error;
       
       toast({ 
-        title: "Imefanikiwa", 
-        description: customFee ? `Ada maalumu imewekwa: TZS ${customFee.toLocaleString()}` : "Discount imeondolewa" 
+        title: "Success", 
+        description: customFee ? `Custom fee set: TZS ${customFee.toLocaleString()}` : "Discount removed" 
       });
       
       setShowDiscountDialog(false);
@@ -464,7 +464,7 @@ export function SecretaryDashboard() {
       
       if (error) throw error;
       
-      toast({ title: "Imefanikiwa", description: "Discount imeondolewa" });
+      toast({ title: "Success", description: "Discount removed" });
       
       setShowDiscountDialog(false);
       setSelectedStudentForDiscount(null);
@@ -591,7 +591,7 @@ export function SecretaryDashboard() {
             <div className="flex items-center gap-2">
               <History className="w-5 h-5 text-warning" />
               <h3 className="font-display font-semibold text-lg text-card-foreground">
-                Madeni ya Mwaka Uliopita
+                Previous Outstanding Debts
               </h3>
             </div>
             <Button variant="ghost" size="sm" onClick={() => setShowDebtManagement(false)}>
@@ -600,19 +600,19 @@ export function SecretaryDashboard() {
           </div>
           
           <p className="text-sm text-muted-foreground mb-4">
-            Wanafunzi hawa wana madeni kutoka mwaka uliopita. Unaweza kufuta deni baada ya kulipwa.
+            These students have outstanding debts from previous years/tests. You can clear the debt once paid.
           </p>
           
           <div className="overflow-x-auto">
             <table className="w-full">
               <thead>
                 <tr className="border-b border-border">
-                  <th className="text-left py-3 px-4 text-sm font-medium text-muted-foreground">Mwanafunzi</th>
-                  <th className="text-left py-3 px-4 text-sm font-medium text-muted-foreground">Darasa</th>
-                  <th className="text-left py-3 px-4 text-sm font-medium text-muted-foreground">Mwaka</th>
-                  <th className="text-left py-3 px-4 text-sm font-medium text-muted-foreground">Muhula</th>
-                  <th className="text-right py-3 px-4 text-sm font-medium text-muted-foreground">Deni</th>
-                  <th className="text-right py-3 px-4 text-sm font-medium text-muted-foreground">Kitendo</th>
+                  <th className="text-left py-3 px-4 text-sm font-medium text-muted-foreground">Student</th>
+                  <th className="text-left py-3 px-4 text-sm font-medium text-muted-foreground">Class</th>
+                  <th className="text-left py-3 px-4 text-sm font-medium text-muted-foreground">Year</th>
+                  <th className="text-left py-3 px-4 text-sm font-medium text-muted-foreground">Test</th>
+                  <th className="text-right py-3 px-4 text-sm font-medium text-muted-foreground">Debt</th>
+                  <th className="text-right py-3 px-4 text-sm font-medium text-muted-foreground">Action</th>
                 </tr>
               </thead>
               <tbody>
@@ -633,7 +633,7 @@ export function SecretaryDashboard() {
                         onClick={() => handleClearDebt(debt.id)}
                       >
                         <Trash2 className="w-3 h-3 mr-1" />
-                        Futa Deni
+                        Clear Debt
                       </Button>
                     </td>
                   </tr>
@@ -644,7 +644,7 @@ export function SecretaryDashboard() {
           
           <div className="mt-4 p-3 bg-warning/10 rounded-lg">
             <p className="text-sm text-warning font-medium">
-              Jumla ya Madeni ya Zamani: TZS {debtHistory.reduce((sum, d) => sum + Number(d.outstanding_balance), 0).toLocaleString()}
+              Total Outstanding Debts: TZS {debtHistory.reduce((sum, d) => sum + Number(d.outstanding_balance), 0).toLocaleString()}
             </p>
           </div>
         </div>
@@ -662,7 +662,7 @@ export function SecretaryDashboard() {
         <StatCard
           title="Total Collected"
           value={`TZS ${totalCollected.toLocaleString()}`}
-          subtitle="This year"
+          subtitle={`${selectedYear}`}
           icon={DollarSign}
           variant="success"
         />
@@ -1145,21 +1145,21 @@ export function SecretaryDashboard() {
       <Dialog open={showFeeStructureDialog} onOpenChange={setShowFeeStructureDialog}>
         <DialogContent className="max-w-3xl max-h-[80vh] overflow-y-auto">
           <DialogHeader>
-            <DialogTitle>Simamia Ada - {selectedYear} / {selectedTerm}</DialogTitle>
+            <DialogTitle>Manage Fees - {selectedYear} / {selectedTerm}</DialogTitle>
           </DialogHeader>
           <div className="space-y-6 py-4">
             {/* Current Fee Structure */}
             <div>
-              <h4 className="font-medium mb-3">Ada Zilizopo</h4>
+              <h4 className="font-medium mb-3">Current Fee Structure</h4>
               {feeStructure.length > 0 ? (
                 <div className="overflow-x-auto">
                   <table className="w-full text-sm">
                     <thead>
                       <tr className="border-b">
-                        <th className="text-left py-2 px-3">Darasa</th>
-                        <th className="text-left py-2 px-3">Aina</th>
-                        <th className="text-right py-2 px-3">Ada (TZS)</th>
-                        <th className="text-right py-2 px-3">Kitendo</th>
+                        <th className="text-left py-2 px-3">Class</th>
+                        <th className="text-left py-2 px-3">Type</th>
+                        <th className="text-right py-2 px-3">Fee (TZS)</th>
+                        <th className="text-right py-2 px-3">Action</th>
                       </tr>
                     </thead>
                     <tbody>
@@ -1184,19 +1184,19 @@ export function SecretaryDashboard() {
                   </table>
                 </div>
               ) : (
-                <p className="text-sm text-muted-foreground">Hakuna ada zilizowekwa kwa mwaka/test hii.</p>
+              <p className="text-sm text-muted-foreground">No fee structure set for this year/test.</p>
               )}
             </div>
 
             {/* Add/Edit Fee Structure Form */}
             <div className="border-t pt-4">
-              <h4 className="font-medium mb-3">{editingFeeStructure ? 'Badilisha Ada' : 'Ongeza Ada Mpya'}</h4>
+              <h4 className="font-medium mb-3">{editingFeeStructure ? 'Edit Fee' : 'Add New Fee'}</h4>
               <div className="grid grid-cols-1 sm:grid-cols-3 gap-4">
                 <div className="space-y-2">
-                  <Label>Darasa</Label>
+                  <Label>Class</Label>
                   <Select value={newFeeClass} onValueChange={setNewFeeClass} disabled={!!editingFeeStructure}>
                     <SelectTrigger>
-                      <SelectValue placeholder="Chagua darasa" />
+                      <SelectValue placeholder="Select class" />
                     </SelectTrigger>
                     <SelectContent>
                       {['Primary 1', 'Primary 2', 'Primary 3', 'Primary 4', 'Primary 5', 'Primary 6', 'Primary 7', 'Senior 1', 'Senior 2', 'Senior 3', 'Senior 4'].map((cls) => (
@@ -1206,7 +1206,7 @@ export function SecretaryDashboard() {
                   </Select>
                 </div>
                 <div className="space-y-2">
-                  <Label>Aina</Label>
+                  <Label>Type</Label>
                   <Select value={newBoardingType} onValueChange={setNewBoardingType} disabled={!!editingFeeStructure}>
                     <SelectTrigger>
                       <SelectValue />
@@ -1218,7 +1218,7 @@ export function SecretaryDashboard() {
                   </Select>
                 </div>
                 <div className="space-y-2">
-                  <Label>Kiasi (TZS)</Label>
+                  <Label>Amount (TZS)</Label>
                   <Input
                     type="number"
                     placeholder="e.g. 1960000"
@@ -1235,14 +1235,14 @@ export function SecretaryDashboard() {
                 )}
                 <Button onClick={handleSaveFeeStructure} disabled={isSubmitting}>
                   {isSubmitting ? <Loader2 className="w-4 h-4 animate-spin mr-2" /> : null}
-                  {editingFeeStructure ? 'Badilisha' : 'Ongeza'}
+                  {editingFeeStructure ? 'Update' : 'Add'}
                 </Button>
               </div>
             </div>
           </div>
           <DialogFooter>
             <Button variant="outline" onClick={() => { setShowFeeStructureDialog(false); setEditingFeeStructure(null); }}>
-              Funga
+              Close
             </Button>
           </DialogFooter>
         </DialogContent>
@@ -1255,7 +1255,7 @@ export function SecretaryDashboard() {
             <DialogTitle>
               <div className="flex items-center gap-2">
                 <Percent className="w-5 h-5 text-success" />
-                Ada Maalumu / Discount
+                Custom Fee / Discount
               </div>
             </DialogTitle>
           </DialogHeader>
@@ -1267,23 +1267,23 @@ export function SecretaryDashboard() {
               </div>
               
               <div className="space-y-2">
-                <Label>Kiasi cha Ada Maalumu (TZS)</Label>
+                <Label>Custom Fee Amount (TZS)</Label>
                 <Input
                   type="number"
-                  placeholder="Weka kiasi cha ada (e.g. 1500000)"
+                  placeholder="Enter fee amount (e.g. 1500000)"
                   value={discountAmount}
                   onChange={(e) => setDiscountAmount(e.target.value)}
                 />
                 <p className="text-xs text-muted-foreground">
-                  Kama mwanafunzi ana discount, weka kiasi kamili atakacholipa (e.g. ikiwa ada ni 2M na discount 500K, weka 1500000).
-                  Kiasi hiki kitakuwa ada yake ya mwaka - akikilipia, mfumo utaonyesha amemaliza.
+                  If this student has a discount, enter the total amount they should pay (e.g. if fee is 2M and discount is 500K, enter 1500000).
+                  This amount will be their expected fee - once paid in full, the system will show them as complete.
                 </p>
               </div>
               
               <div className="space-y-2">
-                <Label>Sababu ya Discount (Optional)</Label>
+                <Label>Discount Reason (Optional)</Label>
                 <Input
-                  placeholder="e.g. Mtoto wa mfanyakazi, Scholarship"
+                  placeholder="e.g. Staff child, Scholarship"
                   value={discountNotes}
                   onChange={(e) => setDiscountNotes(e.target.value)}
                 />
@@ -1292,7 +1292,7 @@ export function SecretaryDashboard() {
               {selectedStudentForDiscount.custom_fee !== null && selectedStudentForDiscount.custom_fee !== undefined && (
                 <div className="p-3 bg-success/10 rounded-lg">
                   <p className="text-sm text-success font-medium">
-                    Ada ya sasa: TZS {Number(selectedStudentForDiscount.custom_fee).toLocaleString()}
+                    Current Fee: TZS {Number(selectedStudentForDiscount.custom_fee).toLocaleString()}
                   </p>
                   {selectedStudentForDiscount.discount_notes && (
                     <p className="text-xs text-muted-foreground mt-1">{selectedStudentForDiscount.discount_notes}</p>
@@ -1304,7 +1304,7 @@ export function SecretaryDashboard() {
           <DialogFooter className="flex-col sm:flex-row gap-2">
             {selectedStudentForDiscount?.custom_fee !== null && selectedStudentForDiscount?.custom_fee !== undefined && (
               <Button variant="outline" className="text-destructive" onClick={handleRemoveDiscount} disabled={isSubmitting}>
-                Ondoa Discount
+                Remove Discount
               </Button>
             )}
             <Button variant="outline" onClick={() => setShowDiscountDialog(false)}>
@@ -1312,7 +1312,7 @@ export function SecretaryDashboard() {
             </Button>
             <Button onClick={handleSaveDiscount} disabled={isSubmitting}>
               {isSubmitting ? <Loader2 className="w-4 h-4 animate-spin mr-2" /> : null}
-              Hifadhi
+              Save
             </Button>
           </DialogFooter>
         </DialogContent>
