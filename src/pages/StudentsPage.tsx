@@ -9,6 +9,7 @@ import { supabase } from '@/integrations/supabase/client';
 import { useAcademicYears } from '@/hooks/useAcademicYears';
 import { Search, Plus, MoreHorizontal, GraduationCap, Calendar, Loader2, Download, FileText, ArrowRightLeft, Users } from 'lucide-react';
 import { generateStudentReportPDF, generateAllStudentsReportPDF } from '@/utils/pdfGenerator';
+import { terms } from '@/data/mockData';
 import { toast } from 'sonner';
 import {
   DropdownMenu,
@@ -276,8 +277,7 @@ export default function StudentsPage() {
         .in('student_id', studentsToTransfer)
         .eq('academic_year', academicYear);
 
-      // Calculate and save outstanding debts for each student
-      const terms = ['Term 1', 'Term 2', 'Term 3'];
+      // Calculate and save outstanding debts for each student using dynamic terms
       for (const studentId of studentsToTransfer) {
         for (const term of terms) {
           const structure = feeStructures?.find(f => f.term === term);
@@ -424,8 +424,8 @@ export default function StudentsPage() {
         grade: m.grade,
       }));
 
-      const term = marksData?.[0]?.term || 'Term 1';
-      const academicYear = marksData?.[0]?.academic_year || '2024-2025';
+      const term = marksData?.[0]?.term || terms[0] || 'Test 1';
+      const academicYear = marksData?.[0]?.academic_year || currentYear || '2024-2025';
 
       generateStudentReportPDF({
         fullName: student.full_name,
@@ -460,7 +460,7 @@ export default function StudentsPage() {
       grade: s.grade,
     }));
 
-      generateAllStudentsReportPDF(studentsData, 'Term 1', currentYear);
+      generateAllStudentsReportPDF(studentsData, terms[0] || 'Test 1', currentYear);
     toast.success('All students report downloaded!');
   };
 

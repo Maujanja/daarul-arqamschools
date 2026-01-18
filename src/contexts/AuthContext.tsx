@@ -83,18 +83,18 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
 
       if (error) {
         console.error('AuthContext: Database error:', error);
-        return { success: false, error: 'Hitilafu ya database' };
+        return { success: false, error: 'Database error' };
       }
 
       if (!teacher) {
         console.log('AuthContext: Teacher not found:', name);
-        return { success: false, error: 'Jina la mwalimu halijulikani' };
+        return { success: false, error: 'Teacher name not found' };
       }
 
       // Check password
       console.log('AuthContext: Checking password. Expected:', teacher.password_hash, 'Got:', password.trim());
       if (teacher.password_hash !== password.trim()) {
-        return { success: false, error: 'Password si sahihi' };
+        return { success: false, error: 'Incorrect password' };
       }
 
       const authUser: AuthUser = {
