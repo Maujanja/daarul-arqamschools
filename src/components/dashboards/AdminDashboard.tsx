@@ -62,6 +62,8 @@ export function AdminDashboard() {
   const { data: allMarks = [] } = useQuery({
     queryKey: ['admin-all-marks', selectedYear],
     queryFn: async () => {
+      if (!selectedYear) return [];
+      
       const allData: any[] = [];
       const pageSize = 1000;
       let page = 0;
@@ -91,6 +93,7 @@ export function AdminDashboard() {
       console.log(`Fetched ${allData.length} marks for ${selectedYear}`);
       return allData;
     },
+    enabled: !!selectedYear,
   });
 
   // Get unique classes and terms

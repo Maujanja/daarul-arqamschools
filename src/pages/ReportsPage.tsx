@@ -22,7 +22,7 @@ export default function ReportsPage() {
   const { academicYears, currentYear } = useAcademicYears();
   const [selectedClass, setSelectedClass] = useState('all');
   const [selectedTerm, setSelectedTerm] = useState(terms[0] || 'Series 1');
-  const [selectedYear, setSelectedYear] = useState(currentYear);
+  const [selectedYear, setSelectedYear] = useState('');
 
   // Update selectedYear when currentYear is loaded
   useEffect(() => {
@@ -88,7 +88,9 @@ export default function ReportsPage() {
   }, [studentsData]);
 
   useEffect(() => {
-    fetchReportData();
+    if (selectedYear) {
+      fetchReportData();
+    }
   }, [selectedClass, selectedTerm, selectedYear, user]);
 
   const fetchReportData = async () => {

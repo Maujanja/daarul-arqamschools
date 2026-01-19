@@ -419,15 +419,20 @@ export function ParentDashboard() {
     'F': 'hsl(0, 84%, 60%)'
   };
 
-  // Series Summary for Student - All subjects across all terms
+  // Filter marks by selected year for series summary
+  const yearFilteredMarks = useMemo(() => {
+    return allMarks.filter(m => m.academic_year === selectedYear);
+  }, [allMarks, selectedYear]);
+
+  // Series Summary for Student - All subjects across all terms for selected year
   const studentTerms = useMemo(() => {
-    const termsSet = new Set(allMarks.map(m => m.term));
+    const termsSet = new Set(yearFilteredMarks.map(m => m.term));
     return Array.from(termsSet).sort((a, b) => {
       const numA = parseInt(a?.replace(/\D/g, '') || '0');
       const numB = parseInt(b?.replace(/\D/g, '') || '0');
       return numA - numB;
     });
-  }, [allMarks]);
+  }, [yearFilteredMarks]);
 
   const studentSeriesLabels = useMemo(() => {
     return studentTerms.map((_, index) => `S${index + 1}`);
@@ -437,7 +442,7 @@ export function ParentDashboard() {
   const studentSubjectSummary = useMemo(() => {
     const subjectsMap = new Map<string, { name: string; marks: { term: string; total: number }[] }>();
     
-    allMarks.forEach(mark => {
+    yearFilteredMarks.forEach(mark => {
       if (!subjectsMap.has(mark.subject_id)) {
         subjectsMap.set(mark.subject_id, { name: mark.subject, marks: [] });
       }
@@ -472,14 +477,14 @@ export function ParentDashboard() {
       };
     }).sort((a, b) => b.average - a.average)
       .map((item, index) => ({ ...item, position: index + 1, sn: index + 1 }));
-  }, [allMarks, studentTerms]);
+  }, [yearFilteredMarks, studentTerms]);
 
   // Average per series for student
   const studentAveragePerSeries = useMemo(() => {
     const result: { [key: string]: number } = {};
     
     studentTerms.forEach((term, termIndex) => {
-      const termMarks = allMarks.filter(m => m.term === term);
+      const termMarks = yearFilteredMarks.filter(m => m.term === term);
       if (termMarks.length > 0) {
         const avg = termMarks.reduce((sum, m) => sum + m.total, 0) / termMarks.length;
         result[`S${termIndex + 1}`] = avg;
@@ -487,7 +492,7 @@ export function ParentDashboard() {
     });
 
     return result;
-  }, [allMarks, studentTerms]);
+  }, [yearFilteredMarks, studentTerms]);
 
 
   // Download Subject Performance PDF with chart image
