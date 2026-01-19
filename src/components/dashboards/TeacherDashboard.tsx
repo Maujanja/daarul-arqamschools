@@ -68,6 +68,13 @@ export function TeacherDashboard() {
   const [seriesLabels, setSeriesLabels] = useState<string[]>([]);
   const [classPerformanceData, setClassPerformanceData] = useState<ClassSeriesData[]>([]);
 
+  // Set initial year when academic years load
+  useEffect(() => {
+    if (currentYear) {
+      setSelectedYear(currentYear);
+    }
+  }, [currentYear]);
+
   const fetchData = async () => {
     if (!user) {
       console.log('TeacherDashboard: No user found');
@@ -270,12 +277,7 @@ export function TeacherDashboard() {
     return 'F';
   };
 
-  // Set initial year when academic years load
-  useEffect(() => {
-    if (currentYear && !selectedYear) {
-      setSelectedYear(currentYear);
-    }
-  }, [currentYear, selectedYear]);
+  // Remove old duplicate useEffect - year is already set above
 
   useEffect(() => {
     if (selectedYear) {

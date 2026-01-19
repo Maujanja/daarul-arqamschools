@@ -11,7 +11,7 @@ import { Tabs, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import { supabase } from '@/integrations/supabase/client';
 import { useToast } from '@/hooks/use-toast';
 import { useAcademicYears } from '@/hooks/useAcademicYears';
-import { terms } from '@/data/mockData';
+
 import { 
   Users, 
   DollarSign, 
@@ -123,9 +123,8 @@ export function SecretaryDashboard() {
   const [selectedClass, setSelectedClass] = useState<string>('all');
   const [expandedClasses, setExpandedClasses] = useState<Set<string>>(new Set());
   
-  // Filter state for academic year and term
-  const [selectedYear, setSelectedYear] = useState('');
-  const [selectedTerm, setSelectedTerm] = useState(terms[0] || 'Term 1');
+  // Filter state for academic year only (no term filter for Secretary)
+  const [selectedYear, setSelectedYear] = useState(currentYear || '');
   
   // AI Assistant state
   const [aiQuestion, setAiQuestion] = useState('');
@@ -161,18 +160,18 @@ export function SecretaryDashboard() {
   const [discountAmount, setDiscountAmount] = useState('');
   const [discountNotes, setDiscountNotes] = useState('');
 
-  // Set initial year when academic years load
+  // Set initial year when currentYear loads
   useEffect(() => {
-    if (currentYear && !selectedYear) {
+    if (currentYear) {
       setSelectedYear(currentYear);
     }
-  }, [currentYear, selectedYear]);
+  }, [currentYear]);
 
   useEffect(() => {
     if (selectedYear) {
       fetchData();
     }
-  }, [selectedYear, selectedTerm]);
+  }, [selectedYear]);
 
   const fetchData = async () => {
     if (!selectedYear) return;
@@ -184,12 +183,10 @@ export function SecretaryDashboard() {
       supabase.from('fee_payments')
         .select('*, students(full_name, class, boarding_type)')
         .eq('academic_year', selectedYear)
-        .eq('term', selectedTerm)
         .order('payment_date', { ascending: false }),
       supabase.from('fee_structure')
         .select('*')
-        .eq('academic_year', selectedYear)
-        .eq('term', selectedTerm),
+        .eq('academic_year', selectedYear),
       supabase.from('feedback').select('*').eq('recipient_type', 'secretary').order('created_at', { ascending: false }),
       supabase.from('student_debt_history').select('*').eq('is_cleared', false).order('created_at', { ascending: false })
     ]);
@@ -294,7 +291,7 @@ export function SecretaryDashboard() {
       payment_method: paymentMethod,
       receipt_number: receiptNumber || null,
       academic_year: selectedYear,
-      term: selectedTerm,
+      term: 'Annual',
       notes: paymentNotes || null,
       recorded_by: 'Secretary'
     });
@@ -370,7 +367,7 @@ export function SecretaryDashboard() {
             total_fee: parseFloat(newTotalFee),
             tuition_fee: parseFloat(newTotalFee),
             academic_year: selectedYear,
-            term: selectedTerm
+            term: 'Annual'
           });
         
         if (error) throw error;
@@ -820,17 +817,6 @@ export function SecretaryDashboard() {
                 ))}
               </SelectContent>
             </Select>
-            {/* Test Filter */}
-            <Select value={selectedTerm} onValueChange={setSelectedTerm}>
-              <SelectTrigger className="w-28">
-                <SelectValue placeholder="Test" />
-              </SelectTrigger>
-              <SelectContent>
-                {terms.map((term) => (
-                  <SelectItem key={term} value={term}>{term}</SelectItem>
-                ))}
-              </SelectContent>
-            </Select>
             {/* Class Filter */}
             <Select value={selectedClass} onValueChange={setSelectedClass}>
               <SelectTrigger className="w-40">
@@ -1145,7 +1131,7 @@ export function SecretaryDashboard() {
       <Dialog open={showFeeStructureDialog} onOpenChange={setShowFeeStructureDialog}>
         <DialogContent className="max-w-3xl max-h-[80vh] overflow-y-auto">
           <DialogHeader>
-            <DialogTitle>Manage Fees - {selectedYear} / {selectedTerm}</DialogTitle>
+            <DialogTitle>Manage Fees - {selectedYear}</DialogTitle>
           </DialogHeader>
           <div className="space-y-6 py-4">
             {/* Current Fee Structure */}

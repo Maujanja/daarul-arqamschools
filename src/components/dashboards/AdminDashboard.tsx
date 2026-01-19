@@ -43,10 +43,10 @@ export function AdminDashboard() {
 
   // Set initial year when academic years load
   useEffect(() => {
-    if (currentYear && !selectedYear) {
+    if (currentYear) {
       setSelectedYear(currentYear);
     }
-  }, [currentYear, selectedYear]);
+  }, [currentYear]);
 
   // Fetch all subjects
   const { data: allSubjects = [] } = useQuery({
