@@ -142,7 +142,7 @@ export function TeacherDashboard() {
             )
           `)
           .in('class', teacherData.classes)
-          .eq('academic_year', selectedYear || currentYear || '2024-2025');
+          .eq('academic_year', selectedYear);
 
         if (!marksError && marksData) {
           // Calculate students needing support (average < 45)
