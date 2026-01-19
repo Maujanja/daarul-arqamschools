@@ -179,10 +179,10 @@ export function ParentDashboard() {
 
   // Set initial year when academic years load
   useEffect(() => {
-    if (currentYear && !selectedYear) {
+    if (currentYear) {
       setSelectedYear(currentYear);
     }
-  }, [currentYear, selectedYear]);
+  }, [currentYear]);
 
   useEffect(() => {
     const fetchChildData = async () => {
