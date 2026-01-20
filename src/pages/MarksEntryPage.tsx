@@ -101,8 +101,8 @@ export default function MarksEntryPage() {
       setAvailableTerms(prev => [...prev, newSeries]);
       setNewSeriesNumber(prev => prev + 1);
       toast({
-        title: "Series Imeongezwa",
-        description: `${newSeries} imeongezwa kwenye orodha.`,
+        title: "Series Added",
+        description: `${newSeries} has been added to the list.`,
       });
     }
     setShowAddSeriesDialog(false);
