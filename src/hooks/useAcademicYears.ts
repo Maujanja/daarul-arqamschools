@@ -9,7 +9,7 @@ interface AcademicYear {
 
 export function useAcademicYears() {
   const [academicYears, setAcademicYears] = useState<string[]>([]);
-  const [currentYear, setCurrentYear] = useState<string>('2024-2025');
+  const [currentYear, setCurrentYear] = useState<string>('');
   const [loading, setLoading] = useState(true);
 
   useEffect(() => {
@@ -21,15 +21,18 @@ export function useAcademicYears() {
 
       if (error) {
         console.error('Error fetching academic years:', error);
-        // Fallback to default years
-        setAcademicYears(['2024-2025', '2023-2024']);
-        setCurrentYear('2024-2025');
+        // Fallback to current years
+        setAcademicYears(['2025-2026', '2024-2025']);
+        setCurrentYear('2025-2026');
       } else {
         const years = data?.map((y: { year_name: string }) => y.year_name) || [];
-        setAcademicYears(years.length > 0 ? years : ['2024-2025']);
+        setAcademicYears(years.length > 0 ? years : ['2025-2026']);
         
+        // Find the current year (is_current = true)
         const current = data?.find((y: { is_current: boolean }) => y.is_current);
-        setCurrentYear(current?.year_name || years[0] || '2024-2025');
+        const currentYearValue = current?.year_name || years[0] || '2025-2026';
+        setCurrentYear(currentYearValue);
+        console.log('Academic years loaded, current:', currentYearValue);
       }
       setLoading(false);
     };

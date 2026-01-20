@@ -83,7 +83,12 @@ export function TeacherDashboard() {
       return;
     }
 
-    console.log('TeacherDashboard: Fetching for user:', user.id, user.name);
+    if (!selectedYear) {
+      console.log('TeacherDashboard: Waiting for selectedYear');
+      return;
+    }
+
+    console.log('TeacherDashboard: Fetching for user:', user.id, 'year:', selectedYear);
     setIsLoading(true);
     setError(null);
 
