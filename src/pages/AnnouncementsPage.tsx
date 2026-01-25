@@ -5,10 +5,12 @@ import { Input } from '@/components/ui/input';
 import { Textarea } from '@/components/ui/textarea';
 import { Label } from '@/components/ui/label';
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger } from '@/components/ui/dialog';
-import { Megaphone, Plus, Calendar, User, Trash2, Edit, Loader2 } from 'lucide-react';
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
+import { Megaphone, Plus, Calendar, User, Trash2, Edit, Loader2, Clock } from 'lucide-react';
 import { useAuth } from '@/contexts/AuthContext';
 import { useToast } from '@/hooks/use-toast';
 import { supabase } from '@/integrations/supabase/client';
+import { useAcademicYears } from '@/hooks/useAcademicYears';
 
 interface Announcement {
   id: string;
@@ -18,32 +20,52 @@ interface Announcement {
   is_active: boolean;
   created_at: string;
   updated_at: string;
+  academic_year: string;
+  visibility_type: string;
+  expires_at: string | null;
 }
 
 export default function AnnouncementsPage() {
   const { user } = useAuth();
   const { toast } = useToast();
+  const { academicYears, currentYear, loading: yearsLoading } = useAcademicYears();
   const [announcements, setAnnouncements] = useState<Announcement[]>([]);
   const [loading, setLoading] = useState(true);
   const [submitting, setSubmitting] = useState(false);
   const [dialogOpen, setDialogOpen] = useState(false);
   const [editingAnnouncement, setEditingAnnouncement] = useState<Announcement | null>(null);
+  const [selectedYear, setSelectedYear] = useState('');
   
   const [title, setTitle] = useState('');
   const [content, setContent] = useState('');
+  const [visibilityType, setVisibilityType] = useState('yearly');
   
   const isAdmin = user?.role === 'admin';
 
+  // Set initial year when academic years load
   useEffect(() => {
-    fetchAnnouncements();
-  }, []);
+    if (currentYear && !selectedYear) {
+      setSelectedYear(currentYear);
+    }
+  }, [currentYear, selectedYear]);
+
+  useEffect(() => {
+    if (selectedYear) {
+      fetchAnnouncements();
+    }
+  }, [selectedYear]);
 
   const fetchAnnouncements = async () => {
     try {
       setLoading(true);
+      const now = new Date().toISOString();
+      
+      // Fetch announcements filtered by year and not expired
       const { data, error } = await supabase
         .from('announcements')
         .select('*')
+        .eq('academic_year', selectedYear)
+        .or(`expires_at.is.null,expires_at.gt.${now}`)
         .order('created_at', { ascending: false });
       
       if (error) throw error;
@@ -72,7 +94,8 @@ export default function AnnouncementsPage() {
           .from('announcements')
           .update({
             title: title.trim(),
-            content: content.trim()
+            content: content.trim(),
+            visibility_type: visibilityType
           })
           .eq('id', editingAnnouncement.id);
         
@@ -88,7 +111,9 @@ export default function AnnouncementsPage() {
           .insert({
             title: title.trim(),
             content: content.trim(),
-            created_by: user?.name || 'Admin'
+            created_by: user?.name || 'Admin',
+            academic_year: selectedYear,
+            visibility_type: visibilityType
           });
         
         if (error) throw error;
@@ -101,6 +126,7 @@ export default function AnnouncementsPage() {
       
       setTitle('');
       setContent('');
+      setVisibilityType('yearly');
       setEditingAnnouncement(null);
       setDialogOpen(false);
       fetchAnnouncements();
@@ -120,6 +146,7 @@ export default function AnnouncementsPage() {
     setEditingAnnouncement(announcement);
     setTitle(announcement.title);
     setContent(announcement.content);
+    setVisibilityType(announcement.visibility_type || 'yearly');
     setDialogOpen(true);
   };
 
@@ -154,7 +181,27 @@ export default function AnnouncementsPage() {
     setEditingAnnouncement(null);
     setTitle('');
     setContent('');
+    setVisibilityType('yearly');
   };
+
+  const getVisibilityLabel = (type: string) => {
+    switch (type) {
+      case 'weekly': return 'Weekly (7 days)';
+      case 'monthly': return 'Monthly (30 days)';
+      case 'yearly': return 'Yearly (365 days)';
+      default: return 'Yearly';
+    }
+  };
+
+  if (yearsLoading) {
+    return (
+      <DashboardLayout>
+        <div className="flex items-center justify-center min-h-[400px]">
+          <Loader2 className="w-8 h-8 animate-spin text-primary" />
+        </div>
+      </DashboardLayout>
+    );
+  }
 
   return (
     <DashboardLayout>
@@ -167,14 +214,27 @@ export default function AnnouncementsPage() {
             </p>
           </div>
           
-          {isAdmin && (
-            <Dialog open={dialogOpen} onOpenChange={(open) => {
-              if (!open) handleDialogClose();
-              else setDialogOpen(true);
-            }}>
-              <DialogTrigger asChild>
-                <Button className="btn-gradient">
-                  <Plus className="w-4 h-4 mr-2" />
+          <div className="flex items-center gap-3">
+            {/* Year Filter */}
+            <Select value={selectedYear} onValueChange={setSelectedYear}>
+              <SelectTrigger className="w-[140px]">
+                <SelectValue placeholder="Select Year" />
+              </SelectTrigger>
+              <SelectContent>
+                {academicYears.map(year => (
+                  <SelectItem key={year} value={year}>{year}</SelectItem>
+                ))}
+              </SelectContent>
+            </Select>
+            
+            {isAdmin && (
+              <Dialog open={dialogOpen} onOpenChange={(open) => {
+                if (!open) handleDialogClose();
+                else setDialogOpen(true);
+              }}>
+                <DialogTrigger asChild>
+                  <Button className="btn-gradient">
+                    <Plus className="w-4 h-4 mr-2" />
                   New Announcement
                 </Button>
               </DialogTrigger>
@@ -195,6 +255,19 @@ export default function AnnouncementsPage() {
                       className="input-enhanced"
                       required
                     />
+                  </div>
+                  <div className="space-y-2">
+                    <Label htmlFor="visibility">Visibility Duration</Label>
+                    <Select value={visibilityType} onValueChange={setVisibilityType}>
+                      <SelectTrigger className="input-enhanced">
+                        <SelectValue placeholder="Select duration" />
+                      </SelectTrigger>
+                      <SelectContent>
+                        <SelectItem value="weekly">Weekly (7 days)</SelectItem>
+                        <SelectItem value="monthly">Monthly (30 days)</SelectItem>
+                        <SelectItem value="yearly">Yearly (365 days)</SelectItem>
+                      </SelectContent>
+                    </Select>
                   </div>
                   <div className="space-y-2">
                     <Label htmlFor="content">Content</Label>
@@ -225,7 +298,8 @@ export default function AnnouncementsPage() {
                 </form>
               </DialogContent>
             </Dialog>
-          )}
+            )}
+          </div>
         </div>
 
         {loading ? (
@@ -272,6 +346,10 @@ export default function AnnouncementsPage() {
                           month: 'long',
                           day: 'numeric'
                         })}
+                      </span>
+                      <span className="flex items-center gap-1">
+                        <Clock className="w-4 h-4" />
+                        {getVisibilityLabel(announcement.visibility_type)}
                       </span>
                     </div>
                   </div>
