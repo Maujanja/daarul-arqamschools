@@ -42,6 +42,9 @@ interface Announcement {
   content: string;
   created_by: string;
   created_at: string;
+  academic_year: string;
+  visibility_type: string;
+  expires_at: string | null;
 }
 
 interface SubjectRanking {
@@ -344,11 +347,14 @@ export function ParentDashboard() {
         setHistoricalDebts([]);
       }
       
-      // Fetch announcements
+      // Fetch announcements filtered by year and not expired
+      const now = new Date().toISOString();
       const { data: announcementsData } = await supabase
         .from('announcements')
         .select('*')
         .eq('is_active', true)
+        .eq('academic_year', selectedYear)
+        .or(`expires_at.is.null,expires_at.gt.${now}`)
         .order('created_at', { ascending: false })
         .limit(5);
       

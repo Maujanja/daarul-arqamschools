@@ -64,31 +64,40 @@ export type Database = {
       }
       announcements: {
         Row: {
+          academic_year: string | null
           content: string
           created_at: string
           created_by: string
+          expires_at: string | null
           id: string
           is_active: boolean
           title: string
           updated_at: string
+          visibility_type: string | null
         }
         Insert: {
+          academic_year?: string | null
           content: string
           created_at?: string
           created_by?: string
+          expires_at?: string | null
           id?: string
           is_active?: boolean
           title: string
           updated_at?: string
+          visibility_type?: string | null
         }
         Update: {
+          academic_year?: string | null
           content?: string
           created_at?: string
           created_by?: string
+          expires_at?: string | null
           id?: string
           is_active?: boolean
           title?: string
           updated_at?: string
+          visibility_type?: string | null
         }
         Relationships: []
       }
