@@ -257,8 +257,10 @@ export default function AnnouncementsPage() {
                         {announcement.title}
                       </h3>
                     </div>
-                    <p className="text-card-foreground whitespace-pre-wrap">{announcement.content}</p>
-                    <div className="flex items-center gap-4 mt-4 text-sm text-muted-foreground">
+                    <p className="text-card-foreground whitespace-pre-wrap break-words overflow-wrap-anywhere text-sm sm:text-base leading-relaxed">
+                      {announcement.content}
+                    </p>
+                    <div className="flex flex-wrap items-center gap-2 sm:gap-4 mt-4 text-xs sm:text-sm text-muted-foreground">
                       <span className="flex items-center gap-1">
                         <User className="w-4 h-4" />
                         {announcement.created_by}
