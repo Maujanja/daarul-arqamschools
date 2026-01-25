@@ -422,7 +422,7 @@ export default function MarksEntryPage() {
     setIsSubmitting(true);
     
     try {
-      // Upsert marks to database
+      // Upsert marks to database - include teacher_id for tracking
       const marksToInsert = marks.map(mark => ({
         student_id: mark.studentId,
         subject_id: selectedSubject,
@@ -432,6 +432,7 @@ export default function MarksEntryPage() {
         grade: mark.grade,
         term: selectedTerm,
         academic_year: selectedYear,
+        teacher_id: isTeacher && user?.id ? user.id : null,
       }));
 
       for (const markData of marksToInsert) {
