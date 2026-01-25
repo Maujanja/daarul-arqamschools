@@ -182,51 +182,28 @@ export function TeacherDashboard() {
           setStudentsNeedingSupport(needingSupport);
 
           // Calculate series summary for all classes using all 11 series
-          const allSeriesLabels = ['S1', 'S2', 'S3', 'S4', 'S5', 'S6', 'S7', 'S8', 'S9', 'S10', 'S11'];
+          const allSeriesLabels = ['Term 1', 'Term 2', 'Term 3', 'Term 4', 'Term 5', 'Term 6', 'Term 7', 'Term 8', 'Term 9', 'Term 10', 'Term 11'];
           const classSummary: any[] = [];
           
-          // Generate consistent sample data for demonstration if no real data exists
-          const generateSampleData = (className: string): Record<string, number> => {
-            const baseScores: Record<string, number> = {
-              'Form 1': 55,
-              'Form 2': 58,
-              'Form 3': 62,
-              'Form 4': 65,
-            };
-            const base = baseScores[className] || 60;
-            // Consistent variations per series (not random)
-            const variations = [0, 2, -1, 3, 1, 4, 2, 5, 3, 6, 4];
-            const sampleData: Record<string, number> = {};
-            
-            allSeriesLabels.forEach((series, idx) => {
-              const trendBonus = Math.floor(idx * 0.8);
-              sampleData[series] = Math.min(95, Math.max(35, base + variations[idx] + trendBonus));
-            });
-            
-            return sampleData;
-          };
+          console.log('TeacherDashboard: Processing marks for series summary', { marksCount: marksData.length, classes: teacherData.classes });
           
           teacherData.classes.forEach((cls: string) => {
             const classMarks = marksData.filter((m: any) => m.class === cls);
             const seriesAverages: Record<string, number | null> = {};
             
-            // Check if we have real data for any series
-            let hasRealData = false;
-            allSeriesLabels.forEach(series => {
-              const seriesMarks = classMarks.filter((m: any) => m.term === series);
-              if (seriesMarks.length > 0) {
-                hasRealData = true;
-                const avg = seriesMarks.reduce((sum: number, m: any) => sum + m.total, 0) / seriesMarks.length;
-                seriesAverages[series] = Math.round(avg * 10) / 10;
+            console.log(`TeacherDashboard: Class ${cls} marks count:`, classMarks.length);
+            
+            allSeriesLabels.forEach((term, idx) => {
+              const termMarks = classMarks.filter((m: any) => m.term === term);
+              if (termMarks.length > 0) {
+                const avg = termMarks.reduce((sum: number, m: any) => sum + m.total, 0) / termMarks.length;
+                seriesAverages[`S${idx + 1}`] = Math.round(avg * 10) / 10;
               } else {
-                seriesAverages[series] = null;
+                seriesAverages[`S${idx + 1}`] = null;
               }
             });
-
-            // If no real data, use sample data for demonstration
-            const finalData = hasRealData ? seriesAverages : generateSampleData(cls);
             
-            const validAverages = Object.values(finalData).filter(v => v !== null) as number[];
+            const validAverages = Object.values(seriesAverages).filter(v => v !== null) as number[];
             const overallAvg = validAverages.length > 0 
               ? Math.round(validAverages.reduce((a, b) => a + b, 0) / validAverages.length * 10) / 10
               : null;
@@ -234,19 +211,19 @@ export function TeacherDashboard() {
             classSummary.push({
               sn: classSummary.length + 1,
               name: cls,
-              seriesData: finalData,
+              seriesData: seriesAverages,
               average: overallAvg,
               grade: overallAvg ? getGrade(overallAvg) : '-'
             });
           });
 
           setSeriesSummaryData(classSummary);
-          setSeriesLabels(allSeriesLabels);
+          setSeriesLabels(['S1', 'S2', 'S3', 'S4', 'S5', 'S6', 'S7', 'S8', 'S9', 'S10', 'S11']);
 
-          // Build performance trend chart data from the same classSummary data
-          // Ensure we use the actual number values from seriesData (not null)
+          // Build performance trend chart data from the classSummary data
+          const seriesLabelsForChart = ['S1', 'S2', 'S3', 'S4', 'S5', 'S6', 'S7', 'S8', 'S9', 'S10', 'S11'];
           const classChartData: ClassSeriesData[] = classSummary.map((classItem: any) => {
-            const chartData: SeriesData[] = allSeriesLabels.map(series => {
+            const chartData: SeriesData[] = seriesLabelsForChart.map(series => {
               const value = classItem.seriesData[series];
               return {
                 name: series,
@@ -282,13 +259,12 @@ export function TeacherDashboard() {
     return 'F';
   };
 
-  // Remove old duplicate useEffect - year is already set above
-
+  // Refetch data when selectedYear or selectedTerm changes
   useEffect(() => {
     if (selectedYear) {
       fetchData();
     }
-  }, [user, selectedYear]);
+  }, [user, selectedYear, selectedTerm]);
 
   // Loading state
   if (isLoading) {

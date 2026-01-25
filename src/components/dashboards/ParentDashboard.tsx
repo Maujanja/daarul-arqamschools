@@ -91,8 +91,10 @@ export function ParentDashboard() {
 
   // Calculate class rank and subject rankings
   const calculateRankings = async (studentId: string, studentClass: string, term: string, year: string) => {
+    console.log('calculateRankings called with:', { studentId, studentClass, term, year });
+    
     // Get all marks for students in the same class for the selected term/year
-    const { data: classMarks } = await supabase
+    const { data: classMarks, error } = await supabase
       .from('marks')
       .select(`
         student_id,
@@ -105,7 +107,10 @@ export function ParentDashboard() {
       .eq('term', term)
       .eq('academic_year', year);
 
+    console.log('Class marks for ranking:', { classMarks, error, count: classMarks?.length });
+
     if (!classMarks || classMarks.length === 0) {
+      console.log('No class marks found, resetting rankings');
       setClassRank(null);
       setTotalClassStudents(0);
       setSubjectRankings([]);
@@ -132,8 +137,14 @@ export function ParentDashboard() {
 
     // Find current student's rank
     const studentRankIndex = rankedStudents.findIndex(s => s.studentId === studentId);
+    console.log('Student rank calculation:', { studentId, studentRankIndex, rankedStudents: rankedStudents.length });
+    
     if (studentRankIndex !== -1) {
       setClassRank(studentRankIndex + 1);
+      setTotalClassStudents(rankedStudents.length);
+    } else {
+      // Student not found in rankings, set total but no rank
+      setClassRank(null);
       setTotalClassStudents(rankedStudents.length);
     }
 
@@ -774,7 +785,7 @@ export function ParentDashboard() {
       </div>
 
       {/* School Announcements */}
-      <div className="card-elevated p-6 animate-fade-in">
+      <div className="card-elevated p-6 animate-fade-in overflow-hidden">
         <h3 className="font-display font-semibold text-lg mb-6 text-card-foreground flex items-center gap-2">
           <Megaphone className="w-5 h-5 text-primary" />
           School Notices
@@ -784,20 +795,20 @@ export function ParentDashboard() {
             {announcements.map((announcement, index) => (
               <div 
                 key={announcement.id} 
-                className="p-4 rounded-lg bg-muted/30 border border-border/50 animate-slide-up"
+                className="p-3 sm:p-4 rounded-lg bg-muted/30 border border-border/50 animate-slide-up overflow-hidden"
                 style={{ animationDelay: `${index * 100}ms` }}
               >
-                <div className="flex items-start gap-3">
-                  <div className="w-10 h-10 rounded-lg bg-primary/10 flex items-center justify-center shrink-0">
-                    <Megaphone className="w-5 h-5 text-primary" />
+                <div className="flex items-start gap-2 sm:gap-3">
+                  <div className="w-8 h-8 sm:w-10 sm:h-10 rounded-lg bg-primary/10 flex items-center justify-center shrink-0">
+                    <Megaphone className="w-4 h-4 sm:w-5 sm:h-5 text-primary" />
                   </div>
                   <div className="flex-1 min-w-0 overflow-hidden">
-                    <h4 className="font-semibold text-card-foreground break-words">{announcement.title}</h4>
-                    <p className="text-sm text-muted-foreground mt-1 whitespace-pre-wrap break-words">{announcement.content}</p>
+                    <h4 className="font-semibold text-card-foreground break-words overflow-wrap-anywhere">{announcement.title}</h4>
+                    <p className="text-sm text-muted-foreground mt-1 whitespace-pre-wrap break-words overflow-wrap-anywhere" style={{ wordBreak: 'break-word', overflowWrap: 'anywhere' }}>{announcement.content}</p>
                     <div className="flex flex-wrap items-center gap-2 sm:gap-4 mt-2 text-xs text-muted-foreground">
                       <span className="flex items-center gap-1">
                         <User className="w-3 h-3" />
-                        {announcement.created_by}
+                        <span className="truncate max-w-[100px] sm:max-w-none">{announcement.created_by}</span>
                       </span>
                       <span className="flex items-center gap-1">
                         <Calendar className="w-3 h-3" />
