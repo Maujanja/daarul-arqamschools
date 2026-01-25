@@ -139,17 +139,18 @@ export default function MyClassStudentsPage() {
     fetchStudents();
   }, [selectedClass]);
 
-  // Fetch existing selections when class/subject changes
+  // Fetch existing selections when class/subject/academic year changes
   useEffect(() => {
     const fetchExistingSelections = async () => {
-      if (!user?.id || !selectedClass || !selectedSubject) return;
+      if (!user?.id || !selectedClass || !selectedSubject || !currentYear) return;
       
       const { data: selections } = await supabase
         .from('teacher_class_students')
         .select('*')
         .eq('teacher_id', user.id)
         .eq('class', selectedClass)
-        .eq('subject_id', selectedSubject);
+        .eq('subject_id', selectedSubject)
+        .eq('academic_year', currentYear);
       
       setExistingSelections(selections || []);
       
@@ -159,7 +160,7 @@ export default function MyClassStudentsPage() {
     };
     
     fetchExistingSelections();
-  }, [user?.id, selectedClass, selectedSubject]);
+  }, [user?.id, selectedClass, selectedSubject, currentYear]);
 
   const toggleStudent = (studentId: string) => {
     setSelectedStudentIds(prev => {
@@ -183,27 +184,28 @@ export default function MyClassStudentsPage() {
   };
 
   const handleSave = async () => {
-    if (!user?.id || !selectedClass || !selectedSubject) return;
+    if (!user?.id || !selectedClass || !selectedSubject || !currentYear) return;
     
     setIsSaving(true);
     
     try {
-      // Delete existing selections for this class/subject
+      // Delete existing selections for this class/subject/year
       await supabase
         .from('teacher_class_students')
         .delete()
         .eq('teacher_id', user.id)
         .eq('class', selectedClass)
-        .eq('subject_id', selectedSubject);
+        .eq('subject_id', selectedSubject)
+        .eq('academic_year', currentYear);
       
-      // Insert new selections
+      // Insert new selections with current academic year
       if (selectedStudentIds.size > 0) {
         const insertData = Array.from(selectedStudentIds).map(studentId => ({
           teacher_id: user.id,
           student_id: studentId,
           class: selectedClass,
           subject_id: selectedSubject,
-          academic_year: currentYear || '2024-2025',
+          academic_year: currentYear,
         }));
         
         const { error } = await supabase
@@ -224,7 +226,8 @@ export default function MyClassStudentsPage() {
         .select('*')
         .eq('teacher_id', user.id)
         .eq('class', selectedClass)
-        .eq('subject_id', selectedSubject);
+        .eq('subject_id', selectedSubject)
+        .eq('academic_year', currentYear);
       
       setExistingSelections(selections || []);
       

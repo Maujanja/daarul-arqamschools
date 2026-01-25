@@ -314,47 +314,54 @@ export default function StudentsPage() {
 
       if (studentError) throw studentError;
 
-      // 2. Get all teachers assigned to the NEW class
-      const { data: teachersForNewClass } = await supabase
+      // Convert full class name to short code for teacher matching
+      const getClassShortCode = (fullName: string): string => {
+        const reverseMapping: Record<string, string> = {
+          'Primary 1': 'P1', 'Primary 2': 'P2', 'Primary 3': 'P3', 'Primary 4': 'P4',
+          'Primary 5': 'P5', 'Primary 6': 'P6', 'Primary 7': 'P7',
+          'Senior 1': 'S1', 'Senior 2': 'S2', 'Senior 3': 'S3', 'Senior 4': 'S4',
+        };
+        return reverseMapping[fullName] || fullName;
+      };
+
+      const newClassShortCode = getClassShortCode(transferToClass);
+      const oldClassShortCode = getClassShortCode(transferFromClass);
+
+      // 2. Get ALL teachers and filter those assigned to the NEW class
+      const { data: allTeachers } = await supabase
         .from('teachers')
-        .select('id, classes')
-        .contains('classes', [transferToClass.replace(/\D/g, '') ? 
-          (transferToClass.includes('Primary') ? `P${transferToClass.replace(/\D/g, '')}` : 
-           transferToClass.includes('Senior') ? `S${transferToClass.replace(/\D/g, '')}` : transferToClass)
-          : transferToClass]);
+        .select('id, classes, subjects');
 
-      const teacherIdsForNewClass = new Set(teachersForNewClass?.map(t => t.id) || []);
+      // Find teachers assigned to the new class (checking both short and full names)
+      const teachersForNewClass = (allTeachers || []).filter(t => 
+        t.classes?.some((c: string) => 
+          c === newClassShortCode || 
+          c === transferToClass || 
+          mapClassToFullName(c) === transferToClass
+        )
+      );
 
-      // 3. Delete teacher_class_students entries where teacher is NOT assigned to the new class
-      const { data: existingAssignments } = await supabase
+      const teacherIdsForNewClass = new Set(teachersForNewClass.map(t => t.id));
+
+      console.log(`Teachers for ${transferToClass}:`, teachersForNewClass.map(t => t.id));
+
+      // 3. Delete ALL old teacher_class_students entries for these students (old class)
+      await supabase
         .from('teacher_class_students')
-        .select('id, teacher_id')
+        .delete()
         .in('student_id', studentsToTransfer)
         .eq('class', transferFromClass);
 
-      if (existingAssignments) {
-        const assignmentsToDelete = existingAssignments
-          .filter(a => !teacherIdsForNewClass.has(a.teacher_id))
-          .map(a => a.id);
+      // Also delete entries with old class short code
+      await supabase
+        .from('teacher_class_students')
+        .delete()
+        .in('student_id', studentsToTransfer)
+        .eq('class', oldClassShortCode);
 
-        if (assignmentsToDelete.length > 0) {
-          await supabase
-            .from('teacher_class_students')
-            .delete()
-            .in('id', assignmentsToDelete);
-        }
-
-        const assignmentsToUpdate = existingAssignments
-          .filter(a => teacherIdsForNewClass.has(a.teacher_id))
-          .map(a => a.id);
-
-        if (assignmentsToUpdate.length > 0) {
-          await supabase
-            .from('teacher_class_students')
-            .update({ class: transferToClass })
-            .in('id', assignmentsToUpdate);
-        }
-      }
+      // 4. For teachers assigned to the NEW class, they can now select these students
+      // via MyClassStudentsPage - the students will appear in their class dropdown
+      console.log(`${studentsToTransfer.length} students now available for teachers assigned to ${transferToClass}`);
 
       // 4. Check if graduating
       const isGraduating = transferToClass.toLowerCase().includes('senior 4') || 
