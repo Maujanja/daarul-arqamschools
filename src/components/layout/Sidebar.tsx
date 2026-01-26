@@ -15,7 +15,6 @@ import {
   UserCog,
   Menu,
   X,
-  ChevronRight,
   Calendar
 } from 'lucide-react';
 import { cn } from '@/lib/utils';
@@ -61,7 +60,7 @@ export function Sidebar() {
       <Button
         variant="ghost"
         size="icon"
-        className="fixed top-4 left-4 z-50 lg:hidden"
+        className="fixed top-4 left-4 z-50 lg:hidden bg-sidebar/90 text-sidebar-foreground hover:bg-sidebar"
         onClick={toggleSidebar}
       >
         {isOpen ? <X className="h-6 w-6" /> : <Menu className="h-6 w-6" />}
@@ -70,30 +69,47 @@ export function Sidebar() {
       {/* Overlay */}
       {isOpen && (
         <div 
-          className="fixed inset-0 bg-foreground/20 backdrop-blur-sm z-40 lg:hidden"
+          className="fixed inset-0 bg-black/40 backdrop-blur-sm z-40 lg:hidden transition-opacity duration-300"
           onClick={() => setIsOpen(false)}
         />
       )}
 
       {/* Sidebar */}
       <aside className={cn(
-        "fixed left-0 top-0 h-full w-64 bg-sidebar z-40 transform transition-transform duration-300 ease-in-out lg:translate-x-0",
+        "fixed left-0 top-0 h-full w-72 z-40 transform transition-all duration-500 ease-out lg:translate-x-0",
+        "bg-gradient-to-b from-[hsl(222,47%,14%)] via-[hsl(222,47%,11%)] to-[hsl(222,47%,8%)]",
+        "shadow-2xl shadow-black/20",
         isOpen ? "translate-x-0" : "-translate-x-full"
       )}>
         <div className="flex flex-col h-full">
-          {/* Logo */}
-          <div className="p-4 border-b border-sidebar-border">
-            <div className="flex items-center gap-3">
-              <img src={dasLogo} alt="Daarul Arqam Logo" className="w-12 h-12 object-contain" />
-              <div>
-                <h1 className="font-display font-bold text-sidebar-foreground text-sm leading-tight">DAARUL-ARQAM</h1>
-                <p className="text-xs text-sidebar-foreground/60">SCHOOLS</p>
+          {/* Close button for mobile */}
+          <button 
+            onClick={() => setIsOpen(false)}
+            className="absolute top-4 right-4 lg:hidden text-sidebar-foreground/60 hover:text-sidebar-foreground transition-colors"
+          >
+            <X className="w-5 h-5" />
+          </button>
+
+          {/* User Profile Section */}
+          <div className="p-6 pb-4">
+            <div className="flex items-center gap-4">
+              <div className="w-14 h-14 rounded-full bg-gradient-to-br from-primary/30 to-accent/30 flex items-center justify-center ring-2 ring-white/10 shadow-lg">
+                <img src={dasLogo} alt="Logo" className="w-10 h-10 object-contain" />
+              </div>
+              <div className="flex-1 min-w-0">
+                <h2 className="text-base font-semibold text-sidebar-foreground truncate">
+                  {user?.name || 'User'}
+                </h2>
+                <p className="text-sm text-sidebar-foreground/50 capitalize">{user?.role || 'Guest'}</p>
               </div>
             </div>
           </div>
 
+          {/* Divider */}
+          <div className="mx-6 h-px bg-gradient-to-r from-transparent via-white/10 to-transparent" />
+
           {/* Navigation */}
-          <nav className="flex-1 p-4 space-y-1 overflow-y-auto">
+          <nav className="flex-1 px-4 py-6 space-y-1.5 overflow-y-auto scrollbar-thin scrollbar-thumb-white/10">
             {filteredNavItems.map((item) => {
               const isActive = location.pathname === item.href;
               return (
@@ -102,43 +118,45 @@ export function Sidebar() {
                   to={item.href}
                   onClick={() => setIsOpen(false)}
                   className={cn(
-                    "sidebar-link group",
-                    isActive && "active"
+                    "group flex items-center gap-3 px-4 py-3 rounded-xl transition-all duration-300 ease-out",
+                    isActive 
+                      ? "bg-white/10 text-white shadow-lg shadow-black/10" 
+                      : "text-sidebar-foreground/60 hover:text-sidebar-foreground hover:bg-white/5"
                   )}
                 >
                   <item.icon className={cn(
-                    "w-5 h-5 transition-colors",
-                    isActive ? "text-primary" : "text-sidebar-foreground/60 group-hover:text-sidebar-foreground"
+                    "w-5 h-5 transition-all duration-300",
+                    isActive ? "text-primary" : "text-sidebar-foreground/50 group-hover:text-sidebar-foreground/80"
                   )} />
-                  <span className="flex-1">{item.label}</span>
+                  <span className="flex-1 font-medium text-sm">{item.label}</span>
                   {isActive && (
-                    <ChevronRight className="w-4 h-4 text-primary" />
+                    <div className="w-1.5 h-1.5 rounded-full bg-primary animate-pulse" />
                   )}
                 </NavLink>
               );
             })}
           </nav>
 
-          {/* User section */}
-          <div className="p-4 border-t border-sidebar-border">
-            <div className="flex items-center gap-3 mb-4 px-4">
-              <div className="w-10 h-10 rounded-full bg-sidebar-accent flex items-center justify-center">
-                <span className="text-sm font-semibold text-sidebar-foreground">
-                  {user?.name.split(' ').map(n => n[0]).join('')}
-                </span>
-              </div>
-              <div className="flex-1 min-w-0">
-                <p className="text-sm font-medium text-sidebar-foreground truncate">{user?.name}</p>
-                <p className="text-xs text-sidebar-foreground/60 capitalize">{user?.role}</p>
-              </div>
-            </div>
+          {/* Divider */}
+          <div className="mx-6 h-px bg-gradient-to-r from-transparent via-white/10 to-transparent" />
+
+          {/* Logout section */}
+          <div className="p-4">
             <button
               onClick={logout}
-              className="sidebar-link w-full text-destructive/80 hover:text-destructive hover:bg-destructive/10"
+              className="w-full flex items-center gap-3 px-4 py-3 rounded-xl text-red-400/80 hover:text-red-400 hover:bg-red-500/10 transition-all duration-300"
             >
               <LogOut className="w-5 h-5" />
-              <span>Sign Out</span>
+              <span className="font-medium text-sm">Sign Out</span>
             </button>
+          </div>
+
+          {/* School branding */}
+          <div className="p-4 pt-2">
+            <div className="px-4 py-3 rounded-xl bg-white/5">
+              <p className="text-xs font-semibold text-sidebar-foreground/80 tracking-wide">DAARUL-ARQAM</p>
+              <p className="text-xs text-sidebar-foreground/40">Schools Management System</p>
+            </div>
           </div>
         </div>
       </aside>
