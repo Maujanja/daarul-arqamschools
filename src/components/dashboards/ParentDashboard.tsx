@@ -277,9 +277,10 @@ export function ParentDashboard() {
         await calculateRankings(studentData.id, studentData.class, selectedTerm, selectedYear);
         
         // Get fee payments for this student using secure query
+        // Payments are stored with term='Annual' by Secretary
         const allPayments = await fetchTable<any>('fee_payments', { student_id: studentData.id });
         const payments = allPayments?.filter((p: any) => 
-          p.academic_year === selectedYear && p.term === selectedTerm
+          p.academic_year === selectedYear
         ) || [];
         
         if (payments.length > 0) {
@@ -291,20 +292,27 @@ export function ParentDashboard() {
           setPaidAmount(0);
         }
         
-        // Get fee structure - this uses publicly readable table
-        const { data: feeStructure } = await supabase
-          .from('fee_structure')
-          .select('total_fee, boarding_type')
-          .eq('class', studentData.class)
-          .eq('boarding_type', studentData.boarding_type || 'day')
-          .eq('academic_year', selectedYear)
-          .eq('term', selectedTerm)
-          .maybeSingle();
-        
-        if (feeStructure) {
-          setExpectedFee(Number(feeStructure.total_fee));
+        // Get expected fee - check for custom_fee first, then fee_structure
+        // Student's custom_fee takes priority over fee_structure
+        if (studentData.custom_fee !== null && studentData.custom_fee !== undefined) {
+          setExpectedFee(Number(studentData.custom_fee));
         } else {
-          setExpectedFee(0);
+          // Get fee structure - this uses publicly readable table
+          // Secretary stores fees as 'Annual', so we query for 'Annual' term
+          const { data: feeStructure } = await supabase
+            .from('fee_structure')
+            .select('total_fee, boarding_type')
+            .eq('class', studentData.class)
+            .eq('boarding_type', studentData.boarding_type || 'day')
+            .eq('academic_year', selectedYear)
+            .eq('term', 'Annual')
+            .maybeSingle();
+          
+          if (feeStructure) {
+            setExpectedFee(Number(feeStructure.total_fee));
+          } else {
+            setExpectedFee(0);
+          }
         }
         
         // Fetch historical debts using secure query
