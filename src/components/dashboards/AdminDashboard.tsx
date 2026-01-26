@@ -354,8 +354,8 @@ export function AdminDashboard() {
     <div className="space-y-8">
       <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4">
         <div>
-          <h1 className="text-3xl font-display font-bold text-foreground">Dashboard</h1>
-          <p className="text-muted-foreground mt-1">Welcome! Here is your school overview.</p>
+          <h1 className="text-3xl font-display font-bold text-white drop-shadow-md">Dashboard</h1>
+          <p className="text-white/80 mt-1">Welcome! Here is your school overview.</p>
         </div>
         <Select value={selectedYear} onValueChange={setSelectedYear}>
           <SelectTrigger className="w-[140px]">
