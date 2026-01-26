@@ -51,19 +51,31 @@ export function StatCard({ title, value, subtitle, icon: Icon, trend, variant = 
     >
       <div className="flex items-start justify-between">
         <div className="space-y-2">
-          <p className="text-sm font-medium text-muted-foreground">{title}</p>
-          <p className="text-3xl font-bold font-display text-card-foreground">{value}</p>
+          <p className={cn(
+            "text-sm font-semibold",
+            backgroundImage ? "text-slate-700 drop-shadow-sm" : "text-muted-foreground"
+          )}>{title}</p>
+          <p className={cn(
+            "text-3xl font-bold font-display",
+            backgroundImage ? "text-slate-900 drop-shadow-md" : "text-card-foreground"
+          )}>{value}</p>
           {subtitle && (
-            <p className="text-sm text-muted-foreground">{subtitle}</p>
+            <p className={cn(
+              "text-sm font-medium",
+              backgroundImage ? "text-slate-600 drop-shadow-sm" : "text-muted-foreground"
+            )}>{subtitle}</p>
           )}
           {trend && (
             <div className={cn(
-              "inline-flex items-center gap-1 text-sm font-medium",
-              trend.isPositive ? "text-success" : "text-destructive"
+              "inline-flex items-center gap-1 text-sm font-semibold drop-shadow-sm",
+              trend.isPositive ? "text-emerald-700" : "text-red-700"
             )}>
               <span>{trend.isPositive ? '↑' : '↓'}</span>
               <span>{Math.abs(trend.value)}%</span>
-              <span className="text-muted-foreground font-normal">vs last term</span>
+              <span className={cn(
+                "font-medium",
+                backgroundImage ? "text-slate-600" : "text-muted-foreground"
+              )}>vs last term</span>
             </div>
           )}
         </div>
