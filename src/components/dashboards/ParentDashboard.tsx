@@ -693,6 +693,19 @@ export function ParentDashboard() {
       </div>
 
 
+      {/* General Performance Trend Chart - First Element */}
+      {Object.keys(studentAveragePerSeries).length > 0 && (
+        <SeriesPerformanceChart
+          data={Object.entries(studentAveragePerSeries).map(([series, avg]) => ({
+            name: series,
+            Average: Number(avg.toFixed(1))
+          }))}
+          title="General Performance Trend"
+          seriesKeys={['Average']}
+          pdfFileName={`${childName}_series_performance.pdf`}
+        />
+      )}
+
       {/* Series Summary Table - Student's Subjects */}
       {studentSubjectSummary.length > 0 && studentSeriesLabels.length > 0 && (
         <SeriesSummaryTable
@@ -704,19 +717,6 @@ export function ParentDashboard() {
           showAveragePerSeries={true}
           averagePerSeries={studentAveragePerSeries}
           pdfFileName={`${childName.replace(/\s+/g, '_')}_series_summary`}
-        />
-      )}
-
-      {/* General Performance Trend Chart - First Element */}
-      {Object.keys(studentAveragePerSeries).length > 0 && (
-        <SeriesPerformanceChart
-          data={Object.entries(studentAveragePerSeries).map(([series, avg]) => ({
-            name: series,
-            Average: Number(avg.toFixed(1))
-          }))}
-          title="General Performance Trend"
-          seriesKeys={['Average']}
-          pdfFileName={`${childName}_series_performance.pdf`}
         />
       )}
 
