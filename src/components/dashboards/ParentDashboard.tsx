@@ -3,6 +3,7 @@ import { StatCard } from '@/components/dashboard/StatCard';
 import { GradeBadge } from '@/components/dashboard/GradeBadge';
 import { SeriesSummaryTable } from '@/components/dashboard/SeriesSummaryTable';
 import { SeriesPerformanceChart } from '@/components/dashboard/SeriesPerformanceChart';
+import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar';
 import { BookOpen, Award, Download, MessageSquare, Loader2, DollarSign, AlertTriangle, TrendingUp, TrendingDown, Megaphone, User, Calendar, FileDown, Trophy, Users, Target } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
@@ -76,6 +77,7 @@ export function ParentDashboard() {
   const [childClass, setChildClass] = useState('');
   const [childBoardingType, setChildBoardingType] = useState('day');
   const [studentId, setStudentId] = useState('');
+  const [studentAvatarUrl, setStudentAvatarUrl] = useState<string | null>(null);
   const [studentMarks, setStudentMarks] = useState<StudentMark[]>([]);
   const [allMarks, setAllMarks] = useState<StudentMark[]>([]);
   const [overallAverage, setOverallAverage] = useState(0);
@@ -237,6 +239,7 @@ export function ParentDashboard() {
         setChildClass(studentData.class);
         setChildBoardingType(studentData.boarding_type || 'day');
         setStudentId(studentData.id);
+        setStudentAvatarUrl(studentData.avatar_url || null);
         
         // Get marks for this student using secure query
         const marksData = await fetchTable<any>('marks', { student_id: studentData.id });
@@ -647,7 +650,44 @@ export function ParentDashboard() {
 
   return (
     <div className="space-y-8">
-      {/* Header */}
+      {/* Student Profile Hero Section - Picha juu kabisa */}
+      <div className="card-elevated p-6 animate-fade-in bg-gradient-to-br from-primary/10 to-accent/10">
+        <div className="flex flex-col items-center text-center gap-4">
+          {/* Large Student Avatar */}
+          <Avatar className="w-32 h-32 border-4 border-primary/20 shadow-xl">
+            <AvatarImage src={studentAvatarUrl || undefined} alt={childName} />
+            <AvatarFallback className="bg-gradient-to-br from-primary to-accent text-primary-foreground text-4xl font-bold">
+              {childName.split(' ').map(n => n[0]).join('')}
+            </AvatarFallback>
+          </Avatar>
+          
+          {/* Student Name and Info */}
+          <div>
+            <h2 className="text-2xl sm:text-3xl font-display font-bold text-primary drop-shadow-sm">{childName}</h2>
+            <p className="text-muted-foreground mt-1">
+              Class {childClass} • {childBoardingType === 'boarding' ? 'Boarding' : 'Day'} Student
+            </p>
+          </div>
+          
+          {/* Overall Average Badge */}
+          <div className="flex items-center gap-4 mt-2">
+            <div className="text-center">
+              <p className="text-sm text-muted-foreground">Overall Average</p>
+              <p className="text-4xl font-bold font-display gradient-text">{overallAverage.toFixed(1)}%</p>
+              <GradeBadge grade={overallAverage >= 75 ? 'A' : overallAverage >= 65 ? 'B' : overallAverage >= 50 ? 'C' : overallAverage >= 40 ? 'D' : 'F'} size="lg" />
+            </div>
+            {classRank && (
+              <div className="text-center border-l border-border pl-4">
+                <p className="text-sm text-muted-foreground">Class Rank</p>
+                <p className="text-3xl font-bold font-display text-primary">{classRank}/{totalClassStudents}</p>
+                {classRank === 1 && <span className="text-xs text-success font-medium">🏆 Top of Class!</span>}
+              </div>
+            )}
+          </div>
+        </div>
+      </div>
+
+      {/* Header with Actions */}
       <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4">
         <div>
           <h1 className="text-3xl font-display font-bold text-white drop-shadow-md">Parent Dashboard</h1>
@@ -727,26 +767,6 @@ export function ParentDashboard() {
           pdfFileName={`${childName.replace(/\s+/g, '_')}_series_summary`}
         />
       )}
-
-      <div className="card-elevated p-6 animate-fade-in">
-        <div className="flex flex-col md:flex-row md:items-center gap-6">
-          <div className="w-20 h-20 rounded-2xl bg-gradient-to-br from-primary to-accent flex items-center justify-center text-primary-foreground text-2xl font-bold">
-            {childName.split(' ').map(n => n[0]).join('')}
-          </div>
-          <div className="flex-1">
-            <h2 className="text-xl font-display font-bold text-white drop-shadow-md">{childName}</h2>
-            <p className="text-muted-foreground">
-              Class {childClass} • {childBoardingType === 'boarding' ? 'Boarding' : 'Day'} Student
-            </p>
-          </div>
-          <div className="text-center md:text-right">
-            <p className="text-sm text-muted-foreground">Overall Average</p>
-            <p className="text-4xl font-bold font-display gradient-text">{overallAverage.toFixed(1)}%</p>
-            <GradeBadge grade={overallAverage >= 75 ? 'A' : overallAverage >= 65 ? 'B' : overallAverage >= 50 ? 'C' : overallAverage >= 40 ? 'D' : 'F'} size="lg" />
-          </div>
-        </div>
-      </div>
-
       {/* Stats Grid */}
       <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-5 gap-6">
         <StatCard

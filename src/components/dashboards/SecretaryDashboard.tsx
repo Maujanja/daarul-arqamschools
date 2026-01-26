@@ -13,6 +13,7 @@ import { useSecureQuery } from '@/hooks/useSecureQuery';
 import { useSecureData } from '@/hooks/useSecureData';
 import { useToast } from '@/hooks/use-toast';
 import { useAcademicYears } from '@/hooks/useAcademicYears';
+import { StudentAvatarUpload } from '@/components/StudentAvatarUpload';
 
 import { 
   Users, 
@@ -38,7 +39,8 @@ import {
   Trash2,
   Settings,
   Percent,
-  Edit
+  Edit,
+  Camera
 } from 'lucide-react';
 
 interface Student {
@@ -49,6 +51,7 @@ interface Student {
   boarding_type?: string;
   custom_fee?: number | null;
   discount_notes?: string | null;
+  avatar_url?: string | null;
 }
 
 interface FeePayment {
@@ -164,6 +167,10 @@ export function SecretaryDashboard() {
   const [selectedStudentForDiscount, setSelectedStudentForDiscount] = useState<Student | null>(null);
   const [discountAmount, setDiscountAmount] = useState('');
   const [discountNotes, setDiscountNotes] = useState('');
+  
+  // Student photo management
+  const [showPhotoDialog, setShowPhotoDialog] = useState(false);
+  const [selectedStudentForPhoto, setSelectedStudentForPhoto] = useState<Student | null>(null);
 
   // Set initial year when currentYear loads
   useEffect(() => {
@@ -493,7 +500,37 @@ export function SecretaryDashboard() {
     }
   };
 
-  // Get paid amount for a student (already filtered by year/term in fetchData)
+  // Handle student avatar update
+  const handleAvatarChange = async (studentId: string, newUrl: string | null) => {
+    try {
+      const result = await update(
+        'students',
+        { avatar_url: newUrl },
+        { id: studentId }
+      );
+      
+      if (!result.success) throw new Error(result.error);
+      
+      // Update local state
+      setStudents(prev => prev.map(s => 
+        s.id === studentId ? { ...s, avatar_url: newUrl } : s
+      ));
+      
+      if (selectedStudentForPhoto) {
+        setSelectedStudentForPhoto({ ...selectedStudentForPhoto, avatar_url: newUrl });
+      }
+      
+    } catch (error: any) {
+      toast({ title: "Error", description: error.message, variant: "destructive" });
+    }
+  };
+
+  const openPhotoDialog = (student: Student) => {
+    setSelectedStudentForPhoto(student);
+    setShowPhotoDialog(true);
+  };
+
+
   const getStudentPaidAmount = (studentId: string) => {
     return feePayments
       .filter(p => p.student_id === studentId)
@@ -926,14 +963,24 @@ export function SecretaryDashboard() {
                             return (
                               <tr key={student.id} className="border-b border-border/50 table-row-hover">
                                 <td className="py-3 px-4 font-medium text-card-foreground">
-                                  <div className="flex items-center gap-2">
-                                    {student.full_name}
-                                    {hasDiscount && (
-                                      <span className="inline-flex items-center gap-1 px-1.5 py-0.5 rounded text-xs font-medium bg-success/10 text-success">
-                                        <Percent className="w-3 h-3" />
-                                        Discount
-                                      </span>
-                                    )}
+                                  <div className="flex items-center gap-3">
+                                    <StudentAvatarUpload
+                                      studentId={student.id}
+                                      studentName={student.full_name}
+                                      currentAvatarUrl={student.avatar_url}
+                                      onAvatarChange={(url) => handleAvatarChange(student.id, url)}
+                                      size="sm"
+                                      editable={false}
+                                    />
+                                    <div>
+                                      <span>{student.full_name}</span>
+                                      {hasDiscount && (
+                                        <span className="ml-2 inline-flex items-center gap-1 px-1.5 py-0.5 rounded text-xs font-medium bg-success/10 text-success">
+                                          <Percent className="w-3 h-3" />
+                                          Discount
+                                        </span>
+                                      )}
+                                    </div>
                                   </div>
                                 </td>
                                 <td className="py-3 px-4 text-card-foreground capitalize">{student.boarding_type || 'day'}</td>
@@ -951,7 +998,16 @@ export function SecretaryDashboard() {
                                     <Button
                                       size="sm"
                                       variant="outline"
+                                      onClick={() => openPhotoDialog(student)}
+                                      title="Manage Photo"
+                                    >
+                                      <Camera className="w-3 h-3" />
+                                    </Button>
+                                    <Button
+                                      size="sm"
+                                      variant="outline"
                                       onClick={() => openDiscountDialog(student)}
+                                      title="Discount"
                                     >
                                       <Percent className="w-3 h-3" />
                                     </Button>
@@ -1338,6 +1394,52 @@ export function SecretaryDashboard() {
             <Button onClick={handleSaveDiscount} disabled={isSubmitting}>
               {isSubmitting ? <Loader2 className="w-4 h-4 animate-spin mr-2" /> : null}
               Save
+            </Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
+
+      {/* Student Photo Management Dialog */}
+      <Dialog open={showPhotoDialog} onOpenChange={setShowPhotoDialog}>
+        <DialogContent>
+          <DialogHeader>
+            <DialogTitle>
+              <div className="flex items-center gap-2">
+                <Camera className="w-5 h-5 text-primary" />
+                Manage Student Photo
+              </div>
+            </DialogTitle>
+          </DialogHeader>
+          {selectedStudentForPhoto && (
+            <div className="space-y-6 py-4">
+              <div className="flex flex-col items-center gap-4">
+                <StudentAvatarUpload
+                  studentId={selectedStudentForPhoto.id}
+                  studentName={selectedStudentForPhoto.full_name}
+                  currentAvatarUrl={selectedStudentForPhoto.avatar_url}
+                  onAvatarChange={(url) => handleAvatarChange(selectedStudentForPhoto.id, url)}
+                  size="xl"
+                  editable={true}
+                />
+                <div className="text-center">
+                  <p className="font-medium text-lg">{selectedStudentForPhoto.full_name}</p>
+                  <p className="text-sm text-muted-foreground">
+                    {selectedStudentForPhoto.class} • {selectedStudentForPhoto.boarding_type || 'Day'}
+                  </p>
+                </div>
+              </div>
+              
+              <div className="p-4 bg-muted/30 rounded-lg">
+                <p className="text-sm text-muted-foreground">
+                  <strong>Instructions:</strong> Click the camera icon to upload a new photo. 
+                  Supported formats: JPG, PNG, GIF. Maximum size: 5MB.
+                </p>
+              </div>
+            </div>
+          )}
+          <DialogFooter>
+            <Button variant="outline" onClick={() => setShowPhotoDialog(false)}>
+              Close
             </Button>
           </DialogFooter>
         </DialogContent>

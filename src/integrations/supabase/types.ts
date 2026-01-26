@@ -448,6 +448,7 @@ export type Database = {
       students: {
         Row: {
           admission_date: string
+          avatar_url: string | null
           boarding_type: string | null
           class: string
           created_at: string
@@ -461,6 +462,7 @@ export type Database = {
         }
         Insert: {
           admission_date?: string
+          avatar_url?: string | null
           boarding_type?: string | null
           class: string
           created_at?: string
@@ -474,6 +476,7 @@ export type Database = {
         }
         Update: {
           admission_date?: string
+          avatar_url?: string | null
           boarding_type?: string | null
           class?: string
           created_at?: string
