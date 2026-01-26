@@ -4,6 +4,7 @@ import { Button } from '@/components/ui/button';
 import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar';
 import { Camera, Loader2, X } from 'lucide-react';
 import { useToast } from '@/hooks/use-toast';
+import { useAuth } from '@/contexts/AuthContext';
 
 interface StudentAvatarUploadProps {
   studentId: string;
@@ -37,6 +38,7 @@ export function StudentAvatarUpload({
   editable = true,
 }: StudentAvatarUploadProps) {
   const { toast } = useToast();
+  const { user } = useAuth();
   const [isUploading, setIsUploading] = useState(false);
   const fileInputRef = useRef<HTMLInputElement>(null);
 
@@ -74,32 +76,40 @@ export function StudentAvatarUpload({
     setIsUploading(true);
 
     try {
-      // Generate unique filename
-      const fileExt = file.name.split('.').pop();
-      const fileName = `${studentId}-${Date.now()}.${fileExt}`;
-      const filePath = `${studentId}/${fileName}`;
+      // Convert file to base64
+      const base64 = await new Promise<string>((resolve, reject) => {
+        const reader = new FileReader();
+        reader.onload = () => {
+          const result = reader.result as string;
+          // Remove the data URL prefix (e.g., "data:image/jpeg;base64,")
+          const base64Data = result.split(',')[1];
+          resolve(base64Data);
+        };
+        reader.onerror = reject;
+        reader.readAsDataURL(file);
+      });
 
-      // Upload to Supabase Storage
-      const { error: uploadError } = await supabase.storage
-        .from('student-avatars')
-        .upload(filePath, file, {
-          cacheControl: '3600',
-          upsert: true,
-        });
+      // Call edge function to upload
+      const { data, error } = await supabase.functions.invoke('upload-avatar', {
+        body: {
+          studentId,
+          fileName: file.name,
+          fileBase64: base64,
+          contentType: file.type,
+          userRole: user?.role || 'secretary',
+        },
+      });
 
-      if (uploadError) {
-        throw uploadError;
+      if (error) {
+        throw error;
       }
 
-      // Get public URL
-      const { data: urlData } = supabase.storage
-        .from('student-avatars')
-        .getPublicUrl(filePath);
-
-      const publicUrl = urlData.publicUrl;
+      if (!data.success) {
+        throw new Error(data.error || 'Upload failed');
+      }
 
       // Notify parent component
-      onAvatarChange(publicUrl);
+      onAvatarChange(data.url);
 
       toast({
         title: 'Success',
@@ -122,11 +132,39 @@ export function StudentAvatarUpload({
   };
 
   const handleRemoveAvatar = async () => {
-    onAvatarChange(null);
-    toast({
-      title: 'Success',
-      description: 'Student photo removed',
-    });
+    setIsUploading(true);
+    try {
+      // Call edge function to delete
+      const { data, error } = await supabase.functions.invoke('upload-avatar?action=delete', {
+        body: {
+          studentId,
+          userRole: user?.role || 'secretary',
+        },
+      });
+
+      if (error) {
+        throw error;
+      }
+
+      if (!data.success) {
+        throw new Error(data.error || 'Delete failed');
+      }
+
+      onAvatarChange(null);
+      toast({
+        title: 'Success',
+        description: 'Student photo removed',
+      });
+    } catch (error: any) {
+      console.error('Delete error:', error);
+      toast({
+        title: 'Error',
+        description: error.message || 'Failed to remove image',
+        variant: 'destructive',
+      });
+    } finally {
+      setIsUploading(false);
+    }
   };
 
   return (
@@ -166,7 +204,7 @@ export function StudentAvatarUpload({
             )}
           </Button>
 
-          {currentAvatarUrl && (
+          {currentAvatarUrl && !isUploading && (
             <Button
               type="button"
               size="icon"
