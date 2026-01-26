@@ -80,17 +80,14 @@ export function Sidebar() {
       {/* Sidebar */}
       <aside 
         className={cn(
-          "fixed left-0 top-0 h-full w-72 z-40 lg:translate-x-0",
+          "fixed left-0 top-0 h-full w-72 z-50",
           "bg-gradient-to-b from-[#1e3a5f] via-[#1a3455] to-[#152a45]",
-          "shadow-2xl transition-all",
-          isOpen 
-            ? "translate-x-0 animate-sidebar-in" 
-            : "-translate-x-full lg:translate-x-0 animate-sidebar-out"
+          "shadow-2xl transition-transform duration-300",
+          // Desktop: always visible
+          "lg:translate-x-0",
+          // Mobile: slide in/out based on isOpen state
+          isOpen ? "translate-x-0" : "-translate-x-full"
         )}
-        style={{
-          animationDuration: '0.4s',
-          animationTimingFunction: 'cubic-bezier(0.34, 1.56, 0.64, 1)'
-        }}
       >
         <div className={cn(
           "flex flex-col h-full",
