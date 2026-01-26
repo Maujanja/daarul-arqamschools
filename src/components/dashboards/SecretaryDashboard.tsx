@@ -156,6 +156,7 @@ export function SecretaryDashboard() {
   const [editingFeeStructure, setEditingFeeStructure] = useState<FeeStructure | null>(null);
   const [newFeeClass, setNewFeeClass] = useState('');
   const [newBoardingType, setNewBoardingType] = useState('day');
+  const [newFeeYear, setNewFeeYear] = useState('');
   const [newTotalFee, setNewTotalFee] = useState('');
   
   // Student discount management
@@ -351,8 +352,10 @@ export function SecretaryDashboard() {
 
   // Fee structure management functions
   const handleSaveFeeStructure = async () => {
-    if (!newFeeClass || !newTotalFee) {
-      toast({ title: "Error", description: "Please fill in class and fee amount", variant: "destructive" });
+    const yearToUse = newFeeYear || selectedYear;
+    
+    if (!newFeeClass || !newTotalFee || !yearToUse) {
+      toast({ title: "Error", description: "Please fill in class, year, and fee amount", variant: "destructive" });
       return;
     }
 
@@ -360,28 +363,31 @@ export function SecretaryDashboard() {
     
     try {
       if (editingFeeStructure) {
-        // Update existing
+        // Update existing - also allow updating the year
         const result = await update(
           'fee_structure',
-          { total_fee: parseFloat(newTotalFee) },
+          { 
+            total_fee: parseFloat(newTotalFee),
+            academic_year: yearToUse
+          },
           { id: editingFeeStructure.id }
         );
         
         if (!result.success) throw new Error(result.error);
         toast({ title: "Success", description: "Fee structure updated" });
       } else {
-        // Insert new
+        // Insert new with selected year
         const result = await insert('fee_structure', {
           class: newFeeClass,
           boarding_type: newBoardingType,
           total_fee: parseFloat(newTotalFee),
           tuition_fee: parseFloat(newTotalFee),
-          academic_year: selectedYear,
+          academic_year: yearToUse,
           term: 'Annual'
         });
         
         if (!result.success) throw new Error(result.error);
-        toast({ title: "Success", description: "Fee structure added" });
+        toast({ title: "Success", description: `Fee structure added for ${yearToUse}` });
       }
       
       setShowFeeStructureDialog(false);
@@ -389,6 +395,7 @@ export function SecretaryDashboard() {
       setNewFeeClass('');
       setNewBoardingType('day');
       setNewTotalFee('');
+      setNewFeeYear('');
       fetchData();
     } catch (error: any) {
       toast({ title: "Error", description: error.message, variant: "destructive" });
@@ -412,6 +419,7 @@ export function SecretaryDashboard() {
     setNewFeeClass(fs.class);
     setNewBoardingType(fs.boarding_type);
     setNewTotalFee(fs.total_fee.toString());
+    setNewFeeYear(fs.academic_year);
     setShowFeeStructureDialog(true);
   };
 
@@ -1160,6 +1168,7 @@ export function SecretaryDashboard() {
                       <tr className="border-b">
                         <th className="text-left py-2 px-3">Class</th>
                         <th className="text-left py-2 px-3">Type</th>
+                        <th className="text-left py-2 px-3">Year</th>
                         <th className="text-right py-2 px-3">Fee (TZS)</th>
                         <th className="text-right py-2 px-3">Action</th>
                       </tr>
@@ -1169,6 +1178,7 @@ export function SecretaryDashboard() {
                         <tr key={fs.id} className="border-b">
                           <td className="py-2 px-3">{fs.class}</td>
                           <td className="py-2 px-3 capitalize">{fs.boarding_type}</td>
+                          <td className="py-2 px-3">{fs.academic_year}</td>
                           <td className="py-2 px-3 text-right font-medium">{Number(fs.total_fee).toLocaleString()}</td>
                           <td className="py-2 px-3 text-right">
                             <div className="flex gap-1 justify-end">
@@ -1193,7 +1203,20 @@ export function SecretaryDashboard() {
             {/* Add/Edit Fee Structure Form */}
             <div className="border-t pt-4">
               <h4 className="font-medium mb-3">{editingFeeStructure ? 'Edit Fee' : 'Add New Fee'}</h4>
-              <div className="grid grid-cols-1 sm:grid-cols-3 gap-4">
+              <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
+                <div className="space-y-2">
+                  <Label>Academic Year</Label>
+                  <Select value={newFeeYear || selectedYear} onValueChange={setNewFeeYear}>
+                    <SelectTrigger>
+                      <SelectValue placeholder="Select year" />
+                    </SelectTrigger>
+                    <SelectContent>
+                      {academicYears.map((year) => (
+                        <SelectItem key={year} value={year}>{year}</SelectItem>
+                      ))}
+                    </SelectContent>
+                  </Select>
+                </div>
                 <div className="space-y-2">
                   <Label>Class</Label>
                   <Select value={newFeeClass} onValueChange={setNewFeeClass} disabled={!!editingFeeStructure}>
@@ -1231,7 +1254,7 @@ export function SecretaryDashboard() {
               </div>
               <div className="flex gap-2 mt-4">
                 {editingFeeStructure && (
-                  <Button variant="outline" onClick={() => { setEditingFeeStructure(null); setNewFeeClass(''); setNewBoardingType('day'); setNewTotalFee(''); }}>
+                  <Button variant="outline" onClick={() => { setEditingFeeStructure(null); setNewFeeClass(''); setNewBoardingType('day'); setNewTotalFee(''); setNewFeeYear(''); }}>
                     Cancel Edit
                   </Button>
                 )}
