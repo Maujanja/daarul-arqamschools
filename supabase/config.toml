@@ -2,3 +2,6 @@ project_id = "bdmuudnrytfwkteybbqb"
 
 [functions.fee-assistant]
 verify_jwt = false
+
+[functions.secure-auth]
+verify_jwt = false
