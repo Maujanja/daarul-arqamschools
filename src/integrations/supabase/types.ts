@@ -299,6 +299,13 @@ export type Database = {
             referencedRelation: "teachers"
             referencedColumns: ["id"]
           },
+          {
+            foreignKeyName: "marks_teacher_id_fkey"
+            columns: ["teacher_id"]
+            isOneToOne: false
+            referencedRelation: "teachers_public"
+            referencedColumns: ["id"]
+          },
         ]
       }
       parents: {
@@ -552,6 +559,13 @@ export type Database = {
             referencedRelation: "teachers"
             referencedColumns: ["id"]
           },
+          {
+            foreignKeyName: "teacher_assignments_teacher_id_fkey"
+            columns: ["teacher_id"]
+            isOneToOne: false
+            referencedRelation: "teachers_public"
+            referencedColumns: ["id"]
+          },
         ]
       }
       teacher_class_students: {
@@ -602,6 +616,13 @@ export type Database = {
             columns: ["teacher_id"]
             isOneToOne: false
             referencedRelation: "teachers"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "teacher_class_students_teacher_id_fkey"
+            columns: ["teacher_id"]
+            isOneToOne: false
+            referencedRelation: "teachers_public"
             referencedColumns: ["id"]
           },
         ]
@@ -665,7 +686,78 @@ export type Database = {
       }
     }
     Views: {
-      [_ in never]: never
+      admin_credentials_public: {
+        Row: {
+          created_at: string | null
+          id: string | null
+          username: string | null
+        }
+        Insert: {
+          created_at?: string | null
+          id?: string | null
+          username?: string | null
+        }
+        Update: {
+          created_at?: string | null
+          id?: string | null
+          username?: string | null
+        }
+        Relationships: []
+      }
+      secretary_credentials_public: {
+        Row: {
+          created_at: string | null
+          full_name: string | null
+          id: string | null
+          username: string | null
+        }
+        Insert: {
+          created_at?: string | null
+          full_name?: string | null
+          id?: string | null
+          username?: string | null
+        }
+        Update: {
+          created_at?: string | null
+          full_name?: string | null
+          id?: string | null
+          username?: string | null
+        }
+        Relationships: []
+      }
+      teachers_public: {
+        Row: {
+          classes: string[] | null
+          created_at: string | null
+          email: string | null
+          full_name: string | null
+          id: string | null
+          subjects: string[] | null
+          updated_at: string | null
+          user_id: string | null
+        }
+        Insert: {
+          classes?: string[] | null
+          created_at?: string | null
+          email?: string | null
+          full_name?: string | null
+          id?: string | null
+          subjects?: string[] | null
+          updated_at?: string | null
+          user_id?: string | null
+        }
+        Update: {
+          classes?: string[] | null
+          created_at?: string | null
+          email?: string | null
+          full_name?: string | null
+          id?: string | null
+          subjects?: string[] | null
+          updated_at?: string | null
+          user_id?: string | null
+        }
+        Relationships: []
+      }
     }
     Functions: {
       get_user_role: {

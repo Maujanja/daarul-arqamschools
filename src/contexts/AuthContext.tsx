@@ -23,6 +23,28 @@ const AuthContext = createContext<AuthContextType | undefined>(undefined);
 
 const AUTH_STORAGE_KEY = 'edumanage_auth';
 
+// Secure authentication via edge function
+async function secureLogin(
+  loginType: 'admin' | 'teacher' | 'parent' | 'secretary',
+  credentials: Record<string, string>
+): Promise<{ success: boolean; user?: AuthUser; error?: string }> {
+  try {
+    const { data, error } = await supabase.functions.invoke('secure-auth', {
+      body: { loginType, credentials },
+    });
+
+    if (error) {
+      console.error('Auth function error:', error);
+      return { success: false, error: 'Authentication service unavailable' };
+    }
+
+    return data;
+  } catch (err: any) {
+    console.error('Auth error:', err);
+    return { success: false, error: err.message || 'Authentication failed' };
+  }
+}
+
 export function AuthProvider({ children }: { children: React.ReactNode }) {
   const [user, setUser] = useState<AuthUser | null>(null);
   const [isLoading, setIsLoading] = useState(true);
@@ -42,133 +64,55 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
   }, []);
 
   const loginAsAdmin = useCallback(async (username: string, password: string) => {
-    try {
-      const { data, error } = await supabase
-        .from('admin_credentials')
-        .select('*')
-        .eq('username', username)
-        .eq('password_hash', password)
-        .maybeSingle();
-
-      if (error || !data) {
-        return { success: false, error: 'Invalid username or password' };
-      }
-
-      const authUser: AuthUser = {
-        id: data.id,
-        name: 'Admin',
-        role: 'admin',
-      };
-
+    const result = await secureLogin('admin', { username, password });
+    
+    if (result.success && result.user) {
+      const authUser = result.user as AuthUser;
       setUser(authUser);
       localStorage.setItem(AUTH_STORAGE_KEY, JSON.stringify(authUser));
       return { success: true };
-    } catch (error: any) {
-      return { success: false, error: error.message || 'Login failed' };
     }
+    
+    return { success: false, error: result.error || 'Login failed' };
   }, []);
 
   const loginAsTeacher = useCallback(async (name: string, password: string) => {
-    try {
-      console.log('AuthContext: Teacher login attempt for:', name.trim());
-      
-      // First find teacher by name (case-insensitive)
-      const { data: teacher, error } = await supabase
-        .from('teachers')
-        .select('id, full_name, email, password_hash')
-        .ilike('full_name', name.trim())
-        .maybeSingle();
-
-      console.log('AuthContext: Teacher query result:', { teacher, error });
-
-      if (error) {
-        console.error('AuthContext: Database error:', error);
-        return { success: false, error: 'Database error' };
-      }
-
-      if (!teacher) {
-        console.log('AuthContext: Teacher not found:', name);
-        return { success: false, error: 'Teacher name not found' };
-      }
-
-      // Check password
-      console.log('AuthContext: Checking password. Expected:', teacher.password_hash, 'Got:', password.trim());
-      if (teacher.password_hash !== password.trim()) {
-        return { success: false, error: 'Incorrect password' };
-      }
-
-      const authUser: AuthUser = {
-        id: teacher.id,
-        name: teacher.full_name,
-        role: 'teacher',
-      };
-
-      console.log('AuthContext: Teacher login successful:', authUser);
+    const result = await secureLogin('teacher', { name, password });
+    
+    if (result.success && result.user) {
+      const authUser = result.user as AuthUser;
       setUser(authUser);
       localStorage.setItem(AUTH_STORAGE_KEY, JSON.stringify(authUser));
       return { success: true };
-    } catch (error: any) {
-      console.error('AuthContext: Login error:', error);
-      return { success: false, error: error.message || 'Login failed' };
     }
+    
+    return { success: false, error: result.error || 'Login failed' };
   }, []);
 
   const loginAsParent = useCallback(async (studentName: string, rollNumber: string) => {
-    try {
-      // Find student by name and roll number
-      const { data: student, error: studentError } = await supabase
-        .from('students')
-        .select('*, parents(*)')
-        .ilike('full_name', studentName)
-        .eq('roll_number', rollNumber)
-        .maybeSingle();
-
-      if (studentError || !student) {
-        return { success: false, error: 'Student name or ID is incorrect' };
-      }
-
-      // Get parent info
-      const parent = student.parents;
-      
-      const authUser: AuthUser = {
-        id: parent?.id || student.id,
-        name: parent?.full_name || `Parent of ${student.full_name}`,
-        role: 'parent',
-      };
-
+    const result = await secureLogin('parent', { studentName, rollNumber });
+    
+    if (result.success && result.user) {
+      const authUser = result.user as AuthUser;
       setUser(authUser);
       localStorage.setItem(AUTH_STORAGE_KEY, JSON.stringify(authUser));
       return { success: true };
-    } catch (error: any) {
-      return { success: false, error: error.message || 'Login failed' };
     }
+    
+    return { success: false, error: result.error || 'Login failed' };
   }, []);
 
   const loginAsSecretary = useCallback(async (username: string, password: string) => {
-    try {
-      const { data, error } = await supabase
-        .from('secretary_credentials')
-        .select('*')
-        .eq('username', username)
-        .eq('password_hash', password)
-        .maybeSingle();
-
-      if (error || !data) {
-        return { success: false, error: 'Invalid username or password' };
-      }
-
-      const authUser: AuthUser = {
-        id: data.id,
-        name: data.full_name,
-        role: 'secretary',
-      };
-
+    const result = await secureLogin('secretary', { username, password });
+    
+    if (result.success && result.user) {
+      const authUser = result.user as AuthUser;
       setUser(authUser);
       localStorage.setItem(AUTH_STORAGE_KEY, JSON.stringify(authUser));
       return { success: true };
-    } catch (error: any) {
-      return { success: false, error: error.message || 'Login failed' };
     }
+    
+    return { success: false, error: result.error || 'Login failed' };
   }, []);
 
   const logout = useCallback(() => {
