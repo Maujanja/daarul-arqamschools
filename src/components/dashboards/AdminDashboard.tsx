@@ -371,10 +371,10 @@ export function AdminDashboard() {
       </div>
 
       <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-6">
-        <StatCard title="Students" value={studentsCount.toLocaleString()} subtitle="All classes" icon={GraduationCap} variant="primary" />
-        <StatCard title="Teachers" value={teachersCount.toLocaleString()} subtitle="All teachers" icon={Users} variant="accent" />
-        <StatCard title="Secretaries" value={secretariesCount.toLocaleString()} subtitle="All secretaries" icon={UserCog} variant="success" />
-        <StatCard title="Feedback" value={feedbackCount.toLocaleString()} subtitle="Pending response" icon={MessageSquare} variant="warning" />
+        <StatCard title="Students" value={studentsCount.toLocaleString()} subtitle="All classes" icon={GraduationCap} variant="primary" bgStyle="silk" />
+        <StatCard title="Teachers" value={teachersCount.toLocaleString()} subtitle="All teachers" icon={Users} variant="accent" bgStyle="cherries" />
+        <StatCard title="Secretaries" value={secretariesCount.toLocaleString()} subtitle="All secretaries" icon={UserCog} variant="success" bgStyle="silk" />
+        <StatCard title="Feedback" value={feedbackCount.toLocaleString()} subtitle="Pending response" icon={MessageSquare} variant="warning" bgStyle="cherries" />
       </div>
 
 

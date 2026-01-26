@@ -759,6 +759,7 @@ export function ParentDashboard() {
           subtitle={classRank === 1 ? 'Top of class!' : classRank && classRank <= 3 ? 'Top 3!' : 'Overall position'}
           icon={Trophy}
           variant={classRank === 1 ? 'success' : classRank && classRank <= 3 ? 'primary' : 'default'}
+          bgStyle="silk"
         />
         <StatCard
           title="Subjects"
@@ -766,6 +767,7 @@ export function ParentDashboard() {
           subtitle="Registered subjects"
           icon={BookOpen}
           variant="primary"
+          bgStyle="cherries"
         />
         <StatCard
           title="Top Subject"
@@ -773,6 +775,7 @@ export function ParentDashboard() {
           subtitle={topSubject ? `${topSubject.average}%` : '-'}
           icon={TrendingUp}
           variant="success"
+          bgStyle="silk"
         />
         <StatCard
           title="Needs Support"
@@ -780,6 +783,7 @@ export function ParentDashboard() {
           subtitle={needSupportSubject ? `${needSupportSubject.average}%` : '-'}
           icon={TrendingDown}
           variant="warning"
+          bgStyle="cherries"
         />
         <StatCard
           title="Fee Balance"
@@ -787,6 +791,7 @@ export function ParentDashboard() {
           subtitle={balance > 0 ? 'Outstanding' : 'Fully paid'}
           icon={DollarSign}
           variant={balance > 0 ? 'warning' : 'success'}
+          bgStyle="silk"
         />
       </div>
 

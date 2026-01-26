@@ -153,12 +153,26 @@
   }
 
   .stat-card {
-    @apply card-elevated p-6 relative overflow-hidden;
+    @apply rounded-xl shadow-md border border-border/50 transition-all duration-300 p-6 relative overflow-hidden;
+  }
+
+  .stat-card:hover {
+    @apply shadow-lg -translate-y-0.5;
   }
 
   .stat-card::before {
     content: '';
     @apply absolute top-0 left-0 w-1 h-full bg-gradient-to-b from-primary to-accent;
+  }
+
+  .stat-card-silk {
+    @apply stat-card;
+    background: linear-gradient(135deg, rgba(255,255,255,0.9) 0%, rgba(255,255,255,0.85) 100%);
+  }
+
+  .stat-card-cherries {
+    @apply stat-card;
+    background: linear-gradient(135deg, rgba(255,255,255,0.92) 0%, rgba(240,248,255,0.88) 100%);
   }
 
   .gradient-text {
