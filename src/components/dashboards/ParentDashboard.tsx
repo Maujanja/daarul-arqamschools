@@ -770,6 +770,19 @@ export function ParentDashboard() {
         />
       </div>
 
+      {/* General Performance Trend Chart - Shown First */}
+      {Object.keys(studentAveragePerSeries).length > 0 && (
+        <SeriesPerformanceChart
+          data={Object.entries(studentAveragePerSeries).map(([series, avg]) => ({
+            name: series,
+            Average: Number(avg.toFixed(1))
+          }))}
+          title="General Performance Trend"
+          seriesKeys={['Average']}
+          pdfFileName={`${childName}_series_performance.pdf`}
+        />
+      )}
+
       {/* School Announcements */}
       <div className="card-elevated p-6 animate-fade-in overflow-hidden">
         <h3 className="font-display font-semibold text-lg mb-6 text-card-foreground flex items-center gap-2">
@@ -1013,19 +1026,6 @@ export function ParentDashboard() {
         )}
       </div>
 
-
-      {/* General Performance Trend Chart */}
-      {Object.keys(studentAveragePerSeries).length > 0 && (
-        <SeriesPerformanceChart
-          data={Object.entries(studentAveragePerSeries).map(([series, avg]) => ({
-            name: series,
-            Average: Number(avg.toFixed(1))
-          }))}
-          title="General Performance Trend"
-          seriesKeys={['Average']}
-          pdfFileName={`${childName}_series_performance.pdf`}
-        />
-      )}
 
       {/* Subject Analysis Table with Class Ranking */}
       <div className="card-elevated p-6 animate-fade-in">
