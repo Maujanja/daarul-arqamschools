@@ -707,6 +707,19 @@ export function ParentDashboard() {
         />
       )}
 
+      {/* General Performance Trend Chart - First Element */}
+      {Object.keys(studentAveragePerSeries).length > 0 && (
+        <SeriesPerformanceChart
+          data={Object.entries(studentAveragePerSeries).map(([series, avg]) => ({
+            name: series,
+            Average: Number(avg.toFixed(1))
+          }))}
+          title="General Performance Trend"
+          seriesKeys={['Average']}
+          pdfFileName={`${childName}_series_performance.pdf`}
+        />
+      )}
+
       <div className="card-elevated p-6 animate-fade-in">
         <div className="flex flex-col md:flex-row md:items-center gap-6">
           <div className="w-20 h-20 rounded-2xl bg-gradient-to-br from-primary to-accent flex items-center justify-center text-primary-foreground text-2xl font-bold">
@@ -770,18 +783,6 @@ export function ParentDashboard() {
         />
       </div>
 
-      {/* General Performance Trend Chart - Shown First */}
-      {Object.keys(studentAveragePerSeries).length > 0 && (
-        <SeriesPerformanceChart
-          data={Object.entries(studentAveragePerSeries).map(([series, avg]) => ({
-            name: series,
-            Average: Number(avg.toFixed(1))
-          }))}
-          title="General Performance Trend"
-          seriesKeys={['Average']}
-          pdfFileName={`${childName}_series_performance.pdf`}
-        />
-      )}
 
       {/* School Announcements */}
       <div className="card-elevated p-6 animate-fade-in overflow-hidden">
