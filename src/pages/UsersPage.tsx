@@ -1,8 +1,7 @@
-import { useState, useEffect } from 'react';
+import { useState, useEffect, useCallback } from 'react';
 import { DashboardLayout } from '@/components/layout/DashboardLayout';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
-import { supabase } from '@/integrations/supabase/client';
 import { Search, Plus, MoreHorizontal, UserCog, Loader2, Shield, GraduationCap, Users } from 'lucide-react';
 import {
   DropdownMenu,
@@ -33,6 +32,9 @@ import {
 } from '@/components/ui/select';
 import { Label } from '@/components/ui/label';
 import { toast } from 'sonner';
+import { useSecureQuery } from '@/hooks/useSecureQuery';
+import { useSecureData } from '@/hooks/useSecureData';
+import { useAuth } from '@/contexts/AuthContext';
 
 interface Teacher {
   id: string;
@@ -66,6 +68,10 @@ interface Secretary {
 }
 
 export default function UsersPage() {
+  const { user } = useAuth();
+  const { fetchTable } = useSecureQuery();
+  const { insert, update, remove } = useSecureData();
+  
   const [searchQuery, setSearchQuery] = useState('');
   const [teachers, setTeachers] = useState<Teacher[]>([]);
   const [parents, setParents] = useState<Parent[]>([]);
@@ -127,36 +133,34 @@ export default function UsersPage() {
     classes: '',
   });
 
-  useEffect(() => {
-    fetchData();
-  }, []);
-
-  const fetchData = async () => {
+  const fetchData = useCallback(async () => {
+    if (!user) return;
+    
     try {
       setLoading(true);
       
-      const [teachersRes, parentsRes, studentsRes, secretariesRes] = await Promise.all([
-        supabase.from('teachers').select('*').order('full_name'),
-        supabase.from('parents').select('*').order('full_name'),
-        supabase.from('students').select('*').order('full_name'),
-        supabase.from('secretary_credentials').select('*').order('full_name'),
+      const [teachersData, parentsData, studentsData, secretariesData] = await Promise.all([
+        fetchTable<Teacher>('teachers', undefined, { orderBy: { column: 'full_name', ascending: true } }),
+        fetchTable<Parent>('parents', undefined, { orderBy: { column: 'full_name', ascending: true } }),
+        fetchTable<Student>('students', undefined, { orderBy: { column: 'full_name', ascending: true } }),
+        fetchTable<Secretary>('secretary_credentials_public' as any, undefined, { orderBy: { column: 'full_name', ascending: true } }),
       ]);
 
-      if (teachersRes.error) throw teachersRes.error;
-      if (parentsRes.error) throw parentsRes.error;
-      if (studentsRes.error) throw studentsRes.error;
-
-      setTeachers(teachersRes.data || []);
-      setParents(parentsRes.data || []);
-      setStudents(studentsRes.data || []);
-      setSecretaries(secretariesRes.data || []);
+      setTeachers(teachersData);
+      setParents(parentsData);
+      setStudents(studentsData);
+      setSecretaries(secretariesData);
     } catch (error) {
       console.error('Error fetching data:', error);
       toast.error('Failed to fetch data');
     } finally {
       setLoading(false);
     }
-  };
+  }, [user, fetchTable]);
+
+  useEffect(() => {
+    fetchData();
+  }, [fetchData]);
 
   const handleAddStudent = async () => {
     if (!newStudent.full_name || !newStudent.class || !newStudent.roll_number) {
@@ -167,24 +171,22 @@ export default function UsersPage() {
     try {
       setSaving(true);
 
-      const { error } = await supabase
-        .from('students')
-        .insert({
-          full_name: newStudent.full_name,
-          class: newStudent.class,
-          roll_number: newStudent.roll_number,
-          parent_id: newStudent.parent_id || null,
-        });
+      const result = await insert('students', {
+        full_name: newStudent.full_name,
+        class: newStudent.class,
+        roll_number: newStudent.roll_number,
+        parent_id: newStudent.parent_id || null,
+      });
 
-      if (error) throw error;
+      if (!result.success) throw new Error(result.error);
 
       toast.success('Student added successfully');
       setShowAddStudentDialog(false);
       setNewStudent({ full_name: '', class: '', roll_number: '', parent_id: '' });
       fetchData();
-    } catch (error) {
+    } catch (error: any) {
       console.error('Error adding student:', error);
-      toast.error('Failed to add student');
+      toast.error(error.message || 'Failed to add student');
     } finally {
       setSaving(false);
     }
@@ -199,23 +201,21 @@ export default function UsersPage() {
     try {
       setSaving(true);
 
-      const { error } = await supabase
-        .from('parents')
-        .insert({
-          full_name: newParent.full_name,
-          email: newParent.email,
-          phone: newParent.phone || null,
-        });
+      const result = await insert('parents', {
+        full_name: newParent.full_name,
+        email: newParent.email,
+        phone: newParent.phone || null,
+      });
 
-      if (error) throw error;
+      if (!result.success) throw new Error(result.error);
 
       toast.success('Parent added successfully');
       setShowAddParentDialog(false);
       setNewParent({ full_name: '', email: '', phone: '' });
       fetchData();
-    } catch (error) {
+    } catch (error: any) {
       console.error('Error adding parent:', error);
-      toast.error('Failed to add parent');
+      toast.error(error.message || 'Failed to add parent');
     } finally {
       setSaving(false);
     }
@@ -223,25 +223,25 @@ export default function UsersPage() {
 
   const handleDeleteStudent = async (id: string) => {
     try {
-      const { error } = await supabase.from('students').delete().eq('id', id);
-      if (error) throw error;
+      const result = await remove('students', { id });
+      if (!result.success) throw new Error(result.error);
       toast.success('Student deleted');
       fetchData();
-    } catch (error) {
+    } catch (error: any) {
       console.error('Error deleting student:', error);
-      toast.error('Failed to delete student');
+      toast.error(error.message || 'Failed to delete student');
     }
   };
 
   const handleDeleteParent = async (id: string) => {
     try {
-      const { error } = await supabase.from('parents').delete().eq('id', id);
-      if (error) throw error;
+      const result = await remove('parents', { id });
+      if (!result.success) throw new Error(result.error);
       toast.success('Parent deleted');
       fetchData();
-    } catch (error) {
+    } catch (error: any) {
       console.error('Error deleting parent:', error);
-      toast.error('Failed to delete parent');
+      toast.error(error.message || 'Failed to delete parent');
     }
   };
 
@@ -275,7 +275,7 @@ export default function UsersPage() {
       const subjectsArray = editTeacher.subjects.split(',').map(s => s.trim()).filter(Boolean);
       const classesArray = editTeacher.classes.split(',').map(c => c.trim()).filter(Boolean);
 
-      const updateData: any = {
+      const updateData: Record<string, unknown> = {
         full_name: editTeacher.full_name,
         email: editTeacher.email,
         subjects: subjectsArray,
@@ -286,20 +286,17 @@ export default function UsersPage() {
         updateData.password_hash = editTeacher.password;
       }
 
-      const { error } = await supabase
-        .from('teachers')
-        .update(updateData)
-        .eq('id', selectedTeacher.id);
+      const result = await update('teachers', updateData, { id: selectedTeacher.id });
 
-      if (error) throw error;
+      if (!result.success) throw new Error(result.error);
 
       toast.success('Teacher updated successfully');
       setShowEditTeacherDialog(false);
       setSelectedTeacher(null);
       fetchData();
-    } catch (error) {
+    } catch (error: any) {
       console.error('Error updating teacher:', error);
-      toast.error('Failed to update teacher');
+      toast.error(error.message || 'Failed to update teacher');
     } finally {
       setSaving(false);
     }
@@ -317,25 +314,23 @@ export default function UsersPage() {
       const subjectsArray = newTeacher.subjects.split(',').map(s => s.trim()).filter(Boolean);
       const classesArray = newTeacher.classes.split(',').map(c => c.trim()).filter(Boolean);
 
-      const { error } = await supabase
-        .from('teachers')
-        .insert({
-          full_name: newTeacher.full_name,
-          email: newTeacher.email,
-          password_hash: newTeacher.password,
-          subjects: subjectsArray,
-          classes: classesArray,
-        });
+      const result = await insert('teachers', {
+        full_name: newTeacher.full_name,
+        email: newTeacher.email,
+        password_hash: newTeacher.password,
+        subjects: subjectsArray,
+        classes: classesArray,
+      });
 
-      if (error) throw error;
+      if (!result.success) throw new Error(result.error);
 
       toast.success('Teacher added successfully');
       setShowAddTeacherDialog(false);
       setNewTeacher({ full_name: '', email: '', password: '', subjects: '', classes: '' });
       fetchData();
-    } catch (error) {
+    } catch (error: any) {
       console.error('Error adding teacher:', error);
-      toast.error('Failed to add teacher');
+      toast.error(error.message || 'Failed to add teacher');
     } finally {
       setSaving(false);
     }
@@ -343,13 +338,13 @@ export default function UsersPage() {
 
   const handleDeleteTeacher = async (id: string) => {
     try {
-      const { error } = await supabase.from('teachers').delete().eq('id', id);
-      if (error) throw error;
+      const result = await remove('teachers', { id });
+      if (!result.success) throw new Error(result.error);
       toast.success('Teacher deleted');
       fetchData();
-    } catch (error) {
+    } catch (error: any) {
       console.error('Error deleting teacher:', error);
-      toast.error('Failed to delete teacher');
+      toast.error(error.message || 'Failed to delete teacher');
     }
   };
 
@@ -367,8 +362,8 @@ export default function UsersPage() {
   );
 
   const filteredSecretaries = secretaries.filter(s =>
-    s.full_name.toLowerCase().includes(searchQuery.toLowerCase()) ||
-    s.username.toLowerCase().includes(searchQuery.toLowerCase())
+    s.full_name?.toLowerCase().includes(searchQuery.toLowerCase()) ||
+    s.username?.toLowerCase().includes(searchQuery.toLowerCase())
   );
 
   // Secretary Management Functions
@@ -380,23 +375,21 @@ export default function UsersPage() {
 
     try {
       setSaving(true);
-      const { error } = await supabase
-        .from('secretary_credentials')
-        .insert({
-          username: newSecretary.username,
-          full_name: newSecretary.full_name,
-          password_hash: newSecretary.password,
-        });
+      const result = await insert('secretary_credentials', {
+        username: newSecretary.username,
+        full_name: newSecretary.full_name,
+        password_hash: newSecretary.password,
+      });
 
-      if (error) throw error;
+      if (!result.success) throw new Error(result.error);
 
       toast.success('Secretary added successfully');
       setShowAddSecretaryDialog(false);
       setNewSecretary({ username: '', full_name: '', password: '' });
       fetchData();
-    } catch (error) {
+    } catch (error: any) {
       console.error('Error adding secretary:', error);
-      toast.error('Failed to add secretary');
+      toast.error(error.message || 'Failed to add secretary');
     } finally {
       setSaving(false);
     }
@@ -420,7 +413,7 @@ export default function UsersPage() {
 
     try {
       setSaving(true);
-      const updateData: any = {
+      const updateData: Record<string, unknown> = {
         username: editSecretary.username,
         full_name: editSecretary.full_name,
       };
@@ -429,20 +422,17 @@ export default function UsersPage() {
         updateData.password_hash = editSecretary.password;
       }
 
-      const { error } = await supabase
-        .from('secretary_credentials')
-        .update(updateData)
-        .eq('id', selectedSecretary.id);
+      const result = await update('secretary_credentials', updateData, { id: selectedSecretary.id });
 
-      if (error) throw error;
+      if (!result.success) throw new Error(result.error);
 
       toast.success('Secretary updated successfully');
       setShowEditSecretaryDialog(false);
       setSelectedSecretary(null);
       fetchData();
-    } catch (error) {
+    } catch (error: any) {
       console.error('Error updating secretary:', error);
-      toast.error('Failed to update secretary');
+      toast.error(error.message || 'Failed to update secretary');
     } finally {
       setSaving(false);
     }
@@ -450,13 +440,13 @@ export default function UsersPage() {
 
   const handleDeleteSecretary = async (id: string) => {
     try {
-      const { error } = await supabase.from('secretary_credentials').delete().eq('id', id);
-      if (error) throw error;
+      const result = await remove('secretary_credentials', { id });
+      if (!result.success) throw new Error(result.error);
       toast.success('Secretary deleted');
       fetchData();
-    } catch (error) {
+    } catch (error: any) {
       console.error('Error deleting secretary:', error);
-      toast.error('Failed to delete secretary');
+      toast.error(error.message || 'Failed to delete secretary');
     }
   };
 

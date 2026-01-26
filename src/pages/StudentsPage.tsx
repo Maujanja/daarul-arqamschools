@@ -1,11 +1,10 @@
-import { useState, useEffect } from 'react';
+import { useState, useEffect, useCallback } from 'react';
 import { DashboardLayout } from '@/components/layout/DashboardLayout';
 import { GradeBadge } from '@/components/dashboard/GradeBadge';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { Checkbox } from '@/components/ui/checkbox';
-import { supabase } from '@/integrations/supabase/client';
 import { useAcademicYears } from '@/hooks/useAcademicYears';
 import { Search, Plus, MoreHorizontal, GraduationCap, Calendar, Loader2, Download, FileText, ArrowRightLeft, Users } from 'lucide-react';
 import { generateStudentReportPDF, generateAllStudentsReportPDF } from '@/utils/pdfGenerator';
@@ -28,6 +27,8 @@ import {
 import { Label } from '@/components/ui/label';
 import { calculateGrade, Grade } from '@/types';
 import { useAuth } from '@/contexts/AuthContext';
+import { useSecureQuery } from '@/hooks/useSecureQuery';
+import { useSecureData } from '@/hooks/useSecureData';
 
 interface Student {
   id: string;
@@ -42,6 +43,44 @@ interface Student {
 interface StudentWithMarks extends Student {
   averageMarks: number;
   grade: Grade;
+}
+
+interface Mark {
+  student_id: string;
+  total: number;
+  subject_id: string;
+}
+
+interface Teacher {
+  id: string;
+  classes: string[];
+  subjects: string[];
+}
+
+interface Subject {
+  id: string;
+  name: string;
+}
+
+interface FeeStructure {
+  id: string;
+  class: string;
+  term: string;
+  total_fee: number;
+  academic_year: string;
+}
+
+interface FeePayment {
+  id: string;
+  student_id: string;
+  amount: number;
+  term: string;
+  academic_year: string;
+}
+
+interface AcademicYear {
+  year_name: string;
+  is_current: boolean;
 }
 
 const ALL_CLASSES = ['Nursery', 'P1', 'P2', 'P3', 'P4', 'P5', 'P6', 'P7', 'S1', 'S2', 'S3', 'S4'];
@@ -68,6 +107,9 @@ const mapClassToFullName = (shortCode: string): string => {
 export default function StudentsPage() {
   const { user } = useAuth();
   const { academicYears, currentYear } = useAcademicYears();
+  const { fetchTable, query } = useSecureQuery();
+  const { insert, update, remove } = useSecureData();
+  
   const [searchQuery, setSearchQuery] = useState('');
   const [selectedClass, setSelectedClass] = useState('all');
   const [students, setStudents] = useState<StudentWithMarks[]>([]);
@@ -94,11 +136,9 @@ export default function StudentsPage() {
   const isTeacher = user?.role === 'teacher';
   const canManageStudents = isAdmin || isSecretary;
 
-  useEffect(() => {
-    fetchStudents();
-  }, [user]);
-
-  const fetchStudents = async () => {
+  const fetchStudents = useCallback(async () => {
+    if (!user) return;
+    
     try {
       setLoading(true);
       
@@ -107,18 +147,18 @@ export default function StudentsPage() {
       
       // If teacher, get their assigned classes and subjects
       if (isTeacher && user) {
-        const { data: teacher } = await supabase
-          .from('teachers')
-          .select('classes, subjects')
-          .eq('id', user.id)
-          .maybeSingle();
+        const teacherResult = await query<Teacher>('teachers', {
+          filters: { id: user.id },
+          limit: 1
+        });
         
-        if (teacher) {
+        if (teacherResult.success && teacherResult.data && teacherResult.data.length > 0) {
+          const teacher = teacherResult.data[0];
           teacherClasses = teacher.classes || [];
           
           // Get subject IDs that match teacher's subject names
           if (teacher.subjects && teacher.subjects.length > 0) {
-            const { data: allSubjects } = await supabase.from('subjects').select('*');
+            const allSubjects = await fetchTable<Subject>('subjects');
             if (allSubjects) {
               teacherSubjectIds = allSubjects
                 .filter(s => teacher.subjects.some((name: string) => 
@@ -132,28 +172,39 @@ export default function StudentsPage() {
       }
 
       // Build query based on role
-      let studentsQuery = supabase.from('students').select('*').order('full_name');
+      let studentsData: Student[] = [];
       
       // Teachers only see students from their assigned classes (convert short codes to full names)
       if (isTeacher && teacherClasses.length > 0) {
         const mappedClasses = teacherClasses.map(mapClassToFullName);
-        studentsQuery = studentsQuery.in('class', mappedClasses);
+        const studentsResult = await query<Student>('students', {
+          filters: { class: mappedClasses },
+          orderBy: { column: 'full_name', ascending: true }
+        });
+        if (studentsResult.success && studentsResult.data) {
+          studentsData = studentsResult.data;
+        }
+      } else {
+        studentsData = await fetchTable<Student>('students', undefined, {
+          orderBy: { column: 'full_name', ascending: true }
+        });
       }
-      
-      const { data: studentsData, error: studentsError } = await studentsQuery;
-
-      if (studentsError) throw studentsError;
 
       // Get marks - filter by teacher's subjects if teacher
-      let marksQuery = supabase.from('marks').select('student_id, total, subject_id');
-      
+      let marksData: Mark[] = [];
       if (isTeacher && teacherSubjectIds.length > 0) {
-        marksQuery = marksQuery.in('subject_id', teacherSubjectIds);
+        const marksResult = await query<Mark>('marks', {
+          select: 'student_id, total, subject_id',
+          filters: { subject_id: teacherSubjectIds }
+        });
+        if (marksResult.success && marksResult.data) {
+          marksData = marksResult.data;
+        }
+      } else {
+        marksData = await fetchTable<Mark>('marks', undefined, {
+          select: 'student_id, total, subject_id'
+        });
       }
-      
-      const { data: marksData, error: marksError } = await marksQuery;
-
-      if (marksError) throw marksError;
 
       const studentsWithMarks: StudentWithMarks[] = (studentsData || []).map(student => {
         const studentMarks = marksData?.filter(m => m.student_id === student.id) || [];
@@ -180,7 +231,11 @@ export default function StudentsPage() {
     } finally {
       setLoading(false);
     }
-  };
+  }, [user, isTeacher, fetchTable, query]);
+
+  useEffect(() => {
+    fetchStudents();
+  }, [fetchStudents]);
 
   const handleAddStudent = async () => {
     if (!newStudent.full_name || !newStudent.roll_number || !newStudent.class) {
@@ -191,17 +246,15 @@ export default function StudentsPage() {
     try {
       setSaving(true);
 
-      const { error } = await supabase
-        .from('students')
-        .insert({
-          full_name: newStudent.full_name.trim(),
-          roll_number: newStudent.roll_number.trim(),
-          class: newStudent.class.trim(),
-          boarding_type: newStudent.boarding_type,
-          admission_date: newStudent.admission_date,
-        });
+      const result = await insert('students', {
+        full_name: newStudent.full_name.trim(),
+        roll_number: newStudent.roll_number.trim(),
+        class: newStudent.class.trim(),
+        boarding_type: newStudent.boarding_type,
+        admission_date: newStudent.admission_date,
+      });
 
-      if (error) throw error;
+      if (!result.success) throw new Error(result.error);
 
       toast.success('Student added successfully!');
       setShowAddDialog(false);
@@ -223,17 +276,13 @@ export default function StudentsPage() {
 
   const handleDeleteStudent = async (id: string) => {
     try {
-      const { error } = await supabase
-        .from('students')
-        .delete()
-        .eq('id', id);
-
-      if (error) throw error;
+      const result = await remove('students', { id });
+      if (!result.success) throw new Error(result.error);
       toast.success('Student deleted');
       fetchStudents();
-    } catch (error) {
+    } catch (error: any) {
       console.error('Error deleting student:', error);
-      toast.error('Failed to delete student');
+      toast.error(error.message || 'Failed to delete student');
     }
   };
 
@@ -256,26 +305,19 @@ export default function StudentsPage() {
       setSaving(true);
 
       // Get current academic year
-      const { data: currentAcademicYear } = await supabase
-        .from('academic_years')
-        .select('year_name')
-        .eq('is_current', true)
-        .maybeSingle();
-      
-      const academicYear = currentAcademicYear?.year_name || '2024-2025';
+      const academicYearsData = await fetchTable<AcademicYear>('academic_years', { is_current: true }, { limit: 1 });
+      const academicYear = academicYearsData?.[0]?.year_name || '2024-2025';
 
       // Get fee structure and payments to calculate outstanding debts
-      const { data: feeStructures } = await supabase
-        .from('fee_structure')
-        .select('*')
-        .eq('class', transferFromClass)
-        .eq('academic_year', academicYear);
+      const feeStructures = await fetchTable<FeeStructure>('fee_structure', { 
+        class: transferFromClass, 
+        academic_year: academicYear 
+      });
       
-      const { data: feePayments } = await supabase
-        .from('fee_payments')
-        .select('*')
-        .in('student_id', studentsToTransfer)
-        .eq('academic_year', academicYear);
+      const feePayments = await fetchTable<FeePayment>('fee_payments', {
+        student_id: studentsToTransfer,
+        academic_year: academicYear
+      });
 
       // Calculate and save outstanding debts for each student using dynamic terms
       for (const studentId of studentsToTransfer) {
@@ -292,7 +334,7 @@ export default function StudentsPage() {
           
           // If there's outstanding debt, save it to history
           if (outstanding > 0) {
-            await supabase.from('student_debt_history').insert({
+            await insert('student_debt_history', {
               student_id: studentId,
               academic_year: academicYear,
               term: term,
@@ -307,12 +349,9 @@ export default function StudentsPage() {
       }
 
       // 1. Update students' class
-      const { error: studentError } = await supabase
-        .from('students')
-        .update({ class: transferToClass })
-        .in('id', studentsToTransfer);
-
-      if (studentError) throw studentError;
+      for (const studentId of studentsToTransfer) {
+        await update('students', { class: transferToClass }, { id: studentId });
+      }
 
       // Convert full class name to short code for teacher matching
       const getClassShortCode = (fullName: string): string => {
@@ -324,43 +363,14 @@ export default function StudentsPage() {
         return reverseMapping[fullName] || fullName;
       };
 
-      const newClassShortCode = getClassShortCode(transferToClass);
       const oldClassShortCode = getClassShortCode(transferFromClass);
 
-      // 2. Get ALL teachers and filter those assigned to the NEW class
-      const { data: allTeachers } = await supabase
-        .from('teachers')
-        .select('id, classes, subjects');
-
-      // Find teachers assigned to the new class (checking both short and full names)
-      const teachersForNewClass = (allTeachers || []).filter(t => 
-        t.classes?.some((c: string) => 
-          c === newClassShortCode || 
-          c === transferToClass || 
-          mapClassToFullName(c) === transferToClass
-        )
-      );
-
-      const teacherIdsForNewClass = new Set(teachersForNewClass.map(t => t.id));
-
-      console.log(`Teachers for ${transferToClass}:`, teachersForNewClass.map(t => t.id));
-
       // 3. Delete ALL old teacher_class_students entries for these students (old class)
-      await supabase
-        .from('teacher_class_students')
-        .delete()
-        .in('student_id', studentsToTransfer)
-        .eq('class', transferFromClass);
+      for (const studentId of studentsToTransfer) {
+        await remove('teacher_class_students', { student_id: studentId, class: transferFromClass });
+        await remove('teacher_class_students', { student_id: studentId, class: oldClassShortCode });
+      }
 
-      // Also delete entries with old class short code
-      await supabase
-        .from('teacher_class_students')
-        .delete()
-        .in('student_id', studentsToTransfer)
-        .eq('class', oldClassShortCode);
-
-      // 4. For teachers assigned to the NEW class, they can now select these students
-      // via MyClassStudentsPage - the students will appear in their class dropdown
       console.log(`${studentsToTransfer.length} students now available for teachers assigned to ${transferToClass}`);
 
       // 4. Check if graduating
@@ -411,22 +421,13 @@ export default function StudentsPage() {
 
   const handleDownloadStudentReport = async (student: StudentWithMarks) => {
     try {
-      const { data: marksData, error } = await supabase
-        .from('marks')
-        .select(`
-          total,
-          grade,
-          term,
-          academic_year,
-          subject_id,
-          subjects (name)
-        `)
-        .eq('student_id', student.id);
+      const marksData = await fetchTable<any>('marks', { student_id: student.id });
 
-      if (error) throw error;
+      const subjectsData = await fetchTable<Subject>('subjects');
+      const subjectsMap = new Map(subjectsData.map(s => [s.id, s.name]));
 
       const subjects = (marksData || []).map((m: any) => ({
-        name: m.subjects?.name || 'Unknown Subject',
+        name: subjectsMap.get(m.subject_id) || 'Unknown Subject',
         marks: m.total,
         grade: m.grade,
       }));
@@ -467,7 +468,7 @@ export default function StudentsPage() {
       grade: s.grade,
     }));
 
-      generateAllStudentsReportPDF(studentsData, terms[0] || 'Test 1', currentYear);
+    generateAllStudentsReportPDF(studentsData, terms[0] || 'Test 1', currentYear);
     toast.success('All students report downloaded!');
   };
 
