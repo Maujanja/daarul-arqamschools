@@ -1,20 +1,21 @@
-import { useState, useEffect, useRef } from 'react';
+import { useState, useEffect, useRef, useCallback } from 'react';
 import { DashboardLayout } from '@/components/layout/DashboardLayout';
 import { GradeBadge } from '@/components/dashboard/GradeBadge';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
-import { supabase } from '@/integrations/supabase/client';
 import { calculateGrade } from '@/types';
 import { Save, Loader2, Upload, Download, FileSpreadsheet, Edit3 } from 'lucide-react';
 import { useToast } from '@/hooks/use-toast';
 import { useAuth } from '@/contexts/AuthContext';
 import * as XLSX from 'xlsx';
-import { terms, generateTerms, DEFAULT_TERM_COUNT } from '@/data/mockData';
+import { terms, DEFAULT_TERM_COUNT } from '@/data/mockData';
 import { Plus } from 'lucide-react';
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger } from '@/components/ui/dialog';
 import { useAcademicYears } from '@/hooks/useAcademicYears';
+import { useSecureQuery } from '@/hooks/useSecureQuery';
+import { useSecureData } from '@/hooks/useSecureData';
 
 interface Student {
   id: string;
@@ -47,11 +48,30 @@ interface TeacherAssignment {
   academic_year: string;
 }
 
+interface Mark {
+  id: string;
+  student_id: string;
+  subject_id: string;
+  class: string;
+  exam: number;
+  total: number;
+  grade: string;
+  term: string;
+  academic_year: string;
+  teacher_id?: string;
+}
 
-// Academic years now fetched from database via useAcademicYears hook
+interface TeacherClassStudent {
+  id: string;
+  teacher_id: string;
+  student_id: string;
+  class: string;
+  subject_id: string;
+  academic_year: string;
+}
+
 const ALL_CLASSES = ['Primary 1', 'Primary 2', 'Primary 3', 'Primary 4', 'Primary 5', 'Primary 6', 'Primary 7', 'Senior 1', 'Senior 2', 'Senior 3', 'Senior 4'];
 
-// Map short class codes to full class names (for teacher assignments compatibility)
 const mapClassToFullName = (shortClass: string): string => {
   const mappings: Record<string, string> = {
     'S1': 'Senior 1',
@@ -74,6 +94,8 @@ export default function MarksEntryPage() {
   const { toast } = useToast();
   const { user } = useAuth();
   const { academicYears, currentYear, loading: yearsLoading } = useAcademicYears();
+  const { fetchTable, query } = useSecureQuery();
+  const { upsert } = useSecureData();
   const fileInputRef = useRef<HTMLInputElement>(null);
   const [selectedClass, setSelectedClass] = useState('');
   const [selectedSubject, setSelectedSubject] = useState('');
@@ -94,7 +116,6 @@ export default function MarksEntryPage() {
 
   const isTeacher = user?.role === 'teacher';
   
-  // Add new series
   const handleAddSeries = () => {
     const newSeries = `Series ${newSeriesNumber}`;
     if (!availableTerms.includes(newSeries)) {
@@ -108,12 +129,10 @@ export default function MarksEntryPage() {
     setShowAddSeriesDialog(false);
   };
 
-  // Get available classes for teacher
   const availableClasses = isTeacher 
     ? [...new Set(teacherAssignments.map(a => a.class))]
     : ALL_CLASSES;
 
-  // Get available subjects for selected class (for teacher, only assigned subjects)
   const availableSubjects = isTeacher
     ? subjects.filter(s => 
         teacherAssignments.some(a => a.class === selectedClass && a.subject_id === s.id)
@@ -123,57 +142,41 @@ export default function MarksEntryPage() {
   const selectedSubjectData = subjects.find(s => s.id === selectedSubject);
   const maxMarks = selectedSubjectData?.max_marks || 100;
 
-  // Set initial year when academic years load
   useEffect(() => {
     if (currentYear && !selectedYear) {
       setSelectedYear(currentYear);
     }
   }, [currentYear, selectedYear]);
 
-  // Fetch teacher assignments and subjects
+  // Fetch teacher assignments and subjects via secure query
   useEffect(() => {
     const fetchInitialData = async () => {
+      if (!user) return;
+      
       setIsLoading(true);
       
-      // Fetch subjects
-      const { data: subjectsData, error: subjectsError } = await supabase
-        .from('subjects')
-        .select('*')
-        .order('name');
-      
-      if (subjectsError) {
-        console.error('Error fetching subjects:', subjectsError);
-        setIsLoading(false);
-        return;
-      }
-      
-      setSubjects(subjectsData || []);
+      // Fetch subjects (publicly readable)
+      const subjectsData = await fetchTable<Subject>('subjects');
+      setSubjects(subjectsData);
 
-      // Fetch teacher assignments if teacher
       if (isTeacher && user?.id) {
-        const { data: assignmentsData } = await supabase
-          .from('teacher_assignments')
-          .select('*')
-          .eq('teacher_id', user.id);
+        // Fetch teacher assignments via secure query
+        const assignmentsData = await fetchTable<TeacherAssignment>('teacher_assignments', { teacher_id: user.id });
         
         if (assignmentsData && assignmentsData.length > 0) {
-          // Map assignment classes to full names
           const mappedAssignments = assignmentsData.map(a => ({
             ...a,
             class: mapClassToFullName(a.class)
           }));
           setTeacherAssignments(mappedAssignments);
-          // Set initial class from assignments
           const firstClass = mappedAssignments[0].class;
           setSelectedClass(firstClass);
-          // Set initial subject for that class
           const firstSubject = mappedAssignments.find(a => a.class === firstClass)?.subject_id;
           if (firstSubject) {
             setSelectedSubject(firstSubject);
           }
         }
       } else {
-        // For admin, set default class
         setSelectedClass('Primary 1');
         if (subjectsData && subjectsData.length > 0) {
           setSelectedSubject(subjectsData[0].id);
@@ -184,12 +187,12 @@ export default function MarksEntryPage() {
     };
     
     fetchInitialData();
-  }, [isTeacher, user?.id]);
+  }, [isTeacher, user?.id, user, fetchTable]);
 
   // Fetch students when class changes - for teachers, only fetch their selected students
   useEffect(() => {
     const fetchStudents = async () => {
-      if (!selectedClass || !selectedSubject) return;
+      if (!selectedClass || !selectedSubject || !user) return;
       
       setIsLoading(true);
       console.log('Fetching students for:', { selectedClass, selectedSubject, userId: user?.id, isTeacher });
@@ -204,41 +207,29 @@ export default function MarksEntryPage() {
           subject_id: selectedSubject
         });
         
-        const { data: selectedStudents, error: selectError } = await supabase
-          .from('teacher_class_students')
-          .select('student_id')
-          .eq('teacher_id', user.id)
-          .eq('class', selectedClass)
-          .eq('subject_id', selectedSubject);
+        const selectedStudents = await fetchTable<TeacherClassStudent>('teacher_class_students', {
+          teacher_id: user.id,
+          class: selectedClass,
+          subject_id: selectedSubject
+        });
         
-        console.log('Selected students from teacher_class_students:', selectedStudents, 'Error:', selectError);
+        console.log('Selected students from teacher_class_students:', selectedStudents);
         
         if (selectedStudents && selectedStudents.length > 0) {
           const studentIds = selectedStudents.map(s => s.student_id);
-          const { data: students, error: studentsError } = await supabase
-            .from('students')
-            .select('*')
-            .in('id', studentIds)
-            .order('roll_number');
-          
-          console.log('Fetched students:', students?.length, 'Error:', studentsError);
-          studentsToShow = students || [];
+          // Fetch student details for these IDs
+          const allStudents = await fetchTable<Student>('students', { class: selectedClass });
+          studentsToShow = allStudents.filter(s => studentIds.includes(s.id)).sort((a, b) => a.roll_number.localeCompare(b.roll_number));
         }
       } else {
         // For admin, get all students in the class
-        const { data } = await supabase
-          .from('students')
-          .select('*')
-          .eq('class', selectedClass)
-          .order('roll_number');
-        
-        studentsToShow = data || [];
+        const allStudents = await fetchTable<Student>('students', { class: selectedClass });
+        studentsToShow = allStudents.sort((a, b) => a.roll_number.localeCompare(b.roll_number));
       }
       
       console.log('Final students to show:', studentsToShow.length);
       setStudents(studentsToShow);
       
-      // Initialize marks for these students
       const initialMarks: StudentMark[] = studentsToShow.map(student => ({
         studentId: student.id,
         studentName: student.full_name,
@@ -253,29 +244,25 @@ export default function MarksEntryPage() {
     };
     
     fetchStudents();
-  }, [selectedClass, selectedSubject, isTeacher, user?.id]);
+  }, [selectedClass, selectedSubject, isTeacher, user?.id, user, fetchTable]);
 
   // Load existing marks when subject/term/year changes
   useEffect(() => {
     const loadExistingMarks = async () => {
-      if (!selectedSubject || students.length === 0) return;
+      if (!selectedSubject || students.length === 0 || !user) return;
       
-      const { data, error } = await supabase
-        .from('marks')
-        .select('*')
-        .eq('class', selectedClass)
-        .eq('subject_id', selectedSubject)
-        .eq('term', selectedTerm)
-        .eq('academic_year', selectedYear);
+      const result = await query<Mark>('marks', {
+        filters: {
+          class: selectedClass,
+          subject_id: selectedSubject,
+          term: selectedTerm,
+          academic_year: selectedYear
+        }
+      });
       
-      if (error) {
-        console.error('Error loading marks:', error);
-        return;
-      }
-      
-      if (data && data.length > 0) {
+      if (result.success && result.data && result.data.length > 0) {
         setMarks(prev => prev.map(mark => {
-          const existingMark = data.find(m => m.student_id === mark.studentId);
+          const existingMark = result.data!.find(m => m.student_id === mark.studentId);
           if (existingMark) {
             return {
               ...mark,
@@ -290,7 +277,7 @@ export default function MarksEntryPage() {
     };
     
     loadExistingMarks();
-  }, [selectedSubject, selectedTerm, selectedYear, students, selectedClass]);
+  }, [selectedSubject, selectedTerm, selectedYear, students, selectedClass, user, query]);
 
   const updateMark = (studentId: string, value: string) => {
     const numValue = value === '' ? '' : Math.min(Math.max(0, parseInt(value) || 0), maxMarks);
@@ -312,7 +299,6 @@ export default function MarksEntryPage() {
     }));
   };
 
-  // Excel export function
   const handleExportTemplate = () => {
     const templateData = marks.map(mark => ({
       'Roll Number': mark.rollNumber,
@@ -324,11 +310,10 @@ export default function MarksEntryPage() {
     const wb = XLSX.utils.book_new();
     XLSX.utils.book_append_sheet(wb, ws, 'Marks');
     
-    // Set column widths
     ws['!cols'] = [
-      { wch: 15 },  // Roll Number
-      { wch: 30 },  // Student Name
-      { wch: 15 },  // Exam Marks
+      { wch: 15 },
+      { wch: 30 },
+      { wch: 15 },
     ];
     
     XLSX.writeFile(wb, `marks_${selectedClass}_${selectedSubjectData?.name || 'subject'}_${selectedTerm}.xlsx`);
@@ -339,14 +324,12 @@ export default function MarksEntryPage() {
     });
   };
 
-  // Handle file input click
   const handleImportClick = () => {
     if (fileInputRef.current) {
       fileInputRef.current.click();
     }
   };
 
-  // Excel import function
   const handleImportExcel = async (event: React.ChangeEvent<HTMLInputElement>) => {
     const file = event.target.files?.[0];
     if (!file) return;
@@ -407,7 +390,6 @@ export default function MarksEntryPage() {
   };
 
   const handleSubmit = async () => {
-    // Validate all marks are entered
     const incomplete = marks.some(m => m.exam === '');
 
     if (incomplete) {
@@ -422,7 +404,7 @@ export default function MarksEntryPage() {
     setIsSubmitting(true);
     
     try {
-      // Upsert marks to database - include teacher_id for tracking
+      // Upsert marks to database via secure data hook
       const marksToInsert = marks.map(mark => ({
         student_id: mark.studentId,
         subject_id: selectedSubject,
@@ -435,15 +417,11 @@ export default function MarksEntryPage() {
         teacher_id: isTeacher && user?.id ? user.id : null,
       }));
 
+      // Use secure upsert for each mark
       for (const markData of marksToInsert) {
-        const { error } = await supabase
-          .from('marks')
-          .upsert(markData, {
-            onConflict: 'student_id,subject_id,term,academic_year',
-          });
-        
-        if (error) {
-          throw error;
+        const result = await upsert('marks', markData);
+        if (!result.success) {
+          throw new Error(result.error || 'Failed to save mark');
         }
       }
       
@@ -475,7 +453,6 @@ export default function MarksEntryPage() {
   return (
     <DashboardLayout>
       <div className="space-y-8">
-        {/* Hidden file input for Excel import */}
         <input
           type="file"
           ref={fileInputRef}
@@ -485,7 +462,6 @@ export default function MarksEntryPage() {
           id="excel-file-input"
         />
         
-        {/* Header */}
         <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4">
           <div>
             <h1 className="text-3xl font-display font-bold text-foreground">Marks Entry</h1>
@@ -493,7 +469,6 @@ export default function MarksEntryPage() {
           </div>
         </div>
 
-        {/* Filters */}
         <div className="card-elevated p-6 animate-fade-in">
           <h3 className="font-display font-semibold text-lg mb-4 text-card-foreground">Select Class & Subject</h3>
           {isTeacher && availableClasses.length === 0 && (
@@ -517,7 +492,6 @@ export default function MarksEntryPage() {
               <label className="text-sm font-medium text-muted-foreground">Class</label>
               <Select value={selectedClass} onValueChange={(value) => {
                 setSelectedClass(value);
-                // Reset subject when class changes for teacher
                 if (isTeacher) {
                   const firstSubjectForClass = teacherAssignments.find(a => a.class === value)?.subject_id;
                   if (firstSubjectForClass) {
@@ -608,7 +582,6 @@ export default function MarksEntryPage() {
           </div>
         </div>
 
-        {/* Entry Method Tabs */}
         <Tabs value={entryMethod} onValueChange={(v) => setEntryMethod(v as 'manual' | 'excel')} className="w-full">
           <TabsList className="grid w-full grid-cols-2 max-w-md">
             <TabsTrigger value="manual" className="flex items-center gap-2">
@@ -621,7 +594,6 @@ export default function MarksEntryPage() {
             </TabsTrigger>
           </TabsList>
 
-          {/* Excel Import Tab */}
           <TabsContent value="excel" className="mt-6">
             <div className="card-elevated p-8 animate-fade-in">
               <div className="text-center space-y-6">
@@ -677,9 +649,7 @@ export default function MarksEntryPage() {
             </div>
           </TabsContent>
 
-          {/* Manual Entry Tab */}
           <TabsContent value="manual" className="mt-6">
-            {/* Marks Entry Table */}
             <div className="card-elevated overflow-hidden animate-fade-in">
               <div className="p-6 border-b border-border">
                 <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4">
@@ -771,7 +741,6 @@ export default function MarksEntryPage() {
           </TabsContent>
         </Tabs>
 
-        {/* Show Save Button for Excel Tab too when marks are loaded */}
         {entryMethod === 'excel' && marks.some(m => m.exam !== '') && (
           <div className="flex justify-center">
             <Button 
@@ -795,7 +764,6 @@ export default function MarksEntryPage() {
           </div>
         )}
 
-        {/* Grading Info */}
         <div className="card-elevated p-6 animate-fade-in">
           <h3 className="font-display font-semibold text-lg mb-4 text-card-foreground">Grading Scale</h3>
           <div className="flex flex-wrap gap-4">
