@@ -6,7 +6,7 @@ import { Input } from '@/components/ui/input';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { Checkbox } from '@/components/ui/checkbox';
 import { useAcademicYears } from '@/hooks/useAcademicYears';
-import { Search, Plus, MoreHorizontal, GraduationCap, Calendar, Loader2, Download, FileText, ArrowRightLeft, Users } from 'lucide-react';
+import { Search, Plus, MoreHorizontal, GraduationCap, Calendar, Loader2, Download, FileText, ArrowRightLeft, Users, Camera } from 'lucide-react';
 import { generateStudentReportPDF, generateAllStudentsReportPDF } from '@/utils/pdfGenerator';
 import { terms } from '@/data/mockData';
 import { toast } from 'sonner';
@@ -29,6 +29,8 @@ import { calculateGrade, Grade } from '@/types';
 import { useAuth } from '@/contexts/AuthContext';
 import { useSecureQuery } from '@/hooks/useSecureQuery';
 import { useSecureData } from '@/hooks/useSecureData';
+import { StudentAvatarUpload } from '@/components/StudentAvatarUpload';
+import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar';
 
 interface Student {
   id: string;
@@ -38,6 +40,7 @@ interface Student {
   admission_date: string;
   parent_id: string | null;
   boarding_type: string;
+  avatar_url?: string | null;
 }
 
 interface StudentWithMarks extends Student {
@@ -117,6 +120,8 @@ export default function StudentsPage() {
   const [loading, setLoading] = useState(true);
   const [showAddDialog, setShowAddDialog] = useState(false);
   const [showBulkTransferDialog, setShowBulkTransferDialog] = useState(false);
+  const [showEditDialog, setShowEditDialog] = useState(false);
+  const [editingStudent, setEditingStudent] = useState<StudentWithMarks | null>(null);
   const [saving, setSaving] = useState(false);
   const [newStudent, setNewStudent] = useState({
     full_name: '',
@@ -124,7 +129,10 @@ export default function StudentsPage() {
     class: '',
     boarding_type: 'day',
     admission_date: new Date().toISOString().split('T')[0],
+    avatar_url: null as string | null,
   });
+  const [tempAvatarUrl, setTempAvatarUrl] = useState<string | null>(null);
+  const [newStudentTempId] = useState(() => `temp-${Date.now()}`);
   
   // Bulk transfer state
   const [transferFromClass, setTransferFromClass] = useState('');
@@ -252,6 +260,7 @@ export default function StudentsPage() {
         class: newStudent.class.trim(),
         boarding_type: newStudent.boarding_type,
         admission_date: newStudent.admission_date,
+        avatar_url: tempAvatarUrl,
       });
 
       if (!result.success) throw new Error(result.error);
@@ -264,13 +273,54 @@ export default function StudentsPage() {
         class: '',
         boarding_type: 'day',
         admission_date: new Date().toISOString().split('T')[0],
+        avatar_url: null,
       });
+      setTempAvatarUrl(null);
       fetchStudents();
     } catch (error: any) {
       console.error('Error adding student:', error);
       toast.error(error.message || 'Failed to add student');
     } finally {
       setSaving(false);
+    }
+  };
+
+  const openEditDialog = (student: StudentWithMarks) => {
+    setEditingStudent(student);
+    setShowEditDialog(true);
+  };
+
+  const handleUpdateStudent = async () => {
+    if (!editingStudent) return;
+
+    try {
+      setSaving(true);
+
+      const result = await update('students', {
+        full_name: editingStudent.full_name.trim(),
+        roll_number: editingStudent.roll_number.trim(),
+        class: editingStudent.class.trim(),
+        boarding_type: editingStudent.boarding_type,
+        avatar_url: editingStudent.avatar_url,
+      }, { id: editingStudent.id });
+
+      if (!result.success) throw new Error(result.error);
+
+      toast.success('Student updated successfully!');
+      setShowEditDialog(false);
+      setEditingStudent(null);
+      fetchStudents();
+    } catch (error: any) {
+      console.error('Error updating student:', error);
+      toast.error(error.message || 'Failed to update student');
+    } finally {
+      setSaving(false);
+    }
+  };
+
+  const handleEditAvatarChange = (newUrl: string | null) => {
+    if (editingStudent) {
+      setEditingStudent({ ...editingStudent, avatar_url: newUrl });
     }
   };
 
@@ -549,9 +599,12 @@ export default function StudentsPage() {
                 style={{ animationDelay: `${index * 50}ms` }}
               >
                 <div className="flex items-start justify-between mb-4">
-                  <div className="w-14 h-14 rounded-xl bg-gradient-to-br from-primary to-accent flex items-center justify-center text-primary-foreground font-bold text-lg">
-                    {student.full_name.split(' ').map(n => n[0]).join('')}
-                  </div>
+                  <Avatar className="w-14 h-14 border-2 border-primary/20">
+                    <AvatarImage src={student.avatar_url || undefined} alt={student.full_name} />
+                    <AvatarFallback className="bg-gradient-to-br from-primary to-accent text-primary-foreground font-bold text-lg">
+                      {student.full_name.split(' ').map(n => n[0]).join('')}
+                    </AvatarFallback>
+                  </Avatar>
                   <DropdownMenu>
                     <DropdownMenuTrigger asChild>
                       <Button variant="ghost" size="icon" className="h-8 w-8">
@@ -567,7 +620,10 @@ export default function StudentsPage() {
                       </DropdownMenuItem>
                       {canManageStudents && (
                         <>
-                          <DropdownMenuItem>Edit</DropdownMenuItem>
+                          <DropdownMenuItem onClick={() => openEditDialog(student)}>
+                            <Camera className="w-4 h-4 mr-2" />
+                            Edit / Photo
+                          </DropdownMenuItem>
                           <DropdownMenuItem 
                             className="text-destructive"
                             onClick={() => handleDeleteStudent(student.id)}
@@ -642,6 +698,22 @@ export default function StudentsPage() {
             </DialogDescription>
           </DialogHeader>
           <div className="space-y-4 py-4">
+            {/* Student Photo */}
+            <div className="flex flex-col items-center gap-3">
+              <Label>Student Photo (Optional)</Label>
+              <StudentAvatarUpload
+                studentId={newStudentTempId}
+                studentName={newStudent.full_name || 'New Student'}
+                currentAvatarUrl={tempAvatarUrl}
+                onAvatarChange={(url) => setTempAvatarUrl(url)}
+                size="lg"
+                editable={true}
+              />
+              <p className="text-xs text-muted-foreground text-center">
+                Click the camera icon to upload a photo
+              </p>
+            </div>
+            
             <div className="space-y-2">
               <Label htmlFor="full_name">Full Name</Label>
               <Input
@@ -801,6 +873,92 @@ export default function StudentsPage() {
             <Button onClick={handleBulkTransfer} disabled={saving || !transferFromClass || !transferToClass}>
               {saving && <Loader2 className="w-4 h-4 mr-2 animate-spin" />}
               Transfer Students
+            </Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
+
+      {/* Edit Student Dialog */}
+      <Dialog open={showEditDialog} onOpenChange={setShowEditDialog}>
+        <DialogContent>
+          <DialogHeader>
+            <DialogTitle>Edit Student</DialogTitle>
+            <DialogDescription>
+              Update student information and photo
+            </DialogDescription>
+          </DialogHeader>
+          {editingStudent && (
+            <div className="space-y-4 py-4">
+              {/* Student Photo */}
+              <div className="flex flex-col items-center gap-3">
+                <Label>Student Photo</Label>
+                <StudentAvatarUpload
+                  studentId={editingStudent.id}
+                  studentName={editingStudent.full_name}
+                  currentAvatarUrl={editingStudent.avatar_url}
+                  onAvatarChange={handleEditAvatarChange}
+                  size="xl"
+                  editable={true}
+                />
+                <p className="text-xs text-muted-foreground text-center">
+                  Click the camera icon to upload or change photo
+                </p>
+              </div>
+              
+              <div className="space-y-2">
+                <Label>Full Name</Label>
+                <Input
+                  value={editingStudent.full_name}
+                  onChange={(e) => setEditingStudent({ ...editingStudent, full_name: e.target.value })}
+                />
+              </div>
+              <div className="space-y-2">
+                <Label>Roll Number</Label>
+                <Input
+                  value={editingStudent.roll_number}
+                  onChange={(e) => setEditingStudent({ ...editingStudent, roll_number: e.target.value })}
+                />
+              </div>
+              <div className="space-y-2">
+                <Label>Class</Label>
+                <Select 
+                  value={editingStudent.class} 
+                  onValueChange={(v) => setEditingStudent({ ...editingStudent, class: v })}
+                >
+                  <SelectTrigger>
+                    <SelectValue />
+                  </SelectTrigger>
+                  <SelectContent>
+                    {ALL_CLASSES.map((cls) => (
+                      <SelectItem key={cls} value={cls}>{cls}</SelectItem>
+                    ))}
+                  </SelectContent>
+                </Select>
+              </div>
+              <div className="space-y-2">
+                <Label>Student Type</Label>
+                <Select 
+                  value={editingStudent.boarding_type} 
+                  onValueChange={(v) => setEditingStudent({ ...editingStudent, boarding_type: v })}
+                >
+                  <SelectTrigger>
+                    <SelectValue />
+                  </SelectTrigger>
+                  <SelectContent>
+                    <SelectItem value="day">Day Student</SelectItem>
+                    <SelectItem value="boarding">Boarding Student</SelectItem>
+                  </SelectContent>
+                </Select>
+              </div>
+            </div>
+          )}
+          <DialogFooter>
+            <Button variant="outline" onClick={() => setShowEditDialog(false)}>
+              Cancel
+            </Button>
+            <Button onClick={handleUpdateStudent} disabled={saving}>
+              {saving && <Loader2 className="w-4 h-4 mr-2 animate-spin" />}
+              Save Changes
             </Button>
           </DialogFooter>
         </DialogContent>
