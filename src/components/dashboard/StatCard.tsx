@@ -25,11 +25,11 @@ const variantStyles = {
 };
 
 const iconVariantStyles = {
-  default: 'bg-muted text-muted-foreground',
-  primary: 'bg-primary/10 text-primary',
-  accent: 'bg-accent/10 text-accent',
-  success: 'bg-success/10 text-success',
-  warning: 'bg-warning/10 text-warning',
+  default: 'bg-gradient-to-br from-slate-400 to-slate-600 text-white shadow-lg',
+  primary: 'bg-gradient-to-br from-sky-400 to-blue-600 text-white shadow-lg shadow-blue-500/30',
+  accent: 'bg-gradient-to-br from-teal-400 to-emerald-600 text-white shadow-lg shadow-emerald-500/30',
+  success: 'bg-gradient-to-br from-green-400 to-emerald-600 text-white shadow-lg shadow-green-500/30',
+  warning: 'bg-gradient-to-br from-amber-400 to-orange-500 text-white shadow-lg shadow-orange-500/30',
 };
 
 const bgImages = {
