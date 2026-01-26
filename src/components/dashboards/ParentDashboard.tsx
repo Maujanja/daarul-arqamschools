@@ -650,9 +650,9 @@ export function ParentDashboard() {
       {/* Header */}
       <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4">
         <div>
-          <h1 className="text-3xl font-display font-bold text-foreground">Parent Dashboard</h1>
-          <p className="text-muted-foreground mt-1">
-            Viewing records for <span className="font-semibold text-primary">{childName}</span>
+          <h1 className="text-3xl font-display font-bold text-white drop-shadow-md">Parent Dashboard</h1>
+          <p className="text-white/80 mt-1 drop-shadow-sm">
+            Viewing records for <span className="font-semibold text-sky-300 drop-shadow-md">{childName}</span>
           </p>
         </div>
         <div className="flex gap-3">
@@ -734,7 +734,7 @@ export function ParentDashboard() {
             {childName.split(' ').map(n => n[0]).join('')}
           </div>
           <div className="flex-1">
-            <h2 className="text-xl font-display font-bold text-card-foreground">{childName}</h2>
+            <h2 className="text-xl font-display font-bold text-white drop-shadow-md">{childName}</h2>
             <p className="text-muted-foreground">
               Class {childClass} • {childBoardingType === 'boarding' ? 'Boarding' : 'Day'} Student
             </p>
