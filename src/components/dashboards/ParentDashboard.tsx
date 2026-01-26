@@ -1,4 +1,4 @@
-import { useState, useEffect, useRef, useMemo } from 'react';
+import { useState, useEffect, useRef, useMemo, useCallback } from 'react';
 import { StatCard } from '@/components/dashboard/StatCard';
 import { GradeBadge } from '@/components/dashboard/GradeBadge';
 import { SeriesSummaryTable } from '@/components/dashboard/SeriesSummaryTable';
@@ -7,6 +7,7 @@ import { BookOpen, Award, Download, MessageSquare, Loader2, DollarSign, AlertTri
 import { Button } from '@/components/ui/button';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { supabase } from '@/integrations/supabase/client';
+import { useSecureQuery } from '@/hooks/useSecureQuery';
 import { terms } from '@/data/mockData';
 import { useAuth } from '@/contexts/AuthContext';
 import { useAcademicYears } from '@/hooks/useAcademicYears';
@@ -68,6 +69,7 @@ interface DebtHistory {
 
 export function ParentDashboard() {
   const { user } = useAuth();
+  const { fetchTable } = useSecureQuery();
   const { academicYears, currentYear, loading: yearsLoading } = useAcademicYears();
   const [isLoading, setIsLoading] = useState(true);
   const [childName, setChildName] = useState('');
@@ -93,24 +95,20 @@ export function ParentDashboard() {
   const gradeChartRef = useRef<HTMLDivElement>(null);
 
   // Calculate class rank and subject rankings
-  const calculateRankings = async (studentId: string, studentClass: string, term: string, year: string) => {
+  const calculateRankings = useCallback(async (studentId: string, studentClass: string, term: string, year: string) => {
     console.log('calculateRankings called with:', { studentId, studentClass, term, year });
     
-    // Get all marks for students in the same class for the selected term/year
-    const { data: classMarks, error } = await supabase
-      .from('marks')
-      .select(`
-        student_id,
-        subject_id,
-        total,
-        grade,
-        subjects (name)
-      `)
-      .eq('class', studentClass)
-      .eq('term', term)
-      .eq('academic_year', year);
+    // Get all marks for students in the same class for the selected term/year using secure query
+    const classMarks = await fetchTable<any>('marks', { 
+      class: studentClass, 
+      term: term, 
+      academic_year: year 
+    });
+    
+    // Also get subjects for name lookup
+    const subjects = await fetchTable<any>('subjects');
 
-    console.log('Class marks for ranking:', { classMarks, error, count: classMarks?.length });
+    console.log('Class marks for ranking:', { classMarks, count: classMarks?.length });
 
     if (!classMarks || classMarks.length === 0) {
       console.log('No class marks found, resetting rankings');
@@ -119,6 +117,9 @@ export function ParentDashboard() {
       setSubjectRankings([]);
       return;
     }
+
+    // Build subject name lookup
+    const subjectMap = new Map(subjects?.map((s: any) => [s.id, s.name]) || []);
 
     // Calculate average for each student
     const studentAverages: Record<string, { total: number; count: number }> = {};
@@ -162,7 +163,7 @@ export function ParentDashboard() {
         studentId: mark.student_id,
         score: mark.total,
         grade: mark.grade,
-        subjectName: (mark.subjects as any)?.name || 'Unknown'
+        subjectName: subjectMap.get(mark.subject_id) || 'Unknown'
       });
     });
 
@@ -189,7 +190,7 @@ export function ParentDashboard() {
     // Sort by score descending (best subjects first)
     rankings.sort((a, b) => b.score - a.score);
     setSubjectRankings(rankings);
-  };
+  }, [fetchTable]);
 
   // Set initial year when academic years load
   useEffect(() => {
@@ -204,169 +205,143 @@ export function ParentDashboard() {
       
       setIsLoading(true);
       
-      let studentData = null;
-      
-      // First check if user.id is a student ID directly (for students without parent record)
-      const { data: studentById } = await supabase
-        .from('students')
-        .select('*')
-        .eq('id', user.id)
-        .maybeSingle();
-      
-      if (studentById) {
-        studentData = studentById;
-      } else {
-        // Then check if user.id is a parent_id
-        const { data: studentByParent } = await supabase
-          .from('students')
-          .select('*')
-          .eq('parent_id', user.id)
-          .maybeSingle();
+      try {
+        // Use secure query to fetch students - this will be filtered based on user role
+        const studentsData = await fetchTable<any>('students');
         
-        if (studentByParent) {
-          studentData = studentByParent;
+        // Find the student - either by matching ID or parent_id
+        let studentData = studentsData?.find((s: any) => s.id === user.id);
+        
+        if (!studentData) {
+          studentData = studentsData?.find((s: any) => s.parent_id === user.id);
         }
-      }
-      
-      // Fallback: search by user name in parents table
-      if (!studentData) {
-        const { data: parentRecord } = await supabase
-          .from('parents')
-          .select('id')
-          .ilike('full_name', `%${user.name}%`)
-          .maybeSingle();
         
-        if (parentRecord) {
-          const { data: studentByParentRecord } = await supabase
-            .from('students')
-            .select('*')
-            .eq('parent_id', parentRecord.id)
-            .maybeSingle();
+        // Fallback: search by user name in parents table
+        if (!studentData) {
+          const parentsData = await fetchTable<any>('parents');
+          const parentRecord = parentsData?.find((p: any) => 
+            p.full_name?.toLowerCase().includes(user.name?.toLowerCase() || '')
+          );
           
-          studentData = studentByParentRecord;
+          if (parentRecord) {
+            studentData = studentsData?.find((s: any) => s.parent_id === parentRecord.id);
+          }
         }
-      }
-      
-      if (!studentData) {
-        setIsLoading(false);
-        return;
-      }
-      
-      setChildName(studentData.full_name);
-      setChildClass(studentData.class);
-      setChildBoardingType(studentData.boarding_type || 'day');
-      setStudentId(studentData.id);
-      
-      // Get marks for this student with subject details
-      const { data: marksData } = await supabase
-        .from('marks')
-        .select(`
-          exam,
-          total,
-          grade,
-          term,
-          academic_year,
-          subject_id,
-          subjects (name)
-        `)
-        .eq('student_id', studentData.id);
-      
-      if (marksData) {
-        const formattedMarks = marksData.map((m: any) => ({
-          subject: m.subjects?.name || 'Unknown',
-          subject_id: m.subject_id,
-          term: m.term,
-          academic_year: m.academic_year,
-          exam: m.exam,
-          total: m.total,
-          grade: m.grade,
-        }));
-        setAllMarks(formattedMarks);
         
-        // Filter by selected term and year
-        const filtered = formattedMarks.filter(
-          m => m.term === selectedTerm && m.academic_year === selectedYear
-        );
-        setStudentMarks(filtered);
-        
-        if (filtered.length > 0) {
-          const avg = filtered.reduce((sum, m) => sum + m.total, 0) / filtered.length;
-          setOverallAverage(avg);
-        } else {
-          setOverallAverage(0);
+        if (!studentData) {
+          setIsLoading(false);
+          return;
         }
-      }
+        
+        setChildName(studentData.full_name);
+        setChildClass(studentData.class);
+        setChildBoardingType(studentData.boarding_type || 'day');
+        setStudentId(studentData.id);
+        
+        // Get marks for this student using secure query
+        const marksData = await fetchTable<any>('marks', { student_id: studentData.id });
+        
+        // Get subjects for name lookup
+        const subjectsData = await fetchTable<any>('subjects');
+      
+        // Build subject name lookup
+        const subjectMap = new Map(subjectsData?.map((s: any) => [s.id, s.name]) || []);
+        
+        if (marksData) {
+          const formattedMarks = marksData.map((m: any) => ({
+            subject: subjectMap.get(m.subject_id) || 'Unknown',
+            subject_id: m.subject_id,
+            term: m.term,
+            academic_year: m.academic_year,
+            exam: m.exam,
+            total: m.total,
+            grade: m.grade,
+          }));
+          setAllMarks(formattedMarks);
+          
+          // Filter by selected term and year
+          const filtered = formattedMarks.filter(
+            (m: any) => m.term === selectedTerm && m.academic_year === selectedYear
+          );
+          setStudentMarks(filtered);
+          
+          if (filtered.length > 0) {
+            const avg = filtered.reduce((sum: number, m: any) => sum + m.total, 0) / filtered.length;
+            setOverallAverage(avg);
+          } else {
+            setOverallAverage(0);
+          }
+        }
 
-      // Calculate class rank and subject rankings
-      await calculateRankings(studentData.id, studentData.class, selectedTerm, selectedYear);
-      
-      // Get fee payments for this student for selected year and term
-      const { data: payments } = await supabase
-        .from('fee_payments')
-        .select('amount, payment_date, payment_method')
-        .eq('student_id', studentData.id)
-        .eq('academic_year', selectedYear)
-        .eq('term', selectedTerm);
-      
-      if (payments) {
-        setFeePayments(payments);
-        const totalPaid = payments.reduce((sum, p) => sum + Number(p.amount), 0);
-        setPaidAmount(totalPaid);
-      } else {
-        setFeePayments([]);
-        setPaidAmount(0);
+        // Calculate class rank and subject rankings
+        await calculateRankings(studentData.id, studentData.class, selectedTerm, selectedYear);
+        
+        // Get fee payments for this student using secure query
+        const allPayments = await fetchTable<any>('fee_payments', { student_id: studentData.id });
+        const payments = allPayments?.filter((p: any) => 
+          p.academic_year === selectedYear && p.term === selectedTerm
+        ) || [];
+        
+        if (payments.length > 0) {
+          setFeePayments(payments);
+          const totalPaid = payments.reduce((sum: number, p: any) => sum + Number(p.amount), 0);
+          setPaidAmount(totalPaid);
+        } else {
+          setFeePayments([]);
+          setPaidAmount(0);
+        }
+        
+        // Get fee structure - this uses publicly readable table
+        const { data: feeStructure } = await supabase
+          .from('fee_structure')
+          .select('total_fee, boarding_type')
+          .eq('class', studentData.class)
+          .eq('boarding_type', studentData.boarding_type || 'day')
+          .eq('academic_year', selectedYear)
+          .eq('term', selectedTerm)
+          .maybeSingle();
+        
+        if (feeStructure) {
+          setExpectedFee(Number(feeStructure.total_fee));
+        } else {
+          setExpectedFee(0);
+        }
+        
+        // Fetch historical debts using secure query
+        const debtsData = await fetchTable<any>('student_debt_history', { 
+          student_id: studentData.id, 
+          is_cleared: false 
+        });
+        
+        if (debtsData) {
+          setHistoricalDebts(debtsData);
+        } else {
+          setHistoricalDebts([]);
+        }
+        
+        // Fetch announcements - uses publicly readable table
+        const now = new Date().toISOString();
+        const { data: announcementsData } = await supabase
+          .from('announcements')
+          .select('*')
+          .eq('is_active', true)
+          .eq('academic_year', selectedYear)
+          .or(`expires_at.is.null,expires_at.gt.${now}`)
+          .order('created_at', { ascending: false })
+          .limit(5);
+        
+        if (announcementsData) {
+          setAnnouncements(announcementsData);
+        }
+      } catch (error) {
+        console.error('Error fetching data:', error);
+      } finally {
+        setIsLoading(false);
       }
-      
-      // Get fee structure for this class, boarding type, year and term
-      const { data: feeStructure } = await supabase
-        .from('fee_structure')
-        .select('total_fee, boarding_type')
-        .eq('class', studentData.class)
-        .eq('boarding_type', studentData.boarding_type || 'day')
-        .eq('academic_year', selectedYear)
-        .eq('term', selectedTerm)
-        .maybeSingle();
-      
-      if (feeStructure) {
-        setExpectedFee(Number(feeStructure.total_fee));
-      } else {
-        setExpectedFee(0);
-      }
-      
-      // Fetch historical debts for this student (unpaid balances from previous years/terms)
-      const { data: debtsData } = await supabase
-        .from('student_debt_history')
-        .select('*')
-        .eq('student_id', studentData.id)
-        .eq('is_cleared', false)
-        .order('academic_year', { ascending: false });
-      
-      if (debtsData) {
-        setHistoricalDebts(debtsData);
-      } else {
-        setHistoricalDebts([]);
-      }
-      
-      // Fetch announcements filtered by year and not expired
-      const now = new Date().toISOString();
-      const { data: announcementsData } = await supabase
-        .from('announcements')
-        .select('*')
-        .eq('is_active', true)
-        .eq('academic_year', selectedYear)
-        .or(`expires_at.is.null,expires_at.gt.${now}`)
-        .order('created_at', { ascending: false })
-        .limit(5);
-      
-      if (announcementsData) {
-        setAnnouncements(announcementsData);
-      }
-      
-      setIsLoading(false);
     };
     
     fetchChildData();
-  }, [user, selectedTerm, selectedYear]);
+  }, [user, selectedTerm, selectedYear, fetchTable, calculateRankings]);
 
   // Update filtered marks and rankings when term/year changes
   useEffect(() => {

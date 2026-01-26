@@ -1,10 +1,10 @@
-import { useState, useEffect } from 'react';
+import { useState, useEffect, useCallback } from 'react';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Users, BookOpen, ClipboardList, Loader2, AlertCircle, RefreshCw, AlertTriangle } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { useAuth } from '@/contexts/AuthContext';
-import { supabase } from '@/integrations/supabase/client';
+import { useSecureQuery } from '@/hooks/useSecureQuery';
 import { terms } from '@/data/mockData';
 import { useAcademicYears } from '@/hooks/useAcademicYears';
 import { SeriesSummaryTable } from '@/components/dashboard/SeriesSummaryTable';
@@ -56,6 +56,7 @@ interface ClassSeriesData {
 
 export function TeacherDashboard() {
   const { user } = useAuth();
+  const { fetchTable, count } = useSecureQuery();
   const { academicYears, currentYear, loading: yearsLoading } = useAcademicYears();
   const [isLoading, setIsLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
@@ -75,7 +76,7 @@ export function TeacherDashboard() {
     }
   }, [currentYear]);
 
-  const fetchData = async () => {
+  const fetchData = useCallback(async () => {
     if (!user) {
       console.log('TeacherDashboard: No user found');
       setError('Please login first');
@@ -93,21 +94,11 @@ export function TeacherDashboard() {
     setError(null);
 
     try {
-      // Fetch teacher data
-      const { data: teacherData, error: teacherError } = await supabase
-        .from('teachers')
-        .select('id, full_name, classes, subjects')
-        .eq('id', user.id)
-        .maybeSingle();
+      // Fetch teacher data using secure query
+      const teachersData = await fetchTable<TeacherInfo>('teachers', { id: user.id });
+      const teacherData = teachersData?.[0] || null;
 
-      console.log('TeacherDashboard: Teacher result:', { teacherData, teacherError });
-
-      if (teacherError) {
-        console.error('TeacherDashboard: Error:', teacherError);
-        setError(`Error: ${teacherError.message}`);
-        setIsLoading(false);
-        return;
-      }
+      console.log('TeacherDashboard: Teacher result:', { teacherData });
 
       if (!teacherData) {
         console.log('TeacherDashboard: No teacher found for ID:', user.id);
@@ -122,43 +113,34 @@ export function TeacherDashboard() {
       if (teacherData.classes && teacherData.classes.length > 0) {
         const counts: StudentCount[] = [];
         for (const cls of teacherData.classes) {
-          const { count } = await supabase
-            .from('students')
-            .select('*', { count: 'exact', head: true })
-            .eq('class', cls);
-          
-          counts.push({ class: cls, count: count || 0 });
+          const studentCount = await count('students', { class: cls });
+          counts.push({ class: cls, count: studentCount || 0 });
         }
         setStudentCounts(counts);
 
-        // Fetch marks for all assigned classes
-        const { data: marksData, error: marksError } = await supabase
-          .from('marks')
-          .select(`
-            student_id,
-            term,
-            total,
-            grade,
-            class,
-            students!inner (
-              id,
-              full_name,
-              class
-            )
-          `)
-          .in('class', teacherData.classes)
-          .eq('academic_year', selectedYear);
+        // Fetch marks for all assigned classes using secure query
+        const marksData = await fetchTable<any>('marks', { 
+          class: teacherData.classes, 
+          academic_year: selectedYear 
+        });
 
-        if (!marksError && marksData) {
+        // We need to also fetch students separately to join the data
+        const studentsData = await fetchTable<any>('students', { class: teacherData.classes });
+
+        if (marksData && marksData.length > 0) {
+          // Build a lookup map for student info
+          const studentMap = new Map(studentsData?.map((s: any) => [s.id, s]) || []);
+          
           // Calculate students needing support (average < 45)
           const studentTotals: Record<string, { name: string; class: string; total: number; count: number }> = {};
           
           marksData.forEach((mark: any) => {
             const studentId = mark.student_id;
+            const student = studentMap.get(studentId);
             if (!studentTotals[studentId]) {
               studentTotals[studentId] = {
-                name: mark.students.full_name,
-                class: mark.students.class,
+                name: student?.full_name || 'Unknown',
+                class: student?.class || mark.class,
                 total: 0,
                 count: 0
               };
@@ -249,7 +231,7 @@ export function TeacherDashboard() {
     } finally {
       setIsLoading(false);
     }
-  };
+  }, [user, selectedYear, fetchTable, count]);
 
   const getGrade = (score: number): string => {
     if (score >= 75) return 'A';
