@@ -35,11 +35,11 @@ export function DashboardLayout({ children }: DashboardLayoutProps) {
         <Sidebar />
         <main className="lg:ml-72 min-h-screen">
           {/* Header with Logo */}
-          <header className="hidden lg:flex items-center gap-3 px-8 py-4 border-b border-border bg-card/50 backdrop-blur-sm sticky top-0 z-30">
+          <header className="hidden lg:flex items-center gap-3 px-8 py-4 border-b border-white/10 bg-[#1e3a5f]/95 backdrop-blur-md sticky top-0 z-30 shadow-lg">
             <img src={dasLogo} alt="Daarul Arqam Logo" className="w-10 h-10 object-contain" />
             <div>
-              <h1 className="font-display font-bold text-foreground text-sm leading-tight">DAARUL-ARQAM SCHOOLS</h1>
-              <p className="text-xs text-muted-foreground">Exam Results Management System</p>
+              <h1 className="font-display font-bold text-white text-sm leading-tight">DAARUL-ARQAM SCHOOLS</h1>
+              <p className="text-xs text-white/70">Exam Results Management System</p>
             </div>
           </header>
           <div className="p-4 sm:p-6 lg:p-8 pt-16 lg:pt-6">

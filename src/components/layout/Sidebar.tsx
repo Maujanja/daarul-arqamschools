@@ -56,15 +56,17 @@ export function Sidebar() {
 
   return (
     <>
-      {/* Mobile menu button */}
-      <Button
-        variant="ghost"
-        size="icon"
-        className="fixed top-4 left-4 z-50 lg:hidden bg-[#1e3a5f]/90 text-white hover:bg-[#1e3a5f] shadow-lg"
-        onClick={toggleSidebar}
-      >
-        {isOpen ? <X className="h-6 w-6" /> : <Menu className="h-6 w-6" />}
-      </Button>
+      {/* Mobile menu button - only shows hamburger, X is inside sidebar */}
+      {!isOpen && (
+        <Button
+          variant="ghost"
+          size="icon"
+          className="fixed top-4 left-4 z-50 lg:hidden bg-[#1e3a5f]/90 text-white hover:bg-[#1e3a5f] shadow-lg"
+          onClick={toggleSidebar}
+        >
+          <Menu className="h-6 w-6" />
+        </Button>
+      )}
 
       {/* Overlay */}
       <div 
