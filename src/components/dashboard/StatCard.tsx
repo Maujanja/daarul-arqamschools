@@ -80,10 +80,10 @@ export function StatCard({ title, value, subtitle, icon: Icon, trend, variant = 
           )}
         </div>
         <div className={cn(
-          "w-12 h-12 rounded-xl flex items-center justify-center",
+          "w-12 h-12 rounded-xl flex items-center justify-center transition-all duration-300 hover:scale-110 hover:shadow-xl hover:animate-pulse cursor-pointer",
           iconVariantStyles[variant]
         )}>
-          <Icon className="w-6 h-6" />
+          <Icon className="w-6 h-6 transition-transform duration-300 group-hover:rotate-12" />
         </div>
       </div>
     </div>
