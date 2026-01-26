@@ -33,7 +33,7 @@ export function DashboardLayout({ children }: DashboardLayoutProps) {
       {/* Content */}
       <div className="relative z-10">
         <Sidebar />
-        <main className="lg:ml-64 min-h-screen">
+        <main className="lg:ml-72 min-h-screen">
           {/* Header with Logo */}
           <header className="hidden lg:flex items-center gap-3 px-8 py-4 border-b border-border bg-card/50 backdrop-blur-sm sticky top-0 z-30">
             <img src={dasLogo} alt="Daarul Arqam Logo" className="w-10 h-10 object-contain" />
