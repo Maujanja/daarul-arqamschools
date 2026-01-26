@@ -1,4 +1,4 @@
-import { useState, useEffect, useMemo } from 'react';
+import { useState, useEffect, useMemo, useCallback } from 'react';
 import { DashboardLayout } from '@/components/layout/DashboardLayout';
 import { PerformanceChart } from '@/components/dashboard/PerformanceChart';
 import { GradeBadge } from '@/components/dashboard/GradeBadge';
@@ -8,7 +8,6 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import { Download, FileText, Users, BookOpen, TrendingUp, BarChart3, Loader2 } from 'lucide-react';
 import { PieChart, Pie, Cell, ResponsiveContainer, Legend, Tooltip, BarChart, Bar, XAxis, YAxis, CartesianGrid } from 'recharts';
-import { supabase } from '@/integrations/supabase/client';
 import { generateClassReportPDF, generateAllStudentsReportPDF } from '@/utils/pdfGenerator';
 import { toast } from 'sonner';
 import { calculateGrade } from '@/types';
@@ -16,10 +15,43 @@ import { terms } from '@/data/mockData';
 import { useAuth } from '@/contexts/AuthContext';
 import { isSubjectForClass } from '@/utils/classSubjects';
 import { useAcademicYears } from '@/hooks/useAcademicYears';
+import { useSecureQuery } from '@/hooks/useSecureQuery';
+
+interface Student {
+  id: string;
+  full_name: string;
+  class: string;
+  roll_number: string;
+}
+
+interface Mark {
+  id: string;
+  student_id: string;
+  subject_id: string;
+  total: number;
+  grade: string;
+  term: string;
+  academic_year: string;
+  class: string;
+}
+
+interface Subject {
+  id: string;
+  name: string;
+  code: string;
+}
+
+interface Teacher {
+  id: string;
+  classes: string[];
+  subjects: string[];
+}
 
 export default function ReportsPage() {
   const { user } = useAuth();
   const { academicYears, currentYear } = useAcademicYears();
+  const { fetchTable, query } = useSecureQuery();
+  
   const [selectedClass, setSelectedClass] = useState('all');
   const [selectedTerm, setSelectedTerm] = useState(terms[0] || 'Series 1');
   const [selectedYear, setSelectedYear] = useState('');
@@ -87,13 +119,9 @@ export default function ReportsPage() {
       }));
   }, [studentsData]);
 
-  useEffect(() => {
-    if (selectedYear) {
-      fetchReportData();
-    }
-  }, [selectedClass, selectedTerm, selectedYear, user]);
-
-  const fetchReportData = async () => {
+  const fetchReportData = useCallback(async () => {
+    if (!user || !selectedYear) return;
+    
     try {
       setLoading(true);
       
@@ -102,18 +130,18 @@ export default function ReportsPage() {
       
       // If teacher, get their assigned classes and subjects
       if (isTeacher && user) {
-        const { data: teacher } = await supabase
-          .from('teachers')
-          .select('classes, subjects')
-          .eq('id', user.id)
-          .maybeSingle();
+        const teacherResult = await query<Teacher>('teachers', {
+          filters: { id: user.id },
+          limit: 1
+        });
         
-        if (teacher) {
+        if (teacherResult.success && teacherResult.data && teacherResult.data.length > 0) {
+          const teacher = teacherResult.data[0];
           teacherClasses = teacher.classes || [];
           
           // Get subject IDs that match teacher's subject names
           if (teacher.subjects && teacher.subjects.length > 0) {
-            const { data: allSubjects } = await supabase.from('subjects').select('*');
+            const allSubjects = await fetchTable<Subject>('subjects');
             if (allSubjects) {
               teacherSubjectIds = allSubjects
                 .filter(s => teacher.subjects.some((name: string) => 
@@ -127,51 +155,63 @@ export default function ReportsPage() {
       }
 
       // Fetch students - filter by teacher's classes if teacher
-      let studentsQuery = supabase.from('students').select('*');
+      let students: Student[] = [];
       if (isTeacher && teacherClasses.length > 0) {
-        studentsQuery = studentsQuery.in('class', teacherClasses);
+        const studentsResult = await query<Student>('students', {
+          filters: { class: teacherClasses }
+        });
+        if (studentsResult.success && studentsResult.data) {
+          students = studentsResult.data;
+        }
+      } else {
+        students = await fetchTable<Student>('students');
       }
-      const { data: students, error: studentsError } = await studentsQuery;
-
-      if (studentsError) throw studentsError;
       
       // Set available classes based on fetched students
       const uniqueClasses = [...new Set(students?.map(s => s.class) || [])].sort();
       setAvailableClasses(uniqueClasses);
 
       // Fetch marks - filter by term, year, class, and teacher's subjects if teacher
-      // Also apply .limit() to get more than default 1000 rows
-      let marksQuery = supabase.from('marks').select('*')
-        .eq('term', selectedTerm)
-        .eq('academic_year', selectedYear);
+      // Build filters
+      const marksFilters: Record<string, unknown> = {
+        term: selectedTerm,
+        academic_year: selectedYear,
+      };
       
       // Filter by selected class if not 'all'
       if (selectedClass !== 'all') {
-        marksQuery = marksQuery.eq('class', selectedClass);
+        marksFilters.class = selectedClass;
       }
       
       if (isTeacher && teacherSubjectIds.length > 0) {
-        marksQuery = marksQuery.in('subject_id', teacherSubjectIds);
+        marksFilters.subject_id = teacherSubjectIds;
       }
       if (isTeacher && teacherClasses.length > 0) {
-        marksQuery = marksQuery.in('class', teacherClasses);
+        marksFilters.class = teacherClasses;
       }
-      
-      // Increase limit to get all marks (default is 1000)
-      marksQuery = marksQuery.limit(10000);
-      
-      const { data: marks, error: marksError } = await marksQuery;
 
-      if (marksError) throw marksError;
+      // Fetch marks with pagination support
+      let marks: Mark[] = [];
+      const marksResult = await query<Mark>('marks', {
+        filters: marksFilters,
+        range: { from: 0, to: 9999 }
+      });
+      if (marksResult.success && marksResult.data) {
+        marks = marksResult.data;
+      }
 
       // Fetch subjects - filter by teacher's subjects if teacher
-      let subjectsQuery = supabase.from('subjects').select('*');
+      let subjects: Subject[] = [];
       if (isTeacher && teacherSubjectIds.length > 0) {
-        subjectsQuery = subjectsQuery.in('id', teacherSubjectIds);
+        const subjectsResult = await query<Subject>('subjects', {
+          filters: { id: teacherSubjectIds }
+        });
+        if (subjectsResult.success && subjectsResult.data) {
+          subjects = subjectsResult.data;
+        }
+      } else {
+        subjects = await fetchTable<Subject>('subjects');
       }
-      const { data: subjects, error: subjectsError } = await subjectsQuery;
-
-      if (subjectsError) throw subjectsError;
 
       // Filter students based on selected class
       const filteredStudents = selectedClass === 'all' 
@@ -264,7 +304,13 @@ export default function ReportsPage() {
     } finally {
       setLoading(false);
     }
-  };
+  }, [user, isTeacher, selectedClass, selectedTerm, selectedYear, fetchTable, query]);
+
+  useEffect(() => {
+    if (selectedYear) {
+      fetchReportData();
+    }
+  }, [fetchReportData, selectedYear]);
 
   const handleExportAllReports = () => {
     const data = studentsData.map(s => ({
