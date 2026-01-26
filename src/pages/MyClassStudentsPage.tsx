@@ -4,10 +4,11 @@ import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { Checkbox } from '@/components/ui/checkbox';
-import { supabase } from '@/integrations/supabase/client';
 import { useAuth } from '@/contexts/AuthContext';
 import { useToast } from '@/hooks/use-toast';
 import { useAcademicYears } from '@/hooks/useAcademicYears';
+import { useSecureQuery } from '@/hooks/useSecureQuery';
+import { useSecureData } from '@/hooks/useSecureData';
 import { Loader2, Search, Save, Users, UserPlus, CheckCircle } from 'lucide-react';
 
 interface Student {
@@ -32,10 +33,21 @@ interface TeacherClassStudent {
   academic_year: string;
 }
 
+interface Teacher {
+  id: string;
+  full_name: string;
+  email: string;
+  subjects: string[];
+  classes: string[];
+}
+
 export default function MyClassStudentsPage() {
   const { user } = useAuth();
   const { toast } = useToast();
   const { currentYear } = useAcademicYears();
+  const { fetchTable, query } = useSecureQuery();
+  const { insert, remove } = useSecureData();
+  
   const [isLoading, setIsLoading] = useState(true);
   const [isSaving, setIsSaving] = useState(false);
   const [searchQuery, setSearchQuery] = useState('');
@@ -49,7 +61,6 @@ export default function MyClassStudentsPage() {
   const [selectedStudentIds, setSelectedStudentIds] = useState<Set<string>>(new Set());
   const [existingSelections, setExistingSelections] = useState<TeacherClassStudent[]>([]);
 
-  // Map short class codes to full class names
   const mapClassToFullName = (shortClass: string): string => {
     const mappings: Record<string, string> = {
       'S1': 'Senior 1',
@@ -67,24 +78,24 @@ export default function MyClassStudentsPage() {
     return mappings[shortClass] || shortClass;
   };
 
-  // Fetch teacher's assigned classes and subjects
+  // Fetch teacher's assigned classes and subjects via secure query
   useEffect(() => {
     const fetchTeacherData = async () => {
       if (!user?.id) return;
       
       setIsLoading(true);
       
-      // Get teacher data
-      const { data: teacher } = await supabase
-        .from('teachers')
-        .select('*')
-        .eq('id', user.id)
-        .maybeSingle();
+      // Get teacher data via secure query
+      const result = await query<Teacher>('teachers', {
+        filters: { id: user.id }
+      });
       
-      if (!teacher) {
+      if (!result.success || !result.data || result.data.length === 0) {
         setIsLoading(false);
         return;
       }
+      
+      const teacher = result.data[0];
       
       // Map short class codes to full names
       const rawClasses = teacher.classes || [];
@@ -98,9 +109,7 @@ export default function MyClassStudentsPage() {
       }
       
       // Get subjects matching teacher's subject names
-      const { data: allSubjects } = await supabase
-        .from('subjects')
-        .select('*');
+      const allSubjects = await fetchTable<Subject>('subjects');
       
       if (allSubjects) {
         const matchedSubjects = allSubjects.filter(s => 
@@ -120,47 +129,42 @@ export default function MyClassStudentsPage() {
     };
     
     fetchTeacherData();
-  }, [user?.id]);
+  }, [user?.id, query, fetchTable]);
 
   // Fetch students when class changes
   useEffect(() => {
     const fetchStudents = async () => {
-      if (!selectedClass) return;
+      if (!selectedClass || !user) return;
       
-      const { data: students } = await supabase
-        .from('students')
-        .select('*')
-        .eq('class', selectedClass)
-        .order('roll_number');
-      
-      setAllStudentsInClass(students || []);
+      const students = await fetchTable<Student>('students', { class: selectedClass });
+      const sortedStudents = students.sort((a, b) => a.roll_number.localeCompare(b.roll_number));
+      setAllStudentsInClass(sortedStudents);
     };
     
     fetchStudents();
-  }, [selectedClass]);
+  }, [selectedClass, user, fetchTable]);
 
   // Fetch existing selections when class/subject/academic year changes
   useEffect(() => {
     const fetchExistingSelections = async () => {
       if (!user?.id || !selectedClass || !selectedSubject || !currentYear) return;
       
-      const { data: selections } = await supabase
-        .from('teacher_class_students')
-        .select('*')
-        .eq('teacher_id', user.id)
-        .eq('class', selectedClass)
-        .eq('subject_id', selectedSubject)
-        .eq('academic_year', currentYear);
+      const selections = await fetchTable<TeacherClassStudent>('teacher_class_students', {
+        teacher_id: user.id,
+        class: selectedClass,
+        subject_id: selectedSubject,
+        academic_year: currentYear
+      });
       
-      setExistingSelections(selections || []);
+      setExistingSelections(selections);
       
       // Set selected student IDs from existing selections
-      const selectedIds = new Set((selections || []).map(s => s.student_id));
+      const selectedIds = new Set(selections.map(s => s.student_id));
       setSelectedStudentIds(selectedIds);
     };
     
     fetchExistingSelections();
-  }, [user?.id, selectedClass, selectedSubject, currentYear]);
+  }, [user?.id, selectedClass, selectedSubject, currentYear, fetchTable]);
 
   const toggleStudent = (studentId: string) => {
     setSelectedStudentIds(prev => {
@@ -189,14 +193,11 @@ export default function MyClassStudentsPage() {
     setIsSaving(true);
     
     try {
-      // Delete existing selections for this class/subject/year
-      await supabase
-        .from('teacher_class_students')
-        .delete()
-        .eq('teacher_id', user.id)
-        .eq('class', selectedClass)
-        .eq('subject_id', selectedSubject)
-        .eq('academic_year', currentYear);
+      // Delete existing selections for this class/subject/year using secure remove
+      // We need to delete each one by ID
+      for (const selection of existingSelections) {
+        await remove('teacher_class_students', { id: selection.id });
+      }
       
       // Insert new selections with current academic year
       if (selectedStudentIds.size > 0) {
@@ -208,11 +209,11 @@ export default function MyClassStudentsPage() {
           academic_year: currentYear,
         }));
         
-        const { error } = await supabase
-          .from('teacher_class_students')
-          .insert(insertData);
+        const result = await insert('teacher_class_students', insertData);
         
-        if (error) throw error;
+        if (!result.success) {
+          throw new Error(result.error || 'Failed to save students');
+        }
       }
       
       toast({
@@ -221,15 +222,14 @@ export default function MyClassStudentsPage() {
       });
       
       // Refresh existing selections
-      const { data: selections } = await supabase
-        .from('teacher_class_students')
-        .select('*')
-        .eq('teacher_id', user.id)
-        .eq('class', selectedClass)
-        .eq('subject_id', selectedSubject)
-        .eq('academic_year', currentYear);
+      const selections = await fetchTable<TeacherClassStudent>('teacher_class_students', {
+        teacher_id: user.id,
+        class: selectedClass,
+        subject_id: selectedSubject,
+        academic_year: currentYear
+      });
       
-      setExistingSelections(selections || []);
+      setExistingSelections(selections);
       
     } catch (error: any) {
       console.error('Error saving students:', error);
@@ -273,7 +273,6 @@ export default function MyClassStudentsPage() {
   return (
     <DashboardLayout>
       <div className="space-y-8">
-        {/* Header */}
         <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4">
           <div>
             <h1 className="text-3xl font-display font-bold text-foreground">My Students</h1>
@@ -293,7 +292,6 @@ export default function MyClassStudentsPage() {
           </Button>
         </div>
 
-        {/* Filters */}
         <div className="card-elevated p-6 animate-fade-in">
           <h3 className="font-display font-semibold text-lg mb-4 text-card-foreground">Select Class and Subject</h3>
           <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4">
@@ -338,7 +336,6 @@ export default function MyClassStudentsPage() {
           </div>
         </div>
 
-        {/* Stats */}
         <div className="grid grid-cols-1 sm:grid-cols-3 gap-4">
           <div className="card-elevated p-4 animate-fade-in">
             <div className="flex items-center gap-3">
@@ -375,7 +372,6 @@ export default function MyClassStudentsPage() {
           </div>
         </div>
 
-        {/* Quick Actions */}
         <div className="flex gap-2">
           <Button variant="outline" size="sm" onClick={selectAll}>
             Select All
@@ -385,7 +381,6 @@ export default function MyClassStudentsPage() {
           </Button>
         </div>
 
-        {/* Students List */}
         <div className="card-elevated p-6 animate-fade-in">
           <h3 className="font-display font-semibold text-lg mb-6 text-card-foreground">
             Students in {selectedClass} ({filteredStudents.length})
