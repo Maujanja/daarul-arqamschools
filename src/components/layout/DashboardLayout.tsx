@@ -28,7 +28,7 @@ export function DashboardLayout({ children }: DashboardLayoutProps) {
         style={{ backgroundImage: `url(${backgroundImage})` }}
       />
       {/* Overlay for better readability */}
-      <div className="fixed inset-0 bg-background/80 backdrop-blur-sm" />
+      <div className="fixed inset-0 bg-black/30" />
       
       {/* Content */}
       <div className="relative z-10">
