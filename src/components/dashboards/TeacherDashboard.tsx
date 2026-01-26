@@ -62,7 +62,7 @@ export function TeacherDashboard() {
   const [error, setError] = useState<string | null>(null);
   const [teacher, setTeacher] = useState<TeacherInfo | null>(null);
   const [studentCounts, setStudentCounts] = useState<StudentCount[]>([]);
-  const [selectedTerm, setSelectedTerm] = useState(terms[0] || 'Term 1');
+  const [selectedTerm, setSelectedTerm] = useState(terms[0] || 'Test 1');
   const [selectedYear, setSelectedYear] = useState('');
   const [studentsNeedingSupport, setStudentsNeedingSupport] = useState<StudentNeedingSupport[]>([]);
   const [seriesSummaryData, setSeriesSummaryData] = useState<any[]>([]);
@@ -164,7 +164,7 @@ export function TeacherDashboard() {
           setStudentsNeedingSupport(needingSupport);
 
           // Calculate series summary for all classes using all 11 series
-          const allSeriesLabels = ['Term 1', 'Term 2', 'Term 3', 'Term 4', 'Term 5', 'Term 6', 'Term 7', 'Term 8', 'Term 9', 'Term 10', 'Term 11'];
+          const allSeriesLabels = ['Test 1', 'Test 2', 'Test 3', 'Test 4', 'Test 5', 'Test 6', 'Test 7', 'Test 8', 'Test 9', 'Test 10', 'Test 11'];
           const classSummary: any[] = [];
           
           console.log('TeacherDashboard: Processing marks for series summary', { marksCount: marksData.length, classes: teacherData.classes });

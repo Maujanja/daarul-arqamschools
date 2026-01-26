@@ -10,7 +10,7 @@ import { Save, Loader2, Upload, Download, FileSpreadsheet, Edit3 } from 'lucide-
 import { useToast } from '@/hooks/use-toast';
 import { useAuth } from '@/contexts/AuthContext';
 import * as XLSX from 'xlsx';
-import { terms, DEFAULT_TERM_COUNT } from '@/data/mockData';
+import { terms, DEFAULT_TEST_COUNT } from '@/data/mockData';
 import { Plus } from 'lucide-react';
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger } from '@/components/ui/dialog';
 import { useAcademicYears } from '@/hooks/useAcademicYears';
@@ -99,7 +99,7 @@ export default function MarksEntryPage() {
   const fileInputRef = useRef<HTMLInputElement>(null);
   const [selectedClass, setSelectedClass] = useState('');
   const [selectedSubject, setSelectedSubject] = useState('');
-  const [selectedTerm, setSelectedTerm] = useState(terms[0] || 'Series 1');
+  const [selectedTerm, setSelectedTerm] = useState(terms[0] || 'Test 1');
   const [selectedYear, setSelectedYear] = useState('');
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [isLoading, setIsLoading] = useState(true);
@@ -107,7 +107,7 @@ export default function MarksEntryPage() {
   const [entryMethod, setEntryMethod] = useState<'manual' | 'excel'>('manual');
   const [availableTerms, setAvailableTerms] = useState<string[]>(terms);
   const [showAddSeriesDialog, setShowAddSeriesDialog] = useState(false);
-  const [newSeriesNumber, setNewSeriesNumber] = useState(DEFAULT_TERM_COUNT + 1);
+  const [newSeriesNumber, setNewSeriesNumber] = useState(DEFAULT_TEST_COUNT + 1);
   
   const [students, setStudents] = useState<Student[]>([]);
   const [subjects, setSubjects] = useState<Subject[]>([]);
