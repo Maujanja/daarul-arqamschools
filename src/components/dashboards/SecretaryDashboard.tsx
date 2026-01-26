@@ -1,4 +1,4 @@
-import { useState, useEffect } from 'react';
+import { useState, useEffect, useCallback } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { StatCard } from '@/components/dashboard/StatCard';
 import { Button } from '@/components/ui/button';
@@ -9,6 +9,8 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter } from '@/components/ui/dialog';
 import { Tabs, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import { supabase } from '@/integrations/supabase/client';
+import { useSecureQuery } from '@/hooks/useSecureQuery';
+import { useSecureData } from '@/hooks/useSecureData';
 import { useToast } from '@/hooks/use-toast';
 import { useAcademicYears } from '@/hooks/useAcademicYears';
 
@@ -113,6 +115,8 @@ interface DebtHistory {
 export function SecretaryDashboard() {
   const { toast } = useToast();
   const navigate = useNavigate();
+  const { fetchTable } = useSecureQuery();
+  const { insert, update, remove } = useSecureData();
   const { academicYears, currentYear, loading: yearsLoading } = useAcademicYears();
   
   const [isLoading, setIsLoading] = useState(true);
@@ -173,71 +177,77 @@ export function SecretaryDashboard() {
     }
   }, [selectedYear]);
 
-  const fetchData = async () => {
+  const fetchData = useCallback(async () => {
     if (!selectedYear) return;
     
     setIsLoading(true);
     
-    const [studentsRes, paymentsRes, structureRes, feedbackRes, debtHistoryRes] = await Promise.all([
-      supabase.from('students').select('id, full_name, class, roll_number, boarding_type, custom_fee, discount_notes').order('class').order('full_name'),
-      supabase.from('fee_payments')
-        .select('*, students(full_name, class, boarding_type)')
-        .eq('academic_year', selectedYear)
-        .order('payment_date', { ascending: false }),
-      supabase.from('fee_structure')
-        .select('*')
-        .eq('academic_year', selectedYear),
-      supabase.from('feedback').select('*').eq('recipient_type', 'secretary').order('created_at', { ascending: false }),
-      supabase.from('student_debt_history').select('*').eq('is_cleared', false).order('created_at', { ascending: false })
-    ]);
+    try {
+      // Fetch data using secure queries
+      const [studentsRes, paymentsRes, structureRes, feedbackRes, debtHistoryRes, parentsRes] = await Promise.all([
+        fetchTable<Student>('students'),
+        fetchTable<FeePayment>('fee_payments', { academic_year: selectedYear }),
+        fetchTable<FeeStructure>('fee_structure', { academic_year: selectedYear }),
+        fetchTable<any>('feedback', { recipient_type: 'secretary' }),
+        fetchTable<any>('student_debt_history', { is_cleared: false }),
+        fetchTable<any>('parents')
+      ]);
 
-    if (studentsRes.data) setStudents(studentsRes.data);
-    if (paymentsRes.data) setFeePayments(paymentsRes.data as FeePayment[]);
-    if (structureRes.data) setFeeStructure(structureRes.data as FeeStructure[]);
-    
-    // Enrich feedback with parent and student names
-    if (feedbackRes.data) {
-      const { data: parentsData } = await supabase.from('parents').select('id, full_name');
-      const enrichedFeedback = feedbackRes.data.map(fb => {
-        const parent = parentsData?.find(p => p.id === fb.parent_id);
-        const student = studentsRes.data?.find(s => s.id === fb.student_id);
-        return {
-          ...fb,
-          parentName: parent?.full_name || 'Parent',
-          studentName: student?.full_name || 'Student',
-          studentClass: student?.class || ''
-        };
+      setStudents(studentsRes || []);
+      setFeePayments(paymentsRes || []);
+      setFeeStructure(structureRes || []);
+      
+      // Enrich feedback with parent and student names
+      if (feedbackRes) {
+        const enrichedFeedback = feedbackRes.map((fb: any) => {
+          const parent = parentsRes?.find((p: any) => p.id === fb.parent_id);
+          const student = studentsRes?.find((s: any) => s.id === fb.student_id);
+          return {
+            ...fb,
+            parentName: parent?.full_name || 'Parent',
+            studentName: student?.full_name || 'Student',
+            studentClass: student?.class || ''
+          };
+        });
+        setFeedback(enrichedFeedback as FeedbackItem[]);
+      }
+      
+      // Enrich debt history with student names
+      if (debtHistoryRes && studentsRes) {
+        const enrichedDebts = debtHistoryRes.map((debt: any) => {
+          const student = studentsRes.find((s: any) => s.id === debt.student_id);
+          return {
+            ...debt,
+            studentName: student?.full_name || 'Unknown',
+            studentClass: student?.class || ''
+          };
+        });
+        setDebtHistory(enrichedDebts as DebtHistory[]);
+      }
+    } catch (error) {
+      console.error('Error fetching data:', error);
+      toast({
+        title: "Error",
+        description: "Failed to fetch data",
+        variant: "destructive"
       });
-      setFeedback(enrichedFeedback as FeedbackItem[]);
+    } finally {
+      setIsLoading(false);
     }
-    
-    // Enrich debt history with student names
-    if (debtHistoryRes.data && studentsRes.data) {
-      const enrichedDebts = debtHistoryRes.data.map(debt => {
-        const student = studentsRes.data?.find(s => s.id === debt.student_id);
-        return {
-          ...debt,
-          studentName: student?.full_name || 'Unknown',
-          studentClass: student?.class || ''
-        };
-      });
-      setDebtHistory(enrichedDebts as DebtHistory[]);
-    }
-    
-    setIsLoading(false);
-  };
+  }, [selectedYear, fetchTable, toast]);
   
   const handleClearDebt = async (debtId: string) => {
-    const { error } = await supabase
-      .from('student_debt_history')
-      .update({ 
+    const result = await update(
+      'student_debt_history',
+      { 
         is_cleared: true, 
         cleared_by: 'Secretary',
         cleared_at: new Date().toISOString()
-      })
-      .eq('id', debtId);
+      },
+      { id: debtId }
+    );
     
-    if (error) {
+    if (!result.success) {
       toast({
         title: "Error",
         description: "Failed to clear debt",
@@ -253,12 +263,13 @@ export function SecretaryDashboard() {
   };
   
   const handleMarkFeedbackReviewed = async (feedbackId: string) => {
-    const { error } = await supabase
-      .from('feedback')
-      .update({ status: 'reviewed' })
-      .eq('id', feedbackId);
+    const result = await update(
+      'feedback',
+      { status: 'reviewed' },
+      { id: feedbackId }
+    );
     
-    if (error) {
+    if (!result.success) {
       toast({
         title: "Error",
         description: "Failed to update status",
@@ -285,7 +296,7 @@ export function SecretaryDashboard() {
 
     setIsSubmitting(true);
     
-    const { error } = await supabase.from('fee_payments').insert({
+    const result = await insert('fee_payments', {
       student_id: selectedStudentId,
       amount: parseFloat(paymentAmount),
       payment_method: paymentMethod,
@@ -296,7 +307,7 @@ export function SecretaryDashboard() {
       recorded_by: 'Secretary'
     });
 
-    if (error) {
+    if (!result.success) {
       toast({
         title: "Error",
         description: "Failed to record payment",
@@ -350,27 +361,26 @@ export function SecretaryDashboard() {
     try {
       if (editingFeeStructure) {
         // Update existing
-        const { error } = await supabase
-          .from('fee_structure')
-          .update({ total_fee: parseFloat(newTotalFee) })
-          .eq('id', editingFeeStructure.id);
+        const result = await update(
+          'fee_structure',
+          { total_fee: parseFloat(newTotalFee) },
+          { id: editingFeeStructure.id }
+        );
         
-        if (error) throw error;
+        if (!result.success) throw new Error(result.error);
         toast({ title: "Success", description: "Fee structure updated" });
       } else {
         // Insert new
-        const { error } = await supabase
-          .from('fee_structure')
-          .insert({
-            class: newFeeClass,
-            boarding_type: newBoardingType,
-            total_fee: parseFloat(newTotalFee),
-            tuition_fee: parseFloat(newTotalFee),
-            academic_year: selectedYear,
-            term: 'Annual'
-          });
+        const result = await insert('fee_structure', {
+          class: newFeeClass,
+          boarding_type: newBoardingType,
+          total_fee: parseFloat(newTotalFee),
+          tuition_fee: parseFloat(newTotalFee),
+          academic_year: selectedYear,
+          term: 'Annual'
+        });
         
-        if (error) throw error;
+        if (!result.success) throw new Error(result.error);
         toast({ title: "Success", description: "Fee structure added" });
       }
       
@@ -388,8 +398,8 @@ export function SecretaryDashboard() {
   };
 
   const handleDeleteFeeStructure = async (id: string) => {
-    const { error } = await supabase.from('fee_structure').delete().eq('id', id);
-    if (error) {
+    const result = await remove('fee_structure', { id });
+    if (!result.success) {
       toast({ title: "Error", description: "Failed to delete fee structure", variant: "destructive" });
     } else {
       toast({ title: "Success", description: "Fee structure deleted" });
@@ -421,15 +431,16 @@ export function SecretaryDashboard() {
     try {
       const customFee = discountAmount ? parseFloat(discountAmount) : null;
       
-      const { error } = await supabase
-        .from('students')
-        .update({ 
+      const result = await update(
+        'students',
+        { 
           custom_fee: customFee,
           discount_notes: discountNotes || null
-        })
-        .eq('id', selectedStudentForDiscount.id);
+        },
+        { id: selectedStudentForDiscount.id }
+      );
       
-      if (error) throw error;
+      if (!result.success) throw new Error(result.error);
       
       toast({ 
         title: "Success", 
@@ -454,12 +465,13 @@ export function SecretaryDashboard() {
     setIsSubmitting(true);
     
     try {
-      const { error } = await supabase
-        .from('students')
-        .update({ custom_fee: null, discount_notes: null })
-        .eq('id', selectedStudentForDiscount.id);
+      const result = await update(
+        'students',
+        { custom_fee: null, discount_notes: null },
+        { id: selectedStudentForDiscount.id }
+      );
       
-      if (error) throw error;
+      if (!result.success) throw new Error(result.error);
       
       toast({ title: "Success", description: "Discount removed" });
       
