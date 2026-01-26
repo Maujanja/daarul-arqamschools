@@ -1,5 +1,7 @@
 import { LucideIcon } from 'lucide-react';
 import { cn } from '@/lib/utils';
+import cardBgSilk from '@/assets/card-bg-silk.jpg';
+import cardBgCherries from '@/assets/card-bg-cherries.jpg';
 
 interface StatCardProps {
   title: string;
@@ -11,6 +13,7 @@ interface StatCardProps {
     isPositive: boolean;
   };
   variant?: 'default' | 'primary' | 'accent' | 'success' | 'warning';
+  bgStyle?: 'silk' | 'cherries';
 }
 
 const variantStyles = {
@@ -29,9 +32,23 @@ const iconVariantStyles = {
   warning: 'bg-warning/10 text-warning',
 };
 
-export function StatCard({ title, value, subtitle, icon: Icon, trend, variant = 'default' }: StatCardProps) {
+const bgImages = {
+  silk: cardBgSilk,
+  cherries: cardBgCherries,
+};
+
+export function StatCard({ title, value, subtitle, icon: Icon, trend, variant = 'default', bgStyle }: StatCardProps) {
+  const backgroundImage = bgStyle ? bgImages[bgStyle] : undefined;
+
   return (
-    <div className={cn("stat-card animate-fade-in", variantStyles[variant])}>
+    <div 
+      className={cn("stat-card animate-fade-in", variantStyles[variant])}
+      style={backgroundImage ? {
+        backgroundImage: `linear-gradient(135deg, rgba(255,255,255,0.88) 0%, rgba(255,255,255,0.82) 100%), url(${backgroundImage})`,
+        backgroundSize: 'cover',
+        backgroundPosition: 'center',
+      } : undefined}
+    >
       <div className="flex items-start justify-between">
         <div className="space-y-2">
           <p className="text-sm font-medium text-muted-foreground">{title}</p>

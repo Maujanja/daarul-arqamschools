@@ -655,6 +655,7 @@ export function SecretaryDashboard() {
           subtitle="Registered"
           icon={Users}
           variant="primary"
+          bgStyle="silk"
         />
         <StatCard
           title="Total Collected"
@@ -662,6 +663,7 @@ export function SecretaryDashboard() {
           subtitle={`${selectedYear}`}
           icon={DollarSign}
           variant="success"
+          bgStyle="cherries"
         />
         <StatCard
           title="With Outstanding"
@@ -669,6 +671,7 @@ export function SecretaryDashboard() {
           subtitle="Students"
           icon={AlertTriangle}
           variant="warning"
+          bgStyle="silk"
         />
         <StatCard
           title="Today's Payments"
@@ -676,6 +679,7 @@ export function SecretaryDashboard() {
           subtitle="Records"
           icon={TrendingUp}
           variant="accent"
+          bgStyle="cherries"
         />
       </div>
 
