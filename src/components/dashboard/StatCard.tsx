@@ -44,7 +44,7 @@ export function StatCard({ title, value, subtitle, icon: Icon, trend, variant = 
     <div 
       className={cn("stat-card animate-fade-in", variantStyles[variant])}
       style={backgroundImage ? {
-        backgroundImage: `linear-gradient(135deg, rgba(255,255,255,0.88) 0%, rgba(255,255,255,0.82) 100%), url(${backgroundImage})`,
+        backgroundImage: `linear-gradient(135deg, rgba(255,255,255,0.55) 0%, rgba(255,255,255,0.45) 100%), url(${backgroundImage})`,
         backgroundSize: 'cover',
         backgroundPosition: 'center',
       } : undefined}

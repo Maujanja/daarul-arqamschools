@@ -558,7 +558,7 @@ export default function UsersPage() {
                   </div>
                   <div className="mt-3 pt-3 border-t space-y-1">
                     <p className="text-xs text-muted-foreground">
-                      <span className="font-medium">Password:</span> {teacher.password_hash || 'Not set'}
+                      <span className="font-medium">Password:</span> ••••••••
                     </p>
                     <p className="text-xs text-muted-foreground">
                       <span className="font-medium">Subjects:</span> {teacher.subjects.length > 0 ? teacher.subjects.join(', ') : 'None'}
@@ -614,7 +614,7 @@ export default function UsersPage() {
                   </div>
                   <div className="mt-3 pt-3 border-t space-y-1">
                     <p className="text-xs text-muted-foreground">
-                      <span className="font-medium">Password:</span> {secretary.password_hash}
+                      <span className="font-medium">Password:</span> ••••••••
                     </p>
                   </div>
                 </div>
@@ -859,7 +859,7 @@ export default function UsersPage() {
                 <div>
                   <Label className="text-muted-foreground">Password</Label>
                   <p className="font-medium font-mono bg-muted px-2 py-1 rounded">
-                    {selectedTeacher.password_hash || 'Not set'}
+                    ••••••••
                   </p>
                 </div>
                 <div>
