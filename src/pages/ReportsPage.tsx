@@ -313,42 +313,56 @@ export default function ReportsPage() {
   }, [fetchReportData, selectedYear]);
 
   const handleExportAllReports = () => {
-    const data = studentsData.map(s => ({
-      name: s.full_name,
-      rollNumber: s.roll_number,
-      className: s.class,
-      average: s.average,
-      grade: s.grade,
-    }));
-
-    generateAllStudentsReportPDF(data, selectedTerm, selectedYear);
-    toast.success('All reports downloaded!');
-  };
-
-  const handleDownloadClassReport = (classData: any) => {
-    const classStudents = studentsData
-      .filter(s => s.class === classData.class)
-      .sort((a, b) => b.average - a.average)
-      .map((s, index) => ({
-        rank: index + 1,
+    try {
+      console.log('Starting PDF export, data count:', studentsData.length);
+      const data = studentsData.map(s => ({
         name: s.full_name,
         rollNumber: s.roll_number,
+        className: s.class,
         average: s.average,
         grade: s.grade,
       }));
 
-    generateClassReportPDF({
-      className: classData.class,
-      term: selectedTerm,
-      academicYear: selectedYear,
-      students: classStudents,
-      classAverage: classData.average,
-      highestScore: classData.highest,
-      lowestScore: classData.lowest,
-      passRate: classData.passRate,
-    });
+      console.log('Calling generateAllStudentsReportPDF...');
+      generateAllStudentsReportPDF(data, selectedTerm, selectedYear);
+      toast.success('All reports downloaded!');
+    } catch (error) {
+      console.error('PDF generation error:', error);
+      toast.error('Failed to generate PDF. Please try again.');
+    }
+  };
 
-    toast.success(`${classData.class} report downloaded!`);
+  const handleDownloadClassReport = (classData: any) => {
+    try {
+      console.log('Starting class report download for:', classData.class);
+      const classStudents = studentsData
+        .filter(s => s.class === classData.class)
+        .sort((a, b) => b.average - a.average)
+        .map((s, index) => ({
+          rank: index + 1,
+          name: s.full_name,
+          rollNumber: s.roll_number,
+          average: s.average,
+          grade: s.grade,
+        }));
+
+      console.log('Calling generateClassReportPDF...');
+      generateClassReportPDF({
+        className: classData.class,
+        term: selectedTerm,
+        academicYear: selectedYear,
+        students: classStudents,
+        classAverage: classData.average,
+        highestScore: classData.highest,
+        lowestScore: classData.lowest,
+        passRate: classData.passRate,
+      });
+
+      toast.success(`${classData.class} report downloaded!`);
+    } catch (error) {
+      console.error('Class report PDF generation error:', error);
+      toast.error('Failed to generate class report. Please try again.');
+    }
   };
 
   return (
