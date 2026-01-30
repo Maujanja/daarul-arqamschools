@@ -611,22 +611,49 @@ export default function StudentsPage() {
                         <MoreHorizontal className="h-4 w-4" />
                       </Button>
                     </DropdownMenuTrigger>
-                    <DropdownMenuContent align="end">
-                      <DropdownMenuItem>View Profile</DropdownMenuItem>
-                      <DropdownMenuItem>View Marks</DropdownMenuItem>
-                      <DropdownMenuItem onClick={() => handleDownloadStudentReport(student)}>
+                    <DropdownMenuContent align="end" className="z-50">
+                      <DropdownMenuItem 
+                        onClick={(e) => {
+                          e.stopPropagation();
+                          toast.info(`Profile: ${student.full_name}`);
+                        }}
+                      >
+                        View Profile
+                      </DropdownMenuItem>
+                      <DropdownMenuItem 
+                        onClick={(e) => {
+                          e.stopPropagation();
+                          toast.info(`Marks for ${student.full_name}`);
+                        }}
+                      >
+                        View Marks
+                      </DropdownMenuItem>
+                      <DropdownMenuItem 
+                        onClick={(e) => {
+                          e.stopPropagation();
+                          handleDownloadStudentReport(student);
+                        }}
+                      >
                         <FileText className="w-4 h-4 mr-2" />
                         Download Report
                       </DropdownMenuItem>
                       {canManageStudents && (
                         <>
-                          <DropdownMenuItem onClick={() => openEditDialog(student)}>
+                          <DropdownMenuItem 
+                            onClick={(e) => {
+                              e.stopPropagation();
+                              openEditDialog(student);
+                            }}
+                          >
                             <Camera className="w-4 h-4 mr-2" />
                             Edit / Photo
                           </DropdownMenuItem>
                           <DropdownMenuItem 
                             className="text-destructive"
-                            onClick={() => handleDeleteStudent(student.id)}
+                            onClick={(e) => {
+                              e.stopPropagation();
+                              handleDeleteStudent(student.id);
+                            }}
                           >
                             Delete
                           </DropdownMenuItem>
@@ -880,15 +907,15 @@ export default function StudentsPage() {
 
       {/* Edit Student Dialog */}
       <Dialog open={showEditDialog} onOpenChange={setShowEditDialog}>
-        <DialogContent>
-          <DialogHeader>
+        <DialogContent className="max-h-[90vh] flex flex-col">
+          <DialogHeader className="flex-shrink-0">
             <DialogTitle>Edit Student</DialogTitle>
             <DialogDescription>
               Update student information and photo
             </DialogDescription>
           </DialogHeader>
           {editingStudent && (
-            <div className="space-y-4 py-4">
+            <div className="space-y-4 py-4 overflow-y-auto flex-1">
               {/* Student Photo */}
               <div className="flex flex-col items-center gap-3">
                 <Label>Student Photo</Label>
@@ -952,11 +979,14 @@ export default function StudentsPage() {
               </div>
             </div>
           )}
-          <DialogFooter>
-            <Button variant="outline" onClick={() => setShowEditDialog(false)}>
+          <DialogFooter className="flex-shrink-0 pt-4 border-t mt-auto">
+            <Button variant="outline" onClick={(e) => { e.stopPropagation(); setShowEditDialog(false); }}>
               Cancel
             </Button>
-            <Button onClick={handleUpdateStudent} disabled={saving}>
+            <Button 
+              onClick={(e) => { e.stopPropagation(); handleUpdateStudent(); }} 
+              disabled={saving}
+            >
               {saving && <Loader2 className="w-4 h-4 mr-2 animate-spin" />}
               Save Changes
             </Button>
