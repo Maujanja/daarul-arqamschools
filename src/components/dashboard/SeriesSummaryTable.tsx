@@ -1,9 +1,14 @@
-import { useRef } from 'react';
+import { useRef, useState } from 'react';
 import { Button } from '@/components/ui/button';
-import { Download } from 'lucide-react';
+import { Download, ChevronDown } from 'lucide-react';
+import { Checkbox } from '@/components/ui/checkbox';
+import {
+  Popover,
+  PopoverContent,
+  PopoverTrigger,
+} from '@/components/ui/popover';
 import jsPDF from 'jspdf';
 import autoTable from 'jspdf-autotable';
-import html2canvas from 'html2canvas';
 
 interface SeriesData {
   [series: string]: number | null;
@@ -29,6 +34,7 @@ interface SeriesSummaryTableProps {
   onDownloadPDF?: () => void;
   pdfFileName?: string;
   className?: string;
+  showSeriesSelector?: boolean; // Enable series selection for PDF download
 }
 
 export function SeriesSummaryTable({
@@ -41,8 +47,10 @@ export function SeriesSummaryTable({
   averagePerSeries = {},
   pdfFileName = 'series_summary',
   className = '',
+  showSeriesSelector = false,
 }: SeriesSummaryTableProps) {
   const tableRef = useRef<HTMLDivElement>(null);
+  const [selectedSeries, setSelectedSeries] = useState<Set<string>>(new Set(seriesLabels));
 
   const getGradeColor = (grade: string) => {
     switch (grade) {
@@ -55,7 +63,35 @@ export function SeriesSummaryTable({
     }
   };
 
+  const toggleSeriesSelection = (series: string) => {
+    setSelectedSeries(prev => {
+      const newSet = new Set(prev);
+      if (newSet.has(series)) {
+        newSet.delete(series);
+      } else {
+        newSet.add(series);
+      }
+      return newSet;
+    });
+  };
+
+  const selectAllSeries = () => {
+    setSelectedSeries(new Set(seriesLabels));
+  };
+
+  const deselectAllSeries = () => {
+    setSelectedSeries(new Set());
+  };
+
   const handleDownloadPDF = async () => {
+    const seriesToInclude = showSeriesSelector 
+      ? seriesLabels.filter(s => selectedSeries.has(s))
+      : seriesLabels;
+    
+    if (seriesToInclude.length === 0) {
+      return;
+    }
+    
     const doc = new jsPDF({ orientation: 'landscape' });
     
     // Title
@@ -71,17 +107,29 @@ export function SeriesSummaryTable({
 
     doc.setFontSize(10);
     doc.text(`Date: ${new Date().toLocaleDateString()}`, 14, 32);
+    
+    if (showSeriesSelector && seriesToInclude.length < seriesLabels.length) {
+      doc.text(`Selected Series: ${seriesToInclude.join(', ')}`, 14, 38);
+    }
 
-    // Prepare table data
-    const headers = ['SN', 'Name', ...seriesLabels, 'AVER', 'GRADE'];
+    // Prepare table data using selected series
+    const headers = ['SN', 'Name', ...seriesToInclude, 'AVER', 'GRADE'];
     if (showPosition) headers.push('POS');
 
     const tableData = data.map(row => {
+      // Recalculate average based on selected series only
+      const selectedValues = seriesToInclude
+        .map(series => row.seriesData[series])
+        .filter((v): v is number => v !== null);
+      const recalcAverage = selectedValues.length > 0
+        ? selectedValues.reduce((a, b) => a + b, 0) / selectedValues.length
+        : null;
+      
       const rowData: (string | number)[] = [
         row.sn,
         row.name,
-        ...seriesLabels.map(series => row.seriesData[series] ?? '-'),
-        row.average !== null ? row.average.toFixed(2) : '-',
+        ...seriesToInclude.map(series => row.seriesData[series] ?? '-'),
+        recalcAverage !== null ? recalcAverage.toFixed(2) : '-',
         row.grade,
       ];
       if (showPosition) rowData.push(row.position ?? '-');
@@ -93,7 +141,7 @@ export function SeriesSummaryTable({
       const avgRow: (string | number)[] = [
         '',
         'AVERAGE PER SERIES',
-        ...seriesLabels.map(series => averagePerSeries[series]?.toFixed(1) ?? '-'),
+        ...seriesToInclude.map(series => averagePerSeries[series]?.toFixed(1) ?? '-'),
         '',
         '',
       ];
@@ -104,7 +152,7 @@ export function SeriesSummaryTable({
     autoTable(doc, {
       head: [headers],
       body: tableData,
-      startY: 38,
+      startY: showSeriesSelector && seriesToInclude.length < seriesLabels.length ? 44 : 38,
       theme: 'grid',
       styles: { fontSize: 8, cellPadding: 2 },
       headStyles: { fillColor: [59, 130, 246], textColor: [255, 255, 255], fontStyle: 'bold' },
@@ -120,15 +168,61 @@ export function SeriesSummaryTable({
 
   return (
     <div className={`card-elevated p-6 animate-fade-in ${className}`}>
-      <div className="flex items-center justify-between mb-4">
+      <div className="flex items-center justify-between mb-4 flex-wrap gap-2">
         <div>
           <h3 className="font-display font-semibold text-lg text-card-foreground">{title}</h3>
           {subtitle && <p className="text-sm text-muted-foreground">{subtitle}</p>}
         </div>
-        <Button variant="outline" size="sm" onClick={handleDownloadPDF}>
-          <Download className="w-4 h-4 mr-2" />
-          Download PDF
-        </Button>
+        <div className="flex items-center gap-2">
+          {showSeriesSelector && (
+            <Popover>
+              <PopoverTrigger asChild>
+                <Button variant="outline" size="sm">
+                  Select Tests
+                  <ChevronDown className="w-4 h-4 ml-2" />
+                </Button>
+              </PopoverTrigger>
+              <PopoverContent className="w-64" align="end">
+                <div className="space-y-3">
+                  <div className="flex items-center justify-between">
+                    <span className="text-sm font-medium">Select Tests for PDF</span>
+                    <div className="flex gap-1">
+                      <Button variant="ghost" size="sm" className="h-7 px-2 text-xs" onClick={selectAllSeries}>
+                        All
+                      </Button>
+                      <Button variant="ghost" size="sm" className="h-7 px-2 text-xs" onClick={deselectAllSeries}>
+                        None
+                      </Button>
+                    </div>
+                  </div>
+                  <div className="grid grid-cols-3 gap-2 max-h-48 overflow-y-auto">
+                    {seriesLabels.map(series => (
+                      <label key={series} className="flex items-center gap-2 text-sm cursor-pointer">
+                        <Checkbox
+                          checked={selectedSeries.has(series)}
+                          onCheckedChange={() => toggleSeriesSelection(series)}
+                        />
+                        {series}
+                      </label>
+                    ))}
+                  </div>
+                  <p className="text-xs text-muted-foreground">
+                    {selectedSeries.size} of {seriesLabels.length} selected
+                  </p>
+                </div>
+              </PopoverContent>
+            </Popover>
+          )}
+          <Button 
+            variant="outline" 
+            size="sm" 
+            onClick={handleDownloadPDF}
+            disabled={showSeriesSelector && selectedSeries.size === 0}
+          >
+            <Download className="w-4 h-4 mr-2" />
+            Download PDF
+          </Button>
+        </div>
       </div>
 
       <div ref={tableRef} className="overflow-x-auto">

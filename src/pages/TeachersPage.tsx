@@ -2,8 +2,9 @@ import { useState, useEffect } from 'react';
 import { DashboardLayout } from '@/components/layout/DashboardLayout';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
-import { supabase } from '@/integrations/supabase/client';
 import { useAcademicYears } from '@/hooks/useAcademicYears';
+import { useSecureQuery } from '@/hooks/useSecureQuery';
+import { useSecureData } from '@/hooks/useSecureData';
 import { Search, Plus, MoreHorizontal, Users, BookOpen, Loader2, Mail, Settings } from 'lucide-react';
 import {
   DropdownMenu,
@@ -52,6 +53,8 @@ const ALL_CLASSES = ['P1', 'P2', 'P3', 'P4', 'P5', 'P6', 'P7', 'S1', 'S2', 'S3',
 export default function TeachersPage() {
   const { user } = useAuth();
   const { currentYear } = useAcademicYears();
+  const { fetchTable } = useSecureQuery();
+  const { insert, update, remove } = useSecureData();
   const [searchQuery, setSearchQuery] = useState('');
   const [teachers, setTeachers] = useState<Teacher[]>([]);
   const [subjects, setSubjects] = useState<Subject[]>([]);
@@ -89,34 +92,21 @@ export default function TeachersPage() {
     try {
       setLoading(true);
       setError(null);
-      console.log('TeachersPage: Fetching teachers data...');
+      console.log('TeachersPage: Fetching teachers data via secure query...');
       
-      const [teachersRes, subjectsRes, assignmentsRes] = await Promise.all([
-        supabase.from('teachers').select('*').order('full_name'),
-        supabase.from('subjects').select('*').order('name'),
-        supabase.from('teacher_assignments').select('*')
+      const [teachersData, subjectsData, assignmentsData] = await Promise.all([
+        fetchTable<Teacher>('teachers', undefined, { orderBy: { column: 'full_name', ascending: true } }),
+        fetchTable<Subject>('subjects', undefined, { orderBy: { column: 'name', ascending: true } }),
+        fetchTable<TeacherAssignment>('teacher_assignments')
       ]);
 
-      console.log('TeachersPage: Teachers response:', teachersRes);
-      console.log('TeachersPage: Subjects response:', subjectsRes);
-      console.log('TeachersPage: Assignments response:', assignmentsRes);
+      console.log('TeachersPage: Teachers fetched:', teachersData?.length || 0);
+      console.log('TeachersPage: Subjects fetched:', subjectsData?.length || 0);
+      console.log('TeachersPage: Assignments fetched:', assignmentsData?.length || 0);
 
-      if (teachersRes.error) {
-        console.error('TeachersPage: Teachers fetch error:', teachersRes.error);
-        setError(`Error: ${teachersRes.error.message}`);
-        return;
-      }
-      if (subjectsRes.error) {
-        console.error('TeachersPage: Subjects fetch error:', subjectsRes.error);
-      }
-      if (assignmentsRes.error) {
-        console.error('TeachersPage: Assignments fetch error:', assignmentsRes.error);
-      }
-
-      console.log('TeachersPage: Setting teachers data, count:', teachersRes.data?.length || 0);
-      setTeachers(teachersRes.data || []);
-      setSubjects(subjectsRes.data || []);
-      setAssignments(assignmentsRes.data || []);
+      setTeachers(teachersData || []);
+      setSubjects(subjectsData || []);
+      setAssignments(assignmentsData || []);
     } catch (err: any) {
       console.error('TeachersPage: Error fetching data:', err);
       setError(`Error: ${err.message || 'Unknown error'}`);
@@ -136,25 +126,23 @@ export default function TeachersPage() {
     try {
       setSaving(true);
 
-      const { error } = await supabase
-        .from('teachers')
-        .insert({
-          full_name: newTeacher.full_name,
-          email: newTeacher.email,
-          password_hash: newTeacher.password,
-          subjects: [],
-          classes: [],
-        });
+      const result = await insert('teachers', {
+        full_name: newTeacher.full_name,
+        email: newTeacher.email,
+        password_hash: newTeacher.password,
+        subjects: [],
+        classes: [],
+      });
 
-      if (error) throw error;
+      if (!result.success) throw new Error(result.error);
 
       toast.success('Teacher added successfully');
       setShowAddDialog(false);
       setNewTeacher({ full_name: '', email: '', password: '' });
       fetchData();
-    } catch (error) {
+    } catch (error: any) {
       console.error('Error adding teacher:', error);
-      toast.error('Failed to add teacher');
+      toast.error(error.message || 'Failed to add teacher');
     } finally {
       setSaving(false);
     }
@@ -162,17 +150,13 @@ export default function TeachersPage() {
 
   const handleDeleteTeacher = async (id: string) => {
     try {
-      const { error } = await supabase
-        .from('teachers')
-        .delete()
-        .eq('id', id);
-
-      if (error) throw error;
+      const result = await remove('teachers', { id });
+      if (!result.success) throw new Error(result.error);
       toast.success('Teacher deleted');
       fetchData();
-    } catch (error) {
+    } catch (error: any) {
       console.error('Error deleting teacher:', error);
-      toast.error('Failed to delete teacher');
+      toast.error(error.message || 'Failed to delete teacher');
     }
   };
 
@@ -240,10 +224,7 @@ export default function TeachersPage() {
       setSaving(true);
 
       // Delete existing assignments for this teacher
-      await supabase
-        .from('teacher_assignments')
-        .delete()
-        .eq('teacher_id', selectedTeacher.id);
+      await remove('teacher_assignments', { teacher_id: selectedTeacher.id });
 
       // Insert new assignments
       const newAssignments: { teacher_id: string; class: string; subject_id: string; academic_year: string }[] = [];
@@ -260,11 +241,8 @@ export default function TeachersPage() {
       });
 
       if (newAssignments.length > 0) {
-        const { error } = await supabase
-          .from('teacher_assignments')
-          .insert(newAssignments);
-
-        if (error) throw error;
+        const result = await insert('teacher_assignments', newAssignments);
+        if (!result.success) throw new Error(result.error);
       }
 
       // Update teacher's classes and subjects arrays for backwards compatibility
@@ -278,20 +256,17 @@ export default function TeachersPage() {
         .filter(s => assignedSubjectIds.has(s.id))
         .map(s => s.name);
 
-      await supabase
-        .from('teachers')
-        .update({
-          classes: assignedClasses,
-          subjects: assignedSubjectNames
-        })
-        .eq('id', selectedTeacher.id);
+      await update('teachers', {
+        classes: assignedClasses,
+        subjects: assignedSubjectNames
+      }, { id: selectedTeacher.id });
 
       toast.success('Teacher assignments saved successfully');
       setShowAssignDialog(false);
       fetchData();
-    } catch (error) {
+    } catch (error: any) {
       console.error('Error saving assignments:', error);
-      toast.error('Failed to save assignments');
+      toast.error(error.message || 'Failed to save assignments');
     } finally {
       setSaving(false);
     }
@@ -306,7 +281,7 @@ export default function TeachersPage() {
     try {
       setSaving(true);
       
-      const updateData: any = {
+      const updateData: Record<string, unknown> = {
         full_name: editTeacher.full_name,
         email: editTeacher.email,
       };
@@ -315,20 +290,16 @@ export default function TeachersPage() {
         updateData.password_hash = editTeacher.password;
       }
 
-      const { error } = await supabase
-        .from('teachers')
-        .update(updateData)
-        .eq('id', selectedTeacher.id);
-
-      if (error) throw error;
+      const result = await update('teachers', updateData, { id: selectedTeacher.id });
+      if (!result.success) throw new Error(result.error);
 
       toast.success('Teacher updated successfully');
       setShowEditDialog(false);
       setSelectedTeacher(null);
       fetchData();
-    } catch (error) {
+    } catch (error: any) {
       console.error('Error updating teacher:', error);
-      toast.error('Failed to update teacher');
+      toast.error(error.message || 'Failed to update teacher');
     } finally {
       setSaving(false);
     }
