@@ -277,6 +277,17 @@ export default function ReportsPage() {
           uniqueNames.add(nameLower);
           return true;
         });
+      } else {
+        // For "All Classes", remove duplicates but keep all subjects
+        const uniqueNames = new Set<string>();
+        filteredSubjects = (subjects || []).filter(s => {
+          const nameLower = s.name.toLowerCase().trim();
+          if (uniqueNames.has(nameLower)) {
+            return false;
+          }
+          uniqueNames.add(nameLower);
+          return true;
+        });
       }
 
       // Group marks by subject name to handle duplicate subject IDs
@@ -286,7 +297,7 @@ export default function ReportsPage() {
           .filter(s => s.name.toLowerCase().trim() === subject.name.toLowerCase().trim())
           .map(s => s.id);
         
-        // Get marks for all matching subject IDs
+        // Get marks for all matching subject IDs from filteredMarks
         const subjectMarks = filteredMarks.filter(m => sameNameSubjectIds.includes(m.subject_id));
         const totals = subjectMarks.map(m => m.total).filter(t => t > 0);
         

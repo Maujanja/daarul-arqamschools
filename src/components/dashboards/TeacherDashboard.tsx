@@ -1,4 +1,5 @@
 import { useState, useEffect, useCallback } from 'react';
+import { useNavigate } from 'react-router-dom';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Users, BookOpen, ClipboardList, Loader2, AlertCircle, RefreshCw, AlertTriangle } from 'lucide-react';
 import { Button } from '@/components/ui/button';
@@ -55,6 +56,7 @@ interface ClassSeriesData {
 }
 
 export function TeacherDashboard() {
+  const navigate = useNavigate();
   const { user } = useAuth();
   const { fetchTable, count } = useSecureQuery();
   const { academicYears, currentYear, loading: yearsLoading } = useAcademicYears();
@@ -409,6 +411,7 @@ export function TeacherDashboard() {
           seriesLabels={seriesLabels}
           showPosition={false}
           showAveragePerSeries={true}
+          showSeriesSelector={true}
           pdfFileName={`teacher_series_summary_${selectedYear}`}
         />
       )}
@@ -476,13 +479,13 @@ export function TeacherDashboard() {
         </CardHeader>
         <CardContent>
           <div className="flex flex-wrap gap-3">
-            <Button variant="outline" onClick={() => window.location.href = '/marks-entry'}>
+            <Button variant="outline" onClick={() => navigate('/marks-entry')}>
               Enter Marks
             </Button>
-            <Button variant="outline" onClick={() => window.location.href = '/my-students'}>
+            <Button variant="outline" onClick={() => navigate('/my-students')}>
               View Students
             </Button>
-            <Button variant="outline" onClick={() => window.location.href = '/feedback'}>
+            <Button variant="outline" onClick={() => navigate('/feedback')}>
               View Feedback
             </Button>
           </div>

@@ -70,7 +70,7 @@ const permissions: Record<string, Record<AllowedTable, AllowedOperation[]>> = {
     secretary_credentials: [],
   },
   secretary: {
-    students: ["insert", "update"],
+    students: ["insert", "update", "delete"],
     marks: [],
     fee_payments: ["insert", "update", "delete"],
     fee_structure: ["insert", "update", "delete"],
@@ -78,7 +78,7 @@ const permissions: Record<string, Record<AllowedTable, AllowedOperation[]>> = {
     feedback: ["update"],
     parents: ["insert", "update"],
     teacher_assignments: [],
-    teacher_class_students: [],
+    teacher_class_students: ["delete"],
     subjects: [],
     academic_years: [],
     announcements: [],
