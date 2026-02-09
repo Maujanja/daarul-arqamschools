@@ -353,41 +353,34 @@ export default function StudentsPage() {
 
     try {
       setSaving(true);
+      toast.info(`Transferring ${studentsToTransfer.length} students...`);
 
       // Get current academic year
       const academicYearsData = await fetchTable<AcademicYear>('academic_years', { is_current: true }, { limit: 1 });
       const academicYear = academicYearsData?.[0]?.year_name || '2024-2025';
 
-      // Get fee structure and payments to calculate outstanding debts
-      const feeStructures = await fetchTable<FeeStructure>('fee_structure', { 
-        class: transferFromClass, 
-        academic_year: academicYear 
-      });
-      
-      const feePayments = await fetchTable<FeePayment>('fee_payments', {
-        student_id: studentsToTransfer,
-        academic_year: academicYear
-      });
+      // Fetch fee data in parallel
+      const [feeStructures, feePayments] = await Promise.all([
+        fetchTable<FeeStructure>('fee_structure', { class: transferFromClass, academic_year: academicYear }),
+        fetchTable<FeePayment>('fee_payments', { academic_year: academicYear }),
+      ]);
 
-      // Calculate and save outstanding debts for each student using dynamic terms
+      // Build all debt records at once
+      const debtRecords: Record<string, unknown>[] = [];
       for (const studentId of studentsToTransfer) {
         for (const term of terms) {
           const structure = feeStructures?.find(f => f.term === term);
           if (!structure) continue;
-          
           const expectedFee = structure.total_fee || 0;
           const paidAmount = feePayments
             ?.filter(p => p.student_id === studentId && p.term === term)
             .reduce((sum, p) => sum + Number(p.amount), 0) || 0;
-          
           const outstanding = expectedFee - paidAmount;
-          
-          // If there's outstanding debt, save it to history
           if (outstanding > 0) {
-            await insert('student_debt_history', {
+            debtRecords.push({
               student_id: studentId,
               academic_year: academicYear,
-              term: term,
+              term,
               original_amount: expectedFee,
               amount_paid: paidAmount,
               outstanding_balance: outstanding,
@@ -398,9 +391,16 @@ export default function StudentsPage() {
         }
       }
 
-      // 1. Update students' class
-      for (const studentId of studentsToTransfer) {
-        await update('students', { class: transferToClass }, { id: studentId });
+      // Batch insert all debt records in one call
+      if (debtRecords.length > 0) {
+        await insert('student_debt_history', debtRecords);
+      }
+
+      // Batch update all students' class in parallel (groups of 5)
+      const BATCH_SIZE = 5;
+      for (let i = 0; i < studentsToTransfer.length; i += BATCH_SIZE) {
+        const batch = studentsToTransfer.slice(i, i + BATCH_SIZE);
+        await Promise.all(batch.map(id => update('students', { class: transferToClass }, { id })));
       }
 
       // Convert full class name to short code for teacher matching
@@ -415,20 +415,13 @@ export default function StudentsPage() {
 
       const oldClassShortCode = getClassShortCode(transferFromClass);
 
-      // 3. Delete ALL old teacher_class_students entries for these students (old class)
-      for (const studentId of studentsToTransfer) {
-        await remove('teacher_class_students', { student_id: studentId, class: transferFromClass });
-        await remove('teacher_class_students', { student_id: studentId, class: oldClassShortCode });
-      }
-
-      console.log(`${studentsToTransfer.length} students now available for teachers assigned to ${transferToClass}`);
-
-      // 4. Check if graduating
-      const isGraduating = transferToClass.toLowerCase().includes('senior 4') || 
-                           transferToClass.toLowerCase().includes('s4');
-      
-      if (isGraduating) {
-        console.log(`Graduating ${studentsToTransfer.length} students to ${transferToClass}`);
+      // Batch delete teacher_class_students in parallel (groups of 5)
+      for (let i = 0; i < studentsToTransfer.length; i += BATCH_SIZE) {
+        const batch = studentsToTransfer.slice(i, i + BATCH_SIZE);
+        await Promise.all(batch.flatMap(id => [
+          remove('teacher_class_students', { student_id: id, class: transferFromClass }),
+          remove('teacher_class_students', { student_id: id, class: oldClassShortCode }),
+        ]));
       }
 
       toast.success(`Transferred ${studentsToTransfer.length} students to ${transferToClass}`);
