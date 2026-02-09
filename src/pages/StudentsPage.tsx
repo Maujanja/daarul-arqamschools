@@ -86,7 +86,7 @@ interface AcademicYear {
   is_current: boolean;
 }
 
-const ALL_CLASSES = ['Nursery', 'P1', 'P2', 'P3', 'P4', 'P5', 'P6', 'P7', 'S1', 'S2', 'S3', 'S4'];
+const ALL_CLASSES = ['Nursery', 'Primary 1', 'Primary 2', 'Primary 3', 'Primary 4', 'Primary 5', 'Primary 6', 'Primary 7', 'Senior 1', 'Senior 2', 'Senior 3', 'Senior 4'];
 
 // Map short class codes to full class names used in students table
 const mapClassToFullName = (shortCode: string): string => {
