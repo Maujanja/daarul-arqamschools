@@ -607,40 +607,41 @@ export function SecretaryDashboard() {
 
   // Download Excel template for fee payments
   const handleDownloadTemplate = () => {
-    const templateData = [
-      {
-        'Roll Number': 'STD001',
-        'Student Name': 'Example Student (DO NOT EDIT)',
-        'Amount': 50000,
-        'Payment Method': 'Cash',
-        'Receipt Number': 'RCP-001',
-        'Notes': 'Term 1 payment'
+    try {
+      if (students.length === 0) {
+        toast({ title: "Error", description: "No students loaded yet. Please wait for data to load.", variant: "destructive" });
+        return;
       }
-    ];
 
-    // Add all current students as rows with empty amounts
-    students.forEach(s => {
-      templateData.push({
-        'Roll Number': s.roll_number,
-        'Student Name': s.full_name,
-        'Amount': 0,
-        'Payment Method': 'Cash',
-        'Receipt Number': '',
-        'Notes': ''
+      const templateData: Record<string, string | number>[] = [];
+
+      // Add all current students as rows with empty amounts
+      students.forEach(s => {
+        templateData.push({
+          'Roll Number': s.roll_number,
+          'Student Name': s.full_name,
+          'Amount': 0,
+          'Payment Method': 'Cash',
+          'Receipt Number': '',
+          'Notes': ''
+        });
       });
-    });
 
-    const ws = XLSX.utils.json_to_sheet(templateData);
-    
-    // Set column widths
-    ws['!cols'] = [
-      { wch: 15 }, { wch: 30 }, { wch: 15 }, { wch: 18 }, { wch: 18 }, { wch: 25 }
-    ];
+      const ws = XLSX.utils.json_to_sheet(templateData);
+      
+      // Set column widths
+      ws['!cols'] = [
+        { wch: 15 }, { wch: 30 }, { wch: 15 }, { wch: 18 }, { wch: 18 }, { wch: 25 }
+      ];
 
-    const wb = XLSX.utils.book_new();
-    XLSX.utils.book_append_sheet(wb, ws, 'Fee Payments');
-    XLSX.writeFile(wb, `Fee_Payment_Template_${selectedYear}.xlsx`);
-    toast({ title: "Success", description: "Template downloaded. Fill amounts and upload." });
+      const wb = XLSX.utils.book_new();
+      XLSX.utils.book_append_sheet(wb, ws, 'Fee Payments');
+      XLSX.writeFile(wb, `Fee_Payment_Template_${selectedYear}.xlsx`);
+      toast({ title: "Success", description: "Template downloaded. Fill amounts and upload." });
+    } catch (error) {
+      console.error('Template download error:', error);
+      toast({ title: "Error", description: "Failed to download template. Please try again.", variant: "destructive" });
+    }
   };
 
   // Upload Excel fee payments
@@ -657,11 +658,11 @@ export function SecretaryDashboard() {
       const sheet = workbook.Sheets[workbook.SheetNames[0]];
       const rows = XLSX.utils.sheet_to_json<Record<string, any>>(sheet);
 
-      // Filter rows with amount > 0 and skip the example row
+      // Filter rows with amount > 0
       const validRows = rows.filter(row => {
         const amount = Number(row['Amount']);
         const rollNumber = String(row['Roll Number'] || '').trim();
-        return amount > 0 && rollNumber && rollNumber !== 'STD001';
+        return amount > 0 && rollNumber;
       });
 
       if (validRows.length === 0) {

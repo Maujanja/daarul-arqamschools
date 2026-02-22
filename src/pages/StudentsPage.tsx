@@ -6,7 +6,7 @@ import { Input } from '@/components/ui/input';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { Checkbox } from '@/components/ui/checkbox';
 import { useAcademicYears } from '@/hooks/useAcademicYears';
-import { Search, Plus, MoreHorizontal, GraduationCap, Calendar, Loader2, Download, FileText, ArrowRightLeft, Users, Camera } from 'lucide-react';
+import { Search, Plus, MoreHorizontal, GraduationCap, Calendar, Loader2, Download, FileText, ArrowRightLeft, Users, Camera, User } from 'lucide-react';
 import { generateStudentReportPDF, generateAllStudentsReportPDF } from '@/utils/pdfGenerator';
 import { terms } from '@/data/mockData';
 import { toast } from 'sonner';
@@ -681,6 +681,11 @@ export default function StudentsPage() {
                     <Calendar className="w-4 h-4 text-muted-foreground" />
                     <span className="text-muted-foreground">Admission:</span>
                     <span className="font-medium text-card-foreground">{new Date(student.admission_date).toLocaleDateString()}</span>
+                  </div>
+                  <div className="flex items-center gap-2 text-sm">
+                    <User className="w-4 h-4 text-muted-foreground" />
+                    <span className="text-muted-foreground">Gender:</span>
+                    <span className="font-medium text-card-foreground">{student.gender || 'N/A'}</span>
                   </div>
                 </div>
 
