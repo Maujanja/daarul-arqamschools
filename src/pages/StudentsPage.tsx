@@ -40,6 +40,7 @@ interface Student {
   admission_date: string;
   parent_id: string | null;
   boarding_type: string;
+  gender?: string;
   avatar_url?: string | null;
 }
 
@@ -128,6 +129,7 @@ export default function StudentsPage() {
     roll_number: '',
     class: '',
     boarding_type: 'day',
+    gender: 'Male',
     admission_date: new Date().toISOString().split('T')[0],
     avatar_url: null as string | null,
   });
@@ -259,6 +261,7 @@ export default function StudentsPage() {
         roll_number: newStudent.roll_number.trim(),
         class: newStudent.class.trim(),
         boarding_type: newStudent.boarding_type,
+        gender: newStudent.gender,
         admission_date: newStudent.admission_date,
         avatar_url: tempAvatarUrl,
       });
@@ -272,6 +275,7 @@ export default function StudentsPage() {
         roll_number: '',
         class: '',
         boarding_type: 'day',
+        gender: 'Male',
         admission_date: new Date().toISOString().split('T')[0],
         avatar_url: null,
       });
@@ -301,6 +305,7 @@ export default function StudentsPage() {
         roll_number: editingStudent.roll_number.trim(),
         class: editingStudent.class.trim(),
         boarding_type: editingStudent.boarding_type,
+        gender: editingStudent.gender || 'Male',
         avatar_url: editingStudent.avatar_url,
       }, { id: editingStudent.id });
 
@@ -787,6 +792,18 @@ export default function StudentsPage() {
               )}
             </div>
             <div className="space-y-2">
+              <Label htmlFor="gender">Gender</Label>
+              <Select value={newStudent.gender} onValueChange={(v) => setNewStudent({ ...newStudent, gender: v })}>
+                <SelectTrigger>
+                  <SelectValue placeholder="Select gender" />
+                </SelectTrigger>
+                <SelectContent>
+                  <SelectItem value="Male">Male</SelectItem>
+                  <SelectItem value="Female">Female</SelectItem>
+                </SelectContent>
+              </Select>
+            </div>
+            <div className="space-y-2">
               <Label htmlFor="admission_date">Admission Date</Label>
               <Input
                 id="admission_date"
@@ -967,6 +984,21 @@ export default function StudentsPage() {
                   <SelectContent>
                     <SelectItem value="day">Day Student</SelectItem>
                     <SelectItem value="boarding">Boarding Student</SelectItem>
+                  </SelectContent>
+                </Select>
+              </div>
+              <div className="space-y-2">
+                <Label>Gender</Label>
+                <Select 
+                  value={editingStudent.gender || 'Male'} 
+                  onValueChange={(v) => setEditingStudent({ ...editingStudent, gender: v })}
+                >
+                  <SelectTrigger>
+                    <SelectValue />
+                  </SelectTrigger>
+                  <SelectContent>
+                    <SelectItem value="Male">Male</SelectItem>
+                    <SelectItem value="Female">Female</SelectItem>
                   </SelectContent>
                 </Select>
               </div>
