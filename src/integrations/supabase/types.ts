@@ -455,6 +455,7 @@ export type Database = {
           custom_fee: number | null
           discount_notes: string | null
           full_name: string
+          gender: string | null
           id: string
           parent_id: string | null
           roll_number: string
@@ -469,6 +470,7 @@ export type Database = {
           custom_fee?: number | null
           discount_notes?: string | null
           full_name: string
+          gender?: string | null
           id?: string
           parent_id?: string | null
           roll_number: string
@@ -483,6 +485,7 @@ export type Database = {
           custom_fee?: number | null
           discount_notes?: string | null
           full_name?: string
+          gender?: string | null
           id?: string
           parent_id?: string | null
           roll_number?: string

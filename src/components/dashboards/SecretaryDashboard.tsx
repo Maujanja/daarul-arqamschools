@@ -14,6 +14,7 @@ import { useSecureData } from '@/hooks/useSecureData';
 import { useToast } from '@/hooks/use-toast';
 import { useAcademicYears } from '@/hooks/useAcademicYears';
 import { StudentAvatarUpload } from '@/components/StudentAvatarUpload';
+import * as XLSX from 'xlsx';
 
 import { 
   Users, 
@@ -40,7 +41,9 @@ import {
   Settings,
   Percent,
   Edit,
-  Camera
+  Camera,
+  Upload,
+  FileSpreadsheet
 } from 'lucide-react';
 
 interface Student {
@@ -602,6 +605,116 @@ export function SecretaryDashboard() {
     s.roll_number.toLowerCase().includes(searchQuery.toLowerCase()))
   );
 
+  // Download Excel template for fee payments
+  const handleDownloadTemplate = () => {
+    const templateData = [
+      {
+        'Roll Number': 'STD001',
+        'Student Name': 'Example Student (DO NOT EDIT)',
+        'Amount': 50000,
+        'Payment Method': 'Cash',
+        'Receipt Number': 'RCP-001',
+        'Notes': 'Term 1 payment'
+      }
+    ];
+
+    // Add all current students as rows with empty amounts
+    students.forEach(s => {
+      templateData.push({
+        'Roll Number': s.roll_number,
+        'Student Name': s.full_name,
+        'Amount': 0,
+        'Payment Method': 'Cash',
+        'Receipt Number': '',
+        'Notes': ''
+      });
+    });
+
+    const ws = XLSX.utils.json_to_sheet(templateData);
+    
+    // Set column widths
+    ws['!cols'] = [
+      { wch: 15 }, { wch: 30 }, { wch: 15 }, { wch: 18 }, { wch: 18 }, { wch: 25 }
+    ];
+
+    const wb = XLSX.utils.book_new();
+    XLSX.utils.book_append_sheet(wb, ws, 'Fee Payments');
+    XLSX.writeFile(wb, `Fee_Payment_Template_${selectedYear}.xlsx`);
+    toast({ title: "Success", description: "Template downloaded. Fill amounts and upload." });
+  };
+
+  // Upload Excel fee payments
+  const handleUploadExcel = async (e: React.ChangeEvent<HTMLInputElement>) => {
+    const file = e.target.files?.[0];
+    if (!file) return;
+
+    try {
+      setIsSubmitting(true);
+      toast({ title: "Processing", description: "Reading Excel file..." });
+
+      const data = await file.arrayBuffer();
+      const workbook = XLSX.read(data);
+      const sheet = workbook.Sheets[workbook.SheetNames[0]];
+      const rows = XLSX.utils.sheet_to_json<Record<string, any>>(sheet);
+
+      // Filter rows with amount > 0 and skip the example row
+      const validRows = rows.filter(row => {
+        const amount = Number(row['Amount']);
+        const rollNumber = String(row['Roll Number'] || '').trim();
+        return amount > 0 && rollNumber && rollNumber !== 'STD001';
+      });
+
+      if (validRows.length === 0) {
+        toast({ title: "Error", description: "No valid payment rows found. Ensure Amount > 0.", variant: "destructive" });
+        setIsSubmitting(false);
+        return;
+      }
+
+      // Match roll numbers to student IDs
+      const paymentRecords: Record<string, unknown>[] = [];
+      const errors: string[] = [];
+
+      for (const row of validRows) {
+        const rollNumber = String(row['Roll Number']).trim();
+        const student = students.find(s => s.roll_number === rollNumber);
+        
+        if (!student) {
+          errors.push(`Roll number "${rollNumber}" not found`);
+          continue;
+        }
+
+        paymentRecords.push({
+          student_id: student.id,
+          amount: Number(row['Amount']),
+          payment_method: String(row['Payment Method'] || 'Cash').trim(),
+          receipt_number: row['Receipt Number'] ? String(row['Receipt Number']).trim() : null,
+          notes: row['Notes'] ? String(row['Notes']).trim() : null,
+          academic_year: selectedYear,
+          term: 'Annual',
+          recorded_by: 'Secretary (Excel Upload)',
+        });
+      }
+
+      if (paymentRecords.length > 0) {
+        const result = await insert('fee_payments', paymentRecords);
+        if (!result.success) throw new Error(result.error);
+      }
+
+      const msg = `${paymentRecords.length} payments uploaded successfully.` + 
+        (errors.length > 0 ? ` ${errors.length} skipped: ${errors.slice(0, 3).join(', ')}` : '');
+      
+      toast({ title: "Success", description: msg });
+      fetchData();
+    } catch (error: any) {
+      console.error('Excel upload error:', error);
+      toast({ title: "Error", description: error.message || "Failed to process Excel file", variant: "destructive" });
+    } finally {
+      setIsSubmitting(false);
+      // Reset file input
+      e.target.value = '';
+    }
+  };
+
   if (isLoading) {
     return (
       <div className="flex items-center justify-center py-12">
@@ -626,6 +739,23 @@ export function SecretaryDashboard() {
           <Button variant="outline" onClick={() => setShowDebtManagement(!showDebtManagement)}>
             <History className="w-4 h-4 mr-2" />
             Previous Debts ({debtHistory.length})
+          </Button>
+          <Button variant="outline" onClick={handleDownloadTemplate}>
+            <FileSpreadsheet className="w-4 h-4 mr-2" />
+            Download Template
+          </Button>
+          <Button variant="outline" asChild>
+            <label className="cursor-pointer">
+              <Upload className="w-4 h-4 mr-2" />
+              Upload Excel
+              <input
+                type="file"
+                accept=".xlsx,.xls"
+                onChange={handleUploadExcel}
+                className="hidden"
+                disabled={isSubmitting}
+              />
+            </label>
           </Button>
           <Button variant="outline" onClick={() => navigate('/students')}>
             <GraduationCap className="w-4 h-4 mr-2" />
