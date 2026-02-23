@@ -638,17 +638,8 @@ export function SecretaryDashboard() {
       const wb = XLSX.utils.book_new();
       XLSX.utils.book_append_sheet(wb, ws, 'Fee Payments');
       
-      // Use write + Blob for reliable browser download
-      const wbout = XLSX.write(wb, { bookType: 'xlsx', type: 'array' });
-      const blob = new Blob([wbout], { type: 'application/octet-stream' });
-      const url = URL.createObjectURL(blob);
-      const a = document.createElement('a');
-      a.href = url;
-      a.download = `Fee_Payment_Template_${selectedYear}.xlsx`;
-      document.body.appendChild(a);
-      a.click();
-      document.body.removeChild(a);
-      URL.revokeObjectURL(url);
+      // Use XLSX.writeFile for maximum browser compatibility
+      XLSX.writeFile(wb, `Fee_Payment_Template_${selectedYear}.xlsx`, { bookType: 'xlsx' });
       
       toast({ title: "Success", description: "Template downloaded. Fill amounts and upload." });
     } catch (error) {
