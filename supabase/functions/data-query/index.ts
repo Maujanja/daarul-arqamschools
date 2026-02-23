@@ -22,7 +22,8 @@ type AllowedTable =
   | "teachers"
   | "teachers_public"
   | "admin_credentials_public"
-  | "secretary_credentials_public";
+  | "secretary_credentials_public"
+  | "secretary_credentials";
 
 interface QueryRequest {
   table: AllowedTable;
@@ -43,7 +44,7 @@ const readPermissions: Record<string, AllowedTable[]> = {
     "students", "marks", "fee_payments", "fee_structure", "student_debt_history",
     "feedback", "parents", "teacher_assignments", "teacher_class_students",
     "subjects", "academic_years", "announcements", "teachers", "teachers_public",
-    "admin_credentials_public", "secretary_credentials_public"
+    "admin_credentials_public", "secretary_credentials_public", "secretary_credentials"
   ],
   teacher: [
     "students", "marks", "teacher_assignments", "teacher_class_students",
