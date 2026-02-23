@@ -6,7 +6,7 @@ import { Input } from '@/components/ui/input';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import { calculateGrade } from '@/types';
-import { Save, Loader2, Upload, Download, FileSpreadsheet, Edit3 } from 'lucide-react';
+import { Save, Loader2, Upload, Download, FileSpreadsheet, Edit3, Lock, ShieldAlert } from 'lucide-react';
 import { useToast } from '@/hooks/use-toast';
 import { useAuth } from '@/contexts/AuthContext';
 import * as XLSX from 'xlsx';
@@ -113,6 +113,7 @@ export default function MarksEntryPage() {
   const [subjects, setSubjects] = useState<Subject[]>([]);
   const [marks, setMarks] = useState<StudentMark[]>([]);
   const [teacherAssignments, setTeacherAssignments] = useState<TeacherAssignment[]>([]);
+  const [marksLocked, setMarksLocked] = useState(false);
 
   const isTeacher = user?.role === 'teacher';
   
@@ -261,6 +262,14 @@ export default function MarksEntryPage() {
       });
       
       if (result.success && result.data && result.data.length > 0) {
+        // If teacher and existing marks found, lock editing
+        const hasExistingMarks = result.data.some(m => m.exam > 0);
+        if (isTeacher && hasExistingMarks) {
+          setMarksLocked(true);
+        } else {
+          setMarksLocked(false);
+        }
+
         setMarks(prev => prev.map(mark => {
           const existingMark = result.data!.find(m => m.student_id === mark.studentId);
           if (existingMark) {
@@ -273,11 +282,13 @@ export default function MarksEntryPage() {
           }
           return mark;
         }));
+      } else {
+        setMarksLocked(false);
       }
     };
     
     loadExistingMarks();
-  }, [selectedSubject, selectedTerm, selectedYear, students, selectedClass, user, query]);
+  }, [selectedSubject, selectedTerm, selectedYear, students, selectedClass, user, query, isTeacher]);
 
   const updateMark = (studentId: string, value: string) => {
     const numValue = value === '' ? '' : Math.min(Math.max(0, parseInt(value) || 0), maxMarks);
@@ -659,24 +670,39 @@ export default function MarksEntryPage() {
                     </h3>
                     <p className="text-sm text-muted-foreground">{marks.length} students • {selectedTerm} • {selectedYear}</p>
                   </div>
-                  <Button 
-                    className="btn-gradient"
-                    onClick={handleSubmit}
-                    disabled={isSubmitting || marks.length === 0}
-                  >
-                    {isSubmitting ? (
-                      <>
-                        <Loader2 className="w-4 h-4 mr-2 animate-spin" />
-                        Saving...
-                      </>
-                    ) : (
-                      <>
-                        <Save className="w-4 h-4 mr-2" />
-                        Save Marks
-                      </>
-                    )}
-                  </Button>
+                  {marksLocked && isTeacher ? (
+                    <div className="flex items-center gap-2 px-4 py-2 rounded-lg bg-warning/10 text-warning border border-warning/30">
+                      <Lock className="w-4 h-4" />
+                      <span className="text-sm font-medium">Marks zimefungwa - Wasiliana na Admin kubadilisha</span>
+                    </div>
+                  ) : (
+                    <Button 
+                      className="btn-gradient"
+                      onClick={handleSubmit}
+                      disabled={isSubmitting || marks.length === 0}
+                    >
+                      {isSubmitting ? (
+                        <>
+                          <Loader2 className="w-4 h-4 mr-2 animate-spin" />
+                          Saving...
+                        </>
+                      ) : (
+                        <>
+                          <Save className="w-4 h-4 mr-2" />
+                          Save Marks
+                        </>
+                      )}
+                    </Button>
+                  )}
                 </div>
+                {marksLocked && isTeacher && (
+                  <div className="mt-3 p-3 rounded-lg bg-destructive/5 border border-destructive/20 flex items-start gap-2">
+                    <ShieldAlert className="w-5 h-5 text-destructive mt-0.5 shrink-0" />
+                    <p className="text-sm text-destructive">
+                      Marks hizi tayari zimeshawekwa na haziwezi kubadilishwa tena. Kama unahitaji kufanya mabadiliko, wasiliana na Admin kwa idhini.
+                    </p>
+                  </div>
+                )}
               </div>
               
               {isLoading ? (
@@ -719,8 +745,9 @@ export default function MarksEntryPage() {
                               max={maxMarks}
                               value={mark.exam}
                               onChange={(e) => updateMark(mark.studentId, e.target.value)}
-                              className={`w-24 text-center mx-auto ${getInputClass(mark.exam)}`}
+                              className={`w-24 text-center mx-auto ${getInputClass(mark.exam)} ${marksLocked && isTeacher ? 'opacity-60 cursor-not-allowed' : ''}`}
                               placeholder="-"
+                              disabled={marksLocked && isTeacher}
                             />
                           </td>
                           <td className="py-4 px-4 text-center">
@@ -741,7 +768,7 @@ export default function MarksEntryPage() {
           </TabsContent>
         </Tabs>
 
-        {entryMethod === 'excel' && marks.some(m => m.exam !== '') && (
+        {entryMethod === 'excel' && marks.some(m => m.exam !== '') && !(marksLocked && isTeacher) && (
           <div className="flex justify-center">
             <Button 
               className="btn-gradient"
