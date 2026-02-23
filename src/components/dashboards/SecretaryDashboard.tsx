@@ -613,21 +613,22 @@ export function SecretaryDashboard() {
         return;
       }
 
-      const templateData: Record<string, string | number>[] = [];
+      const templateData: (string | number)[][] = [
+        ['Roll Number', 'Student Name', 'Amount', 'Payment Method', 'Receipt Number', 'Notes']
+      ];
 
-      // Add all current students as rows with empty amounts
       students.forEach(s => {
-        templateData.push({
-          'Roll Number': s.roll_number,
-          'Student Name': s.full_name,
-          'Amount': 0,
-          'Payment Method': 'Cash',
-          'Receipt Number': '',
-          'Notes': ''
-        });
+        templateData.push([
+          s.roll_number,
+          s.full_name,
+          0,
+          'Cash',
+          '',
+          ''
+        ]);
       });
 
-      const ws = XLSX.utils.json_to_sheet(templateData);
+      const ws = XLSX.utils.aoa_to_sheet(templateData);
       
       // Set column widths
       ws['!cols'] = [
@@ -636,7 +637,19 @@ export function SecretaryDashboard() {
 
       const wb = XLSX.utils.book_new();
       XLSX.utils.book_append_sheet(wb, ws, 'Fee Payments');
-      XLSX.writeFile(wb, `Fee_Payment_Template_${selectedYear}.xlsx`);
+      
+      // Use write + Blob for reliable browser download
+      const wbout = XLSX.write(wb, { bookType: 'xlsx', type: 'array' });
+      const blob = new Blob([wbout], { type: 'application/octet-stream' });
+      const url = URL.createObjectURL(blob);
+      const a = document.createElement('a');
+      a.href = url;
+      a.download = `Fee_Payment_Template_${selectedYear}.xlsx`;
+      document.body.appendChild(a);
+      a.click();
+      document.body.removeChild(a);
+      URL.revokeObjectURL(url);
+      
       toast({ title: "Success", description: "Template downloaded. Fill amounts and upload." });
     } catch (error) {
       console.error('Template download error:', error);
