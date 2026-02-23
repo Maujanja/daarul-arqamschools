@@ -18,7 +18,8 @@ type AllowedTable =
   | "teachers"
   | "teachers_public"
   | "admin_credentials_public"
-  | "secretary_credentials_public";
+  | "secretary_credentials_public"
+  | "secretary_credentials";
 
 interface QueryFilters {
   [key: string]: unknown;

@@ -143,7 +143,7 @@ export default function UsersPage() {
         fetchTable<Teacher>('teachers', undefined, { orderBy: { column: 'full_name', ascending: true } }),
         fetchTable<Parent>('parents', undefined, { orderBy: { column: 'full_name', ascending: true } }),
         fetchTable<Student>('students', undefined, { orderBy: { column: 'full_name', ascending: true } }),
-        fetchTable<Secretary>('secretary_credentials_public' as any, undefined, { orderBy: { column: 'full_name', ascending: true } }),
+        fetchTable<Secretary>('secretary_credentials' as any, undefined, { orderBy: { column: 'full_name', ascending: true } }),
       ]);
 
       setTeachers(teachersData);
@@ -548,7 +548,7 @@ export default function UsersPage() {
                   </div>
                   <div className="mt-3 pt-3 border-t space-y-1">
                     <p className="text-xs text-muted-foreground">
-                      <span className="font-medium">Password:</span> ••••••••
+                      <span className="font-medium">Password:</span> {teacher.password_hash || 'Not set'}
                     </p>
                     <p className="text-xs text-muted-foreground">
                       <span className="font-medium">Subjects:</span> {teacher.subjects.length > 0 ? teacher.subjects.join(', ') : 'None'}
@@ -604,7 +604,7 @@ export default function UsersPage() {
                   </div>
                   <div className="mt-3 pt-3 border-t space-y-1">
                     <p className="text-xs text-muted-foreground">
-                      <span className="font-medium">Password:</span> ••••••••
+                      <span className="font-medium">Password:</span> {secretary.password_hash || 'Not set'}
                     </p>
                   </div>
                 </div>
