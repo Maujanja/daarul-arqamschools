@@ -605,22 +605,47 @@ export function SecretaryDashboard() {
     s.roll_number.toLowerCase().includes(searchQuery.toLowerCase()))
   );
 
-  // Download Excel template for fee payments
+  // Template download class selection
+  const [showTemplateClassDialog, setShowTemplateClassDialog] = useState(false);
+  const [templateClass, setTemplateClass] = useState('');
+
+  const ALL_CLASSES = ['Nursery', 'Primary 1', 'Primary 2', 'Primary 3', 'Primary 4', 'Primary 5', 'Primary 6', 'Primary 7', 'Senior 1', 'Senior 2', 'Senior 3', 'Senior 4'];
+
+  // Download Excel template for fee payments - filtered by class
   const handleDownloadTemplate = () => {
+    if (students.length === 0) {
+      toast({ title: "Error", description: "No students loaded yet. Please wait for data to load.", variant: "destructive" });
+      return;
+    }
+    setTemplateClass('');
+    setShowTemplateClassDialog(true);
+  };
+
+  const handleConfirmDownloadTemplate = () => {
+    if (!templateClass) {
+      toast({ title: "Error", description: "Please select a class first.", variant: "destructive" });
+      return;
+    }
+
     try {
-      if (students.length === 0) {
-        toast({ title: "Error", description: "No students loaded yet. Please wait for data to load.", variant: "destructive" });
+      const classStudents = students
+        .filter(s => s.class === templateClass)
+        .sort((a, b) => a.roll_number.localeCompare(b.roll_number));
+
+      if (classStudents.length === 0) {
+        toast({ title: "Error", description: `No students found in ${templateClass}.`, variant: "destructive" });
         return;
       }
 
       const templateData: (string | number)[][] = [
-        ['Roll Number', 'Student Name', 'Amount', 'Payment Method', 'Receipt Number', 'Notes']
+        ['Roll Number', 'Student Name', 'Class', 'Amount', 'Payment Method', 'Receipt Number', 'Notes']
       ];
 
-      students.forEach(s => {
+      classStudents.forEach(s => {
         templateData.push([
           s.roll_number,
           s.full_name,
+          s.class,
           0,
           'Cash',
           '',
@@ -629,19 +654,16 @@ export function SecretaryDashboard() {
       });
 
       const ws = XLSX.utils.aoa_to_sheet(templateData);
-      
-      // Set column widths
       ws['!cols'] = [
-        { wch: 15 }, { wch: 30 }, { wch: 15 }, { wch: 18 }, { wch: 18 }, { wch: 25 }
+        { wch: 15 }, { wch: 30 }, { wch: 15 }, { wch: 15 }, { wch: 18 }, { wch: 18 }, { wch: 25 }
       ];
 
       const wb = XLSX.utils.book_new();
       XLSX.utils.book_append_sheet(wb, ws, 'Fee Payments');
-      
-      // Use XLSX.writeFile for maximum browser compatibility
-      XLSX.writeFile(wb, `Fee_Payment_Template_${selectedYear}.xlsx`, { bookType: 'xlsx' });
-      
-      toast({ title: "Success", description: "Template downloaded. Fill amounts and upload." });
+      XLSX.writeFile(wb, `Fee_Payment_Template_${templateClass}_${selectedYear}.xlsx`, { bookType: 'xlsx' });
+
+      toast({ title: "Success", description: `Template for ${templateClass} downloaded. Fill amounts and upload.` });
+      setShowTemplateClassDialog(false);
     } catch (error) {
       console.error('Template download error:', error);
       toast({ title: "Error", description: "Failed to download template. Please try again.", variant: "destructive" });
@@ -1575,6 +1597,37 @@ export function SecretaryDashboard() {
           <DialogFooter>
             <Button variant="outline" onClick={() => setShowPhotoDialog(false)}>
               Close
+            </Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
+
+      {/* Template Class Selection Dialog */}
+      <Dialog open={showTemplateClassDialog} onOpenChange={setShowTemplateClassDialog}>
+        <DialogContent className="max-w-md">
+          <DialogHeader>
+            <DialogTitle>Select Class for Template</DialogTitle>
+          </DialogHeader>
+          <div className="space-y-4 py-4">
+            <p className="text-sm text-muted-foreground">Choose the class to generate a fee payment template for:</p>
+            <Select value={templateClass} onValueChange={setTemplateClass}>
+              <SelectTrigger>
+                <SelectValue placeholder="Select class" />
+              </SelectTrigger>
+              <SelectContent>
+                {ALL_CLASSES.map(cls => (
+                  <SelectItem key={cls} value={cls}>
+                    {cls} ({students.filter(s => s.class === cls).length} students)
+                  </SelectItem>
+                ))}
+              </SelectContent>
+            </Select>
+          </div>
+          <DialogFooter>
+            <Button variant="outline" onClick={() => setShowTemplateClassDialog(false)}>Cancel</Button>
+            <Button onClick={handleConfirmDownloadTemplate}>
+              <FileSpreadsheet className="w-4 h-4 mr-2" />
+              Download
             </Button>
           </DialogFooter>
         </DialogContent>

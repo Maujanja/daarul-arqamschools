@@ -401,22 +401,26 @@ export default function MarksEntryPage() {
   };
 
   const handleSubmit = async () => {
-    const incomplete = marks.some(m => m.exam === '');
+    // Only save marks that have been filled in
+    const filledMarks = marks.filter(m => m.exam !== '' && typeof m.exam === 'number');
 
-    if (incomplete) {
+    if (filledMarks.length === 0) {
       toast({
-        title: "Marks Incomplete",
-        description: "Please enter marks for all students before submitting.",
+        title: "No Marks Entered",
+        description: "Please enter marks for at least one student before saving.",
         variant: "destructive",
       });
       return;
     }
 
+    const totalStudents = marks.length;
+    const unfilledCount = totalStudents - filledMarks.length;
+
     setIsSubmitting(true);
     
     try {
-      // Upsert marks to database via secure data hook
-      const marksToInsert = marks.map(mark => ({
+      // Upsert only filled marks to database via secure data hook
+      const marksToInsert = filledMarks.map(mark => ({
         student_id: mark.studentId,
         subject_id: selectedSubject,
         class: selectedClass,
@@ -436,9 +440,13 @@ export default function MarksEntryPage() {
         }
       }
       
+      const description = unfilledCount > 0
+        ? `Saved marks for ${filledMarks.length}/${totalStudents} students. ${unfilledCount} remaining.`
+        : `All marks for Class ${selectedClass} - ${selectedSubjectData?.name} have been saved.`;
+      
       toast({
         title: "Marks Saved!",
-        description: `Marks for Class ${selectedClass} - ${selectedSubjectData?.name} have been saved.`,
+        description,
       });
     } catch (error: any) {
       console.error('Error saving marks:', error);
