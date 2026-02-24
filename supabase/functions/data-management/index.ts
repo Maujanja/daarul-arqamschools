@@ -61,7 +61,7 @@ const permissions: Record<string, Record<AllowedTable, AllowedOperation[]>> = {
     feedback: ["update"],
     parents: [],
     teacher_assignments: [],
-    teacher_class_students: [],
+    teacher_class_students: ["insert", "delete"],
     subjects: [],
     academic_years: [],
     announcements: [],
