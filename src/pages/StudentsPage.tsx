@@ -720,14 +720,14 @@ export default function StudentsPage() {
 
       {/* Add Student Dialog */}
       <Dialog open={showAddDialog} onOpenChange={setShowAddDialog}>
-        <DialogContent>
+        <DialogContent className="max-h-[90vh] flex flex-col">
           <DialogHeader>
             <DialogTitle>Add New Student</DialogTitle>
             <DialogDescription>
               Fill in the new student's information below
             </DialogDescription>
           </DialogHeader>
-          <div className="space-y-4 py-4">
+          <div className="space-y-4 py-4 overflow-y-auto flex-1 pr-2">
             {/* Student Photo */}
             <div className="flex flex-col items-center gap-3">
               <Label>Student Photo (Optional)</Label>
@@ -818,7 +818,7 @@ export default function StudentsPage() {
               />
             </div>
           </div>
-          <DialogFooter>
+          <DialogFooter className="flex-shrink-0 pt-4 border-t">
             <Button variant="outline" onClick={() => setShowAddDialog(false)}>
               Cancel
             </Button>
