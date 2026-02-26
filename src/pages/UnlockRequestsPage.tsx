@@ -24,6 +24,9 @@ interface UnlockRequest {
   admin_note: string | null;
   created_at: string;
   updated_at: string;
+  student_id: string | null;
+  student_name: string | null;
+  current_marks: number | null;
 }
 
 export default function UnlockRequestsPage() {
@@ -180,26 +183,21 @@ export default function UnlockRequestsPage() {
                           <div><span className="font-medium">Series:</span> {request.term}</div>
                           <div><span className="font-medium">Mwaka:</span> {request.academic_year}</div>
                         </div>
-                        {request.reason && (() => {
-                          const parts = request.reason.split('\n\nWanafunzi');
-                          const reasonText = parts[0];
-                          const studentsText = parts.length > 1 ? 'Wanafunzi' + parts[1] : null;
-                          return (
-                            <div className="text-sm space-y-2">
-                              {reasonText && (
-                                <div className="bg-muted/50 p-3 rounded-lg">
-                                  <span className="font-medium">Sababu: </span>{reasonText}
-                                </div>
-                              )}
-                              {studentsText && (
-                                <div className="bg-primary/5 border border-primary/20 p-3 rounded-lg">
-                                  <p className="font-medium text-primary text-xs mb-1">📋 Wanafunzi walioombewa:</p>
-                                  <p className="text-card-foreground">{studentsText.replace(/^Wanafunzi\s*\(\d+\):\s*/, '')}</p>
-                                </div>
-                              )}
-                            </div>
-                          );
-                        })()}
+                        {/* Student info */}
+                        {request.student_name && (
+                          <div className="bg-primary/5 border border-primary/20 p-3 rounded-lg mb-3">
+                            <p className="font-medium text-primary text-xs mb-1">📋 Mwanafunzi anayeombewa:</p>
+                            <p className="text-card-foreground font-semibold">{request.student_name}</p>
+                            {request.current_marks !== null && (
+                              <p className="text-sm text-muted-foreground">Maksi za sasa: <strong>{request.current_marks}</strong></p>
+                            )}
+                          </div>
+                        )}
+                        {request.reason && (
+                          <div className="text-sm bg-muted/50 p-3 rounded-lg">
+                            <span className="font-medium">Sababu: </span>{request.reason}
+                          </div>
+                        )}
                         <p className="text-xs text-muted-foreground mt-2">
                           {new Date(request.created_at).toLocaleString()}
                         </p>
@@ -253,21 +251,19 @@ export default function UnlockRequestsPage() {
                       </div>
                       <div className="grid grid-cols-2 sm:grid-cols-4 gap-2 text-sm text-muted-foreground mb-2">
                         <div><span className="font-medium">Darasa:</span> {request.class}</div>
-                         <div><span className="font-medium">Somo:</span> {request.subject_name}</div>
-                         <div><span className="font-medium">Series:</span> {request.term}</div>
-                         <div><span className="font-medium">Mwaka:</span> {request.academic_year}</div>
-                       </div>
-                       {request.reason && (() => {
-                         const parts = request.reason.split('\n\nWanafunzi');
-                         const reasonText = parts[0];
-                         const studentsText = parts.length > 1 ? 'Wanafunzi' + parts[1] : null;
-                         return (
-                           <div className="text-sm space-y-1">
-                             {reasonText && <p className="text-muted-foreground"><span className="font-medium">Sababu:</span> {reasonText}</p>}
-                             {studentsText && <p className="text-primary text-sm"><span className="font-medium">📋 Wanafunzi:</span> {studentsText.replace(/^Wanafunzi\s*\(\d+\):\s*/, '')}</p>}
-                           </div>
-                         );
-                       })()}
+                        <div><span className="font-medium">Somo:</span> {request.subject_name}</div>
+                        <div><span className="font-medium">Series:</span> {request.term}</div>
+                        <div><span className="font-medium">Mwaka:</span> {request.academic_year}</div>
+                      </div>
+                      {request.student_name && (
+                        <div className="text-sm mb-2">
+                          <span className="font-medium">📋 Mwanafunzi:</span> {request.student_name}
+                          {request.current_marks !== null && <span className="text-muted-foreground ml-2">(Maksi: {request.current_marks})</span>}
+                        </div>
+                      )}
+                      {request.reason && (
+                        <p className="text-sm text-muted-foreground"><span className="font-medium">Sababu:</span> {request.reason}</p>
+                      )}
                       {request.admin_note && (
                         <p className="text-sm mt-1"><span className="font-medium">Jibu la Admin:</span> {request.admin_note}</p>
                       )}
@@ -296,13 +292,14 @@ export default function UnlockRequestsPage() {
                    <p><strong>Mwalimu:</strong> {selectedRequest.teacher_name}</p>
                    <p><strong>Darasa:</strong> {selectedRequest.class} - {selectedRequest.subject_name}</p>
                    <p><strong>Series:</strong> {selectedRequest.term}</p>
-                   {selectedRequest.reason && (() => {
-                     const parts = selectedRequest.reason.split('\n\nWanafunzi');
-                     const studentsText = parts.length > 1 ? parts[1].replace(/^\s*\(\d+\):\s*/, '') : null;
-                     return studentsText ? (
-                       <p className="mt-2 text-primary"><strong>📋 Wanafunzi:</strong> {studentsText}</p>
-                     ) : null;
-                   })()}
+                   {selectedRequest.student_name && (
+                     <div className="mt-2 p-2 bg-primary/5 border border-primary/20 rounded">
+                       <p className="text-primary font-medium">📋 Mwanafunzi: {selectedRequest.student_name}</p>
+                       {selectedRequest.current_marks !== null && (
+                         <p className="text-muted-foreground">Maksi za sasa: <strong>{selectedRequest.current_marks}</strong></p>
+                       )}
+                     </div>
+                   )}
                  </div>
               )}
               <div className="space-y-2">
