@@ -2,7 +2,8 @@ import { useState, useEffect } from 'react';
 import { DashboardLayout } from '@/components/layout/DashboardLayout';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
-import { supabase } from '@/integrations/supabase/client';
+import { useSecureQuery } from '@/hooks/useSecureQuery';
+import { useSecureData } from '@/hooks/useSecureData';
 import { Search, Plus, MoreHorizontal, BookOpen, Loader2 } from 'lucide-react';
 import {
   DropdownMenu,
@@ -40,6 +41,8 @@ export default function SubjectsPage() {
     max_marks: '100',
   });
   const [saving, setSaving] = useState(false);
+  const { fetchTable } = useSecureQuery();
+  const { insert, remove } = useSecureData();
 
   useEffect(() => {
     fetchSubjects();
@@ -48,12 +51,7 @@ export default function SubjectsPage() {
   const fetchSubjects = async () => {
     try {
       setLoading(true);
-      const { data, error } = await supabase
-        .from('subjects')
-        .select('*')
-        .order('name');
-
-      if (error) throw error;
+      const data = await fetchTable<Subject>('subjects');
       setSubjects(data || []);
     } catch (error) {
       console.error('Error fetching subjects:', error);
@@ -72,23 +70,21 @@ export default function SubjectsPage() {
     try {
       setSaving(true);
 
-      const { error } = await supabase
-        .from('subjects')
-        .insert({
-          name: newSubject.name,
-          code: newSubject.code.toUpperCase(),
-          max_marks: parseInt(newSubject.max_marks) || 100,
-        });
+      const result = await insert('subjects', {
+        name: newSubject.name,
+        code: newSubject.code.toUpperCase(),
+        max_marks: parseInt(newSubject.max_marks) || 100,
+      });
 
-      if (error) throw error;
+      if (!result.success) throw new Error(result.error);
 
       toast.success('Subject added successfully');
       setShowAddDialog(false);
       setNewSubject({ name: '', code: '', max_marks: '100' });
       fetchSubjects();
-    } catch (error) {
+    } catch (error: any) {
       console.error('Error adding subject:', error);
-      toast.error('Failed to add subject');
+      toast.error(error.message || 'Failed to add subject');
     } finally {
       setSaving(false);
     }
@@ -96,17 +92,13 @@ export default function SubjectsPage() {
 
   const handleDeleteSubject = async (id: string) => {
     try {
-      const { error } = await supabase
-        .from('subjects')
-        .delete()
-        .eq('id', id);
-
-      if (error) throw error;
+      const result = await remove('subjects', { id });
+      if (!result.success) throw new Error(result.error);
       toast.success('Subject deleted');
       fetchSubjects();
-    } catch (error) {
+    } catch (error: any) {
       console.error('Error deleting subject:', error);
-      toast.error('Failed to delete subject');
+      toast.error(error.message || 'Failed to delete subject');
     }
   };
 
