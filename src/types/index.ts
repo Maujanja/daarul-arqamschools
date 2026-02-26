@@ -75,9 +75,9 @@ export interface GradeRange {
 export const GRADE_RANGES: GradeRange[] = [
   { grade: 'A', min: 75, max: 100, color: 'grade-a' },
   { grade: 'B', min: 65, max: 74, color: 'grade-b' },
-  { grade: 'C', min: 50, max: 64, color: 'grade-c' },
-  { grade: 'D', min: 40, max: 49, color: 'grade-d' },
-  { grade: 'F', min: 0, max: 39, color: 'grade-f' },
+  { grade: 'C', min: 45, max: 64, color: 'grade-c' },
+  { grade: 'D', min: 30, max: 44, color: 'grade-d' },
+  { grade: 'F', min: 0, max: 29, color: 'grade-f' },
 ];
 
 export function calculateGrade(percentage: number): Grade {
