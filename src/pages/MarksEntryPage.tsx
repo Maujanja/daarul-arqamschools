@@ -395,6 +395,11 @@ export default function MarksEntryPage() {
   const handleRequestUnlock = async () => {
     if (!user?.id || !selectedClass || !selectedSubject || !selectedTerm || !selectedYear) return;
     
+    // Collect names of locked students
+    const lockedStudentNames = marks
+      .filter(m => lockedStudentIds.has(m.studentId))
+      .map(m => m.studentName);
+    
     setIsRequestingUnlock(true);
     try {
       const result = await insert('marks_unlock_requests', {
@@ -405,7 +410,8 @@ export default function MarksEntryPage() {
         subject_name: selectedSubjectData?.name || '',
         term: selectedTerm,
         academic_year: selectedYear,
-        reason: unlockReason || 'Nahitaji kubadilisha maksi',
+        reason: (unlockReason || 'Nahitaji kubadilisha maksi') + 
+          (lockedStudentNames.length > 0 ? `\n\nWanafunzi: ${lockedStudentNames.join(', ')}` : ''),
         status: 'pending',
       });
       
@@ -853,6 +859,9 @@ export default function MarksEntryPage() {
                 <p><strong>Somo:</strong> {selectedSubjectData?.name}</p>
                 <p><strong>Test:</strong> {selectedTerm}</p>
                 <p><strong>Mwaka:</strong> {selectedYear}</p>
+                {lockedStudentIds.size > 0 && (
+                  <p className="mt-2 text-primary"><strong>Wanafunzi ({lockedStudentIds.size}):</strong> {marks.filter(m => lockedStudentIds.has(m.studentId)).map(m => m.studentName).join(', ')}</p>
+                )}
               </div>
               <div className="space-y-2">
                 <label className="text-sm font-medium">Sababu ya kuomba mabadiliko</label>
@@ -1054,10 +1063,32 @@ export default function MarksEntryPage() {
                             {isTeacher && (
                               <td className="py-4 px-4 text-center whitespace-nowrap">
                                 {locked ? (
-                                  <div className="flex items-center justify-center gap-2">
-                                    <Lock className="w-4 h-4 text-warning flex-shrink-0" />
-                                    <span className="text-xs text-warning font-medium">Imefungwa</span>
-                                  </div>
+                                  existingUnlockRequest?.status === 'approved' ? (
+                                    <div className="flex items-center justify-center gap-1">
+                                      <Unlock className="w-4 h-4 text-success flex-shrink-0" />
+                                      <span className="text-xs text-success font-medium">Imefunguliwa</span>
+                                    </div>
+                                  ) : existingUnlockRequest?.status === 'pending' ? (
+                                    <div className="flex items-center justify-center gap-1">
+                                      <Loader2 className="w-3 h-3 animate-spin text-warning flex-shrink-0" />
+                                      <span className="text-xs text-warning font-medium">Inasubiri</span>
+                                    </div>
+                                  ) : existingUnlockRequest?.status === 'rejected' ? (
+                                    <button 
+                                      onClick={() => { setExistingUnlockRequest(null); setShowUnlockDialog(true); }}
+                                      className="text-xs text-destructive font-medium hover:underline cursor-pointer"
+                                    >
+                                      ❌ Imekataliwa · Omba tena
+                                    </button>
+                                  ) : (
+                                    <button 
+                                      onClick={() => setShowUnlockDialog(true)}
+                                      className="inline-flex items-center gap-1 text-xs text-primary font-medium hover:underline cursor-pointer"
+                                    >
+                                      <Unlock className="w-3 h-3" />
+                                      Omba Idhini
+                                    </button>
+                                  )
                                 ) : mark.exam !== '' ? (
                                   <span className="text-xs text-success font-medium">✓ Wazi</span>
                                 ) : (
