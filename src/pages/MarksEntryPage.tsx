@@ -158,10 +158,16 @@ export default function MarksEntryPage() {
     : ALL_CLASSES;
 
   // Available streams for selected class - for teachers, filter by their assignments
+  // If teacher's assignment has null stream, show all streams for that class (backward compat)
+  const teacherHasNullStreamAssignment = isTeacher && teacherAssignments.some(
+    a => a.class === selectedClass && !a.stream
+  );
   const availableStreams = isTeacher
-    ? [...new Set(teacherAssignments
-        .filter(a => a.class === selectedClass && a.stream)
-        .map(a => a.stream!))]
+    ? teacherHasNullStreamAssignment
+      ? getStreamsForClass(selectedClass) // null stream = access to all streams
+      : [...new Set(teacherAssignments
+          .filter(a => a.class === selectedClass && a.stream)
+          .map(a => a.stream!))]
     : getStreamsForClass(selectedClass);
 
   const availableSubjects = isTeacher
@@ -169,7 +175,7 @@ export default function MarksEntryPage() {
         teacherAssignments.some(a => 
           a.class === selectedClass && 
           a.subject_id === s.id && 
-          (!hasStreams(selectedClass) || a.stream === selectedStream)
+          (!hasStreams(selectedClass) || !a.stream || a.stream === selectedStream)
         )
       )
     : subjects;
@@ -204,10 +210,18 @@ export default function MarksEntryPage() {
           setTeacherAssignments(mappedAssignments);
           const firstClass = mappedAssignments[0].class;
           setSelectedClass(firstClass);
-          if (mappedAssignments[0].stream) {
-            setSelectedStream(mappedAssignments[0].stream);
+          // Auto-select first stream: use assignment stream, or first available stream for class
+          const assignmentStream = mappedAssignments[0].stream;
+          if (assignmentStream) {
+            setSelectedStream(assignmentStream);
+          } else if (hasStreams(firstClass)) {
+            const classStreams = getStreamsForClass(firstClass);
+            if (classStreams.length > 0) {
+              setSelectedStream(classStreams[0]);
+            }
           }
-          const firstSubject = mappedAssignments.find(a => a.class === firstClass && (!hasStreams(firstClass) || a.stream === mappedAssignments[0].stream))?.subject_id;
+          const effectiveStream = assignmentStream || (hasStreams(firstClass) ? getStreamsForClass(firstClass)[0] : null);
+          const firstSubject = mappedAssignments.find(a => a.class === firstClass && (!hasStreams(firstClass) || !a.stream || a.stream === effectiveStream))?.subject_id;
           if (firstSubject) {
             setSelectedSubject(firstSubject);
           }
