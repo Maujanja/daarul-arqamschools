@@ -928,29 +928,42 @@ export default function MarksEntryPage() {
                 <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4">
                   <div>
                     <h3 className="font-display font-semibold text-lg text-card-foreground">
-                      Class {selectedClass} - {selectedSubjectData?.name || 'Select Subject'}
+                      Class {selectedClass}{selectedStream ? ` ${selectedStream}` : ''} - {selectedSubjectData?.name || 'Select Subject'}
                     </h3>
                     <p className="text-sm text-muted-foreground">{marks.length} students • {selectedTerm} • {selectedYear}</p>
                   </div>
-                  {hasUnlockedStudentsToSave && (
-                    <Button 
-                      className="btn-gradient"
-                      onClick={handleSubmit}
-                      disabled={isSubmitting || marks.length === 0}
-                    >
-                      {isSubmitting ? (
-                        <>
-                          <Loader2 className="w-4 h-4 mr-2 animate-spin" />
-                          Saving...
-                        </>
-                      ) : (
-                        <>
-                          <Save className="w-4 h-4 mr-2" />
-                          Save Marks
-                        </>
-                      )}
-                    </Button>
-                  )}
+                  <div className="flex items-center gap-2 flex-wrap">
+                    {/* Omba Idhini button - visible when there are locked students and no existing request */}
+                    {isTeacher && hasLockedStudents && !existingUnlockRequest && (
+                      <Button 
+                        variant="outline"
+                        onClick={() => setShowUnlockDialog(true)}
+                        className="border-warning text-warning hover:bg-warning/10"
+                      >
+                        <Unlock className="w-4 h-4 mr-2" />
+                        Omba Idhini ya Kubadilisha
+                      </Button>
+                    )}
+                    {hasUnlockedStudentsToSave && (
+                      <Button 
+                        className="btn-gradient"
+                        onClick={handleSubmit}
+                        disabled={isSubmitting || marks.length === 0}
+                      >
+                        {isSubmitting ? (
+                          <>
+                            <Loader2 className="w-4 h-4 mr-2 animate-spin" />
+                            Saving...
+                          </>
+                        ) : (
+                          <>
+                            <Save className="w-4 h-4 mr-2" />
+                            Save Marks
+                          </>
+                        )}
+                      </Button>
+                    )}
+                  </div>
                 </div>
               </div>
               
@@ -1016,24 +1029,14 @@ export default function MarksEntryPage() {
                               <GradeBadge grade={mark.grade} />
                             </td>
                             {isTeacher && (
-                              <td className="py-4 px-4 text-center">
+                              <td className="py-4 px-4 text-center whitespace-nowrap">
                                 {locked ? (
-                                  <div className="flex items-center justify-center gap-1">
-                                    <Lock className="w-4 h-4 text-warning" />
-                                    {!existingUnlockRequest && !hasUnlockApproval && (
-                                      <Button 
-                                        variant="ghost" 
-                                        size="sm" 
-                                        className="text-xs h-6 px-2 text-primary hover:text-primary"
-                                        onClick={() => setShowUnlockDialog(true)}
-                                      >
-                                        <Unlock className="w-3 h-3 mr-1" />
-                                        Omba Idhini
-                                      </Button>
-                                    )}
+                                  <div className="flex items-center justify-center gap-2">
+                                    <Lock className="w-4 h-4 text-warning flex-shrink-0" />
+                                    <span className="text-xs text-warning font-medium">Imefungwa</span>
                                   </div>
                                 ) : mark.exam !== '' ? (
-                                  <span className="text-xs text-muted-foreground">Wazi</span>
+                                  <span className="text-xs text-success font-medium">✓ Wazi</span>
                                 ) : (
                                   <span className="text-xs text-muted-foreground">—</span>
                                 )}
