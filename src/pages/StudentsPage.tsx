@@ -255,6 +255,11 @@ export default function StudentsPage() {
       toast.error('Please fill in all required fields');
       return;
     }
+    // Stream is required if the class has streams
+    if (hasStreams(newStudent.class) && !newStudent.stream) {
+      toast.error('Please select a stream for this class');
+      return;
+    }
 
     try {
       setSaving(true);
@@ -301,6 +306,11 @@ export default function StudentsPage() {
 
   const handleUpdateStudent = async () => {
     if (!editingStudent) return;
+    // Stream is required if the class has streams
+    if (hasStreams(editingStudent.class) && !editingStudent.stream) {
+      toast.error('Please select a stream for this class');
+      return;
+    }
 
     try {
       setSaving(true);
@@ -785,7 +795,7 @@ export default function StudentsPage() {
             </div>
             {hasStreams(newStudent.class) && (
               <div className="space-y-2">
-                <Label htmlFor="stream">Stream</Label>
+                <Label htmlFor="stream">Stream <span className="text-destructive">*</span></Label>
                 <Select value={newStudent.stream} onValueChange={(v) => setNewStudent({ ...newStudent, stream: v })}>
                   <SelectTrigger>
                     <SelectValue placeholder="Select stream" />
@@ -1002,7 +1012,7 @@ export default function StudentsPage() {
               </div>
               {hasStreams(editingStudent.class) && (
                 <div className="space-y-2">
-                  <Label>Stream</Label>
+                  <Label>Stream <span className="text-destructive">*</span></Label>
                   <Select 
                     value={editingStudent.stream || ''} 
                     onValueChange={(v) => setEditingStudent({ ...editingStudent, stream: v })}
