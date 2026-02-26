@@ -730,10 +730,10 @@ export function ParentDashboard() {
         <h3 className="font-display font-semibold text-lg mb-4 text-card-foreground">Filter Results</h3>
         <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
           <div className="space-y-2">
-            <label className="text-sm font-medium text-muted-foreground">{childClass ? getFilterLabel(childClass) : 'Test'}</label>
+            <label className="text-sm font-medium text-muted-foreground">{childClass ? getFilterLabel(childClass) : 'Series'}</label>
             <Select value={selectedTerm} onValueChange={setSelectedTerm}>
               <SelectTrigger>
-                <SelectValue placeholder="Select test" />
+                <SelectValue placeholder="Select series" />
               </SelectTrigger>
               <SelectContent>
                 {childClass ? getTestsForClass(childClass).map((t) => (

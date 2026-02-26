@@ -427,17 +427,17 @@ export default function ReportsPage() {
             </div>
             <div className="space-y-2">
               <label className="text-sm font-medium text-muted-foreground">
-                {selectedClass !== 'all' ? getFilterLabel(selectedClass) : 'Test'}
+                {selectedClass !== 'all' ? getFilterLabel(selectedClass) : 'Series'}
               </label>
               <Select value={selectedTerm} onValueChange={setSelectedTerm}>
                 <SelectTrigger>
-                  <SelectValue placeholder="Select test" />
+                <SelectValue placeholder="Select series" />
                 </SelectTrigger>
                 <SelectContent>
                   {selectedClass !== 'all' ? getTestsForClass(selectedClass).map((t) => (
                     <SelectItem key={t.value} value={t.value}>{t.label}</SelectItem>
                   )) : terms.map((term) => (
-                    <SelectItem key={term} value={term}>{term}</SelectItem>
+                    <SelectItem key={term} value={term}>Series {term.replace(/\D/g, '')}</SelectItem>
                   ))}
                 </SelectContent>
               </Select>
