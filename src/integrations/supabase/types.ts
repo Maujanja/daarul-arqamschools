@@ -242,6 +242,7 @@ export type Database = {
           exam: number
           grade: string
           id: string
+          stream: string | null
           student_id: string
           subject_id: string
           teacher_id: string | null
@@ -256,6 +257,7 @@ export type Database = {
           exam?: number
           grade?: string
           id?: string
+          stream?: string | null
           student_id: string
           subject_id: string
           teacher_id?: string | null
@@ -270,6 +272,7 @@ export type Database = {
           exam?: number
           grade?: string
           id?: string
+          stream?: string | null
           student_id?: string
           subject_id?: string
           teacher_id?: string | null
@@ -317,6 +320,7 @@ export type Database = {
           id: string
           reason: string | null
           status: string
+          stream: string | null
           subject_id: string
           subject_name: string
           teacher_id: string
@@ -332,6 +336,7 @@ export type Database = {
           id?: string
           reason?: string | null
           status?: string
+          stream?: string | null
           subject_id: string
           subject_name: string
           teacher_id: string
@@ -347,6 +352,7 @@ export type Database = {
           id?: string
           reason?: string | null
           status?: string
+          stream?: string | null
           subject_id?: string
           subject_name?: string
           teacher_id?: string
@@ -507,6 +513,7 @@ export type Database = {
           id: string
           parent_id: string | null
           roll_number: string
+          stream: string | null
           updated_at: string
         }
         Insert: {
@@ -522,6 +529,7 @@ export type Database = {
           id?: string
           parent_id?: string | null
           roll_number: string
+          stream?: string | null
           updated_at?: string
         }
         Update: {
@@ -537,6 +545,7 @@ export type Database = {
           id?: string
           parent_id?: string | null
           roll_number?: string
+          stream?: string | null
           updated_at?: string
         }
         Relationships: [
@@ -579,6 +588,7 @@ export type Database = {
           class: string
           created_at: string
           id: string
+          stream: string | null
           subject_id: string
           teacher_id: string
         }
@@ -587,6 +597,7 @@ export type Database = {
           class: string
           created_at?: string
           id?: string
+          stream?: string | null
           subject_id: string
           teacher_id: string
         }
@@ -595,6 +606,7 @@ export type Database = {
           class?: string
           created_at?: string
           id?: string
+          stream?: string | null
           subject_id?: string
           teacher_id?: string
         }
@@ -628,6 +640,7 @@ export type Database = {
           class: string
           created_at: string
           id: string
+          stream: string | null
           student_id: string
           subject_id: string
           teacher_id: string
@@ -637,6 +650,7 @@ export type Database = {
           class: string
           created_at?: string
           id?: string
+          stream?: string | null
           student_id: string
           subject_id: string
           teacher_id: string
@@ -646,6 +660,7 @@ export type Database = {
           class?: string
           created_at?: string
           id?: string
+          stream?: string | null
           student_id?: string
           subject_id?: string
           teacher_id?: string

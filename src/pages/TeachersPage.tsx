@@ -3,6 +3,7 @@ import { DashboardLayout } from '@/components/layout/DashboardLayout';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { useAcademicYears } from '@/hooks/useAcademicYears';
+import { getStreamsForClass, hasStreams, getClassStreamDisplay } from '@/utils/classStreams';
 import { useSecureQuery } from '@/hooks/useSecureQuery';
 import { useSecureData } from '@/hooks/useSecureData';
 import { Search, Plus, MoreHorizontal, Users, BookOpen, Loader2, Mail, Settings } from 'lucide-react';
@@ -46,9 +47,23 @@ interface TeacherAssignment {
   class: string;
   subject_id: string;
   academic_year: string;
+  stream: string | null;
 }
 
-const ALL_CLASSES = ['Primary 1', 'Primary 2', 'Primary 3', 'Primary 4', 'Primary 5', 'Primary 6', 'Primary 7', 'Senior 1', 'Senior 2', 'Senior 3', 'Senior 4'];
+const ALL_CLASSES = ['Nursery', 'Primary 1', 'Primary 2', 'Primary 3', 'Primary 4', 'Primary 5', 'Primary 6', 'Primary 7', 'Senior 1', 'Senior 2', 'Senior 3', 'Senior 4'];
+
+// Generate class+stream slots for assignments
+const ALL_CLASS_STREAM_SLOTS: { className: string; stream: string | null; key: string; display: string }[] = [];
+ALL_CLASSES.forEach(cls => {
+  const streams = getStreamsForClass(cls);
+  if (streams.length === 0) {
+    ALL_CLASS_STREAM_SLOTS.push({ className: cls, stream: null, key: cls, display: cls });
+  } else {
+    streams.forEach(stream => {
+      ALL_CLASS_STREAM_SLOTS.push({ className: cls, stream, key: `${cls}|${stream}`, display: `${cls} ${stream}` });
+    });
+  }
+});
 
 export default function TeachersPage() {
   const { user } = useAuth();
@@ -179,38 +194,38 @@ export default function TeachersPage() {
     setSelectedTeacher(teacher);
     
     // Load existing assignments for this teacher
-    const teacherAssignments = assignments.filter(a => a.teacher_id === teacher.id);
+    const teacherAssigns = assignments.filter(a => a.teacher_id === teacher.id);
     const assignmentMap: Record<string, Set<string>> = {};
     
-    teacherAssignments.forEach(a => {
-      if (!assignmentMap[a.class]) {
-        assignmentMap[a.class] = new Set();
+    teacherAssigns.forEach(a => {
+      const key = a.stream ? `${a.class}|${a.stream}` : a.class;
+      if (!assignmentMap[key]) {
+        assignmentMap[key] = new Set();
       }
-      assignmentMap[a.class].add(a.subject_id);
+      assignmentMap[key].add(a.subject_id);
     });
     
     setClassSubjectAssignments(assignmentMap);
     setShowAssignDialog(true);
   };
 
-  const toggleSubjectForClass = (className: string, subjectId: string) => {
+  const toggleSubjectForClass = (slotKey: string, subjectId: string) => {
     setClassSubjectAssignments(prev => {
       const newMap = { ...prev };
-      if (!newMap[className]) {
-        newMap[className] = new Set();
+      if (!newMap[slotKey]) {
+        newMap[slotKey] = new Set();
       } else {
-        newMap[className] = new Set(newMap[className]);
+        newMap[slotKey] = new Set(newMap[slotKey]);
       }
       
-      if (newMap[className].has(subjectId)) {
-        newMap[className].delete(subjectId);
+      if (newMap[slotKey].has(subjectId)) {
+        newMap[slotKey].delete(subjectId);
       } else {
-        newMap[className].add(subjectId);
+        newMap[slotKey].add(subjectId);
       }
       
-      // Remove empty class entries
-      if (newMap[className].size === 0) {
-        delete newMap[className];
+      if (newMap[slotKey].size === 0) {
+        delete newMap[slotKey];
       }
       
       return newMap;
@@ -227,15 +242,20 @@ export default function TeachersPage() {
       await remove('teacher_assignments', { teacher_id: selectedTeacher.id });
 
       // Insert new assignments
-      const newAssignments: { teacher_id: string; class: string; subject_id: string; academic_year: string }[] = [];
+      const newAssignments: { teacher_id: string; class: string; subject_id: string; academic_year: string; stream: string | null }[] = [];
       
-      Object.entries(classSubjectAssignments).forEach(([className, subjectIds]) => {
+      Object.entries(classSubjectAssignments).forEach(([slotKey, subjectIds]) => {
+        const slot = ALL_CLASS_STREAM_SLOTS.find(s => s.key === slotKey);
+        const className = slot?.className || slotKey;
+        const stream = slot?.stream || null;
+        
         subjectIds.forEach(subjectId => {
           newAssignments.push({
             teacher_id: selectedTeacher.id,
             class: className,
             subject_id: subjectId,
-            academic_year: currentYear
+            academic_year: currentYear,
+            stream,
           });
         });
       });
@@ -246,7 +266,7 @@ export default function TeachersPage() {
       }
 
       // Update teacher's classes and subjects arrays for backwards compatibility
-      const assignedClasses = Object.keys(classSubjectAssignments);
+      const assignedClasses = [...new Set(newAssignments.map(a => a.stream ? `${a.class} ${a.stream}` : a.class))];
       const assignedSubjectIds = new Set<string>();
       Object.values(classSubjectAssignments).forEach(subjectSet => {
         subjectSet.forEach(id => assignedSubjectIds.add(id));
@@ -311,11 +331,12 @@ export default function TeachersPage() {
     const classSubjectMap: Record<string, string[]> = {};
     
     teacherAssigns.forEach(a => {
+      const displayKey = a.stream ? `${a.class} ${a.stream}` : a.class;
       const subjectName = subjects.find(s => s.id === a.subject_id)?.name || 'Unknown';
-      if (!classSubjectMap[a.class]) {
-        classSubjectMap[a.class] = [];
+      if (!classSubjectMap[displayKey]) {
+        classSubjectMap[displayKey] = [];
       }
-      classSubjectMap[a.class].push(subjectName);
+      classSubjectMap[displayKey].push(subjectName);
     });
     
     return classSubjectMap;
@@ -647,14 +668,14 @@ export default function TeachersPage() {
             </p>
             
             <div className="space-y-4">
-              {ALL_CLASSES.map(cls => {
-                const assignedSubjects = classSubjectAssignments[cls] || new Set();
-                const hasAssignments = assignedSubjects.size > 0;
+              {ALL_CLASS_STREAM_SLOTS.map(slot => {
+                const assignedSubjects = classSubjectAssignments[slot.key] || new Set();
+                const hasAssignmentsForSlot = assignedSubjects.size > 0;
                 
                 return (
-                  <div key={cls} className={`border rounded-lg p-4 ${hasAssignments ? 'border-primary/50 bg-primary/5' : 'border-border'}`}>
+                  <div key={slot.key} className={`border rounded-lg p-4 ${hasAssignmentsForSlot ? 'border-primary/50 bg-primary/5' : 'border-border'}`}>
                     <div className="flex items-center justify-between mb-3">
-                      <h4 className="font-semibold text-card-foreground">{cls}</h4>
+                      <h4 className="font-semibold text-card-foreground">{slot.display}</h4>
                       <span className="text-xs text-muted-foreground">
                         {assignedSubjects.size} subjects selected
                       </span>
@@ -666,12 +687,12 @@ export default function TeachersPage() {
                           className="flex items-center gap-2 p-2 rounded hover:bg-muted/50"
                         >
                           <Checkbox
-                            id={`${cls}-${subject.id}`}
+                            id={`${slot.key}-${subject.id}`}
                             checked={assignedSubjects.has(subject.id)}
-                            onCheckedChange={() => toggleSubjectForClass(cls, subject.id)}
+                            onCheckedChange={() => toggleSubjectForClass(slot.key, subject.id)}
                           />
                           <label 
-                            htmlFor={`${cls}-${subject.id}`}
+                            htmlFor={`${slot.key}-${subject.id}`}
                             className="text-sm cursor-pointer"
                           >
                             {subject.name}
