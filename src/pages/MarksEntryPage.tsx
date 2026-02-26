@@ -6,6 +6,7 @@ import { Input } from '@/components/ui/input';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import { calculateGrade } from '@/types';
+import { Checkbox } from '@/components/ui/checkbox';
 import { Save, Loader2, Upload, Download, FileSpreadsheet, Edit3, Lock, ShieldAlert, Unlock, CheckCircle, Bell } from 'lucide-react';
 import { useToast } from '@/hooks/use-toast';
 import { useAuth } from '@/contexts/AuthContext';
@@ -138,6 +139,7 @@ export default function MarksEntryPage() {
   const [unlockReason, setUnlockReason] = useState('');
   const [isRequestingUnlock, setIsRequestingUnlock] = useState(false);
   const [existingUnlockRequest, setExistingUnlockRequest] = useState<UnlockRequest | null>(null);
+  const [selectedUnlockStudents, setSelectedUnlockStudents] = useState<Set<string>>(new Set());
 
   const isTeacher = user?.role === 'teacher';
   
@@ -395,6 +397,11 @@ export default function MarksEntryPage() {
 
   const handleRequestUnlock = async () => {
     if (!user?.id || !selectedClass || !selectedSubject || !selectedTerm || !selectedYear) return;
+    if (selectedUnlockStudents.size === 0) return;
+    
+    const selectedNames = marks
+      .filter(m => selectedUnlockStudents.has(m.studentId))
+      .map(m => m.studentName);
     
     setIsRequestingUnlock(true);
     try {
@@ -406,7 +413,7 @@ export default function MarksEntryPage() {
         subject_name: selectedSubjectData?.name || '',
         term: selectedTerm,
         academic_year: selectedYear,
-        reason: unlockReason || `Nahitaji kubadilisha maksi za wanafunzi ${lockedStudentIds.size}`,
+        reason: (unlockReason || 'Nahitaji kubadilisha maksi') + `\n\nWanafunzi (${selectedNames.length}): ${selectedNames.join(', ')}`,
         status: 'pending',
       });
       
@@ -856,28 +863,59 @@ export default function MarksEntryPage() {
                 <p><strong>Somo:</strong> {selectedSubjectData?.name}</p>
                 <p><strong>Series:</strong> {selectedClass ? getTestDisplayName(selectedTerm, selectedClass) : selectedTerm}</p>
                 <p><strong>Mwaka:</strong> {selectedYear}</p>
-                {lockedStudentIds.size > 0 && (
-                  <p className="mt-2 text-primary"><strong>Wanafunzi waliofungwa:</strong> {lockedStudentIds.size}</p>
-                )}
               </div>
+              
+              {/* Student selection */}
+              <div className="space-y-2">
+                <div className="flex items-center justify-between">
+                  <label className="text-sm font-medium">Chagua wanafunzi wa kubadilishiwa maksi</label>
+                  <div className="flex gap-1">
+                    <Button variant="ghost" size="sm" className="h-7 px-2 text-xs" onClick={() => {
+                      const allLocked = marks.filter(m => lockedStudentIds.has(m.studentId)).map(m => m.studentId);
+                      setSelectedUnlockStudents(new Set(allLocked));
+                    }}>Wote</Button>
+                    <Button variant="ghost" size="sm" className="h-7 px-2 text-xs" onClick={() => setSelectedUnlockStudents(new Set())}>Ondoa</Button>
+                  </div>
+                </div>
+                <div className="max-h-48 overflow-y-auto border rounded-lg p-2 space-y-1">
+                  {marks.filter(m => lockedStudentIds.has(m.studentId)).map((m) => (
+                    <label key={m.studentId} className="flex items-center gap-2 p-1.5 rounded hover:bg-muted/50 cursor-pointer text-sm">
+                      <Checkbox
+                        checked={selectedUnlockStudents.has(m.studentId)}
+                        onCheckedChange={(checked) => {
+                          setSelectedUnlockStudents(prev => {
+                            const newSet = new Set(prev);
+                            if (checked) { newSet.add(m.studentId); } else { newSet.delete(m.studentId); }
+                            return newSet;
+                          });
+                        }}
+                      />
+                      <span>{m.studentName}</span>
+                      <span className="ml-auto text-muted-foreground">{m.exam !== '' && m.exam !== '-' ? `${m.exam}%` : '-'}</span>
+                    </label>
+                  ))}
+                </div>
+                <p className="text-xs text-muted-foreground">{selectedUnlockStudents.size} wa {lockedStudentIds.size} wamechaguliwa</p>
+              </div>
+
               <div className="space-y-2">
                 <label className="text-sm font-medium">Sababu ya kuomba mabadiliko</label>
                 <Textarea
                   placeholder="Andika sababu ya kuomba kubadilisha maksi..."
                   value={unlockReason}
                   onChange={(e) => setUnlockReason(e.target.value)}
-                  rows={3}
+                  rows={2}
                 />
               </div>
               <Button 
                 onClick={handleRequestUnlock} 
                 className="w-full btn-gradient"
-                disabled={isRequestingUnlock}
+                disabled={isRequestingUnlock || selectedUnlockStudents.size === 0}
               >
                 {isRequestingUnlock ? (
                   <><Loader2 className="w-4 h-4 mr-2 animate-spin" />Inatuma...</>
                 ) : (
-                  <><Unlock className="w-4 h-4 mr-2" />Tuma Ombi</>
+                  <><Unlock className="w-4 h-4 mr-2" />Tuma Ombi ({selectedUnlockStudents.size})</>
                 )}
               </Button>
             </div>
@@ -966,7 +1004,7 @@ export default function MarksEntryPage() {
                     {isTeacher && hasLockedStudents && !existingUnlockRequest && (
                       <Button 
                         variant="outline"
-                        onClick={() => setShowUnlockDialog(true)}
+                        onClick={() => { setSelectedUnlockStudents(new Set()); setShowUnlockDialog(true); }}
                         className="border-warning text-warning hover:bg-warning/10"
                       >
                         <Unlock className="w-4 h-4 mr-2" />
