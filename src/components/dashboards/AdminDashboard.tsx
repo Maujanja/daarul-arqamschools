@@ -12,6 +12,7 @@ import { classes } from '@/data/mockData';
 import { useAcademicYears } from '@/hooks/useAcademicYears';
 import { useAuth } from '@/contexts/AuthContext';
 import { useSecureData } from '@/hooks/useSecureData';
+import { getTestDisplayName } from '@/utils/seniorGrading';
 
 interface FeedbackItem {
   id: string;
@@ -139,8 +140,13 @@ export function AdminDashboard() {
 
   // Generate series labels (S1, S2, etc.) from terms
   const seriesLabels = useMemo(() => {
-    return uniqueTerms.map((_, index) => `S${index + 1}`);
+    return uniqueTerms.map((term) => `S${uniqueTerms.indexOf(term) + 1}`);
   }, [uniqueTerms]);
+
+  // Class-specific series labels for subject performance
+  const classSeriesLabels = useMemo(() => {
+    return uniqueTerms.map((term) => getTestDisplayName(term, selectedClass));
+  }, [uniqueTerms, selectedClass]);
 
   // Calculate class-based series summary data
   const classSummaryData = useMemo(() => {
@@ -218,17 +224,18 @@ export function AdminDashboard() {
       let totalCount = 0;
 
       uniqueTerms.forEach((term, termIndex) => {
+        const label = getTestDisplayName(term, selectedClass);
         const termMarks = classFilteredMarks.filter(m => 
           m.subject_id === subject.id && 
           m.term === term
         );
         if (termMarks.length > 0) {
           const avg = termMarks.reduce((sum, m) => sum + m.total, 0) / termMarks.length;
-          seriesData[`S${termIndex + 1}`] = Math.round(avg);
+          seriesData[label] = Math.round(avg);
           totalSum += avg;
           totalCount++;
         } else {
-          seriesData[`S${termIndex + 1}`] = null;
+          seriesData[label] = null;
         }
       });
 
@@ -251,10 +258,11 @@ export function AdminDashboard() {
     const result: { [key: string]: number } = {};
     
     uniqueTerms.forEach((term, termIndex) => {
+      const label = getTestDisplayName(term, selectedClass);
       const termMarks = classFilteredMarks.filter(m => m.term === term);
       if (termMarks.length > 0) {
         const avg = termMarks.reduce((sum, m) => sum + m.total, 0) / termMarks.length;
-        result[`S${termIndex + 1}`] = avg;
+        result[label] = avg;
       }
     });
 
@@ -466,12 +474,12 @@ export function AdminDashboard() {
         </div>
 
         {/* Subject Summary Table for Selected Class */}
-        {subjectSummaryData.length > 0 && seriesLabels.length > 0 && (
+        {subjectSummaryData.length > 0 && classSeriesLabels.length > 0 && (
           <SeriesSummaryTable
             title={`SUBJECT SUMMARY - ${selectedClass.toUpperCase()}`}
             subtitle={`Academic Year: ${selectedYear} | Subject Average Per Series`}
             data={subjectSummaryData}
-            seriesLabels={seriesLabels}
+            seriesLabels={classSeriesLabels}
             showPosition={true}
             showAveragePerSeries={true}
             averagePerSeries={subjectAveragePerSeries}

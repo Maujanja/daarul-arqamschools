@@ -10,6 +10,7 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@
 import { supabase } from '@/integrations/supabase/client';
 import { useSecureQuery } from '@/hooks/useSecureQuery';
 import { terms } from '@/data/mockData';
+import { isSeniorClass, calculateDivision, getTestDisplayName, getTestsForClass, getFilterLabel, getDivisionBgColor } from '@/utils/seniorGrading';
 import { useAuth } from '@/contexts/AuthContext';
 import { useAcademicYears } from '@/hooks/useAcademicYears';
 import { BarChart, Bar, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer, LineChart, Line, Legend, PieChart, Pie, Cell } from 'recharts';
@@ -440,8 +441,8 @@ export function ParentDashboard() {
   }, [yearFilteredMarks]);
 
   const studentSeriesLabels = useMemo(() => {
-    return studentTerms.map((_, index) => `S${index + 1}`);
-  }, [studentTerms]);
+    return studentTerms.map((term) => getTestDisplayName(term, childClass));
+  }, [studentTerms, childClass]);
 
   // Series summary for student's subjects
   const studentSubjectSummary = useMemo(() => {
@@ -460,13 +461,14 @@ export function ParentDashboard() {
       let totalCount = 0;
 
       studentTerms.forEach((term, termIndex) => {
+        const label = getTestDisplayName(term, childClass);
         const mark = data.marks.find(m => m.term === term);
         if (mark) {
-          seriesData[`S${termIndex + 1}`] = mark.total;
+          seriesData[label] = mark.total;
           totalSum += mark.total;
           totalCount++;
         } else {
-          seriesData[`S${termIndex + 1}`] = null;
+          seriesData[label] = null;
         }
       });
 
@@ -489,15 +491,16 @@ export function ParentDashboard() {
     const result: { [key: string]: number } = {};
     
     studentTerms.forEach((term, termIndex) => {
+      const label = getTestDisplayName(term, childClass);
       const termMarks = yearFilteredMarks.filter(m => m.term === term);
       if (termMarks.length > 0) {
         const avg = termMarks.reduce((sum, m) => sum + m.total, 0) / termMarks.length;
-        result[`S${termIndex + 1}`] = avg;
+        result[label] = avg;
       }
     });
 
     return result;
-  }, [yearFilteredMarks, studentTerms]);
+  }, [yearFilteredMarks, studentTerms, childClass]);
 
 
   // Download Subject Performance PDF with chart image
@@ -672,7 +675,7 @@ export function ParentDashboard() {
           </div>
           
           {/* Overall Average Badge */}
-          <div className="flex items-center gap-4 mt-2">
+          <div className="flex items-center gap-4 mt-2 flex-wrap justify-center">
             <div className="text-center">
               <p className="text-sm text-muted-foreground">Overall Average</p>
               <p className="text-4xl font-bold font-display gradient-text">{overallAverage.toFixed(1)}%</p>
@@ -685,6 +688,19 @@ export function ParentDashboard() {
                 {classRank === 1 && <span className="text-xs text-success font-medium">🏆 Top of Class!</span>}
               </div>
             )}
+            {isSeniorClass(childClass) && studentMarks.length > 0 && (() => {
+              const scores = studentMarks.map(m => m.total);
+              const { division, totalPoints } = calculateDivision(scores);
+              return (
+                <div className="text-center border-l border-border pl-4">
+                  <p className="text-sm text-muted-foreground">Division</p>
+                  <p className={`text-3xl font-bold font-display ${getDivisionBgColor(division).split(' ').find(c => c.startsWith('text-'))}`}>
+                    {division}
+                  </p>
+                  <span className="text-xs text-muted-foreground">Points: {totalPoints}</span>
+                </div>
+              );
+            })()}
           </div>
         </div>
       </div>
@@ -714,13 +730,15 @@ export function ParentDashboard() {
         <h3 className="font-display font-semibold text-lg mb-4 text-card-foreground">Filter Results</h3>
         <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
           <div className="space-y-2">
-            <label className="text-sm font-medium text-muted-foreground">Test</label>
+            <label className="text-sm font-medium text-muted-foreground">{childClass ? getFilterLabel(childClass) : 'Test'}</label>
             <Select value={selectedTerm} onValueChange={setSelectedTerm}>
               <SelectTrigger>
-                <SelectValue placeholder="Select term" />
+                <SelectValue placeholder="Select test" />
               </SelectTrigger>
               <SelectContent>
-                {terms.map((term) => (
+                {childClass ? getTestsForClass(childClass).map((t) => (
+                  <SelectItem key={t.value} value={t.value}>{t.label}</SelectItem>
+                )) : terms.map((term) => (
                   <SelectItem key={term} value={term}>{term}</SelectItem>
                 ))}
               </SelectContent>
