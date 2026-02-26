@@ -106,7 +106,7 @@ export default function MarksEntryPage() {
   const { user } = useAuth();
   const { academicYears, currentYear, loading: yearsLoading } = useAcademicYears();
   const { fetchTable, query } = useSecureQuery();
-  const { upsert, insert } = useSecureData();
+  const { upsert, insert, update } = useSecureData();
   const fileInputRef = useRef<HTMLInputElement>(null);
   const [selectedClass, setSelectedClass] = useState('');
   const [selectedSubject, setSelectedSubject] = useState('');
@@ -543,6 +543,16 @@ export default function MarksEntryPage() {
           filledMarks.forEach(m => newSet.add(m.studentId));
           return newSet;
         });
+        
+        // If unlock was approved, consume the approval (mark as 'used')
+        if (hasUnlockApproval && existingUnlockRequest?.id) {
+          await update('marks_unlock_requests', 
+            { status: 'used' }, 
+            { id: existingUnlockRequest.id }
+          );
+          setHasUnlockApproval(false);
+          setExistingUnlockRequest(null);
+        }
       }
       
       const description = unfilledCount > 0
