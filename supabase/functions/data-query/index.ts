@@ -101,22 +101,22 @@ serve(async (req) => {
       
       // Apply role-based filtering for count queries
       if (userRole === "parent" && userId) {
+        // Resolve student IDs (parent_id match or direct student ID fallback)
+        const resolveIds = async (): Promise<string[]> => {
+          const { data: byParent } = await supabase.from("students").select("id").eq("parent_id", userId);
+          if (byParent && byParent.length > 0) return byParent.map(s => s.id);
+          const { data: direct } = await supabase.from("students").select("id").eq("id", userId).maybeSingle();
+          return direct ? [direct.id] : [];
+        };
+
         if (table === "students") {
-          countQuery = countQuery.eq("parent_id", userId);
+          const ids = await resolveIds();
+          if (ids.length > 0) { countQuery = countQuery.in("id", ids); }
+          else { return new Response(JSON.stringify({ success: true, count: 0 }), { headers: { ...corsHeaders, "Content-Type": "application/json" } }); }
         } else if (table === "marks" || table === "fee_payments" || table === "student_debt_history") {
-          const { data: studentIds } = await supabase
-            .from("students")
-            .select("id")
-            .eq("parent_id", userId);
-          
-          if (studentIds && studentIds.length > 0) {
-            countQuery = countQuery.in("student_id", studentIds.map(s => s.id));
-          } else {
-            return new Response(
-              JSON.stringify({ success: true, count: 0 }),
-              { headers: { ...corsHeaders, "Content-Type": "application/json" } }
-            );
-          }
+          const ids = await resolveIds();
+          if (ids.length > 0) { countQuery = countQuery.in("student_id", ids); }
+          else { return new Response(JSON.stringify({ success: true, count: 0 }), { headers: { ...corsHeaders, "Content-Type": "application/json" } }); }
         } else if (table === "feedback") {
           countQuery = countQuery.eq("parent_id", userId);
         }
@@ -150,19 +150,45 @@ serve(async (req) => {
     // Apply role-based data filtering for sensitive tables
     if (userRole === "parent" && userId) {
       // Parents can only see their own children's data
-      if (table === "students") {
-        query = query.eq("parent_id", userId);
-      } else if (table === "marks" || table === "fee_payments" || table === "student_debt_history") {
-        // Get student IDs for this parent first
-        const { data: studentIds } = await supabase
+      // userId could be a parent record ID OR a student ID (fallback when no parent record exists)
+      
+      // Helper: resolve student IDs for this parent
+      const resolveStudentIds = async (): Promise<string[]> => {
+        // First try: find students by parent_id
+        const { data: byParent } = await supabase
           .from("students")
           .select("id")
           .eq("parent_id", userId);
         
-        if (studentIds && studentIds.length > 0) {
-          query = query.in("student_id", studentIds.map(s => s.id));
+        if (byParent && byParent.length > 0) {
+          return byParent.map(s => s.id);
+        }
+        
+        // Fallback: userId might be the student's own ID
+        const { data: directStudent } = await supabase
+          .from("students")
+          .select("id")
+          .eq("id", userId)
+          .maybeSingle();
+        
+        return directStudent ? [directStudent.id] : [];
+      };
+
+      if (table === "students") {
+        const studentIds = await resolveStudentIds();
+        if (studentIds.length > 0) {
+          query = query.in("id", studentIds);
         } else {
-          // No students found, return empty result
+          return new Response(
+            JSON.stringify({ success: true, data: [] }),
+            { headers: { ...corsHeaders, "Content-Type": "application/json" } }
+          );
+        }
+      } else if (table === "marks" || table === "fee_payments" || table === "student_debt_history") {
+        const studentIds = await resolveStudentIds();
+        if (studentIds.length > 0) {
+          query = query.in("student_id", studentIds);
+        } else {
           return new Response(
             JSON.stringify({ success: true, data: [] }),
             { headers: { ...corsHeaders, "Content-Type": "application/json" } }
