@@ -709,62 +709,40 @@ export default function MarksEntryPage() {
           </div>
         </div>
 
-        {/* Unlock request status for teacher */}
-        {isTeacher && hasLockedStudents && (
-          <div className="card-elevated p-4 animate-fade-in border-l-4 border-l-warning">
-            <div className="flex items-start gap-3">
-              <Lock className="w-5 h-5 text-warning mt-0.5 shrink-0" />
-              <div className="flex-1">
-                <p className="font-medium text-card-foreground">
-                  {lockedStudentIds.size} wanafunzi wamefungwa (tayari wamejazwa maksi)
-                </p>
-                <p className="text-sm text-muted-foreground mt-1">
-                  Wanafunzi ambao bado hawajajazwa maksi wako wazi kwa kujaza. Ukihitaji kubadilisha maksi za walioshajazwa, omba idhini kwa Admin.
-                </p>
-                
-                {existingUnlockRequest ? (
-                  <div className="mt-3">
-                    {existingUnlockRequest.status === 'pending' && (
-                      <div className="flex items-center gap-2 px-3 py-2 rounded-lg bg-warning/10 text-warning text-sm">
-                        <Loader2 className="w-4 h-4 animate-spin" />
-                        Ombi lako linasubiri idhini ya Admin...
-                      </div>
-                    )}
-                    {existingUnlockRequest.status === 'rejected' && (
-                      <div className="flex items-center gap-2 px-3 py-2 rounded-lg bg-destructive/10 text-destructive text-sm">
-                        <ShieldAlert className="w-4 h-4" />
-                        Ombi lako limekataliwa na Admin. Unaweza kutuma ombi jipya.
-                        <Button variant="outline" size="sm" className="ml-auto" onClick={() => { setExistingUnlockRequest(null); setShowUnlockDialog(true); }}>
-                          Omba Tena
-                        </Button>
-                      </div>
-                    )}
-                  </div>
-                ) : (
-                  <Button 
-                    variant="outline" 
-                    size="sm" 
-                    className="mt-3"
-                    onClick={() => setShowUnlockDialog(true)}
-                  >
-                    <Unlock className="w-4 h-4 mr-2" />
-                    Omba Idhini ya Kubadilisha
-                  </Button>
-                )}
+        {/* Top notification: Unlock approval/rejection/pending status */}
+        {isTeacher && existingUnlockRequest && existingUnlockRequest.status === 'approved' && lockedStudentIds.size > 0 && (
+          <div className="rounded-lg p-4 animate-fade-in border border-success/30 bg-success/10">
+            <div className="flex items-center gap-3">
+              <CheckCircle className="w-5 h-5 text-success shrink-0" />
+              <div>
+                <p className="font-semibold text-success">✅ Idhini Imekubaliwa!</p>
+                <p className="text-sm text-muted-foreground">Admin amekubali ombi lako. Sasa unaweza kubadilisha maksi zote.</p>
               </div>
             </div>
           </div>
         )}
-
-        {/* Unlock approved notification */}
-        {isTeacher && hasUnlockApproval && lockedStudentIds.size > 0 && (
-          <div className="card-elevated p-4 animate-fade-in border-l-4 border-l-success">
+        {isTeacher && existingUnlockRequest && existingUnlockRequest.status === 'pending' && (
+          <div className="rounded-lg p-4 animate-fade-in border border-warning/30 bg-warning/10">
             <div className="flex items-center gap-3">
-              <CheckCircle className="w-5 h-5 text-success shrink-0" />
+              <Loader2 className="w-4 h-4 animate-spin text-warning shrink-0" />
               <div>
-                <p className="font-medium text-success">Idhini Imekubaliwa!</p>
-                <p className="text-sm text-muted-foreground">Admin amekubali ombi lako. Sasa unaweza kubadilisha maksi zote.</p>
+                <p className="font-semibold text-warning">⏳ Ombi Linasubiri</p>
+                <p className="text-sm text-muted-foreground">Ombi lako la kubadilisha maksi linasubiri idhini ya Admin.</p>
               </div>
+            </div>
+          </div>
+        )}
+        {isTeacher && existingUnlockRequest && existingUnlockRequest.status === 'rejected' && (
+          <div className="rounded-lg p-4 animate-fade-in border border-destructive/30 bg-destructive/10">
+            <div className="flex items-center gap-3">
+              <ShieldAlert className="w-5 h-5 text-destructive shrink-0" />
+              <div className="flex-1">
+                <p className="font-semibold text-destructive">❌ Ombi Limekataliwa</p>
+                <p className="text-sm text-muted-foreground">Admin amekataa ombi lako. Unaweza kutuma ombi jipya.</p>
+              </div>
+              <Button variant="outline" size="sm" onClick={() => { setExistingUnlockRequest(null); setShowUnlockDialog(true); }}>
+                Omba Tena
+              </Button>
             </div>
           </div>
         )}
@@ -964,7 +942,20 @@ export default function MarksEntryPage() {
                             {isTeacher && (
                               <td className="py-4 px-4 text-center">
                                 {locked ? (
-                                  <Lock className="w-4 h-4 text-warning mx-auto" />
+                                  <div className="flex items-center justify-center gap-1">
+                                    <Lock className="w-4 h-4 text-warning" />
+                                    {!existingUnlockRequest && !hasUnlockApproval && (
+                                      <Button 
+                                        variant="ghost" 
+                                        size="sm" 
+                                        className="text-xs h-6 px-2 text-primary hover:text-primary"
+                                        onClick={() => setShowUnlockDialog(true)}
+                                      >
+                                        <Unlock className="w-3 h-3 mr-1" />
+                                        Omba Idhini
+                                      </Button>
+                                    )}
+                                  </div>
                                 ) : mark.exam !== '' ? (
                                   <span className="text-xs text-muted-foreground">Wazi</span>
                                 ) : (
