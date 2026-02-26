@@ -9,6 +9,7 @@ import { useAcademicYears } from '@/hooks/useAcademicYears';
 import { Search, Plus, MoreHorizontal, GraduationCap, Calendar, Loader2, Download, FileText, ArrowRightLeft, Users, Camera, User } from 'lucide-react';
 import { generateStudentReportPDF, generateAllStudentsReportPDF } from '@/utils/pdfGenerator';
 import { terms } from '@/data/mockData';
+import { getStreamsForClass, hasStreams } from '@/utils/classStreams';
 import { toast } from 'sonner';
 import {
   DropdownMenu,
@@ -36,6 +37,7 @@ interface Student {
   id: string;
   full_name: string;
   class: string;
+  stream: string | null;
   roll_number: string;
   admission_date: string;
   parent_id: string | null;
@@ -128,6 +130,7 @@ export default function StudentsPage() {
     full_name: '',
     roll_number: '',
     class: '',
+    stream: '' as string,
     boarding_type: 'day',
     gender: 'Male',
     admission_date: new Date().toISOString().split('T')[0],
@@ -260,6 +263,7 @@ export default function StudentsPage() {
         full_name: newStudent.full_name.trim(),
         roll_number: newStudent.roll_number.trim(),
         class: newStudent.class.trim(),
+        stream: newStudent.stream || null,
         boarding_type: newStudent.boarding_type,
         gender: newStudent.gender,
         admission_date: newStudent.admission_date,
@@ -274,6 +278,7 @@ export default function StudentsPage() {
         full_name: '',
         roll_number: '',
         class: '',
+        stream: '',
         boarding_type: 'day',
         gender: 'Male',
         admission_date: new Date().toISOString().split('T')[0],
@@ -304,6 +309,7 @@ export default function StudentsPage() {
         full_name: editingStudent.full_name.trim(),
         roll_number: editingStudent.roll_number.trim(),
         class: editingStudent.class.trim(),
+        stream: editingStudent.stream || null,
         boarding_type: editingStudent.boarding_type,
         gender: editingStudent.gender || 'Male',
         avatar_url: editingStudent.avatar_url,
@@ -668,7 +674,9 @@ export default function StudentsPage() {
                   <div className="flex items-center gap-2 text-sm">
                     <GraduationCap className="w-4 h-4 text-muted-foreground" />
                     <span className="text-muted-foreground">Class:</span>
-                    <span className="font-medium text-card-foreground">{student.class}</span>
+                    <span className="font-medium text-card-foreground">
+                      {student.stream ? `${student.class} ${student.stream}` : student.class}
+                    </span>
                   </div>
                   <div className="flex items-center gap-2 text-sm">
                     <Users className="w-4 h-4 text-muted-foreground" />
@@ -764,7 +772,7 @@ export default function StudentsPage() {
             </div>
             <div className="space-y-2">
               <Label htmlFor="class">Class</Label>
-              <Select value={newStudent.class} onValueChange={(v) => setNewStudent({ ...newStudent, class: v })}>
+              <Select value={newStudent.class} onValueChange={(v) => setNewStudent({ ...newStudent, class: v, stream: '' })}>
                 <SelectTrigger>
                   <SelectValue placeholder="Select class" />
                 </SelectTrigger>
@@ -775,6 +783,21 @@ export default function StudentsPage() {
                 </SelectContent>
               </Select>
             </div>
+            {hasStreams(newStudent.class) && (
+              <div className="space-y-2">
+                <Label htmlFor="stream">Stream</Label>
+                <Select value={newStudent.stream} onValueChange={(v) => setNewStudent({ ...newStudent, stream: v })}>
+                  <SelectTrigger>
+                    <SelectValue placeholder="Select stream" />
+                  </SelectTrigger>
+                  <SelectContent>
+                    {getStreamsForClass(newStudent.class).map((stream) => (
+                      <SelectItem key={stream} value={stream}>{stream}</SelectItem>
+                    ))}
+                  </SelectContent>
+                </Select>
+              </div>
+            )}
             <div className="space-y-2">
               <Label htmlFor="boarding_type">Student Type</Label>
               <Select 
@@ -965,7 +988,7 @@ export default function StudentsPage() {
                 <Label>Class</Label>
                 <Select 
                   value={editingStudent.class} 
-                  onValueChange={(v) => setEditingStudent({ ...editingStudent, class: v })}
+                  onValueChange={(v) => setEditingStudent({ ...editingStudent, class: v, stream: null })}
                 >
                   <SelectTrigger>
                     <SelectValue />
@@ -977,6 +1000,24 @@ export default function StudentsPage() {
                   </SelectContent>
                 </Select>
               </div>
+              {hasStreams(editingStudent.class) && (
+                <div className="space-y-2">
+                  <Label>Stream</Label>
+                  <Select 
+                    value={editingStudent.stream || ''} 
+                    onValueChange={(v) => setEditingStudent({ ...editingStudent, stream: v })}
+                  >
+                    <SelectTrigger>
+                      <SelectValue placeholder="Select stream" />
+                    </SelectTrigger>
+                    <SelectContent>
+                      {getStreamsForClass(editingStudent.class).map((stream) => (
+                        <SelectItem key={stream} value={stream}>{stream}</SelectItem>
+                      ))}
+                    </SelectContent>
+                  </Select>
+                </div>
+              )}
               <div className="space-y-2">
                 <Label>Student Type</Label>
                 <Select 

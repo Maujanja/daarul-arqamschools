@@ -17,6 +17,7 @@ import { Textarea } from '@/components/ui/textarea';
 import { useAcademicYears } from '@/hooks/useAcademicYears';
 import { useSecureQuery } from '@/hooks/useSecureQuery';
 import { useSecureData } from '@/hooks/useSecureData';
+import { getStreamsForClass, hasStreams } from '@/utils/classStreams';
 
 interface Student {
   id: string;
@@ -36,7 +37,7 @@ interface StudentMark {
   studentId: string;
   studentName: string;
   rollNumber: string;
-  exam: number | '';
+  exam: number | '' | '-';
   total: number;
   grade: string;
 }
@@ -47,6 +48,7 @@ interface TeacherAssignment {
   class: string;
   subject_id: string;
   academic_year: string;
+  stream: string | null;
 }
 
 interface Mark {
@@ -110,6 +112,7 @@ export default function MarksEntryPage() {
   const fileInputRef = useRef<HTMLInputElement>(null);
   const [selectedClass, setSelectedClass] = useState('');
   const [selectedSubject, setSelectedSubject] = useState('');
+  const [selectedStream, setSelectedStream] = useState<string>('');
   const [selectedTerm, setSelectedTerm] = useState(terms[0] || 'Test 1');
   const [selectedYear, setSelectedYear] = useState('');
   const [isSubmitting, setIsSubmitting] = useState(false);
@@ -154,9 +157,20 @@ export default function MarksEntryPage() {
     ? [...new Set(teacherAssignments.map(a => a.class))]
     : ALL_CLASSES;
 
+  // Available streams for selected class - for teachers, filter by their assignments
+  const availableStreams = isTeacher
+    ? [...new Set(teacherAssignments
+        .filter(a => a.class === selectedClass && a.stream)
+        .map(a => a.stream!))]
+    : getStreamsForClass(selectedClass);
+
   const availableSubjects = isTeacher
     ? subjects.filter(s => 
-        teacherAssignments.some(a => a.class === selectedClass && a.subject_id === s.id)
+        teacherAssignments.some(a => 
+          a.class === selectedClass && 
+          a.subject_id === s.id && 
+          (!hasStreams(selectedClass) || a.stream === selectedStream)
+        )
       )
     : subjects;
 
@@ -190,7 +204,10 @@ export default function MarksEntryPage() {
           setTeacherAssignments(mappedAssignments);
           const firstClass = mappedAssignments[0].class;
           setSelectedClass(firstClass);
-          const firstSubject = mappedAssignments.find(a => a.class === firstClass)?.subject_id;
+          if (mappedAssignments[0].stream) {
+            setSelectedStream(mappedAssignments[0].stream);
+          }
+          const firstSubject = mappedAssignments.find(a => a.class === firstClass && (!hasStreams(firstClass) || a.stream === mappedAssignments[0].stream))?.subject_id;
           if (firstSubject) {
             setSelectedSubject(firstSubject);
           }
@@ -208,29 +225,42 @@ export default function MarksEntryPage() {
     fetchInitialData();
   }, [isTeacher, user?.id, user, fetchTable]);
 
-  // Fetch students when class changes
+  // Fetch students when class/stream changes
   useEffect(() => {
     const fetchStudents = async () => {
       if (!selectedClass || !selectedSubject || !user) return;
+      // If class has streams, wait for stream selection
+      if (hasStreams(selectedClass) && !selectedStream) {
+        setStudents([]);
+        setMarks([]);
+        return;
+      }
       
       setIsLoading(true);
       
       let studentsToShow: Student[] = [];
       
       if (isTeacher && user?.id) {
-        const selectedStudents = await fetchTable<TeacherClassStudent>('teacher_class_students', {
+        const filters: Record<string, unknown> = {
           teacher_id: user.id,
           class: selectedClass,
           subject_id: selectedSubject
-        });
+        };
+        if (selectedStream) filters.stream = selectedStream;
+        
+        const selectedStudents = await fetchTable<TeacherClassStudent>('teacher_class_students', filters);
         
         if (selectedStudents && selectedStudents.length > 0) {
           const studentIds = selectedStudents.map(s => s.student_id);
-          const allStudents = await fetchTable<Student>('students', { class: selectedClass });
+          const studentFilters: Record<string, unknown> = { class: selectedClass };
+          if (selectedStream) studentFilters.stream = selectedStream;
+          const allStudents = await fetchTable<Student>('students', studentFilters);
           studentsToShow = allStudents.filter(s => studentIds.includes(s.id)).sort((a, b) => a.roll_number.localeCompare(b.roll_number));
         }
       } else {
-        const allStudents = await fetchTable<Student>('students', { class: selectedClass });
+        const studentFilters: Record<string, unknown> = { class: selectedClass };
+        if (selectedStream) studentFilters.stream = selectedStream;
+        const allStudents = await fetchTable<Student>('students', studentFilters);
         studentsToShow = allStudents.sort((a, b) => a.roll_number.localeCompare(b.roll_number));
       }
       
@@ -250,7 +280,7 @@ export default function MarksEntryPage() {
     };
     
     fetchStudents();
-  }, [selectedClass, selectedSubject, isTeacher, user?.id, user, fetchTable]);
+  }, [selectedClass, selectedSubject, selectedStream, isTeacher, user?.id, user, fetchTable]);
 
   // Load existing marks AND check unlock requests when subject/term/year changes
   useEffect(() => {
@@ -380,6 +410,15 @@ export default function MarksEntryPage() {
   };
 
   const updateMark = (studentId: string, value: string) => {
+    // Allow "-" as a valid value (absent/didn't sit)
+    if (value === '-') {
+      setMarks(prev => prev.map(mark => {
+        if (mark.studentId !== studentId) return mark;
+        return { ...mark, exam: '-', total: 0, grade: '-' };
+      }));
+      return;
+    }
+    
     const numValue = value === '' ? '' : Math.min(Math.max(0, parseInt(value) || 0), maxMarks);
     
     setMarks(prev => prev.map(mark => {
@@ -494,8 +533,9 @@ export default function MarksEntryPage() {
 
   const handleSubmit = async () => {
     // Only save marks that have been filled in AND are not locked
+    // Allow "-" (saves as 0 with grade "-") and numeric values
     const filledMarks = marks.filter(m => {
-      if (m.exam === '' || typeof m.exam !== 'number') return false;
+      if (m.exam === '') return false;
       // If student is locked, don't include in save (unless unlock approved)
       if (isStudentLocked(m.studentId)) return false;
       return true;
@@ -521,6 +561,7 @@ export default function MarksEntryPage() {
         student_id: mark.studentId,
         subject_id: selectedSubject,
         class: selectedClass,
+        stream: selectedStream || null,
         exam: typeof mark.exam === 'number' ? mark.exam : 0,
         total: mark.total,
         grade: mark.grade,
@@ -575,8 +616,8 @@ export default function MarksEntryPage() {
     }
   };
 
-  const getInputClass = (value: number | '') => {
-    if (value === '') return '';
+  const getInputClass = (value: number | '' | '-') => {
+    if (value === '' || value === '-') return '';
     const percentage = (Number(value) / maxMarks) * 100;
     if (percentage >= 75) return 'border-success/50 bg-success/5';
     if (percentage >= 50) return 'border-primary/50 bg-primary/5';
@@ -624,13 +665,18 @@ export default function MarksEntryPage() {
               </Button>
             </div>
           )}
-          <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
+          <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-5 gap-4">
             <div className="space-y-2">
               <label className="text-sm font-medium text-muted-foreground">Class</label>
               <Select value={selectedClass} onValueChange={(value) => {
                 setSelectedClass(value);
+                setSelectedStream('');
                 if (isTeacher) {
-                  const firstSubjectForClass = teacherAssignments.find(a => a.class === value)?.subject_id;
+                  const firstAssignment = teacherAssignments.find(a => a.class === value);
+                  if (firstAssignment?.stream) {
+                    setSelectedStream(firstAssignment.stream);
+                  }
+                  const firstSubjectForClass = firstAssignment?.subject_id;
                   if (firstSubjectForClass) {
                     setSelectedSubject(firstSubjectForClass);
                   }
@@ -646,6 +692,21 @@ export default function MarksEntryPage() {
                 </SelectContent>
               </Select>
             </div>
+            {availableStreams.length > 0 && (
+              <div className="space-y-2">
+                <label className="text-sm font-medium text-muted-foreground">Stream</label>
+                <Select value={selectedStream} onValueChange={setSelectedStream}>
+                  <SelectTrigger>
+                    <SelectValue placeholder="Select stream" />
+                  </SelectTrigger>
+                  <SelectContent>
+                    {availableStreams.map((stream) => (
+                      <SelectItem key={stream} value={stream}>{stream}</SelectItem>
+                    ))}
+                  </SelectContent>
+                </Select>
+              </div>
+            )}
             <div className="space-y-2">
               <label className="text-sm font-medium text-muted-foreground">Subject</label>
               <Select value={selectedSubject} onValueChange={setSelectedSubject}>
@@ -931,11 +992,16 @@ export default function MarksEntryPage() {
                             <td className="py-4 px-4 font-medium text-card-foreground">{mark.studentName}</td>
                             <td className="py-4 px-4">
                               <Input
-                                type="number"
-                                min="0"
-                                max={maxMarks}
+                                type="text"
                                 value={mark.exam}
-                                onChange={(e) => updateMark(mark.studentId, e.target.value)}
+                                onChange={(e) => {
+                                  const val = e.target.value;
+                                  if (val === '-' || val === '') {
+                                    updateMark(mark.studentId, val);
+                                  } else if (/^\d+$/.test(val)) {
+                                    updateMark(mark.studentId, val);
+                                  }
+                                }}
                                 className={`w-24 text-center mx-auto ${getInputClass(mark.exam)} ${locked ? 'opacity-60 cursor-not-allowed' : ''}`}
                                 placeholder="-"
                                 disabled={locked}
