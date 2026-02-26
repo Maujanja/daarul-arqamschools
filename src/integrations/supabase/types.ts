@@ -317,10 +317,13 @@ export type Database = {
           admin_note: string | null
           class: string
           created_at: string
+          current_marks: number | null
           id: string
           reason: string | null
           status: string
           stream: string | null
+          student_id: string | null
+          student_name: string | null
           subject_id: string
           subject_name: string
           teacher_id: string
@@ -333,10 +336,13 @@ export type Database = {
           admin_note?: string | null
           class: string
           created_at?: string
+          current_marks?: number | null
           id?: string
           reason?: string | null
           status?: string
           stream?: string | null
+          student_id?: string | null
+          student_name?: string | null
           subject_id: string
           subject_name: string
           teacher_id: string
@@ -349,10 +355,13 @@ export type Database = {
           admin_note?: string | null
           class?: string
           created_at?: string
+          current_marks?: number | null
           id?: string
           reason?: string | null
           status?: string
           stream?: string | null
+          student_id?: string | null
+          student_name?: string | null
           subject_id?: string
           subject_name?: string
           teacher_id?: string

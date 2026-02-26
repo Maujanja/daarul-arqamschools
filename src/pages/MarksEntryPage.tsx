@@ -6,13 +6,11 @@ import { Input } from '@/components/ui/input';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import { calculateGrade } from '@/types';
-import { Checkbox } from '@/components/ui/checkbox';
-import { Save, Loader2, Upload, Download, FileSpreadsheet, Edit3, Lock, ShieldAlert, Unlock, CheckCircle, Bell } from 'lucide-react';
+import { Save, Loader2, Upload, Download, FileSpreadsheet, Edit3, Lock, ShieldAlert, Unlock, CheckCircle, Plus } from 'lucide-react';
 import { useToast } from '@/hooks/use-toast';
 import { useAuth } from '@/contexts/AuthContext';
 import * as XLSX from 'xlsx';
 import { terms, DEFAULT_TEST_COUNT } from '@/data/mockData';
-import { Plus } from 'lucide-react';
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger } from '@/components/ui/dialog';
 import { Textarea } from '@/components/ui/textarea';
 import { useAcademicYears } from '@/hooks/useAcademicYears';
@@ -83,6 +81,9 @@ interface UnlockRequest {
   subject_id: string;
   term: string;
   academic_year: string;
+  student_id?: string;
+  student_name?: string;
+  current_marks?: number;
 }
 
 const ALL_CLASSES = ['Primary 1', 'Primary 2', 'Primary 3', 'Primary 4', 'Primary 5', 'Primary 6', 'Primary 7', 'Senior 1', 'Senior 2', 'Senior 3', 'Senior 4'];
@@ -132,14 +133,15 @@ export default function MarksEntryPage() {
   
   // Per-student locking: track which students have existing marks
   const [lockedStudentIds, setLockedStudentIds] = useState<Set<string>>(new Set());
-  // Track if there's an approved unlock request for current selection
-  const [hasUnlockApproval, setHasUnlockApproval] = useState(false);
-  // Unlock request dialog
+  // Track approved unlock requests per student
+  const [approvedStudentIds, setApprovedStudentIds] = useState<Set<string>>(new Set());
+  // Track all unlock requests for current selection
+  const [unlockRequests, setUnlockRequests] = useState<UnlockRequest[]>([]);
+  // Unlock request dialog for single student
   const [showUnlockDialog, setShowUnlockDialog] = useState(false);
   const [unlockReason, setUnlockReason] = useState('');
   const [isRequestingUnlock, setIsRequestingUnlock] = useState(false);
-  const [existingUnlockRequest, setExistingUnlockRequest] = useState<UnlockRequest | null>(null);
-  const [selectedUnlockStudents, setSelectedUnlockStudents] = useState<Set<string>>(new Set());
+  const [unlockTargetStudent, setUnlockTargetStudent] = useState<StudentMark | null>(null);
 
   const isTeacher = user?.role === 'teacher';
   
@@ -354,10 +356,10 @@ export default function MarksEntryPage() {
       }
     };
     
-    const checkUnlockRequest = async () => {
+    const checkUnlockRequests = async () => {
       if (!isTeacher || !user?.id || !selectedClass || !selectedSubject || !selectedTerm || !selectedYear) {
-        setHasUnlockApproval(false);
-        setExistingUnlockRequest(null);
+        setApprovedStudentIds(new Set());
+        setUnlockRequests([]);
         return;
       }
       
@@ -372,36 +374,43 @@ export default function MarksEntryPage() {
       });
       
       if (result.success && result.data && result.data.length > 0) {
-        const latest = result.data[result.data.length - 1];
-        setExistingUnlockRequest(latest);
-        setHasUnlockApproval(latest.status === 'approved');
+        setUnlockRequests(result.data);
+        // Build set of student IDs that have been approved
+        const approved = new Set<string>();
+        result.data.forEach(r => {
+          if (r.status === 'approved' && r.student_id) {
+            approved.add(r.student_id);
+          }
+        });
+        setApprovedStudentIds(approved);
       } else {
-        setExistingUnlockRequest(null);
-        setHasUnlockApproval(false);
+        setUnlockRequests([]);
+        setApprovedStudentIds(new Set());
       }
     };
     
     loadExistingMarks();
-    checkUnlockRequest();
+    checkUnlockRequests();
   }, [selectedSubject, selectedTerm, selectedYear, students, selectedClass, user, query, isTeacher]);
+
+  // Get unlock request for a specific student
+  const getStudentUnlockRequest = (studentId: string): UnlockRequest | undefined => {
+    return unlockRequests.find(r => r.student_id === studentId && r.status !== 'used');
+  };
 
   // Check if a specific student is locked for teacher
   const isStudentLocked = (studentId: string): boolean => {
     if (!isTeacher) return false;
-    if (hasUnlockApproval) return false; // Unlock approved, all editable
+    if (approvedStudentIds.has(studentId)) return false;
     return lockedStudentIds.has(studentId);
   };
 
   // Check if any students are locked
-  const hasLockedStudents = isTeacher && lockedStudentIds.size > 0 && !hasUnlockApproval;
+  const hasLockedStudents = isTeacher && lockedStudentIds.size > 0;
 
   const handleRequestUnlock = async () => {
     if (!user?.id || !selectedClass || !selectedSubject || !selectedTerm || !selectedYear) return;
-    if (selectedUnlockStudents.size === 0) return;
-    
-    const selectedNames = marks
-      .filter(m => selectedUnlockStudents.has(m.studentId))
-      .map(m => m.studentName);
+    if (!unlockTargetStudent) return;
     
     setIsRequestingUnlock(true);
     try {
@@ -413,19 +422,27 @@ export default function MarksEntryPage() {
         subject_name: selectedSubjectData?.name || '',
         term: selectedTerm,
         academic_year: selectedYear,
-        reason: (unlockReason || 'Nahitaji kubadilisha maksi') + `\n\nWanafunzi (${selectedNames.length}): ${selectedNames.join(', ')}`,
+        student_id: unlockTargetStudent.studentId,
+        student_name: unlockTargetStudent.studentName,
+        current_marks: typeof unlockTargetStudent.exam === 'number' ? unlockTargetStudent.exam : 0,
+        reason: unlockReason || 'Nahitaji kubadilisha maksi',
         status: 'pending',
       });
       
       if (result.success) {
         toast({
           title: "Ombi Limetumwa!",
-          description: "Ombi lako la idhini ya kubadilisha maksi limetumwa kwa Admin. Utapata taarifa pindi litakapojibiwa.",
+          description: `Ombi la kubadilisha maksi za ${unlockTargetStudent.studentName} limetumwa kwa Admin.`,
         });
         setShowUnlockDialog(false);
         setUnlockReason('');
-        // Refresh unlock request status
-        setExistingUnlockRequest({ id: '', teacher_id: user.id, status: 'pending', class: selectedClass, subject_id: selectedSubject, term: selectedTerm, academic_year: selectedYear });
+        setUnlockTargetStudent(null);
+        // Add to local tracking
+        setUnlockRequests(prev => [...prev, { 
+          id: '', teacher_id: user.id, status: 'pending', class: selectedClass, 
+          subject_id: selectedSubject, term: selectedTerm, academic_year: selectedYear,
+          student_id: unlockTargetStudent.studentId, student_name: unlockTargetStudent.studentName
+        }]);
       } else {
         throw new Error(result.error || 'Failed');
       }
@@ -616,15 +633,24 @@ export default function MarksEntryPage() {
           return newSet;
         });
         
-        // If unlock was approved, consume the approval (mark as 'used')
-        if (hasUnlockApproval && existingUnlockRequest?.id) {
-          await update('marks_unlock_requests', 
-            { status: 'used' }, 
-            { id: existingUnlockRequest.id }
-          );
-          setHasUnlockApproval(false);
-          setExistingUnlockRequest(null);
+        // If unlock was approved for specific students, consume those approvals
+        const savedStudentIds = filledMarks.map(m => m.studentId);
+        const usedRequests = unlockRequests.filter(r => 
+          r.status === 'approved' && r.student_id && savedStudentIds.includes(r.student_id)
+        );
+        for (const req of usedRequests) {
+          if (req.id) {
+            await update('marks_unlock_requests', { status: 'used' }, { id: req.id });
+          }
         }
+        setApprovedStudentIds(prev => {
+          const newSet = new Set(prev);
+          savedStudentIds.forEach(id => newSet.delete(id));
+          return newSet;
+        });
+        setUnlockRequests(prev => prev.map(r => 
+          usedRequests.some(ur => ur.id === r.id) ? { ...r, status: 'used' } : r
+        ));
       }
       
       const description = unfilledCount > 0
@@ -813,46 +839,32 @@ export default function MarksEntryPage() {
           </div>
         </div>
 
-        {/* Top notification: Unlock approval/rejection/pending status */}
-        {isTeacher && existingUnlockRequest && existingUnlockRequest.status === 'approved' && lockedStudentIds.size > 0 && (
+        {/* Top notification: Per-student unlock status summary */}
+        {isTeacher && approvedStudentIds.size > 0 && (
           <div className="rounded-lg p-4 animate-fade-in border border-success/30 bg-success/10">
             <div className="flex items-center gap-3">
               <CheckCircle className="w-5 h-5 text-success shrink-0" />
               <div>
                 <p className="font-semibold text-success">✅ Idhini Imekubaliwa!</p>
-                <p className="text-sm text-muted-foreground">Admin amekubali ombi lako. Sasa unaweza kubadilisha maksi zote.</p>
+                <p className="text-sm text-muted-foreground">Wanafunzi {approvedStudentIds.size} wamefunguliwa. Badilisha maksi na uhifadhi.</p>
               </div>
             </div>
           </div>
         )}
-        {isTeacher && existingUnlockRequest && existingUnlockRequest.status === 'pending' && (
+        {isTeacher && unlockRequests.some(r => r.status === 'pending') && (
           <div className="rounded-lg p-4 animate-fade-in border border-warning/30 bg-warning/10">
             <div className="flex items-center gap-3">
               <Loader2 className="w-4 h-4 animate-spin text-warning shrink-0" />
               <div>
-                <p className="font-semibold text-warning">⏳ Ombi Linasubiri</p>
-                <p className="text-sm text-muted-foreground">Ombi lako la kubadilisha maksi linasubiri idhini ya Admin.</p>
+                <p className="font-semibold text-warning">⏳ Maombi Yanasubiri</p>
+                <p className="text-sm text-muted-foreground">Maombi {unlockRequests.filter(r => r.status === 'pending').length} yanasubiri idhini ya Admin.</p>
               </div>
-            </div>
-          </div>
-        )}
-        {isTeacher && existingUnlockRequest && existingUnlockRequest.status === 'rejected' && (
-          <div className="rounded-lg p-4 animate-fade-in border border-destructive/30 bg-destructive/10">
-            <div className="flex items-center gap-3">
-              <ShieldAlert className="w-5 h-5 text-destructive shrink-0" />
-              <div className="flex-1">
-                <p className="font-semibold text-destructive">❌ Ombi Limekataliwa</p>
-                <p className="text-sm text-muted-foreground">Admin amekataa ombi lako. Unaweza kutuma ombi jipya.</p>
-              </div>
-              <Button variant="outline" size="sm" onClick={() => { setExistingUnlockRequest(null); setShowUnlockDialog(true); }}>
-                Omba Tena
-              </Button>
             </div>
           </div>
         )}
 
-        {/* Unlock Request Dialog */}
-        <Dialog open={showUnlockDialog} onOpenChange={setShowUnlockDialog}>
+        {/* Unlock Request Dialog - for single student */}
+        <Dialog open={showUnlockDialog} onOpenChange={(open) => { setShowUnlockDialog(open); if (!open) setUnlockTargetStudent(null); }}>
           <DialogContent>
             <DialogHeader>
               <DialogTitle>Omba Idhini ya Kubadilisha Maksi</DialogTitle>
@@ -865,38 +877,13 @@ export default function MarksEntryPage() {
                 <p><strong>Mwaka:</strong> {selectedYear}</p>
               </div>
               
-              {/* Student selection */}
-              <div className="space-y-2">
-                <div className="flex items-center justify-between">
-                  <label className="text-sm font-medium">Chagua wanafunzi wa kubadilishiwa maksi</label>
-                  <div className="flex gap-1">
-                    <Button variant="ghost" size="sm" className="h-7 px-2 text-xs" onClick={() => {
-                      const allLocked = marks.filter(m => lockedStudentIds.has(m.studentId)).map(m => m.studentId);
-                      setSelectedUnlockStudents(new Set(allLocked));
-                    }}>Wote</Button>
-                    <Button variant="ghost" size="sm" className="h-7 px-2 text-xs" onClick={() => setSelectedUnlockStudents(new Set())}>Ondoa</Button>
-                  </div>
+              {unlockTargetStudent && (
+                <div className="p-3 bg-primary/5 border border-primary/20 rounded-lg text-sm">
+                  <p className="font-medium text-primary mb-1">📋 Mwanafunzi:</p>
+                  <p className="text-card-foreground font-semibold">{unlockTargetStudent.studentName}</p>
+                  <p className="text-muted-foreground">Maksi za sasa: <strong>{unlockTargetStudent.exam !== '' && unlockTargetStudent.exam !== '-' ? unlockTargetStudent.exam : '0'}</strong> / {maxMarks}</p>
                 </div>
-                <div className="max-h-48 overflow-y-auto border rounded-lg p-2 space-y-1">
-                  {marks.filter(m => lockedStudentIds.has(m.studentId)).map((m) => (
-                    <label key={m.studentId} className="flex items-center gap-2 p-1.5 rounded hover:bg-muted/50 cursor-pointer text-sm">
-                      <Checkbox
-                        checked={selectedUnlockStudents.has(m.studentId)}
-                        onCheckedChange={(checked) => {
-                          setSelectedUnlockStudents(prev => {
-                            const newSet = new Set(prev);
-                            if (checked) { newSet.add(m.studentId); } else { newSet.delete(m.studentId); }
-                            return newSet;
-                          });
-                        }}
-                      />
-                      <span>{m.studentName}</span>
-                      <span className="ml-auto text-muted-foreground">{m.exam !== '' && m.exam !== '-' ? `${m.exam}%` : '-'}</span>
-                    </label>
-                  ))}
-                </div>
-                <p className="text-xs text-muted-foreground">{selectedUnlockStudents.size} wa {lockedStudentIds.size} wamechaguliwa</p>
-              </div>
+              )}
 
               <div className="space-y-2">
                 <label className="text-sm font-medium">Sababu ya kuomba mabadiliko</label>
@@ -910,12 +897,12 @@ export default function MarksEntryPage() {
               <Button 
                 onClick={handleRequestUnlock} 
                 className="w-full btn-gradient"
-                disabled={isRequestingUnlock || selectedUnlockStudents.size === 0}
+                disabled={isRequestingUnlock || !unlockTargetStudent}
               >
                 {isRequestingUnlock ? (
                   <><Loader2 className="w-4 h-4 mr-2 animate-spin" />Inatuma...</>
                 ) : (
-                  <><Unlock className="w-4 h-4 mr-2" />Tuma Ombi ({selectedUnlockStudents.size})</>
+                  <><Unlock className="w-4 h-4 mr-2" />Tuma Ombi</>
                 )}
               </Button>
             </div>
@@ -1000,17 +987,6 @@ export default function MarksEntryPage() {
                     <p className="text-sm text-muted-foreground">{marks.length} students • {selectedClass ? getTestDisplayName(selectedTerm, selectedClass) : selectedTerm} • {selectedYear}</p>
                   </div>
                   <div className="flex items-center gap-2 flex-wrap">
-                    {/* Omba Idhini button - visible when there are locked students and no existing request */}
-                    {isTeacher && hasLockedStudents && !existingUnlockRequest && (
-                      <Button 
-                        variant="outline"
-                        onClick={() => { setSelectedUnlockStudents(new Set()); setShowUnlockDialog(true); }}
-                        className="border-warning text-warning hover:bg-warning/10"
-                      >
-                        <Unlock className="w-4 h-4 mr-2" />
-                        Omba Idhini ya Kubadilisha
-                      </Button>
-                    )}
                     {hasUnlockedStudentsToSave && (
                       <Button 
                         className="btn-gradient"
@@ -1097,34 +1073,44 @@ export default function MarksEntryPage() {
                             </td>
                             {isTeacher && (
                               <td className="py-4 px-4 text-center whitespace-nowrap">
-                                {locked ? (
-                                  existingUnlockRequest?.status === 'approved' ? (
-                                    <div className="flex items-center justify-center gap-1">
-                                      <Unlock className="w-4 h-4 text-success flex-shrink-0" />
-                                      <span className="text-xs text-success font-medium">Imefunguliwa</span>
-                                    </div>
-                                  ) : existingUnlockRequest?.status === 'pending' ? (
-                                    <div className="flex items-center justify-center gap-1">
-                                      <Loader2 className="w-3 h-3 animate-spin text-warning flex-shrink-0" />
-                                      <span className="text-xs text-warning font-medium">Inasubiri</span>
-                                    </div>
-                                  ) : existingUnlockRequest?.status === 'rejected' ? (
-                                    <button 
-                                      onClick={() => { setExistingUnlockRequest(null); setShowUnlockDialog(true); }}
-                                      className="text-xs text-destructive font-medium hover:underline cursor-pointer"
-                                    >
-                                      ❌ Imekataliwa · Omba tena
-                                    </button>
-                                  ) : (
-                                    <button 
-                                      onClick={() => setShowUnlockDialog(true)}
-                                      className="inline-flex items-center gap-1 text-xs text-primary font-medium hover:underline cursor-pointer"
-                                    >
-                                      <Unlock className="w-3 h-3" />
-                                      Omba Idhini
-                                    </button>
-                                  )
-                                ) : mark.exam !== '' ? (
+                                {locked ? (() => {
+                                  const studentReq = getStudentUnlockRequest(mark.studentId);
+                                  if (approvedStudentIds.has(mark.studentId)) {
+                                    return (
+                                      <div className="flex items-center justify-center gap-1">
+                                        <Unlock className="w-4 h-4 text-success flex-shrink-0" />
+                                        <span className="text-xs text-success font-medium">Imefunguliwa</span>
+                                      </div>
+                                    );
+                                  } else if (studentReq?.status === 'pending') {
+                                    return (
+                                      <div className="flex items-center justify-center gap-1">
+                                        <Loader2 className="w-3 h-3 animate-spin text-warning flex-shrink-0" />
+                                        <span className="text-xs text-warning font-medium">Inasubiri</span>
+                                      </div>
+                                    );
+                                  } else if (studentReq?.status === 'rejected') {
+                                    return (
+                                      <button 
+                                        onClick={() => { setUnlockTargetStudent(mark); setUnlockReason(''); setShowUnlockDialog(true); }}
+                                        className="text-xs text-destructive font-medium hover:underline cursor-pointer"
+                                      >
+                                        ❌ Imekataliwa · Omba tena
+                                      </button>
+                                    );
+                                  } else {
+                                    return (
+                                      <button 
+                                        onClick={() => { setUnlockTargetStudent(mark); setUnlockReason(''); setShowUnlockDialog(true); }}
+                                        className="inline-flex items-center gap-1 text-xs text-primary font-medium hover:underline cursor-pointer"
+                                      >
+                                        <Unlock className="w-3 h-3" />
+                                        Omba Idhini
+                                      </button>
+                                    );
+                                  }
+                                })()
+                                : mark.exam !== '' ? (
                                   <span className="text-xs text-success font-medium">✓ Wazi</span>
                                 ) : (
                                   <span className="text-xs text-muted-foreground">—</span>
