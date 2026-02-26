@@ -1156,23 +1156,23 @@ export default function MarksEntryPage() {
           <div className="flex flex-wrap gap-4">
             <div className="flex items-center gap-2">
               <GradeBadge grade="A" size="sm" />
-              <span className="text-sm text-muted-foreground">75-100%</span>
+              <span className="text-sm text-muted-foreground">75-100</span>
             </div>
             <div className="flex items-center gap-2">
               <GradeBadge grade="B" size="sm" />
-              <span className="text-sm text-muted-foreground">65-74%</span>
+              <span className="text-sm text-muted-foreground">65-74</span>
             </div>
             <div className="flex items-center gap-2">
               <GradeBadge grade="C" size="sm" />
-              <span className="text-sm text-muted-foreground">50-64%</span>
+              <span className="text-sm text-muted-foreground">45-64</span>
             </div>
             <div className="flex items-center gap-2">
               <GradeBadge grade="D" size="sm" />
-              <span className="text-sm text-muted-foreground">40-49%</span>
+              <span className="text-sm text-muted-foreground">30-44</span>
             </div>
             <div className="flex items-center gap-2">
               <GradeBadge grade="F" size="sm" />
-              <span className="text-sm text-muted-foreground">0-39%</span>
+              <span className="text-sm text-muted-foreground">0-29</span>
             </div>
           </div>
         </div>
