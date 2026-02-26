@@ -406,7 +406,7 @@ export function ParentDashboard() {
 
   // Grade distribution for pie chart
   const gradeDistribution = subjectAverages.reduce((acc, s) => {
-    const grade = s.average >= 75 ? 'A' : s.average >= 65 ? 'B' : s.average >= 50 ? 'C' : s.average >= 40 ? 'D' : 'F';
+    const grade = s.average >= 75 ? 'A' : s.average >= 65 ? 'B' : s.average >= 45 ? 'C' : s.average >= 30 ? 'D' : 'F';
     acc[grade] = (acc[grade] || 0) + 1;
     return acc;
   }, {} as Record<string, number>);
@@ -473,7 +473,7 @@ export function ParentDashboard() {
       });
 
       const average = totalCount > 0 ? totalSum / totalCount : 0;
-      const grade = average >= 75 ? 'A' : average >= 65 ? 'B' : average >= 50 ? 'C' : average >= 40 ? 'D' : 'F';
+      const grade = average >= 75 ? 'A' : average >= 65 ? 'B' : average >= 45 ? 'C' : average >= 30 ? 'D' : 'F';
 
       return {
         sn: index + 1,
@@ -532,7 +532,7 @@ export function ParentDashboard() {
     
     // Subject table below chart
     const tableData = subjectAverages.map(s => {
-      const grade = s.average >= 75 ? 'A' : s.average >= 65 ? 'B' : s.average >= 50 ? 'C' : s.average >= 40 ? 'D' : 'F';
+      const grade = s.average >= 75 ? 'A' : s.average >= 65 ? 'B' : s.average >= 45 ? 'C' : s.average >= 30 ? 'D' : 'F';
       return [s.subject, `${s.average}%`, grade];
     });
     
@@ -577,7 +577,7 @@ export function ParentDashboard() {
     }
     
     // Grade distribution table below chart
-    const gradeLabels = ['A (75-100%)', 'B (65-74%)', 'C (50-64%)', 'D (40-49%)', 'F (0-39%)'];
+    const gradeLabels = ['A (75-100%)', 'B (65-74%)', 'C (45-64%)', 'D (30-44%)', 'F (0-29%)'];
     const tableData = Object.entries(gradeDistribution).map(([grade, count]) => {
       const label = gradeLabels.find(l => l.startsWith(grade)) || grade;
       return [label, count.toString(), `${Math.round((count / subjectAverages.length) * 100)}%`];
@@ -612,7 +612,7 @@ export function ParentDashboard() {
     doc.text('Subject Performance', 20, 80);
     
     const tableData = subjectAverages.map(s => {
-      const grade = s.average >= 75 ? 'A' : s.average >= 65 ? 'B' : s.average >= 50 ? 'C' : s.average >= 40 ? 'D' : 'F';
+      const grade = s.average >= 75 ? 'A' : s.average >= 65 ? 'B' : s.average >= 45 ? 'C' : s.average >= 30 ? 'D' : 'F';
       return [s.subject, `${s.average}%`, grade];
     });
     
@@ -679,7 +679,7 @@ export function ParentDashboard() {
             <div className="text-center">
               <p className="text-sm text-muted-foreground">Overall Average</p>
               <p className="text-4xl font-bold font-display gradient-text">{overallAverage.toFixed(1)}%</p>
-              <GradeBadge grade={overallAverage >= 75 ? 'A' : overallAverage >= 65 ? 'B' : overallAverage >= 50 ? 'C' : overallAverage >= 40 ? 'D' : 'F'} size="lg" />
+              <GradeBadge grade={overallAverage >= 75 ? 'A' : overallAverage >= 65 ? 'B' : overallAverage >= 45 ? 'C' : overallAverage >= 30 ? 'D' : 'F'} size="lg" />
             </div>
             {classRank && (
               <div className="text-center border-l border-border pl-4">
@@ -761,322 +761,7 @@ export function ParentDashboard() {
       </div>
 
 
-      {/* General Performance Trend Chart - First Element */}
-      {Object.keys(studentAveragePerSeries).length > 0 && (
-        <SeriesPerformanceChart
-          data={Object.entries(studentAveragePerSeries).map(([series, avg]) => ({
-            name: series,
-            Average: Number(avg.toFixed(1))
-          }))}
-          title="General Performance Trend"
-          seriesKeys={['Average']}
-          pdfFileName={`${childName}_series_performance.pdf`}
-        />
-      )}
-
-      {/* Series Summary Table - Student's Subjects */}
-      {studentSubjectSummary.length > 0 && studentSeriesLabels.length > 0 && (
-        <SeriesSummaryTable
-          title={`SUMMARY OF SERIES - ${childName.toUpperCase()}`}
-          subtitle={`Class: ${childClass} | All Series Results`}
-          data={studentSubjectSummary}
-          seriesLabels={studentSeriesLabels}
-          showPosition={true}
-          showAveragePerSeries={true}
-          averagePerSeries={studentAveragePerSeries}
-          pdfFileName={`${childName.replace(/\s+/g, '_')}_series_summary`}
-        />
-      )}
-      {/* Stats Grid */}
-      <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-5 gap-6">
-        <StatCard
-          title="Class Rank"
-          value={classRank ? `${classRank}/${totalClassStudents}` : '-'}
-          subtitle={classRank === 1 ? 'Top of class!' : classRank && classRank <= 3 ? 'Top 3!' : 'Overall position'}
-          icon={Trophy}
-          variant={classRank === 1 ? 'success' : classRank && classRank <= 3 ? 'primary' : 'default'}
-          bgStyle="silk"
-        />
-        <StatCard
-          title="Subjects"
-          value={uniqueSubjects.length.toString()}
-          subtitle="Registered subjects"
-          icon={BookOpen}
-          variant="primary"
-          bgStyle="cherries"
-        />
-        <StatCard
-          title="Top Subject"
-          value={topSubject?.subject || '-'}
-          subtitle={topSubject ? `${topSubject.average}%` : '-'}
-          icon={TrendingUp}
-          variant="success"
-          bgStyle="silk"
-        />
-        <StatCard
-          title="Needs Support"
-          value={needSupportSubject?.subject || '-'}
-          subtitle={needSupportSubject ? `${needSupportSubject.average}%` : '-'}
-          icon={TrendingDown}
-          variant="warning"
-          bgStyle="cherries"
-        />
-        <StatCard
-          title="Fee Balance"
-          value={balance > 0 ? `TZS ${(balance / 1000000).toFixed(1)}M` : 'None'}
-          subtitle={balance > 0 ? 'Outstanding' : 'Fully paid'}
-          icon={DollarSign}
-          variant={balance > 0 ? 'warning' : 'success'}
-          bgStyle="silk"
-        />
-      </div>
-
-
-      {/* School Announcements */}
-      <div className="card-elevated p-6 animate-fade-in overflow-hidden">
-        <h3 className="font-display font-semibold text-lg mb-6 text-card-foreground flex items-center gap-2">
-          <Megaphone className="w-5 h-5 text-primary" />
-          School Notices
-        </h3>
-        {announcements.length > 0 ? (
-          <div className="space-y-4">
-            {announcements.map((announcement, index) => (
-              <div 
-                key={announcement.id} 
-                className="p-3 sm:p-4 rounded-lg bg-muted/30 border border-border/50 animate-slide-up overflow-hidden"
-                style={{ animationDelay: `${index * 100}ms` }}
-              >
-                <div className="flex items-start gap-2 sm:gap-3">
-                  <div className="w-8 h-8 sm:w-10 sm:h-10 rounded-lg bg-primary/10 flex items-center justify-center shrink-0">
-                    <Megaphone className="w-4 h-4 sm:w-5 sm:h-5 text-primary" />
-                  </div>
-                  <div className="flex-1 min-w-0 overflow-hidden">
-                    <h4 className="font-semibold text-card-foreground break-words overflow-wrap-anywhere">{announcement.title}</h4>
-                    <p className="text-sm text-muted-foreground mt-1 whitespace-pre-wrap break-words overflow-wrap-anywhere" style={{ wordBreak: 'break-word', overflowWrap: 'anywhere' }}>{announcement.content}</p>
-                    <div className="flex flex-wrap items-center gap-2 sm:gap-4 mt-2 text-xs text-muted-foreground">
-                      <span className="flex items-center gap-1">
-                        <User className="w-3 h-3" />
-                        <span className="truncate max-w-[100px] sm:max-w-none">{announcement.created_by}</span>
-                      </span>
-                      <span className="flex items-center gap-1">
-                        <Calendar className="w-3 h-3" />
-                        {new Date(announcement.created_at).toLocaleDateString('en-US', {
-                          year: 'numeric',
-                          month: 'short',
-                          day: 'numeric'
-                        })}
-                      </span>
-                    </div>
-                  </div>
-                </div>
-              </div>
-            ))}
-          </div>
-        ) : (
-          <p className="text-muted-foreground text-center py-8">No announcements at this time</p>
-        )}
-      </div>
-
-      {/* Historical Debts Card */}
-      {historicalDebts.length > 0 && (
-        <div className="card-elevated p-6 animate-fade-in border-l-4 border-l-destructive">
-          <h3 className="font-display font-semibold text-lg mb-6 text-card-foreground flex items-center gap-2">
-            <AlertTriangle className="w-5 h-5 text-destructive" />
-            Outstanding Debts from Previous Periods
-          </h3>
-          <div className="space-y-4">
-            {historicalDebts.map((debt) => (
-              <div key={debt.id} className="p-4 rounded-lg bg-destructive/10 border border-destructive/20">
-                <div className="flex items-center justify-between">
-                  <div>
-                    <p className="font-medium text-card-foreground">
-                      {debt.academic_year} - {debt.term}
-                    </p>
-                    <p className="text-sm text-muted-foreground">
-                      Original: TZS {Number(debt.original_amount).toLocaleString()} | 
-                      Paid: TZS {Number(debt.amount_paid).toLocaleString()}
-                    </p>
-                  </div>
-                  <div className="text-right">
-                    <p className="text-xl font-bold text-destructive">
-                      TZS {Number(debt.outstanding_balance).toLocaleString()}
-                    </p>
-                    <p className="text-sm text-muted-foreground">Outstanding</p>
-                  </div>
-                </div>
-              </div>
-            ))}
-            <div className="p-4 rounded-lg bg-destructive/20 border border-destructive/30">
-              <div className="flex items-center justify-between">
-                <p className="font-semibold text-card-foreground">Total Outstanding Debt</p>
-                <p className="text-2xl font-bold text-destructive">
-                  TZS {historicalDebts.reduce((sum, d) => sum + Number(d.outstanding_balance), 0).toLocaleString()}
-                </p>
-              </div>
-            </div>
-          </div>
-        </div>
-      )}
-
-      {/* Fee Status Card */}
-      <div className="card-elevated p-6 animate-fade-in">
-        <h3 className="font-display font-semibold text-lg mb-6 text-card-foreground flex items-center gap-2">
-          <DollarSign className="w-5 h-5 text-primary" />
-          Fee Status - {selectedYear} ({selectedTerm})
-        </h3>
-        {expectedFee > 0 || paidAmount > 0 ? (
-          <>
-            <div className="grid grid-cols-1 md:grid-cols-3 gap-6 mb-6">
-              <div className="p-4 rounded-lg bg-muted/50">
-                <p className="text-sm text-muted-foreground">Expected Fee</p>
-                <p className="text-2xl font-bold text-card-foreground">
-                  {expectedFee > 0 ? `TZS ${expectedFee.toLocaleString()}` : 'Not Set'}
-                </p>
-              </div>
-              <div className="p-4 rounded-lg bg-success/10">
-                <p className="text-sm text-muted-foreground">Paid Amount</p>
-                <p className="text-2xl font-bold text-success">TZS {paidAmount.toLocaleString()}</p>
-              </div>
-              <div className={`p-4 rounded-lg ${balance > 0 ? 'bg-destructive/10' : 'bg-success/10'}`}>
-                <p className="text-sm text-muted-foreground">Balance</p>
-                <p className={`text-2xl font-bold ${balance > 0 ? 'text-destructive' : 'text-success'}`}>
-                  {expectedFee > 0 ? (balance > 0 ? `TZS ${balance.toLocaleString()}` : 'Fully Paid') : 'N/A'}
-                </p>
-              </div>
-            </div>
-            
-            {/* Progress Bar */}
-            {expectedFee > 0 && (
-              <div className="mb-4">
-                <div className="flex justify-between text-sm mb-2">
-                  <span className="text-muted-foreground">Payment Progress</span>
-                  <span className="font-medium text-card-foreground">
-                    {Math.round((paidAmount / expectedFee) * 100)}%
-                  </span>
-                </div>
-                <div className="h-3 bg-muted rounded-full overflow-hidden">
-                  <div 
-                    className="h-full bg-gradient-to-r from-primary to-success rounded-full transition-all duration-500"
-                    style={{ width: `${Math.min((paidAmount / expectedFee) * 100, 100)}%` }}
-                  />
-                </div>
-              </div>
-            )}
-
-            {/* Payment History */}
-            {feePayments.length > 0 && (
-              <div className="mt-6">
-                <h4 className="font-medium text-card-foreground mb-4">Payment History</h4>
-                <div className="space-y-3">
-                  {feePayments.map((payment, index) => (
-                    <div key={index} className="flex items-center justify-between p-3 rounded-lg bg-muted/30">
-                      <div>
-                        <p className="font-medium text-card-foreground">TZS {Number(payment.amount).toLocaleString()}</p>
-                        <p className="text-sm text-muted-foreground">{payment.payment_method}</p>
-                      </div>
-                      <div className="text-right">
-                        <p className="text-sm text-muted-foreground">
-                          {new Date(payment.payment_date).toLocaleDateString()}
-                        </p>
-                      </div>
-                    </div>
-                  ))}
-                </div>
-              </div>
-            )}
-          </>
-        ) : (
-          <p className="text-muted-foreground text-center py-8">
-            No fee information available for {selectedYear} - {selectedTerm}
-          </p>
-        )}
-      </div>
-
-      {/* Grade Distribution Pie Chart */}
-      <div className="card-elevated p-6 animate-fade-in">
-        <div className="flex items-center justify-between mb-6">
-          <h3 className="font-display font-semibold text-lg text-card-foreground">
-            Grade Distribution
-          </h3>
-          {pieChartData.length > 0 && (
-            <Button variant="outline" size="sm" onClick={handleDownloadGradeDistribution}>
-              <FileDown className="w-4 h-4 mr-2" />
-              Download PDF
-            </Button>
-          )}
-        </div>
-        {pieChartData.length > 0 ? (
-          <div ref={gradeChartRef} className="h-80 bg-white dark:bg-gray-900 rounded-lg p-2">
-            <ResponsiveContainer width="100%" height="100%">
-              <PieChart>
-                <Pie
-                  data={pieChartData}
-                  cx="50%"
-                  cy="50%"
-                  labelLine={false}
-                  label={({ name, percent }) => `${name} (${(percent * 100).toFixed(0)}%)`}
-                  outerRadius={100}
-                  fill="#8884d8"
-                  dataKey="value"
-                >
-                  {pieChartData.map((entry, index) => (
-                    <Cell key={`cell-${index}`} fill={GRADE_COLORS[entry.grade] || '#8884d8'} />
-                  ))}
-                </Pie>
-                <Tooltip 
-                  contentStyle={{ 
-                    backgroundColor: 'hsl(var(--card))',
-                    border: '1px solid hsl(var(--border))',
-                    borderRadius: '8px'
-                  }}
-                />
-                <Legend />
-              </PieChart>
-            </ResponsiveContainer>
-          </div>
-        ) : (
-          <p className="text-muted-foreground text-center py-8">No grade data available yet</p>
-        )}
-      </div>
-
-      {/* Subject Performance Chart */}
-      <div className="card-elevated p-6 animate-fade-in">
-        <div className="flex items-center justify-between mb-6">
-          <h3 className="font-display font-semibold text-lg text-card-foreground">
-            Subject Performance Overview
-          </h3>
-          {performanceData.length > 0 && (
-            <Button variant="outline" size="sm" onClick={handleDownloadSubjectPerformance}>
-              <FileDown className="w-4 h-4 mr-2" />
-              Download PDF
-            </Button>
-          )}
-        </div>
-        {performanceData.length > 0 ? (
-          <div ref={subjectChartRef} className="h-80 bg-white dark:bg-gray-900 rounded-lg p-2">
-            <ResponsiveContainer width="100%" height="100%">
-              <BarChart data={performanceData} margin={{ top: 20, right: 30, left: 20, bottom: 5 }}>
-                <CartesianGrid strokeDasharray="3 3" className="opacity-30" />
-                <XAxis dataKey="name" tick={{ fontSize: 12 }} />
-                <YAxis domain={[0, 100]} tick={{ fontSize: 12 }} />
-                <Tooltip 
-                  contentStyle={{ 
-                    backgroundColor: 'hsl(var(--card))',
-                    border: '1px solid hsl(var(--border))',
-                    borderRadius: '8px'
-                  }}
-                />
-                <Bar dataKey="score" fill="hsl(var(--primary))" radius={[4, 4, 0, 0]} />
-              </BarChart>
-            </ResponsiveContainer>
-          </div>
-        ) : (
-          <p className="text-muted-foreground text-center py-8">No marks recorded yet for this student</p>
-        )}
-      </div>
-
-
-      {/* Subject Analysis Table with Class Ranking */}
+      {/* 1. Subject Analysis & Class Ranking */}
       <div className="card-elevated p-6 animate-fade-in">
         <h3 className="font-display font-semibold text-lg mb-6 text-card-foreground flex items-center gap-2">
           <Target className="w-5 h-5 text-primary" />
@@ -1098,7 +783,7 @@ export function ParentDashboard() {
                 {subjectRankings.map((item, index) => {
                   const isTop = index === 0;
                   const isFirst = item.rank === 1;
-                  const needsSupport = index === subjectRankings.length - 1 && item.score < 50;
+                  const needsSupport = index === subjectRankings.length - 1 && item.score < 45;
                   
                   return (
                     <tr key={item.subject_id} className="border-b border-border/50 table-row-hover">
@@ -1156,9 +841,9 @@ export function ParentDashboard() {
               </thead>
               <tbody>
                 {subjectAverages.map((item, index) => {
-                  const grade = item.average >= 75 ? 'A' : item.average >= 65 ? 'B' : item.average >= 50 ? 'C' : item.average >= 40 ? 'D' : 'F';
+                  const grade = item.average >= 75 ? 'A' : item.average >= 65 ? 'B' : item.average >= 45 ? 'C' : item.average >= 30 ? 'D' : 'F';
                   const isTop = index === 0;
-                  const needsSupport = index === subjectAverages.length - 1 && item.average < 50;
+                  const needsSupport = index === subjectAverages.length - 1 && item.average < 45;
                   
                   return (
                     <tr key={item.subject} className="border-b border-border/50 table-row-hover">
@@ -1189,6 +874,318 @@ export function ParentDashboard() {
           </div>
         ) : (
           <p className="text-muted-foreground text-center py-8">No subject data available yet</p>
+        )}
+      </div>
+
+      {/* 2. Subject Performance Overview */}
+      <div className="card-elevated p-6 animate-fade-in">
+        <div className="flex items-center justify-between mb-6">
+          <h3 className="font-display font-semibold text-lg text-card-foreground">
+            Subject Performance Overview
+          </h3>
+          {performanceData.length > 0 && (
+            <Button variant="outline" size="sm" onClick={handleDownloadSubjectPerformance}>
+              <FileDown className="w-4 h-4 mr-2" />
+              Download PDF
+            </Button>
+          )}
+        </div>
+        {performanceData.length > 0 ? (
+          <div ref={subjectChartRef} className="h-80 bg-white dark:bg-gray-900 rounded-lg p-2">
+            <ResponsiveContainer width="100%" height="100%">
+              <BarChart data={performanceData} margin={{ top: 20, right: 30, left: 20, bottom: 5 }}>
+                <CartesianGrid strokeDasharray="3 3" className="opacity-30" />
+                <XAxis dataKey="name" tick={{ fontSize: 12 }} />
+                <YAxis domain={[0, 100]} tick={{ fontSize: 12 }} />
+                <Tooltip 
+                  contentStyle={{ 
+                    backgroundColor: 'hsl(var(--card))',
+                    border: '1px solid hsl(var(--border))',
+                    borderRadius: '8px'
+                  }}
+                />
+                <Bar dataKey="score" fill="hsl(var(--primary))" radius={[4, 4, 0, 0]} />
+              </BarChart>
+            </ResponsiveContainer>
+          </div>
+        ) : (
+          <p className="text-muted-foreground text-center py-8">No marks recorded yet for this student</p>
+        )}
+      </div>
+
+      {/* 3. Grade Distribution Pie Chart */}
+      <div className="card-elevated p-6 animate-fade-in">
+        <div className="flex items-center justify-between mb-6">
+          <h3 className="font-display font-semibold text-lg text-card-foreground">
+            Grade Distribution
+          </h3>
+          {pieChartData.length > 0 && (
+            <Button variant="outline" size="sm" onClick={handleDownloadGradeDistribution}>
+              <FileDown className="w-4 h-4 mr-2" />
+              Download PDF
+            </Button>
+          )}
+        </div>
+        {pieChartData.length > 0 ? (
+          <div ref={gradeChartRef} className="h-80 bg-white dark:bg-gray-900 rounded-lg p-2">
+            <ResponsiveContainer width="100%" height="100%">
+              <PieChart>
+                <Pie
+                  data={pieChartData}
+                  cx="50%"
+                  cy="50%"
+                  labelLine={false}
+                  label={({ name, percent }) => `${name} (${(percent * 100).toFixed(0)}%)`}
+                  outerRadius={100}
+                  fill="#8884d8"
+                  dataKey="value"
+                >
+                  {pieChartData.map((entry, index) => (
+                    <Cell key={`cell-${index}`} fill={GRADE_COLORS[entry.grade] || '#8884d8'} />
+                  ))}
+                </Pie>
+                <Tooltip 
+                  contentStyle={{ 
+                    backgroundColor: 'hsl(var(--card))',
+                    border: '1px solid hsl(var(--border))',
+                    borderRadius: '8px'
+                  }}
+                />
+                <Legend />
+              </PieChart>
+            </ResponsiveContainer>
+          </div>
+        ) : (
+          <p className="text-muted-foreground text-center py-8">No grade data available yet</p>
+        )}
+      </div>
+
+      {/* 4. Stats Cards */}
+      <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-5 gap-6">
+        <StatCard
+          title="Class Rank"
+          value={classRank ? `${classRank}/${totalClassStudents}` : '-'}
+          subtitle={classRank === 1 ? 'Top of class!' : classRank && classRank <= 3 ? 'Top 3!' : 'Overall position'}
+          icon={Trophy}
+          variant={classRank === 1 ? 'success' : classRank && classRank <= 3 ? 'primary' : 'default'}
+          bgStyle="silk"
+        />
+        <StatCard
+          title="Subjects"
+          value={uniqueSubjects.length.toString()}
+          subtitle="Registered subjects"
+          icon={BookOpen}
+          variant="primary"
+          bgStyle="cherries"
+        />
+        <StatCard
+          title="Top Subject"
+          value={topSubject?.subject || '-'}
+          subtitle={topSubject ? `${topSubject.average}%` : '-'}
+          icon={TrendingUp}
+          variant="success"
+          bgStyle="silk"
+        />
+        <StatCard
+          title="Needs Support"
+          value={needSupportSubject?.subject || '-'}
+          subtitle={needSupportSubject ? `${needSupportSubject.average}%` : '-'}
+          icon={TrendingDown}
+          variant="warning"
+          bgStyle="cherries"
+        />
+        <StatCard
+          title="Fee Balance"
+          value={balance > 0 ? `TZS ${(balance / 1000000).toFixed(1)}M` : 'None'}
+          subtitle={balance > 0 ? 'Outstanding' : 'Fully paid'}
+          icon={DollarSign}
+          variant={balance > 0 ? 'warning' : 'success'}
+          bgStyle="silk"
+        />
+      </div>
+
+      {/* 5. Summary of Series */}
+      {studentSubjectSummary.length > 0 && studentSeriesLabels.length > 0 && (
+        <SeriesSummaryTable
+          title={`SUMMARY OF SERIES - ${childName.toUpperCase()}`}
+          subtitle={`Class: ${childClass} | All Series Results`}
+          data={studentSubjectSummary}
+          seriesLabels={studentSeriesLabels}
+          showPosition={true}
+          showAveragePerSeries={true}
+          averagePerSeries={studentAveragePerSeries}
+          pdfFileName={`${childName.replace(/\s+/g, '_')}_series_summary`}
+        />
+      )}
+
+      {/* 6. Grade Performance Trend */}
+      {Object.keys(studentAveragePerSeries).length > 0 && (
+        <SeriesPerformanceChart
+          data={Object.entries(studentAveragePerSeries).map(([series, avg]) => ({
+            name: series,
+            Average: Number(avg.toFixed(1))
+          }))}
+          title="Grade Performance Trend"
+          seriesKeys={['Average']}
+          pdfFileName={`${childName}_series_performance.pdf`}
+        />
+      )}
+
+      {/* 7. Fee Status */}
+      <div className="card-elevated p-6 animate-fade-in">
+        <h3 className="font-display font-semibold text-lg mb-6 text-card-foreground flex items-center gap-2">
+          <DollarSign className="w-5 h-5 text-primary" />
+          Fee Status - {selectedYear} ({selectedTerm})
+        </h3>
+        {expectedFee > 0 || paidAmount > 0 ? (
+          <>
+            <div className="grid grid-cols-1 md:grid-cols-3 gap-6 mb-6">
+              <div className="p-4 rounded-lg bg-muted/50">
+                <p className="text-sm text-muted-foreground">Expected Fee</p>
+                <p className="text-2xl font-bold text-card-foreground">
+                  {expectedFee > 0 ? `TZS ${expectedFee.toLocaleString()}` : 'Not Set'}
+                </p>
+              </div>
+              <div className="p-4 rounded-lg bg-success/10">
+                <p className="text-sm text-muted-foreground">Paid Amount</p>
+                <p className="text-2xl font-bold text-success">TZS {paidAmount.toLocaleString()}</p>
+              </div>
+              <div className={`p-4 rounded-lg ${balance > 0 ? 'bg-destructive/10' : 'bg-success/10'}`}>
+                <p className="text-sm text-muted-foreground">Balance</p>
+                <p className={`text-2xl font-bold ${balance > 0 ? 'text-destructive' : 'text-success'}`}>
+                  {expectedFee > 0 ? (balance > 0 ? `TZS ${balance.toLocaleString()}` : 'Fully Paid') : 'N/A'}
+                </p>
+              </div>
+            </div>
+            
+            {expectedFee > 0 && (
+              <div className="mb-4">
+                <div className="flex justify-between text-sm mb-2">
+                  <span className="text-muted-foreground">Payment Progress</span>
+                  <span className="font-medium text-card-foreground">
+                    {Math.round((paidAmount / expectedFee) * 100)}%
+                  </span>
+                </div>
+                <div className="h-3 bg-muted rounded-full overflow-hidden">
+                  <div 
+                    className="h-full bg-gradient-to-r from-primary to-success rounded-full transition-all duration-500"
+                    style={{ width: `${Math.min((paidAmount / expectedFee) * 100, 100)}%` }}
+                  />
+                </div>
+              </div>
+            )}
+
+            {feePayments.length > 0 && (
+              <div className="mt-6">
+                <h4 className="font-medium text-card-foreground mb-4">Payment History</h4>
+                <div className="space-y-3">
+                  {feePayments.map((payment, index) => (
+                    <div key={index} className="flex items-center justify-between p-3 rounded-lg bg-muted/30">
+                      <div>
+                        <p className="font-medium text-card-foreground">TZS {Number(payment.amount).toLocaleString()}</p>
+                        <p className="text-sm text-muted-foreground">{payment.payment_method}</p>
+                      </div>
+                      <div className="text-right">
+                        <p className="text-sm text-muted-foreground">
+                          {new Date(payment.payment_date).toLocaleDateString()}
+                        </p>
+                      </div>
+                    </div>
+                  ))}
+                </div>
+              </div>
+            )}
+          </>
+        ) : (
+          <p className="text-muted-foreground text-center py-8">
+            No fee information available for {selectedYear} - {selectedTerm}
+          </p>
+        )}
+      </div>
+
+      {/* Historical Debts */}
+      {historicalDebts.length > 0 && (
+        <div className="card-elevated p-6 animate-fade-in border-l-4 border-l-destructive">
+          <h3 className="font-display font-semibold text-lg mb-6 text-card-foreground flex items-center gap-2">
+            <AlertTriangle className="w-5 h-5 text-destructive" />
+            Outstanding Debts from Previous Periods
+          </h3>
+          <div className="space-y-4">
+            {historicalDebts.map((debt) => (
+              <div key={debt.id} className="p-4 rounded-lg bg-destructive/10 border border-destructive/20">
+                <div className="flex items-center justify-between">
+                  <div>
+                    <p className="font-medium text-card-foreground">
+                      {debt.academic_year} - {debt.term}
+                    </p>
+                    <p className="text-sm text-muted-foreground">
+                      Original: TZS {Number(debt.original_amount).toLocaleString()} | 
+                      Paid: TZS {Number(debt.amount_paid).toLocaleString()}
+                    </p>
+                  </div>
+                  <div className="text-right">
+                    <p className="text-xl font-bold text-destructive">
+                      TZS {Number(debt.outstanding_balance).toLocaleString()}
+                    </p>
+                    <p className="text-sm text-muted-foreground">Outstanding</p>
+                  </div>
+                </div>
+              </div>
+            ))}
+            <div className="p-4 rounded-lg bg-destructive/20 border border-destructive/30">
+              <div className="flex items-center justify-between">
+                <p className="font-semibold text-card-foreground">Total Outstanding Debt</p>
+                <p className="text-2xl font-bold text-destructive">
+                  TZS {historicalDebts.reduce((sum, d) => sum + Number(d.outstanding_balance), 0).toLocaleString()}
+                </p>
+              </div>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* 8. School Notices - Last */}
+      <div className="card-elevated p-6 animate-fade-in overflow-hidden">
+        <h3 className="font-display font-semibold text-lg mb-6 text-card-foreground flex items-center gap-2">
+          <Megaphone className="w-5 h-5 text-primary" />
+          School Notices
+        </h3>
+        {announcements.length > 0 ? (
+          <div className="space-y-4">
+            {announcements.map((announcement, index) => (
+              <div 
+                key={announcement.id} 
+                className="p-3 sm:p-4 rounded-lg bg-muted/30 border border-border/50 animate-slide-up overflow-hidden"
+                style={{ animationDelay: `${index * 100}ms` }}
+              >
+                <div className="flex items-start gap-2 sm:gap-3">
+                  <div className="w-8 h-8 sm:w-10 sm:h-10 rounded-lg bg-primary/10 flex items-center justify-center shrink-0">
+                    <Megaphone className="w-4 h-4 sm:w-5 sm:h-5 text-primary" />
+                  </div>
+                  <div className="flex-1 min-w-0 overflow-hidden">
+                    <h4 className="font-semibold text-card-foreground break-words overflow-wrap-anywhere">{announcement.title}</h4>
+                    <p className="text-sm text-muted-foreground mt-1 whitespace-pre-wrap break-words overflow-wrap-anywhere" style={{ wordBreak: 'break-word', overflowWrap: 'anywhere' }}>{announcement.content}</p>
+                    <div className="flex flex-wrap items-center gap-2 sm:gap-4 mt-2 text-xs text-muted-foreground">
+                      <span className="flex items-center gap-1">
+                        <User className="w-3 h-3" />
+                        <span className="truncate max-w-[100px] sm:max-w-none">{announcement.created_by}</span>
+                      </span>
+                      <span className="flex items-center gap-1">
+                        <Calendar className="w-3 h-3" />
+                        {new Date(announcement.created_at).toLocaleDateString('en-US', {
+                          year: 'numeric',
+                          month: 'short',
+                          day: 'numeric'
+                        })}
+                      </span>
+                    </div>
+                  </div>
+                </div>
+              </div>
+            ))}
+          </div>
+        ) : (
+          <p className="text-muted-foreground text-center py-8">No announcements at this time</p>
         )}
       </div>
     </div>
