@@ -76,6 +76,7 @@ export function ParentDashboard() {
   const [childName, setChildName] = useState('');
   const [childClass, setChildClass] = useState('');
   const [childBoardingType, setChildBoardingType] = useState('day');
+  const [childStream, setChildStream] = useState<string | null>(null);
   const [studentId, setStudentId] = useState('');
   const [studentAvatarUrl, setStudentAvatarUrl] = useState<string | null>(null);
   const [studentMarks, setStudentMarks] = useState<StudentMark[]>([]);
@@ -237,6 +238,7 @@ export function ParentDashboard() {
         
         setChildName(studentData.full_name);
         setChildClass(studentData.class);
+        setChildStream(studentData.stream || null);
         setChildBoardingType(studentData.boarding_type || 'day');
         setStudentId(studentData.id);
         setStudentAvatarUrl(studentData.avatar_url || null);
@@ -665,7 +667,7 @@ export function ParentDashboard() {
           <div>
             <h2 className="text-2xl sm:text-3xl font-display font-bold text-primary drop-shadow-sm">{childName}</h2>
             <p className="text-muted-foreground mt-1">
-              Class {childClass} • {childBoardingType === 'boarding' ? 'Boarding' : 'Day'} Student
+              Class {childClass}{childStream ? ` ${childStream}` : ''} • {childBoardingType === 'boarding' ? 'Boarding' : 'Day'} Student
             </p>
           </div>
           
