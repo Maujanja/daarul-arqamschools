@@ -342,11 +342,14 @@ export default function MarksEntryPage() {
         setMarks(prev => prev.map(mark => {
           const existingMark = result.data!.find(m => m.student_id === mark.studentId);
           if (existingMark) {
+            // Recalculate grade from stored marks to ensure consistency
+            const percentage = (existingMark.total / maxMarks) * 100;
+            const recalcGrade = existingMark.total > 0 ? calculateGrade(percentage) : '-';
             return {
               ...mark,
               exam: existingMark.exam,
               total: existingMark.total,
-              grade: existingMark.grade,
+              grade: recalcGrade,
             };
           }
           return mark;
@@ -677,8 +680,9 @@ export default function MarksEntryPage() {
     if (value === '' || value === '-') return '';
     const percentage = (Number(value) / maxMarks) * 100;
     if (percentage >= 75) return 'border-success/50 bg-success/5';
-    if (percentage >= 50) return 'border-primary/50 bg-primary/5';
-    if (percentage >= 40) return 'border-warning/50 bg-warning/5';
+    if (percentage >= 65) return 'border-primary/50 bg-primary/5';
+    if (percentage >= 45) return 'border-warning/50 bg-warning/5';
+    if (percentage >= 30) return 'border-orange-500/50 bg-orange-500/5';
     return 'border-destructive/50 bg-destructive/5';
   };
 
