@@ -35,14 +35,21 @@ export default function SubjectsPage() {
   const [subjects, setSubjects] = useState<Subject[]>([]);
   const [loading, setLoading] = useState(true);
   const [showAddDialog, setShowAddDialog] = useState(false);
+  const [showEditDialog, setShowEditDialog] = useState(false);
+  const [selectedSubject, setSelectedSubject] = useState<Subject | null>(null);
   const [newSubject, setNewSubject] = useState({
+    name: '',
+    code: '',
+    max_marks: '100',
+  });
+  const [editSubject, setEditSubject] = useState({
     name: '',
     code: '',
     max_marks: '100',
   });
   const [saving, setSaving] = useState(false);
   const { fetchTable } = useSecureQuery();
-  const { insert, remove } = useSecureData();
+  const { insert, update, remove } = useSecureData();
 
   useEffect(() => {
     fetchSubjects();
@@ -85,6 +92,45 @@ export default function SubjectsPage() {
     } catch (error: any) {
       console.error('Error adding subject:', error);
       toast.error(error.message || 'Failed to add subject');
+    } finally {
+      setSaving(false);
+    }
+  };
+
+  const handleOpenEditDialog = (subject: Subject) => {
+    setSelectedSubject(subject);
+    setEditSubject({
+      name: subject.name,
+      code: subject.code,
+      max_marks: String(subject.max_marks),
+    });
+    setShowEditDialog(true);
+  };
+
+  const handleEditSubject = async () => {
+    if (!selectedSubject || !editSubject.name || !editSubject.code) {
+      toast.error('Please fill in all required fields');
+      return;
+    }
+
+    try {
+      setSaving(true);
+
+      const result = await update('subjects', {
+        name: editSubject.name,
+        code: editSubject.code.toUpperCase(),
+        max_marks: parseInt(editSubject.max_marks) || 100,
+      }, { id: selectedSubject.id });
+
+      if (!result.success) throw new Error(result.error);
+
+      toast.success('Subject updated successfully');
+      setShowEditDialog(false);
+      setSelectedSubject(null);
+      fetchSubjects();
+    } catch (error: any) {
+      console.error('Error updating subject:', error);
+      toast.error(error.message || 'Failed to update subject');
     } finally {
       setSaving(false);
     }
@@ -164,7 +210,7 @@ export default function SubjectsPage() {
                     </Button>
                   </DropdownMenuTrigger>
                   <DropdownMenuContent align="end">
-                    <DropdownMenuItem>Edit</DropdownMenuItem>
+                    <DropdownMenuItem onClick={() => handleOpenEditDialog(subject)}>Edit</DropdownMenuItem>
                     <DropdownMenuItem 
                       className="text-destructive"
                       onClick={() => handleDeleteSubject(subject.id)}
@@ -244,6 +290,57 @@ export default function SubjectsPage() {
               Cancel
             </Button>
             <Button onClick={handleAddSubject} disabled={saving}>
+              {saving && <Loader2 className="w-4 h-4 mr-2 animate-spin" />}
+              Save
+            </Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
+
+      {/* Edit Subject Dialog */}
+      <Dialog open={showEditDialog} onOpenChange={setShowEditDialog}>
+        <DialogContent>
+          <DialogHeader>
+            <DialogTitle>Edit Subject</DialogTitle>
+            <DialogDescription>
+              Update the subject's information below
+            </DialogDescription>
+          </DialogHeader>
+          <div className="space-y-4 py-4">
+            <div className="space-y-2">
+              <Label htmlFor="edit-name">Subject Name</Label>
+              <Input
+                id="edit-name"
+                value={editSubject.name}
+                onChange={(e) => setEditSubject({ ...editSubject, name: e.target.value })}
+                placeholder="e.g. Mathematics"
+              />
+            </div>
+            <div className="space-y-2">
+              <Label htmlFor="edit-code">Subject Code</Label>
+              <Input
+                id="edit-code"
+                value={editSubject.code}
+                onChange={(e) => setEditSubject({ ...editSubject, code: e.target.value })}
+                placeholder="e.g. MATH"
+              />
+            </div>
+            <div className="space-y-2">
+              <Label htmlFor="edit-max_marks">Maximum Marks</Label>
+              <Input
+                id="edit-max_marks"
+                type="number"
+                value={editSubject.max_marks}
+                onChange={(e) => setEditSubject({ ...editSubject, max_marks: e.target.value })}
+                placeholder="100"
+              />
+            </div>
+          </div>
+          <DialogFooter>
+            <Button variant="outline" onClick={() => setShowEditDialog(false)}>
+              Cancel
+            </Button>
+            <Button onClick={handleEditSubject} disabled={saving}>
               {saving && <Loader2 className="w-4 h-4 mr-2 animate-spin" />}
               Save
             </Button>
