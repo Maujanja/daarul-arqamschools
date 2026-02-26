@@ -309,14 +309,14 @@ export function TeacherDashboard() {
         <CardContent>
           <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
             <div className="space-y-2">
-              <label className="text-sm font-medium text-muted-foreground">Test</label>
+              <label className="text-sm font-medium text-muted-foreground">Series</label>
               <Select value={selectedTerm} onValueChange={setSelectedTerm}>
                 <SelectTrigger>
-                  <SelectValue placeholder="Select term" />
+                  <SelectValue placeholder="Select series" />
                 </SelectTrigger>
                 <SelectContent>
                   {terms.map((term) => (
-                    <SelectItem key={term} value={term}>{term}</SelectItem>
+                    <SelectItem key={term} value={term}>Series {term.replace(/\D/g, '')}</SelectItem>
                   ))}
                 </SelectContent>
               </Select>

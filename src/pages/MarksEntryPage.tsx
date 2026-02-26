@@ -18,6 +18,7 @@ import { useAcademicYears } from '@/hooks/useAcademicYears';
 import { useSecureQuery } from '@/hooks/useSecureQuery';
 import { useSecureData } from '@/hooks/useSecureData';
 import { getStreamsForClass, hasStreams } from '@/utils/classStreams';
+import { getTestsForClass, getFilterLabel, getTestDisplayName } from '@/utils/seniorGrading';
 
 interface Student {
   id: string;
@@ -750,14 +751,16 @@ export default function MarksEntryPage() {
               </Select>
             </div>
             <div className="space-y-2">
-              <label className="text-sm font-medium text-muted-foreground">Test</label>
+              <label className="text-sm font-medium text-muted-foreground">{selectedClass ? getFilterLabel(selectedClass) : 'Series'}</label>
               <div className="flex gap-2">
                 <Select value={selectedTerm} onValueChange={setSelectedTerm}>
                   <SelectTrigger className="flex-1">
-                    <SelectValue placeholder="Select term" />
+                    <SelectValue placeholder="Select series" />
                   </SelectTrigger>
                   <SelectContent>
-                    {availableTerms.map((term) => (
+                    {selectedClass ? getTestsForClass(selectedClass).map((t) => (
+                      <SelectItem key={t.value} value={t.value}>{t.label}</SelectItem>
+                    )) : availableTerms.map((term) => (
                       <SelectItem key={term} value={term}>{term}</SelectItem>
                     ))}
                   </SelectContent>
@@ -857,7 +860,7 @@ export default function MarksEntryPage() {
               <div className="p-3 bg-muted/50 rounded-lg text-sm">
                 <p><strong>Darasa:</strong> {selectedClass}</p>
                 <p><strong>Somo:</strong> {selectedSubjectData?.name}</p>
-                <p><strong>Test:</strong> {selectedTerm}</p>
+                <p><strong>Series:</strong> {selectedClass ? getTestDisplayName(selectedTerm, selectedClass) : selectedTerm}</p>
                 <p><strong>Mwaka:</strong> {selectedYear}</p>
                 {lockedStudentIds.size > 0 && (
                   <p className="mt-2 text-primary"><strong>Wanafunzi ({lockedStudentIds.size}):</strong> {marks.filter(m => lockedStudentIds.has(m.studentId)).map(m => m.studentName).join(', ')}</p>
@@ -962,7 +965,7 @@ export default function MarksEntryPage() {
                     <h3 className="font-display font-semibold text-lg text-card-foreground">
                       Class {selectedClass}{selectedStream ? ` ${selectedStream}` : ''} - {selectedSubjectData?.name || 'Select Subject'}
                     </h3>
-                    <p className="text-sm text-muted-foreground">{marks.length} students • {selectedTerm} • {selectedYear}</p>
+                    <p className="text-sm text-muted-foreground">{marks.length} students • {selectedClass ? getTestDisplayName(selectedTerm, selectedClass) : selectedTerm} • {selectedYear}</p>
                   </div>
                   <div className="flex items-center gap-2 flex-wrap">
                     {/* Omba Idhini button - visible when there are locked students and no existing request */}
