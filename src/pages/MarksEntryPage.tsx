@@ -396,11 +396,6 @@ export default function MarksEntryPage() {
   const handleRequestUnlock = async () => {
     if (!user?.id || !selectedClass || !selectedSubject || !selectedTerm || !selectedYear) return;
     
-    // Collect names of locked students
-    const lockedStudentNames = marks
-      .filter(m => lockedStudentIds.has(m.studentId))
-      .map(m => m.studentName);
-    
     setIsRequestingUnlock(true);
     try {
       const result = await insert('marks_unlock_requests', {
@@ -411,8 +406,7 @@ export default function MarksEntryPage() {
         subject_name: selectedSubjectData?.name || '',
         term: selectedTerm,
         academic_year: selectedYear,
-        reason: (unlockReason || 'Nahitaji kubadilisha maksi') + 
-          (lockedStudentNames.length > 0 ? `\n\nWanafunzi: ${lockedStudentNames.join(', ')}` : ''),
+        reason: unlockReason || `Nahitaji kubadilisha maksi za wanafunzi ${lockedStudentIds.size}`,
         status: 'pending',
       });
       
@@ -863,7 +857,7 @@ export default function MarksEntryPage() {
                 <p><strong>Series:</strong> {selectedClass ? getTestDisplayName(selectedTerm, selectedClass) : selectedTerm}</p>
                 <p><strong>Mwaka:</strong> {selectedYear}</p>
                 {lockedStudentIds.size > 0 && (
-                  <p className="mt-2 text-primary"><strong>Wanafunzi ({lockedStudentIds.size}):</strong> {marks.filter(m => lockedStudentIds.has(m.studentId)).map(m => m.studentName).join(', ')}</p>
+                  <p className="mt-2 text-primary"><strong>Wanafunzi waliofungwa:</strong> {lockedStudentIds.size}</p>
                 )}
               </div>
               <div className="space-y-2">
