@@ -215,9 +215,14 @@ serve(async (req) => {
             { status: 400, headers: { ...corsHeaders, "Content-Type": "application/json" } }
           );
         }
+        // For marks table, specify the unique constraint columns for proper upsert
+        const upsertOptions: Record<string, string> = {};
+        if (table === "marks") {
+          upsertOptions.onConflict = "student_id,subject_id,term,academic_year";
+        }
         const { data: upsertData, error } = await supabase
           .from(table)
-          .upsert(data)
+          .upsert(data, upsertOptions)
           .select();
         
         if (error) throw error;
