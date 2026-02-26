@@ -91,19 +91,19 @@ export const calculateDivision = (subjectScores: number[]): { division: string; 
  * Primary & Nursery: Series 1-11
  */
 
-// Senior 1 & 3 test name mapping (Test 1-6 only)
+// Senior 1 & 3 test name mapping (Series 1-6 only)
 const SENIOR_1_3_TEST_NAMES: Record<string, string> = {
-  'Test 1': 'CAT 1',
-  'Test 2': 'CAT 2',
-  'Test 3': 'TERMINAL',
-  'Test 4': 'CAT 3',
-  'Test 5': 'CAT 4',
-  'Test 6': 'ANNUAL',
+  'Series 1': 'CAT 1',
+  'Series 2': 'CAT 2',
+  'Series 3': 'TERMINAL',
+  'Series 4': 'CAT 3',
+  'Series 5': 'CAT 4',
+  'Series 6': 'ANNUAL',
 };
 
 /**
  * Get the display name for a test based on the class
- * @param testName - Internal test name (e.g., "Test 1")
+ * @param testName - Internal test name (e.g., "Series 1")
  * @param className - Class name (e.g., "Senior 1", "Primary 3")
  * @returns Display name for the test
  */
@@ -112,12 +112,7 @@ export const getTestDisplayName = (testName: string, className: string): string 
     return SENIOR_1_3_TEST_NAMES[testName] || testName;
   }
   
-  // For all other classes (Senior 2, 4, Primary, Nursery): use "Series X"
-  const match = testName.match(/Test\s+(\d+)/i);
-  if (match) {
-    return `Series ${match[1]}`;
-  }
-  
+  // For all other classes: use "Series X" as-is
   return testName;
 };
 
@@ -136,7 +131,7 @@ export const getTestsForClass = (className: string): { value: string; label: str
   
   // For all other classes: 11 series
   return Array.from({ length: 11 }, (_, i) => ({
-    value: `Test ${i + 1}`,
+    value: `Series ${i + 1}`,
     label: `Series ${i + 1}`,
   }));
 };
@@ -151,7 +146,7 @@ export const getSeriesLabel = (testName: string, className: string): string => {
     return SENIOR_1_3_TEST_NAMES[testName] || testName;
   }
   
-  const match = testName.match(/Test\s+(\d+)/i);
+  const match = testName.match(/Series\s+(\d+)/i);
   if (match) {
     return `S${match[1]}`;
   }

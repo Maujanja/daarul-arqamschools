@@ -138,8 +138,8 @@ export default function SettingsPage() {
               <Input id="academic_year" defaultValue="2024/2025" className="input-enhanced" />
             </div>
             <div className="space-y-2">
-              <Label htmlFor="current_term">Current Test</Label>
-              <Input id="current_term" defaultValue="Test 1" className="input-enhanced" />
+              <Label htmlFor="current_term">Current Series</Label>
+              <Input id="current_term" defaultValue="Series 1" className="input-enhanced" />
             </div>
           </div>
         </div>
