@@ -181,9 +181,14 @@ export default function UnlockRequestsPage() {
                           <div><span className="font-medium">Mwaka:</span> {request.academic_year}</div>
                         </div>
                         {request.reason && (
-                          <p className="text-sm bg-muted/50 p-3 rounded-lg">
-                            <span className="font-medium">Sababu:</span> {request.reason}
-                          </p>
+                          <div className="text-sm bg-muted/50 p-3 rounded-lg space-y-1">
+                            {request.reason.split('\n').map((line, i) => (
+                              <p key={i} className={line.startsWith('Wanafunzi:') ? 'font-medium text-primary' : ''}>
+                                {i === 0 && <span className="font-medium">Sababu: </span>}
+                                {line}
+                              </p>
+                            ))}
+                          </div>
                         )}
                         <p className="text-xs text-muted-foreground mt-2">
                           {new Date(request.created_at).toLocaleString()}
