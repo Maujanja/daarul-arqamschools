@@ -85,11 +85,14 @@ serve(async (req) => {
           break;
         }
 
-        const { data, error } = await supabase
+        // Fetch all teachers and match with trimmed names to handle trailing spaces in DB
+        const { data: allTeachers, error } = await supabase
           .from("teachers")
-          .select("id, full_name, email, password_hash")
-          .ilike("full_name", name.trim())
-          .maybeSingle();
+          .select("id, full_name, email, password_hash");
+
+        const data = allTeachers?.find(
+          (t: any) => t.full_name.trim().toLowerCase() === name.trim().toLowerCase()
+        );
 
         if (error || !data) {
           response = { success: false, error: "Teacher name not found" };
