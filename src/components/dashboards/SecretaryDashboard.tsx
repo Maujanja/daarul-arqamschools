@@ -50,6 +50,7 @@ interface Student {
   id: string;
   full_name: string;
   class: string;
+  stream: string | null;
   roll_number: string;
   boarding_type?: string;
   custom_fee?: number | null;
@@ -1131,6 +1132,9 @@ export function SecretaryDashboard() {
                                     />
                                     <div>
                                       <span>{student.full_name}</span>
+                                      {student.stream && (
+                                        <span className="ml-1 text-xs text-muted-foreground">({student.stream})</span>
+                                      )}
                                       {hasDiscount && (
                                         <span className="ml-2 inline-flex items-center gap-1 px-1.5 py-0.5 rounded text-xs font-medium bg-success/10 text-success">
                                           <Percent className="w-3 h-3" />
@@ -1214,7 +1218,7 @@ export function SecretaryDashboard() {
                   return (
                     <tr key={student.id} className="border-b border-border/50 table-row-hover">
                       <td className="py-4 px-4 font-medium text-card-foreground">{student.full_name}</td>
-                      <td className="py-4 px-4 text-card-foreground">{student.class}</td>
+                      <td className="py-4 px-4 text-card-foreground">{student.stream ? `${student.class} ${student.stream}` : student.class}</td>
                       <td className="py-4 px-4 text-right text-card-foreground">TZS {expectedFee.toLocaleString()}</td>
                       <td className="py-4 px-4 text-right text-success font-medium">TZS {paidAmount.toLocaleString()}</td>
                       <td className="py-4 px-4 text-right">
@@ -1297,7 +1301,7 @@ export function SecretaryDashboard() {
                 <SelectContent>
                   {students.map((student) => (
                     <SelectItem key={student.id} value={student.id}>
-                      {student.full_name} - {student.class}
+                      {student.full_name} - {student.stream ? `${student.class} ${student.stream}` : student.class}
                     </SelectItem>
                   ))}
                 </SelectContent>
