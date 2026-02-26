@@ -240,28 +240,37 @@ export default function MarksEntryPage() {
       
       let studentsToShow: Student[] = [];
       
+      // Helper: match stream (include records with null stream for backward compatibility)
+      const matchesStream = (recordStream: string | null | undefined) => {
+        if (!selectedStream) return true; // No stream filter
+        return recordStream === selectedStream || !recordStream; // Match selected or null/empty
+      };
+      
       if (isTeacher && user?.id) {
         const filters: Record<string, unknown> = {
           teacher_id: user.id,
           class: selectedClass,
           subject_id: selectedSubject
         };
-        if (selectedStream) filters.stream = selectedStream;
+        // Don't filter by stream at DB level - filter client-side for backward compat
         
-        const selectedStudents = await fetchTable<TeacherClassStudent>('teacher_class_students', filters);
+        const selectedStudents = await fetchTable<TeacherClassStudent & { stream?: string | null }>('teacher_class_students', filters);
         
         if (selectedStudents && selectedStudents.length > 0) {
-          const studentIds = selectedStudents.map(s => s.student_id);
-          const studentFilters: Record<string, unknown> = { class: selectedClass };
-          if (selectedStream) studentFilters.stream = selectedStream;
-          const allStudents = await fetchTable<Student>('students', studentFilters);
-          studentsToShow = allStudents.filter(s => studentIds.includes(s.id)).sort((a, b) => a.roll_number.localeCompare(b.roll_number));
+          // Client-side stream filter: include records where stream matches OR stream is null
+          const filteredSelections = selectedStudents.filter(s => matchesStream(s.stream));
+          const studentIds = filteredSelections.map(s => s.student_id);
+          const allStudents = await fetchTable<Student & { stream?: string | null }>('students', { class: selectedClass });
+          studentsToShow = allStudents
+            .filter(s => studentIds.includes(s.id))
+            .sort((a, b) => a.roll_number.localeCompare(b.roll_number));
         }
       } else {
-        const studentFilters: Record<string, unknown> = { class: selectedClass };
-        if (selectedStream) studentFilters.stream = selectedStream;
-        const allStudents = await fetchTable<Student>('students', studentFilters);
-        studentsToShow = allStudents.sort((a, b) => a.roll_number.localeCompare(b.roll_number));
+        const allStudents = await fetchTable<Student & { stream?: string | null }>('students', { class: selectedClass });
+        // Client-side stream filter for backward compat
+        studentsToShow = allStudents
+          .filter(s => matchesStream((s as any).stream))
+          .sort((a, b) => a.roll_number.localeCompare(b.roll_number));
       }
       
       setStudents(studentsToShow);
