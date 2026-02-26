@@ -308,6 +308,54 @@ export type Database = {
           },
         ]
       }
+      marks_unlock_requests: {
+        Row: {
+          academic_year: string
+          admin_note: string | null
+          class: string
+          created_at: string
+          id: string
+          reason: string | null
+          status: string
+          subject_id: string
+          subject_name: string
+          teacher_id: string
+          teacher_name: string
+          term: string
+          updated_at: string
+        }
+        Insert: {
+          academic_year: string
+          admin_note?: string | null
+          class: string
+          created_at?: string
+          id?: string
+          reason?: string | null
+          status?: string
+          subject_id: string
+          subject_name: string
+          teacher_id: string
+          teacher_name: string
+          term: string
+          updated_at?: string
+        }
+        Update: {
+          academic_year?: string
+          admin_note?: string | null
+          class?: string
+          created_at?: string
+          id?: string
+          reason?: string | null
+          status?: string
+          subject_id?: string
+          subject_name?: string
+          teacher_id?: string
+          teacher_name?: string
+          term?: string
+          updated_at?: string
+        }
+        Relationships: []
+      }
       parents: {
         Row: {
           created_at: string

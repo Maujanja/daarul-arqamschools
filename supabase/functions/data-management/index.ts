@@ -21,7 +21,8 @@ type AllowedTable =
   | "announcements"
   | "teachers"
   | "admin_credentials"
-  | "secretary_credentials";
+  | "secretary_credentials"
+  | "marks_unlock_requests";
 
 type AllowedOperation = "insert" | "update" | "delete" | "upsert";
 
@@ -51,6 +52,7 @@ const permissions: Record<string, Record<AllowedTable, AllowedOperation[]>> = {
     teachers: ["insert", "update", "delete"],
     admin_credentials: ["update"],
     secretary_credentials: ["insert", "update", "delete"],
+    marks_unlock_requests: ["insert", "update", "delete"],
   },
   teacher: {
     students: [],
@@ -68,6 +70,7 @@ const permissions: Record<string, Record<AllowedTable, AllowedOperation[]>> = {
     teachers: [],
     admin_credentials: [],
     secretary_credentials: [],
+    marks_unlock_requests: ["insert"],
   },
   secretary: {
     students: ["insert", "update", "delete"],
@@ -85,6 +88,7 @@ const permissions: Record<string, Record<AllowedTable, AllowedOperation[]>> = {
     teachers: [],
     admin_credentials: [],
     secretary_credentials: [],
+    marks_unlock_requests: [],
   },
   parent: {
     students: [],
@@ -102,6 +106,7 @@ const permissions: Record<string, Record<AllowedTable, AllowedOperation[]>> = {
     teachers: [],
     admin_credentials: [],
     secretary_credentials: [],
+    marks_unlock_requests: [],
   },
 };
 
