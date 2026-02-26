@@ -16,6 +16,7 @@ import { useAuth } from '@/contexts/AuthContext';
 import { isSubjectForClass } from '@/utils/classSubjects';
 import { useAcademicYears } from '@/hooks/useAcademicYears';
 import { useSecureQuery } from '@/hooks/useSecureQuery';
+import { isSeniorClass, calculateDivision, getTestDisplayName, getTestsForClass, getFilterLabel, getDivisionBgColor } from '@/utils/seniorGrading';
 
 interface Student {
   id: string;
@@ -102,6 +103,7 @@ export default function ReportsPage() {
         class: s.class,
         average: s.average,
         grade: s.grade,
+        division: s.division,
       }));
   }, [studentsData]);
 
@@ -116,6 +118,7 @@ export default function ReportsPage() {
         class: s.class,
         average: s.average,
         grade: s.grade,
+        division: s.division,
       }));
   }, [studentsData]);
 
@@ -229,10 +232,23 @@ export default function ReportsPage() {
         const average = studentMarks.length > 0
           ? Math.round(studentMarks.reduce((sum, m) => sum + m.total, 0) / studentMarks.length)
           : 0;
+        
+        // Calculate division for senior students
+        let division: string | undefined;
+        let totalPoints: number | undefined;
+        if (isSeniorClass(student.class) && studentMarks.length > 0) {
+          const scores = studentMarks.map(m => m.total);
+          const divResult = calculateDivision(scores);
+          division = divResult.division;
+          totalPoints = divResult.totalPoints;
+        }
+        
         return {
           ...student,
           average,
           grade: calculateGrade(average),
+          division,
+          totalPoints,
         };
       });
 
@@ -410,13 +426,17 @@ export default function ReportsPage() {
               </Select>
             </div>
             <div className="space-y-2">
-              <label className="text-sm font-medium text-muted-foreground">Test</label>
+              <label className="text-sm font-medium text-muted-foreground">
+                {selectedClass !== 'all' ? getFilterLabel(selectedClass) : 'Test'}
+              </label>
               <Select value={selectedTerm} onValueChange={setSelectedTerm}>
                 <SelectTrigger>
-                  <SelectValue placeholder="Select term" />
+                  <SelectValue placeholder="Select test" />
                 </SelectTrigger>
                 <SelectContent>
-                  {terms.map((term) => (
+                  {selectedClass !== 'all' ? getTestsForClass(selectedClass).map((t) => (
+                    <SelectItem key={t.value} value={t.value}>{t.label}</SelectItem>
+                  )) : terms.map((term) => (
                     <SelectItem key={term} value={term}>{term}</SelectItem>
                   ))}
                 </SelectContent>

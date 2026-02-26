@@ -10,6 +10,7 @@ import { terms } from '@/data/mockData';
 import { useAcademicYears } from '@/hooks/useAcademicYears';
 import { SeriesSummaryTable } from '@/components/dashboard/SeriesSummaryTable';
 import { SeriesPerformanceChart } from '@/components/dashboard/SeriesPerformanceChart';
+import { getTestDisplayName, getTestsForClass, getFilterLabel } from '@/utils/seniorGrading';
 
 interface TeacherInfo {
   id: string;
