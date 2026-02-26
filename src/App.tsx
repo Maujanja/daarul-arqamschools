@@ -17,6 +17,7 @@ import SettingsPage from "./pages/SettingsPage";
 import AnnouncementsPage from "./pages/AnnouncementsPage";
 import MyClassStudentsPage from "./pages/MyClassStudentsPage";
 import AcademicYearsPage from "./pages/AcademicYearsPage";
+import UnlockRequestsPage from "./pages/UnlockRequestsPage";
 import NotFound from "./pages/NotFound";
 
 const queryClient = new QueryClient();
@@ -44,6 +45,7 @@ const App = () => (
             <Route path="/announcements" element={<AnnouncementsPage />} />
             <Route path="/my-class-students" element={<MyClassStudentsPage />} />
             <Route path="/academic-years" element={<AcademicYearsPage />} />
+            <Route path="/unlock-requests" element={<UnlockRequestsPage />} />
             {/* ADD ALL CUSTOM ROUTES ABOVE THE CATCH-ALL "*" ROUTE */}
             <Route path="*" element={<NotFound />} />
           </Routes>

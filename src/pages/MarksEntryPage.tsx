@@ -6,13 +6,14 @@ import { Input } from '@/components/ui/input';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import { calculateGrade } from '@/types';
-import { Save, Loader2, Upload, Download, FileSpreadsheet, Edit3, Lock, ShieldAlert } from 'lucide-react';
+import { Save, Loader2, Upload, Download, FileSpreadsheet, Edit3, Lock, ShieldAlert, Unlock, CheckCircle, Bell } from 'lucide-react';
 import { useToast } from '@/hooks/use-toast';
 import { useAuth } from '@/contexts/AuthContext';
 import * as XLSX from 'xlsx';
 import { terms, DEFAULT_TEST_COUNT } from '@/data/mockData';
 import { Plus } from 'lucide-react';
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger } from '@/components/ui/dialog';
+import { Textarea } from '@/components/ui/textarea';
 import { useAcademicYears } from '@/hooks/useAcademicYears';
 import { useSecureQuery } from '@/hooks/useSecureQuery';
 import { useSecureData } from '@/hooks/useSecureData';
@@ -70,6 +71,16 @@ interface TeacherClassStudent {
   academic_year: string;
 }
 
+interface UnlockRequest {
+  id: string;
+  teacher_id: string;
+  status: string;
+  class: string;
+  subject_id: string;
+  term: string;
+  academic_year: string;
+}
+
 const ALL_CLASSES = ['Primary 1', 'Primary 2', 'Primary 3', 'Primary 4', 'Primary 5', 'Primary 6', 'Primary 7', 'Senior 1', 'Senior 2', 'Senior 3', 'Senior 4'];
 
 const mapClassToFullName = (shortClass: string): string => {
@@ -95,7 +106,7 @@ export default function MarksEntryPage() {
   const { user } = useAuth();
   const { academicYears, currentYear, loading: yearsLoading } = useAcademicYears();
   const { fetchTable, query } = useSecureQuery();
-  const { upsert } = useSecureData();
+  const { upsert, insert } = useSecureData();
   const fileInputRef = useRef<HTMLInputElement>(null);
   const [selectedClass, setSelectedClass] = useState('');
   const [selectedSubject, setSelectedSubject] = useState('');
@@ -113,7 +124,16 @@ export default function MarksEntryPage() {
   const [subjects, setSubjects] = useState<Subject[]>([]);
   const [marks, setMarks] = useState<StudentMark[]>([]);
   const [teacherAssignments, setTeacherAssignments] = useState<TeacherAssignment[]>([]);
-  const [marksLocked, setMarksLocked] = useState(false);
+  
+  // Per-student locking: track which students have existing marks
+  const [lockedStudentIds, setLockedStudentIds] = useState<Set<string>>(new Set());
+  // Track if there's an approved unlock request for current selection
+  const [hasUnlockApproval, setHasUnlockApproval] = useState(false);
+  // Unlock request dialog
+  const [showUnlockDialog, setShowUnlockDialog] = useState(false);
+  const [unlockReason, setUnlockReason] = useState('');
+  const [isRequestingUnlock, setIsRequestingUnlock] = useState(false);
+  const [existingUnlockRequest, setExistingUnlockRequest] = useState<UnlockRequest | null>(null);
 
   const isTeacher = user?.role === 'teacher';
   
@@ -156,12 +176,10 @@ export default function MarksEntryPage() {
       
       setIsLoading(true);
       
-      // Fetch subjects (publicly readable)
       const subjectsData = await fetchTable<Subject>('subjects');
       setSubjects(subjectsData);
 
       if (isTeacher && user?.id) {
-        // Fetch teacher assignments via secure query
         const assignmentsData = await fetchTable<TeacherAssignment>('teacher_assignments', { teacher_id: user.id });
         
         if (assignmentsData && assignmentsData.length > 0) {
@@ -190,45 +208,32 @@ export default function MarksEntryPage() {
     fetchInitialData();
   }, [isTeacher, user?.id, user, fetchTable]);
 
-  // Fetch students when class changes - for teachers, only fetch their selected students
+  // Fetch students when class changes
   useEffect(() => {
     const fetchStudents = async () => {
       if (!selectedClass || !selectedSubject || !user) return;
       
       setIsLoading(true);
-      console.log('Fetching students for:', { selectedClass, selectedSubject, userId: user?.id, isTeacher });
       
       let studentsToShow: Student[] = [];
       
       if (isTeacher && user?.id) {
-        // For teachers, get only their selected students from teacher_class_students
-        console.log('Teacher query params:', {
-          teacher_id: user.id,
-          class: selectedClass,
-          subject_id: selectedSubject
-        });
-        
         const selectedStudents = await fetchTable<TeacherClassStudent>('teacher_class_students', {
           teacher_id: user.id,
           class: selectedClass,
           subject_id: selectedSubject
         });
         
-        console.log('Selected students from teacher_class_students:', selectedStudents);
-        
         if (selectedStudents && selectedStudents.length > 0) {
           const studentIds = selectedStudents.map(s => s.student_id);
-          // Fetch student details for these IDs
           const allStudents = await fetchTable<Student>('students', { class: selectedClass });
           studentsToShow = allStudents.filter(s => studentIds.includes(s.id)).sort((a, b) => a.roll_number.localeCompare(b.roll_number));
         }
       } else {
-        // For admin, get all students in the class
         const allStudents = await fetchTable<Student>('students', { class: selectedClass });
         studentsToShow = allStudents.sort((a, b) => a.roll_number.localeCompare(b.roll_number));
       }
       
-      console.log('Final students to show:', studentsToShow.length);
       setStudents(studentsToShow);
       
       const initialMarks: StudentMark[] = studentsToShow.map(student => ({
@@ -247,7 +252,7 @@ export default function MarksEntryPage() {
     fetchStudents();
   }, [selectedClass, selectedSubject, isTeacher, user?.id, user, fetchTable]);
 
-  // Load existing marks when subject/term/year changes
+  // Load existing marks AND check unlock requests when subject/term/year changes
   useEffect(() => {
     const loadExistingMarks = async () => {
       if (!selectedSubject || students.length === 0 || !user) return;
@@ -262,12 +267,18 @@ export default function MarksEntryPage() {
       });
       
       if (result.success && result.data && result.data.length > 0) {
-        // If teacher and existing marks found, lock editing
-        const hasExistingMarks = result.data.some(m => m.exam > 0);
-        if (isTeacher && hasExistingMarks) {
-          setMarksLocked(true);
+        // Track which students have existing marks (per-student locking)
+        const studentsWithMarks = new Set<string>();
+        result.data.forEach(m => {
+          if (m.exam > 0) {
+            studentsWithMarks.add(m.student_id);
+          }
+        });
+        
+        if (isTeacher) {
+          setLockedStudentIds(studentsWithMarks);
         } else {
-          setMarksLocked(false);
+          setLockedStudentIds(new Set());
         }
 
         setMarks(prev => prev.map(mark => {
@@ -283,12 +294,90 @@ export default function MarksEntryPage() {
           return mark;
         }));
       } else {
-        setMarksLocked(false);
+        setLockedStudentIds(new Set());
+      }
+    };
+    
+    const checkUnlockRequest = async () => {
+      if (!isTeacher || !user?.id || !selectedClass || !selectedSubject || !selectedTerm || !selectedYear) {
+        setHasUnlockApproval(false);
+        setExistingUnlockRequest(null);
+        return;
+      }
+      
+      const result = await query<UnlockRequest>('marks_unlock_requests', {
+        filters: {
+          teacher_id: user.id,
+          class: selectedClass,
+          subject_id: selectedSubject,
+          term: selectedTerm,
+          academic_year: selectedYear
+        }
+      });
+      
+      if (result.success && result.data && result.data.length > 0) {
+        const latest = result.data[result.data.length - 1];
+        setExistingUnlockRequest(latest);
+        setHasUnlockApproval(latest.status === 'approved');
+      } else {
+        setExistingUnlockRequest(null);
+        setHasUnlockApproval(false);
       }
     };
     
     loadExistingMarks();
+    checkUnlockRequest();
   }, [selectedSubject, selectedTerm, selectedYear, students, selectedClass, user, query, isTeacher]);
+
+  // Check if a specific student is locked for teacher
+  const isStudentLocked = (studentId: string): boolean => {
+    if (!isTeacher) return false;
+    if (hasUnlockApproval) return false; // Unlock approved, all editable
+    return lockedStudentIds.has(studentId);
+  };
+
+  // Check if any students are locked
+  const hasLockedStudents = isTeacher && lockedStudentIds.size > 0 && !hasUnlockApproval;
+
+  const handleRequestUnlock = async () => {
+    if (!user?.id || !selectedClass || !selectedSubject || !selectedTerm || !selectedYear) return;
+    
+    setIsRequestingUnlock(true);
+    try {
+      const result = await insert('marks_unlock_requests', {
+        teacher_id: user.id,
+        teacher_name: user.name || 'Teacher',
+        class: selectedClass,
+        subject_id: selectedSubject,
+        subject_name: selectedSubjectData?.name || '',
+        term: selectedTerm,
+        academic_year: selectedYear,
+        reason: unlockReason || 'Nahitaji kubadilisha maksi',
+        status: 'pending',
+      });
+      
+      if (result.success) {
+        toast({
+          title: "Ombi Limetumwa!",
+          description: "Ombi lako la idhini ya kubadilisha maksi limetumwa kwa Admin. Utapata taarifa pindi litakapojibiwa.",
+        });
+        setShowUnlockDialog(false);
+        setUnlockReason('');
+        // Refresh unlock request status
+        setExistingUnlockRequest({ id: '', teacher_id: user.id, status: 'pending', class: selectedClass, subject_id: selectedSubject, term: selectedTerm, academic_year: selectedYear });
+      } else {
+        throw new Error(result.error || 'Failed');
+      }
+    } catch (error: any) {
+      toast({
+        title: "Error",
+        description: error.message || "Imeshindikana kutuma ombi.",
+        variant: "destructive",
+      });
+    } finally {
+      setIsRequestingUnlock(false);
+    }
+  };
 
   const updateMark = (studentId: string, value: string) => {
     const numValue = value === '' ? '' : Math.min(Math.max(0, parseInt(value) || 0), maxMarks);
@@ -360,6 +449,9 @@ export default function MarksEntryPage() {
       let updatedCount = 0;
       
       setMarks(prev => prev.map(mark => {
+        // Skip locked students during import
+        if (isStudentLocked(mark.studentId)) return mark;
+        
         const importedRow = jsonData.find(row => 
           row['Roll Number']?.toString().trim() === mark.rollNumber.trim()
         );
@@ -401,8 +493,13 @@ export default function MarksEntryPage() {
   };
 
   const handleSubmit = async () => {
-    // Only save marks that have been filled in
-    const filledMarks = marks.filter(m => m.exam !== '' && typeof m.exam === 'number');
+    // Only save marks that have been filled in AND are not locked
+    const filledMarks = marks.filter(m => {
+      if (m.exam === '' || typeof m.exam !== 'number') return false;
+      // If student is locked, don't include in save (unless unlock approved)
+      if (isStudentLocked(m.studentId)) return false;
+      return true;
+    });
 
     if (filledMarks.length === 0) {
       toast({
@@ -413,13 +510,13 @@ export default function MarksEntryPage() {
       return;
     }
 
-    const totalStudents = marks.length;
-    const unfilledCount = totalStudents - filledMarks.length;
+    // Count unlocked students only
+    const unlockedStudents = marks.filter(m => !isStudentLocked(m.studentId));
+    const unfilledCount = unlockedStudents.length - filledMarks.length;
 
     setIsSubmitting(true);
     
     try {
-      // Upsert only filled marks to database via secure data hook
       const marksToInsert = filledMarks.map(mark => ({
         student_id: mark.studentId,
         subject_id: selectedSubject,
@@ -432,7 +529,6 @@ export default function MarksEntryPage() {
         teacher_id: isTeacher && user?.id ? user.id : null,
       }));
 
-      // Use secure upsert for each mark
       for (const markData of marksToInsert) {
         const result = await upsert('marks', markData);
         if (!result.success) {
@@ -440,8 +536,17 @@ export default function MarksEntryPage() {
         }
       }
       
+      // After saving, lock newly saved students
+      if (isTeacher) {
+        setLockedStudentIds(prev => {
+          const newSet = new Set(prev);
+          filledMarks.forEach(m => newSet.add(m.studentId));
+          return newSet;
+        });
+      }
+      
       const description = unfilledCount > 0
-        ? `Saved marks for ${filledMarks.length}/${totalStudents} students. ${unfilledCount} remaining.`
+        ? `Saved marks for ${filledMarks.length} students. ${unfilledCount} remaining.`
         : `All marks for Class ${selectedClass} - ${selectedSubjectData?.name} have been saved.`;
       
       toast({
@@ -468,6 +573,9 @@ export default function MarksEntryPage() {
     if (percentage >= 40) return 'border-warning/50 bg-warning/5';
     return 'border-destructive/50 bg-destructive/5';
   };
+
+  // Check if there are any unlocked students to save
+  const hasUnlockedStudentsToSave = marks.some(m => !isStudentLocked(m.studentId));
 
   return (
     <DashboardLayout>
@@ -601,6 +709,103 @@ export default function MarksEntryPage() {
           </div>
         </div>
 
+        {/* Unlock request status for teacher */}
+        {isTeacher && hasLockedStudents && (
+          <div className="card-elevated p-4 animate-fade-in border-l-4 border-l-warning">
+            <div className="flex items-start gap-3">
+              <Lock className="w-5 h-5 text-warning mt-0.5 shrink-0" />
+              <div className="flex-1">
+                <p className="font-medium text-card-foreground">
+                  {lockedStudentIds.size} wanafunzi wamefungwa (tayari wamejazwa maksi)
+                </p>
+                <p className="text-sm text-muted-foreground mt-1">
+                  Wanafunzi ambao bado hawajajazwa maksi wako wazi kwa kujaza. Ukihitaji kubadilisha maksi za walioshajazwa, omba idhini kwa Admin.
+                </p>
+                
+                {existingUnlockRequest ? (
+                  <div className="mt-3">
+                    {existingUnlockRequest.status === 'pending' && (
+                      <div className="flex items-center gap-2 px-3 py-2 rounded-lg bg-warning/10 text-warning text-sm">
+                        <Loader2 className="w-4 h-4 animate-spin" />
+                        Ombi lako linasubiri idhini ya Admin...
+                      </div>
+                    )}
+                    {existingUnlockRequest.status === 'rejected' && (
+                      <div className="flex items-center gap-2 px-3 py-2 rounded-lg bg-destructive/10 text-destructive text-sm">
+                        <ShieldAlert className="w-4 h-4" />
+                        Ombi lako limekataliwa na Admin. Unaweza kutuma ombi jipya.
+                        <Button variant="outline" size="sm" className="ml-auto" onClick={() => { setExistingUnlockRequest(null); setShowUnlockDialog(true); }}>
+                          Omba Tena
+                        </Button>
+                      </div>
+                    )}
+                  </div>
+                ) : (
+                  <Button 
+                    variant="outline" 
+                    size="sm" 
+                    className="mt-3"
+                    onClick={() => setShowUnlockDialog(true)}
+                  >
+                    <Unlock className="w-4 h-4 mr-2" />
+                    Omba Idhini ya Kubadilisha
+                  </Button>
+                )}
+              </div>
+            </div>
+          </div>
+        )}
+
+        {/* Unlock approved notification */}
+        {isTeacher && hasUnlockApproval && lockedStudentIds.size > 0 && (
+          <div className="card-elevated p-4 animate-fade-in border-l-4 border-l-success">
+            <div className="flex items-center gap-3">
+              <CheckCircle className="w-5 h-5 text-success shrink-0" />
+              <div>
+                <p className="font-medium text-success">Idhini Imekubaliwa!</p>
+                <p className="text-sm text-muted-foreground">Admin amekubali ombi lako. Sasa unaweza kubadilisha maksi zote.</p>
+              </div>
+            </div>
+          </div>
+        )}
+
+        {/* Unlock Request Dialog */}
+        <Dialog open={showUnlockDialog} onOpenChange={setShowUnlockDialog}>
+          <DialogContent>
+            <DialogHeader>
+              <DialogTitle>Omba Idhini ya Kubadilisha Maksi</DialogTitle>
+            </DialogHeader>
+            <div className="space-y-4 pt-4">
+              <div className="p-3 bg-muted/50 rounded-lg text-sm">
+                <p><strong>Darasa:</strong> {selectedClass}</p>
+                <p><strong>Somo:</strong> {selectedSubjectData?.name}</p>
+                <p><strong>Test:</strong> {selectedTerm}</p>
+                <p><strong>Mwaka:</strong> {selectedYear}</p>
+              </div>
+              <div className="space-y-2">
+                <label className="text-sm font-medium">Sababu ya kuomba mabadiliko</label>
+                <Textarea
+                  placeholder="Andika sababu ya kuomba kubadilisha maksi..."
+                  value={unlockReason}
+                  onChange={(e) => setUnlockReason(e.target.value)}
+                  rows={3}
+                />
+              </div>
+              <Button 
+                onClick={handleRequestUnlock} 
+                className="w-full btn-gradient"
+                disabled={isRequestingUnlock}
+              >
+                {isRequestingUnlock ? (
+                  <><Loader2 className="w-4 h-4 mr-2 animate-spin" />Inatuma...</>
+                ) : (
+                  <><Unlock className="w-4 h-4 mr-2" />Tuma Ombi</>
+                )}
+              </Button>
+            </div>
+          </DialogContent>
+        </Dialog>
+
         <Tabs value={entryMethod} onValueChange={(v) => setEntryMethod(v as 'manual' | 'excel')} className="w-full">
           <TabsList className="grid w-full grid-cols-2 max-w-md">
             <TabsTrigger value="manual" className="flex items-center gap-2">
@@ -678,12 +883,7 @@ export default function MarksEntryPage() {
                     </h3>
                     <p className="text-sm text-muted-foreground">{marks.length} students • {selectedTerm} • {selectedYear}</p>
                   </div>
-                  {marksLocked && isTeacher ? (
-                    <div className="flex items-center gap-2 px-4 py-2 rounded-lg bg-warning/10 text-warning border border-warning/30">
-                      <Lock className="w-4 h-4" />
-                      <span className="text-sm font-medium">Marks zimefungwa - Wasiliana na Admin kubadilisha</span>
-                    </div>
-                  ) : (
+                  {hasUnlockedStudentsToSave && (
                     <Button 
                       className="btn-gradient"
                       onClick={handleSubmit}
@@ -703,14 +903,6 @@ export default function MarksEntryPage() {
                     </Button>
                   )}
                 </div>
-                {marksLocked && isTeacher && (
-                  <div className="mt-3 p-3 rounded-lg bg-destructive/5 border border-destructive/20 flex items-start gap-2">
-                    <ShieldAlert className="w-5 h-5 text-destructive mt-0.5 shrink-0" />
-                    <p className="text-sm text-destructive">
-                      Marks hizi tayari zimeshawekwa na haziwezi kubadilishwa tena. Kama unahitaji kufanya mabadiliko, wasiliana na Admin kwa idhini.
-                    </p>
-                  </div>
-                )}
               </div>
               
               {isLoading ? (
@@ -735,39 +927,54 @@ export default function MarksEntryPage() {
                         </th>
                         <th className="text-center py-3 px-4 text-sm font-medium text-muted-foreground">Total</th>
                         <th className="text-center py-3 px-4 text-sm font-medium text-muted-foreground">Grade</th>
+                        {isTeacher && <th className="text-center py-3 px-4 text-sm font-medium text-muted-foreground">Status</th>}
                       </tr>
                     </thead>
                     <tbody>
-                      {marks.map((mark, index) => (
-                        <tr 
-                          key={mark.studentId} 
-                          className="border-b border-border/50 table-row-hover animate-slide-up"
-                          style={{ animationDelay: `${index * 50}ms` }}
-                        >
-                          <td className="py-4 px-4 font-mono text-sm text-card-foreground">{mark.rollNumber}</td>
-                          <td className="py-4 px-4 font-medium text-card-foreground">{mark.studentName}</td>
-                          <td className="py-4 px-4">
-                            <Input
-                              type="number"
-                              min="0"
-                              max={maxMarks}
-                              value={mark.exam}
-                              onChange={(e) => updateMark(mark.studentId, e.target.value)}
-                              className={`w-24 text-center mx-auto ${getInputClass(mark.exam)} ${marksLocked && isTeacher ? 'opacity-60 cursor-not-allowed' : ''}`}
-                              placeholder="-"
-                              disabled={marksLocked && isTeacher}
-                            />
-                          </td>
-                          <td className="py-4 px-4 text-center">
-                            <span className={`text-lg font-bold ${mark.total >= 75 ? 'text-success' : mark.total >= 50 ? 'text-primary' : mark.total >= 40 ? 'text-warning' : mark.total > 0 ? 'text-destructive' : 'text-muted-foreground'}`}>
-                              {mark.total || '-'}
-                            </span>
-                          </td>
-                          <td className="py-4 px-4 text-center">
-                            <GradeBadge grade={mark.grade} />
-                          </td>
-                        </tr>
-                      ))}
+                      {marks.map((mark, index) => {
+                        const locked = isStudentLocked(mark.studentId);
+                        return (
+                          <tr 
+                            key={mark.studentId} 
+                            className={`border-b border-border/50 table-row-hover animate-slide-up ${locked ? 'bg-muted/30' : ''}`}
+                            style={{ animationDelay: `${index * 50}ms` }}
+                          >
+                            <td className="py-4 px-4 font-mono text-sm text-card-foreground">{mark.rollNumber}</td>
+                            <td className="py-4 px-4 font-medium text-card-foreground">{mark.studentName}</td>
+                            <td className="py-4 px-4">
+                              <Input
+                                type="number"
+                                min="0"
+                                max={maxMarks}
+                                value={mark.exam}
+                                onChange={(e) => updateMark(mark.studentId, e.target.value)}
+                                className={`w-24 text-center mx-auto ${getInputClass(mark.exam)} ${locked ? 'opacity-60 cursor-not-allowed' : ''}`}
+                                placeholder="-"
+                                disabled={locked}
+                              />
+                            </td>
+                            <td className="py-4 px-4 text-center">
+                              <span className={`text-lg font-bold ${mark.total >= 75 ? 'text-success' : mark.total >= 50 ? 'text-primary' : mark.total >= 40 ? 'text-warning' : mark.total > 0 ? 'text-destructive' : 'text-muted-foreground'}`}>
+                                {mark.total || '-'}
+                              </span>
+                            </td>
+                            <td className="py-4 px-4 text-center">
+                              <GradeBadge grade={mark.grade} />
+                            </td>
+                            {isTeacher && (
+                              <td className="py-4 px-4 text-center">
+                                {locked ? (
+                                  <Lock className="w-4 h-4 text-warning mx-auto" />
+                                ) : mark.exam !== '' ? (
+                                  <span className="text-xs text-muted-foreground">Wazi</span>
+                                ) : (
+                                  <span className="text-xs text-muted-foreground">—</span>
+                                )}
+                              </td>
+                            )}
+                          </tr>
+                        );
+                      })}
                     </tbody>
                   </table>
                 </div>
@@ -776,7 +983,7 @@ export default function MarksEntryPage() {
           </TabsContent>
         </Tabs>
 
-        {entryMethod === 'excel' && marks.some(m => m.exam !== '') && !(marksLocked && isTeacher) && (
+        {entryMethod === 'excel' && marks.some(m => m.exam !== '' && !isStudentLocked(m.studentId)) && hasUnlockedStudentsToSave && (
           <div className="flex justify-center">
             <Button 
               className="btn-gradient"

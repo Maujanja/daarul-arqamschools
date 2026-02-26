@@ -19,7 +19,8 @@ type AllowedTable =
   | "teachers_public"
   | "admin_credentials_public"
   | "secretary_credentials_public"
-  | "secretary_credentials";
+  | "secretary_credentials"
+  | "marks_unlock_requests";
 
 interface QueryFilters {
   [key: string]: unknown;

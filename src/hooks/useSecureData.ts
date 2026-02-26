@@ -17,7 +17,8 @@ type AllowedTable =
   | "announcements"
   | "teachers"
   | "admin_credentials"
-  | "secretary_credentials";
+  | "secretary_credentials"
+  | "marks_unlock_requests";
 
 type AllowedOperation = "insert" | "update" | "delete" | "upsert";
 
