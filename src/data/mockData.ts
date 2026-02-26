@@ -68,15 +68,15 @@ export const classes = [
   'Senior 1', 'Senior 2', 'Senior 3', 'Senior 4'
 ];
 
-// Default test count - starts from Test 1
+// Default test count - starts from Series 1
 export const DEFAULT_TEST_COUNT = 11;
 
-// Generate tests (Test 1, Test 2, ... Test N)
+// Generate series (Series 1, Series 2, ... Series N)
 export const generateTests = (count: number = DEFAULT_TEST_COUNT): string[] => {
-  return Array.from({ length: count }, (_, i) => `Test ${i + 1}`);
+  return Array.from({ length: count }, (_, i) => `Series ${i + 1}`);
 };
 
-// Default tests - Test 1 to 11
+// Default series - Series 1 to 11
 export const terms = generateTests(DEFAULT_TEST_COUNT);
 
 export const academicYears = ['2025-2026', '2024-2025', '2023-2024'];

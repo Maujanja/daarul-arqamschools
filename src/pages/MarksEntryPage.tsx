@@ -114,7 +114,7 @@ export default function MarksEntryPage() {
   const [selectedClass, setSelectedClass] = useState('');
   const [selectedSubject, setSelectedSubject] = useState('');
   const [selectedStream, setSelectedStream] = useState<string>('');
-  const [selectedTerm, setSelectedTerm] = useState(terms[0] || 'Test 1');
+  const [selectedTerm, setSelectedTerm] = useState(terms[0] || 'Series 1');
   const [selectedYear, setSelectedYear] = useState('');
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [isLoading, setIsLoading] = useState(true);

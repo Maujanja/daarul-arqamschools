@@ -496,7 +496,7 @@ export default function StudentsPage() {
         grade: m.grade,
       }));
 
-      const term = marksData?.[0]?.term || terms[0] || 'Test 1';
+      const term = marksData?.[0]?.term || terms[0] || 'Series 1';
       const academicYear = marksData?.[0]?.academic_year || currentYear || '2024-2025';
 
       generateStudentReportPDF({
@@ -532,7 +532,7 @@ export default function StudentsPage() {
       grade: s.grade,
     }));
 
-    generateAllStudentsReportPDF(studentsData, terms[0] || 'Test 1', currentYear);
+    generateAllStudentsReportPDF(studentsData, terms[0] || 'Series 1', currentYear);
     toast.success('All students report downloaded!');
   };
 

@@ -87,7 +87,7 @@ export function ParentDashboard() {
   const [expectedFee, setExpectedFee] = useState(0);
   const [paidAmount, setPaidAmount] = useState(0);
   const [announcements, setAnnouncements] = useState<Announcement[]>([]);
-  const [selectedTerm, setSelectedTerm] = useState(terms[0] || 'Test 1');
+  const [selectedTerm, setSelectedTerm] = useState(terms[0] || 'Series 1');
   const [selectedYear, setSelectedYear] = useState('');
   const [classRank, setClassRank] = useState<number | null>(null);
   const [totalClassStudents, setTotalClassStudents] = useState(0);

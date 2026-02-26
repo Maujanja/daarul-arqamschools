@@ -54,7 +54,7 @@ export default function ReportsPage() {
   const { fetchTable, query } = useSecureQuery();
   
   const [selectedClass, setSelectedClass] = useState('all');
-  const [selectedTerm, setSelectedTerm] = useState(terms[0] || 'Test 1');
+  const [selectedTerm, setSelectedTerm] = useState(terms[0] || 'Series 1');
   const [selectedYear, setSelectedYear] = useState('');
 
   // Update selectedYear when currentYear is loaded
