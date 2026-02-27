@@ -105,7 +105,6 @@ export function AdminDashboard() {
       while (hasMore) {
         try {
           const result = await secureQuery('marks', user.role, user.id, {
-            select: 'id, class, term, total, academic_year, subject_id',
             filters: { academic_year: selectedYear },
             range: { from: page * pageSize, to: (page + 1) * pageSize - 1 },
             orderBy: { column: 'id', ascending: true },

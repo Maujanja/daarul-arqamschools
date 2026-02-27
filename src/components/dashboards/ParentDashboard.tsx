@@ -698,8 +698,8 @@ export function ParentDashboard() {
             </p>
           </div>
           
-          {/* Overall Average Badge - only show when marks complete */}
-          {classRankComplete && studentMarks.length > 0 && (
+          {/* Overall Average Badge */}
+          {studentMarks.length > 0 && (
             <div className="flex items-center gap-4 mt-2 flex-wrap justify-center">
               <div className="text-center">
                 <p className="text-sm text-muted-foreground">Overall Average</p>
@@ -726,13 +726,6 @@ export function ParentDashboard() {
                   </div>
                 );
               })()}
-            </div>
-          )}
-          {!classRankComplete && (
-            <div className="mt-4 p-3 rounded-lg bg-muted/50 text-center">
-              <p className="text-sm text-muted-foreground">
-                📝 Results will be available once teachers have completed entering marks for all students in this class.
-              </p>
             </div>
           )}
         </div>
@@ -793,8 +786,8 @@ export function ParentDashboard() {
         </div>
       </div>
 
-      {/* Academic sections - only visible when class marks are complete */}
-      {classRankComplete ? (<>
+      {/* Academic sections - always visible when student has marks */}
+      {studentMarks.length > 0 ? (<>
       {/* 1. Subject Analysis & Class Ranking */}
       <div className="card-elevated p-6 animate-fade-in">
         <h3 className="font-display font-semibold text-lg mb-6 text-card-foreground flex items-center gap-2">
@@ -827,7 +820,6 @@ export function ParentDashboard() {
                         <GradeBadge grade={item.grade} />
                       </td>
                       <td className="py-4 px-4 text-center">
-                        {item.complete ? (
                           <span className={`inline-flex items-center gap-1 px-3 py-1 rounded-full text-sm font-medium ${
                             item.rank === 1 ? 'bg-yellow-500/10 text-yellow-600' :
                             item.rank <= 3 ? 'bg-primary/10 text-primary' :
@@ -836,9 +828,6 @@ export function ParentDashboard() {
                             {item.rank === 1 && <Trophy className="w-3 h-3" />}
                             {item.rank}/{item.totalStudents}
                           </span>
-                        ) : (
-                          <span className="text-xs text-muted-foreground italic">Incomplete</span>
-                        )}
                       </td>
                       <td className="py-4 px-4 text-center">
                         {isFirst && (
@@ -1000,14 +989,14 @@ export function ParentDashboard() {
 
       {/* 4. Stats Cards */}
       <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-5 gap-6">
-        <StatCard
-          title="Class Rank"
-          value={classRank && classRankComplete ? `${classRank}/${totalClassStudents}` : '-'}
-          subtitle={classRank && classRankComplete ? (classRank === 1 ? 'Top of class!' : classRank <= 3 ? 'Top 3!' : 'Overall position') : 'Marks incomplete'}
-          icon={Trophy}
-          variant={classRank && classRankComplete ? (classRank === 1 ? 'success' : classRank <= 3 ? 'primary' : 'default') : 'default'}
-          bgStyle="silk"
-        />
+          <StatCard
+            title="Class Rank"
+            value={classRank ? `${classRank}/${totalClassStudents}` : '-'}
+            subtitle={classRank ? (classRank === 1 ? 'Top of class!' : classRank <= 3 ? 'Top 3!' : 'Overall position') : 'Not available'}
+            icon={Trophy}
+            variant={classRank ? (classRank === 1 ? 'success' : classRank <= 3 ? 'primary' : 'default') : 'default'}
+            bgStyle="silk"
+          />
         <StatCard
           title="Subjects"
           value={uniqueSubjects.length.toString()}
@@ -1072,10 +1061,9 @@ export function ParentDashboard() {
         <div className="card-elevated p-6 animate-fade-in text-center">
           <div className="py-12">
             <BookOpen className="w-12 h-12 mx-auto text-muted-foreground/50 mb-4" />
-            <h3 className="font-display font-semibold text-lg text-card-foreground mb-2">Results Not Yet Available</h3>
+            <h3 className="font-display font-semibold text-lg text-card-foreground mb-2">No Results Yet</h3>
             <p className="text-muted-foreground max-w-md mx-auto">
-              Teachers have not yet completed entering marks for all students in this class for the selected series. 
-              Results, grades, and reports will appear here once marks entry is complete.
+              No marks have been recorded for this series yet. Results will appear here once teachers enter marks.
             </p>
           </div>
         </div>
