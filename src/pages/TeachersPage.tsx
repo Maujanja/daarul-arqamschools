@@ -257,11 +257,13 @@ export default function TeachersPage() {
         });
       });
 
-      // Delete existing assignments for this teacher first, then insert new ones
-      await remove('teacher_assignments', { teacher_id: selectedTeacher.id, academic_year: currentYear });
+      // Delete existing assignments for this teacher for current year, then insert new ones
+      const deleteResult = await remove('teacher_assignments', { teacher_id: selectedTeacher.id, academic_year: currentYear });
+      console.log('Delete result:', deleteResult);
 
       if (newAssignments.length > 0) {
-        const result = await upsert('teacher_assignments', newAssignments);
+        const result = await insert('teacher_assignments', newAssignments);
+        console.log('Insert result:', result);
         if (!result.success) throw new Error(result.error);
       }
 
