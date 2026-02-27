@@ -1,0 +1,2 @@
+ALTER TABLE public.teacher_assignments DROP CONSTRAINT teacher_assignments_teacher_id_class_subject_id_academic_ye_key;
+ALTER TABLE public.teacher_assignments ADD CONSTRAINT teacher_assignments_unique_teacher_class_subject_year_stream UNIQUE (teacher_id, class, subject_id, academic_year, stream);
