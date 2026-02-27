@@ -88,10 +88,10 @@ export default function UnlockRequestsPage() {
       
       if (result.success) {
         toast({
-          title: actionType === 'approved' ? "Idhini Imekubaliwa" : "Ombi Limekataliwa",
+          title: actionType === 'approved' ? "Request Approved" : "Request Rejected",
           description: actionType === 'approved' 
-            ? `${selectedRequest.teacher_name} sasa anaweza kubadilisha maksi.`
-            : `Ombi la ${selectedRequest.teacher_name} limekataliwa.`,
+            ? `${selectedRequest.teacher_name} can now update marks.`
+            : `${selectedRequest.teacher_name}'s request has been rejected.`,
         });
         await loadRequests();
       } else {
@@ -100,7 +100,7 @@ export default function UnlockRequestsPage() {
     } catch (error: any) {
       toast({
         title: "Error",
-        description: error.message || "Imeshindikana.",
+        description: error.message || "Failed to process request.",
         variant: "destructive",
       });
     } finally {
@@ -114,11 +114,11 @@ export default function UnlockRequestsPage() {
   const getStatusBadge = (status: string) => {
     switch (status) {
       case 'pending':
-        return <span className="inline-flex items-center gap-1 px-2 py-1 rounded-full text-xs font-medium bg-warning/20 text-warning"><Clock className="w-3 h-3" />Inasubiri</span>;
+        return <span className="inline-flex items-center gap-1 px-2 py-1 rounded-full text-xs font-medium bg-warning/20 text-warning"><Clock className="w-3 h-3" />Pending</span>;
       case 'approved':
-        return <span className="inline-flex items-center gap-1 px-2 py-1 rounded-full text-xs font-medium bg-success/20 text-success"><CheckCircle className="w-3 h-3" />Imekubaliwa</span>;
+        return <span className="inline-flex items-center gap-1 px-2 py-1 rounded-full text-xs font-medium bg-success/20 text-success"><CheckCircle className="w-3 h-3" />Approved</span>;
       case 'rejected':
-        return <span className="inline-flex items-center gap-1 px-2 py-1 rounded-full text-xs font-medium bg-destructive/20 text-destructive"><XCircle className="w-3 h-3" />Imekataliwa</span>;
+        return <span className="inline-flex items-center gap-1 px-2 py-1 rounded-full text-xs font-medium bg-destructive/20 text-destructive"><XCircle className="w-3 h-3" />Rejected</span>;
       default:
         return null;
     }
@@ -139,12 +139,12 @@ export default function UnlockRequestsPage() {
       <div className="space-y-8">
         <div>
           <h1 className="text-3xl font-display font-bold text-foreground">
-            {isAdmin ? 'Maombi ya Idhini (Maksi)' : 'Maombi Yangu ya Idhini'}
+            {isAdmin ? 'Marks Unlock Requests' : 'My Unlock Requests'}
           </h1>
           <p className="text-muted-foreground mt-1">
             {isAdmin 
-              ? 'Simamia maombi ya walimu ya kubadilisha maksi zilizoshawekwa'
-              : 'Fuatilia hali ya maombi yako ya kubadilisha maksi'
+              ? 'Manage teacher requests to edit previously submitted marks'
+              : 'Track the status of your marks edit requests'
             }
           </p>
         </div>
@@ -153,11 +153,11 @@ export default function UnlockRequestsPage() {
           <TabsList>
             <TabsTrigger value="pending" className="flex items-center gap-2">
               <Bell className="w-4 h-4" />
-              Inasubiri ({pendingRequests.length})
+              Pending ({pendingRequests.length})
             </TabsTrigger>
             <TabsTrigger value="processed" className="flex items-center gap-2">
               <CheckCircle className="w-4 h-4" />
-              Yaliyojibiwa ({processedRequests.length})
+              Processed ({processedRequests.length})
             </TabsTrigger>
           </TabsList>
 
@@ -165,7 +165,7 @@ export default function UnlockRequestsPage() {
             {pendingRequests.length === 0 ? (
               <div className="card-elevated p-12 text-center">
                 <Bell className="w-12 h-12 text-muted-foreground mx-auto mb-4" />
-                <p className="text-muted-foreground">Hakuna maombi yanayosubiri</p>
+                <p className="text-muted-foreground">No pending requests</p>
               </div>
             ) : (
               <div className="space-y-4">
@@ -178,24 +178,24 @@ export default function UnlockRequestsPage() {
                           {getStatusBadge(request.status)}
                         </div>
                         <div className="grid grid-cols-2 sm:grid-cols-4 gap-2 text-sm text-muted-foreground mb-3">
-                          <div><span className="font-medium">Darasa:</span> {request.class}</div>
-                          <div><span className="font-medium">Somo:</span> {request.subject_name}</div>
+                          <div><span className="font-medium">Class:</span> {request.class}</div>
+                          <div><span className="font-medium">Subject:</span> {request.subject_name}</div>
                           <div><span className="font-medium">Series:</span> {request.term}</div>
-                          <div><span className="font-medium">Mwaka:</span> {request.academic_year}</div>
+                          <div><span className="font-medium">Year:</span> {request.academic_year}</div>
                         </div>
                         {/* Student info */}
                         {request.student_name && (
                           <div className="bg-primary/5 border border-primary/20 p-3 rounded-lg mb-3">
-                            <p className="font-medium text-primary text-xs mb-1">📋 Mwanafunzi anayeombewa:</p>
+                            <p className="font-medium text-primary text-xs mb-1">📋 Student requested:</p>
                             <p className="text-card-foreground font-semibold">{request.student_name}</p>
                             {request.current_marks !== null && (
-                              <p className="text-sm text-muted-foreground">Maksi za sasa: <strong>{request.current_marks}</strong></p>
+                              <p className="text-sm text-muted-foreground">Current marks: <strong>{request.current_marks}</strong></p>
                             )}
                           </div>
                         )}
                         {request.reason && (
                           <div className="text-sm bg-muted/50 p-3 rounded-lg">
-                            <span className="font-medium">Sababu: </span>{request.reason}
+                            <span className="font-medium">Reason: </span>{request.reason}
                           </div>
                         )}
                         <p className="text-xs text-muted-foreground mt-2">
@@ -214,7 +214,7 @@ export default function UnlockRequestsPage() {
                             {processingId === request.id ? (
                               <Loader2 className="w-4 h-4 animate-spin" />
                             ) : (
-                              <><CheckCircle className="w-4 h-4 mr-1" />Kubali</>
+                              <><CheckCircle className="w-4 h-4 mr-1" />Approve</>
                             )}
                           </Button>
                           <Button 
@@ -223,7 +223,7 @@ export default function UnlockRequestsPage() {
                             onClick={() => handleAction(request, 'rejected')}
                             disabled={processingId === request.id}
                           >
-                            <XCircle className="w-4 h-4 mr-1" />Kataa
+                            <XCircle className="w-4 h-4 mr-1" />Reject
                           </Button>
                         </div>
                       )}
@@ -238,7 +238,7 @@ export default function UnlockRequestsPage() {
             {processedRequests.length === 0 ? (
               <div className="card-elevated p-12 text-center">
                 <CheckCircle className="w-12 h-12 text-muted-foreground mx-auto mb-4" />
-                <p className="text-muted-foreground">Hakuna maombi yaliyojibiwa bado</p>
+                <p className="text-muted-foreground">No processed requests yet</p>
               </div>
             ) : (
               <div className="space-y-4">
@@ -250,22 +250,22 @@ export default function UnlockRequestsPage() {
                         {getStatusBadge(request.status)}
                       </div>
                       <div className="grid grid-cols-2 sm:grid-cols-4 gap-2 text-sm text-muted-foreground mb-2">
-                        <div><span className="font-medium">Darasa:</span> {request.class}</div>
-                        <div><span className="font-medium">Somo:</span> {request.subject_name}</div>
+                        <div><span className="font-medium">Class:</span> {request.class}</div>
+                        <div><span className="font-medium">Subject:</span> {request.subject_name}</div>
                         <div><span className="font-medium">Series:</span> {request.term}</div>
-                        <div><span className="font-medium">Mwaka:</span> {request.academic_year}</div>
+                        <div><span className="font-medium">Year:</span> {request.academic_year}</div>
                       </div>
                       {request.student_name && (
                         <div className="text-sm mb-2">
-                          <span className="font-medium">📋 Mwanafunzi:</span> {request.student_name}
-                          {request.current_marks !== null && <span className="text-muted-foreground ml-2">(Maksi: {request.current_marks})</span>}
+                          <span className="font-medium">📋 Student:</span> {request.student_name}
+                          {request.current_marks !== null && <span className="text-muted-foreground ml-2">(Marks: {request.current_marks})</span>}
                         </div>
                       )}
                       {request.reason && (
-                        <p className="text-sm text-muted-foreground"><span className="font-medium">Sababu:</span> {request.reason}</p>
+                        <p className="text-sm text-muted-foreground"><span className="font-medium">Reason:</span> {request.reason}</p>
                       )}
                       {request.admin_note && (
-                        <p className="text-sm mt-1"><span className="font-medium">Jibu la Admin:</span> {request.admin_note}</p>
+                        <p className="text-sm mt-1"><span className="font-medium">Admin Response:</span> {request.admin_note}</p>
                       )}
                       <p className="text-xs text-muted-foreground mt-2">
                         {new Date(request.created_at).toLocaleString()}
@@ -283,29 +283,29 @@ export default function UnlockRequestsPage() {
           <DialogContent>
             <DialogHeader>
               <DialogTitle>
-                {actionType === 'approved' ? 'Kubali Ombi' : 'Kataa Ombi'}
+                {actionType === 'approved' ? 'Approve Request' : 'Reject Request'}
               </DialogTitle>
             </DialogHeader>
             <div className="space-y-4 pt-4">
               {selectedRequest && (
                  <div className="p-3 bg-muted/50 rounded-lg text-sm">
-                   <p><strong>Mwalimu:</strong> {selectedRequest.teacher_name}</p>
-                   <p><strong>Darasa:</strong> {selectedRequest.class} - {selectedRequest.subject_name}</p>
+                   <p><strong>Teacher:</strong> {selectedRequest.teacher_name}</p>
+                   <p><strong>Class:</strong> {selectedRequest.class} - {selectedRequest.subject_name}</p>
                    <p><strong>Series:</strong> {selectedRequest.term}</p>
                    {selectedRequest.student_name && (
                      <div className="mt-2 p-2 bg-primary/5 border border-primary/20 rounded">
-                       <p className="text-primary font-medium">📋 Mwanafunzi: {selectedRequest.student_name}</p>
+                       <p className="text-primary font-medium">📋 Student: {selectedRequest.student_name}</p>
                        {selectedRequest.current_marks !== null && (
-                         <p className="text-muted-foreground">Maksi za sasa: <strong>{selectedRequest.current_marks}</strong></p>
+                         <p className="text-muted-foreground">Current marks: <strong>{selectedRequest.current_marks}</strong></p>
                        )}
                      </div>
                    )}
                  </div>
               )}
               <div className="space-y-2">
-                <label className="text-sm font-medium">Maoni (hiari)</label>
+                <label className="text-sm font-medium">Note (optional)</label>
                 <Textarea
-                  placeholder="Andika maoni yako..."
+                  placeholder="Enter your note..."
                   value={adminNote}
                   onChange={(e) => setAdminNote(e.target.value)}
                   rows={3}
@@ -315,7 +315,7 @@ export default function UnlockRequestsPage() {
                 onClick={confirmAction}
                 className={`w-full ${actionType === 'approved' ? 'bg-success hover:bg-success/90' : 'bg-destructive hover:bg-destructive/90'} text-white`}
               >
-                {actionType === 'approved' ? 'Kubali' : 'Kataa'} Ombi
+                {actionType === 'approved' ? 'Approve' : 'Reject'} Request
               </Button>
             </div>
           </DialogContent>

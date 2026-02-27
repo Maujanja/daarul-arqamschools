@@ -723,7 +723,7 @@ export function ParentDashboard() {
           {!classRankComplete && (
             <div className="mt-4 p-3 rounded-lg bg-muted/50 text-center">
               <p className="text-sm text-muted-foreground">
-                📝 Matokeo yataonekana baada ya walimu kukamilisha kuingiza maksi za wanafunzi wote wa darasa hili.
+                📝 Results will be available once teachers have completed entering marks for all students in this class.
               </p>
             </div>
           )}
@@ -1064,10 +1064,10 @@ export function ParentDashboard() {
         <div className="card-elevated p-6 animate-fade-in text-center">
           <div className="py-12">
             <BookOpen className="w-12 h-12 mx-auto text-muted-foreground/50 mb-4" />
-            <h3 className="font-display font-semibold text-lg text-card-foreground mb-2">Matokeo Bado Hayajaandaliwa</h3>
+            <h3 className="font-display font-semibold text-lg text-card-foreground mb-2">Results Not Yet Available</h3>
             <p className="text-muted-foreground max-w-md mx-auto">
-              Walimu bado hawakukamilisha kuingiza maksi za wanafunzi wote wa darasa hili kwa series iliyochaguliwa. 
-              Matokeo, gredi, na ripoti zitaonekana hapa baada ya maksi kukamilika.
+              Teachers have not yet completed entering marks for all students in this class for the selected series. 
+              Results, grades, and reports will appear here once marks entry is complete.
             </p>
           </div>
         </div>
