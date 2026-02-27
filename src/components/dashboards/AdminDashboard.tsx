@@ -91,7 +91,7 @@ export function AdminDashboard() {
   });
 
   // Fetch all marks for series summary via edge function with pagination
-  const { data: allMarks = [] } = useQuery({
+  const { data: allMarks = [], isLoading: marksLoading } = useQuery({
     queryKey: ['admin-all-marks', selectedYear, user?.role],
     queryFn: async () => {
       if (!selectedYear || !user) return [];
@@ -100,28 +100,41 @@ export function AdminDashboard() {
       const pageSize = 1000;
       let page = 0;
       let hasMore = true;
+      let retries = 0;
 
       while (hasMore) {
-        const result = await secureQuery('marks', user.role, user.id, {
-          select: 'class, term, total, academic_year, subject_id',
-          filters: { academic_year: selectedYear },
-          range: { from: page * pageSize, to: (page + 1) * pageSize - 1 },
-          orderBy: { column: 'id', ascending: true },
-        });
-        
-        if (result?.success && result.data && result.data.length > 0) {
-          allData.push(...result.data);
-          page++;
-          hasMore = result.data.length === pageSize;
-        } else {
+        try {
+          const result = await secureQuery('marks', user.role, user.id, {
+            select: 'id, class, term, total, academic_year, subject_id',
+            filters: { academic_year: selectedYear },
+            range: { from: page * pageSize, to: (page + 1) * pageSize - 1 },
+            orderBy: { column: 'id', ascending: true },
+          });
+          
+          if (result?.success && result.data && result.data.length > 0) {
+            allData.push(...result.data);
+            page++;
+            retries = 0;
+            hasMore = result.data.length === pageSize;
+          } else if (!result?.success && retries < 2) {
+            retries++;
+            console.warn(`Retrying marks page ${page}, attempt ${retries}`);
+            continue;
+          } else {
+            hasMore = false;
+          }
+        } catch (err) {
+          console.error(`Error fetching marks page ${page}:`, err);
+          if (retries < 2) { retries++; continue; }
           hasMore = false;
         }
       }
       
-      console.log(`Fetched ${allData.length} marks for ${selectedYear}`);
+      console.log(`Admin: Fetched ${allData.length} total marks for ${selectedYear}`);
       return allData;
     },
     enabled: !!selectedYear && !!user,
+    staleTime: 0,
   });
 
   // Get unique classes and terms
@@ -207,7 +220,7 @@ export function AdminDashboard() {
   // Get unique subject IDs that have marks for this class
   const validSubjectsForClass = useMemo(() => {
     const subjectIdsWithMarks = [...new Set(classMarksOnly.map(m => m.subject_id))];
-    return allSubjects.filter(s => subjectIdsWithMarks.includes(s.id));
+    return (allSubjects as any[]).filter(s => subjectIdsWithMarks.includes(s.id));
   }, [allSubjects, classMarksOnly]);
 
   // Filter marks for selected class
@@ -488,7 +501,14 @@ export function AdminDashboard() {
           />
         )}
 
-        {subjectSummaryData.length === 0 && (
+        {subjectSummaryData.length === 0 && marksLoading && (
+          <div className="text-center py-8 text-muted-foreground">
+            <BookOpen className="w-12 h-12 mx-auto mb-3 opacity-50 animate-pulse" />
+            <p>Loading marks data...</p>
+          </div>
+        )}
+
+        {subjectSummaryData.length === 0 && !marksLoading && (
           <div className="text-center py-8 text-muted-foreground">
             <BookOpen className="w-12 h-12 mx-auto mb-3 opacity-50" />
             <p>No marks data available for {selectedClass}</p>
