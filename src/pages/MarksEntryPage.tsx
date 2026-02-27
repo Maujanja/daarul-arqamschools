@@ -244,6 +244,20 @@ export default function MarksEntryPage() {
     fetchInitialData();
   }, [isTeacher, user?.id, user, fetchTable]);
 
+  // Auto-select stream when class changes and streams are available
+  useEffect(() => {
+    if (selectedClass && hasStreams(selectedClass) && !selectedStream && availableStreams.length > 0) {
+      setSelectedStream(availableStreams[0]);
+    }
+  }, [selectedClass, selectedStream, availableStreams]);
+
+  // Auto-select first subject when available subjects change
+  useEffect(() => {
+    if (availableSubjects.length > 0 && !availableSubjects.find(s => s.id === selectedSubject)) {
+      setSelectedSubject(availableSubjects[0].id);
+    }
+  }, [availableSubjects, selectedSubject]);
+
   // Fetch students when class/stream changes
   useEffect(() => {
     const fetchStudents = async () => {
