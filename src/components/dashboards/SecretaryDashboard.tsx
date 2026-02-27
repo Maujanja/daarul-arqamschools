@@ -812,7 +812,7 @@ export function SecretaryDashboard() {
           </div>
           
           <p className="text-sm text-muted-foreground mb-4">
-            These students have outstanding debts from previous years/tests. Click "Clear Debt" when paid.
+            These students have outstanding debts from previous years/series. Click "Clear Debt" when paid.
           </p>
           
           <div className="overflow-x-auto">
@@ -822,7 +822,7 @@ export function SecretaryDashboard() {
                   <th className="text-left py-3 px-4 text-sm font-medium text-muted-foreground">Student</th>
                   <th className="text-left py-3 px-4 text-sm font-medium text-muted-foreground">Class</th>
                   <th className="text-left py-3 px-4 text-sm font-medium text-muted-foreground">Year</th>
-                  <th className="text-left py-3 px-4 text-sm font-medium text-muted-foreground">Test</th>
+                  <th className="text-left py-3 px-4 text-sm font-medium text-muted-foreground">Series</th>
                   <th className="text-right py-3 px-4 text-sm font-medium text-muted-foreground">Debt</th>
                   <th className="text-right py-3 px-4 text-sm font-medium text-muted-foreground">Action</th>
                 </tr>
@@ -1413,7 +1413,7 @@ export function SecretaryDashboard() {
                   </table>
                 </div>
               ) : (
-              <p className="text-sm text-muted-foreground">No fee structure set for this year/test.</p>
+              <p className="text-sm text-muted-foreground">No fee structure set for this year/series.</p>
               )}
             </div>
 

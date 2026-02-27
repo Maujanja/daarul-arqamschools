@@ -10,7 +10,7 @@ import { Save, Loader2, Upload, Download, FileSpreadsheet, Edit3, Lock, ShieldAl
 import { useToast } from '@/hooks/use-toast';
 import { useAuth } from '@/contexts/AuthContext';
 import * as XLSX from 'xlsx';
-import { terms, DEFAULT_TEST_COUNT } from '@/data/mockData';
+import { terms, DEFAULT_SERIES_COUNT } from '@/data/mockData';
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger } from '@/components/ui/dialog';
 import { Textarea } from '@/components/ui/textarea';
 import { useAcademicYears } from '@/hooks/useAcademicYears';
@@ -124,7 +124,7 @@ export default function MarksEntryPage() {
   const [entryMethod, setEntryMethod] = useState<'manual' | 'excel'>('manual');
   const [availableTerms, setAvailableTerms] = useState<string[]>(terms);
   const [showAddSeriesDialog, setShowAddSeriesDialog] = useState(false);
-  const [newSeriesNumber, setNewSeriesNumber] = useState(DEFAULT_TEST_COUNT + 1);
+  const [newSeriesNumber, setNewSeriesNumber] = useState(DEFAULT_SERIES_COUNT + 1);
   
   const [students, setStudents] = useState<Student[]>([]);
   const [subjects, setSubjects] = useState<Subject[]>([]);

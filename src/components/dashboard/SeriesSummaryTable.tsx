@@ -178,14 +178,14 @@ export function SeriesSummaryTable({
             <Popover>
               <PopoverTrigger asChild>
                 <Button variant="outline" size="sm">
-                  Select Tests
+                  Select Series
                   <ChevronDown className="w-4 h-4 ml-2" />
                 </Button>
               </PopoverTrigger>
               <PopoverContent className="w-64" align="end">
                 <div className="space-y-3">
                   <div className="flex items-center justify-between">
-                    <span className="text-sm font-medium">Select Tests for PDF</span>
+                    <span className="text-sm font-medium">Select Series for PDF</span>
                     <div className="flex gap-1">
                       <Button variant="ghost" size="sm" className="h-7 px-2 text-xs" onClick={selectAllSeries}>
                         All
