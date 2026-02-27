@@ -428,14 +428,14 @@ export default function MarksEntryPage() {
         student_id: unlockTargetStudent.studentId,
         student_name: unlockTargetStudent.studentName,
         current_marks: typeof unlockTargetStudent.exam === 'number' ? unlockTargetStudent.exam : 0,
-        reason: unlockReason || 'Nahitaji kubadilisha maksi',
+        reason: unlockReason || 'Need to update marks',
         status: 'pending',
       });
       
       if (result.success) {
         toast({
-          title: "Ombi Limetumwa!",
-          description: `Ombi la kubadilisha maksi za ${unlockTargetStudent.studentName} limetumwa kwa Admin.`,
+          title: "Request Sent!",
+          description: `Request to update marks for ${unlockTargetStudent.studentName} has been sent to Admin.`,
         });
         setShowUnlockDialog(false);
         setUnlockReason('');
@@ -452,7 +452,7 @@ export default function MarksEntryPage() {
     } catch (error: any) {
       toast({
         title: "Error",
-        description: error.message || "Imeshindikana kutuma ombi.",
+        description: error.message || "Failed to send request.",
         variant: "destructive",
       });
     } finally {
@@ -849,8 +849,8 @@ export default function MarksEntryPage() {
             <div className="flex items-center gap-3">
               <CheckCircle className="w-5 h-5 text-success shrink-0" />
               <div>
-                <p className="font-semibold text-success">✅ Idhini Imekubaliwa!</p>
-                <p className="text-sm text-muted-foreground">Wanafunzi {approvedStudentIds.size} wamefunguliwa. Badilisha maksi na uhifadhi.</p>
+                <p className="font-semibold text-success">✅ Unlock Approved!</p>
+                <p className="text-sm text-muted-foreground">{approvedStudentIds.size} students unlocked. Update marks and save.</p>
               </div>
             </div>
           </div>
@@ -860,8 +860,8 @@ export default function MarksEntryPage() {
             <div className="flex items-center gap-3">
               <Loader2 className="w-4 h-4 animate-spin text-warning shrink-0" />
               <div>
-                <p className="font-semibold text-warning">⏳ Maombi Yanasubiri</p>
-                <p className="text-sm text-muted-foreground">Maombi {unlockRequests.filter(r => r.status === 'pending').length} yanasubiri idhini ya Admin.</p>
+                <p className="font-semibold text-warning">⏳ Requests Pending</p>
+                <p className="text-sm text-muted-foreground">{unlockRequests.filter(r => r.status === 'pending').length} requests awaiting Admin approval.</p>
               </div>
             </div>
           </div>
@@ -871,28 +871,28 @@ export default function MarksEntryPage() {
         <Dialog open={showUnlockDialog} onOpenChange={(open) => { setShowUnlockDialog(open); if (!open) setUnlockTargetStudent(null); }}>
           <DialogContent>
             <DialogHeader>
-              <DialogTitle>Omba Idhini ya Kubadilisha Maksi</DialogTitle>
+              <DialogTitle>Request Permission to Edit Marks</DialogTitle>
             </DialogHeader>
             <div className="space-y-4 pt-4">
               <div className="p-3 bg-muted/50 rounded-lg text-sm">
-                <p><strong>Darasa:</strong> {selectedClass}</p>
-                <p><strong>Somo:</strong> {selectedSubjectData?.name}</p>
+                <p><strong>Class:</strong> {selectedClass}</p>
+                <p><strong>Subject:</strong> {selectedSubjectData?.name}</p>
                 <p><strong>Series:</strong> {selectedClass ? getTestDisplayName(selectedTerm, selectedClass) : selectedTerm}</p>
-                <p><strong>Mwaka:</strong> {selectedYear}</p>
+                <p><strong>Year:</strong> {selectedYear}</p>
               </div>
               
               {unlockTargetStudent && (
                 <div className="p-3 bg-primary/5 border border-primary/20 rounded-lg text-sm">
-                  <p className="font-medium text-primary mb-1">📋 Mwanafunzi:</p>
+                  <p className="font-medium text-primary mb-1">📋 Student:</p>
                   <p className="text-card-foreground font-semibold">{unlockTargetStudent.studentName}</p>
-                  <p className="text-muted-foreground">Maksi za sasa: <strong>{unlockTargetStudent.exam !== '' && unlockTargetStudent.exam !== '-' ? unlockTargetStudent.exam : '0'}</strong> / {maxMarks}</p>
+                  <p className="text-muted-foreground">Current marks: <strong>{unlockTargetStudent.exam !== '' && unlockTargetStudent.exam !== '-' ? unlockTargetStudent.exam : '0'}</strong> / {maxMarks}</p>
                 </div>
               )}
 
               <div className="space-y-2">
-                <label className="text-sm font-medium">Sababu ya kuomba mabadiliko</label>
+                <label className="text-sm font-medium">Reason for requesting changes</label>
                 <Textarea
-                  placeholder="Andika sababu ya kuomba kubadilisha maksi..."
+                  placeholder="Enter reason for requesting marks update..."
                   value={unlockReason}
                   onChange={(e) => setUnlockReason(e.target.value)}
                   rows={2}
@@ -904,9 +904,9 @@ export default function MarksEntryPage() {
                 disabled={isRequestingUnlock || !unlockTargetStudent}
               >
                 {isRequestingUnlock ? (
-                  <><Loader2 className="w-4 h-4 mr-2 animate-spin" />Inatuma...</>
+                  <><Loader2 className="w-4 h-4 mr-2 animate-spin" />Sending...</>
                 ) : (
-                  <><Unlock className="w-4 h-4 mr-2" />Tuma Ombi</>
+                  <><Unlock className="w-4 h-4 mr-2" />Submit Request</>
                 )}
               </Button>
             </div>
@@ -1083,14 +1083,14 @@ export default function MarksEntryPage() {
                                     return (
                                       <div className="flex items-center justify-center gap-1">
                                         <Unlock className="w-4 h-4 text-success flex-shrink-0" />
-                                        <span className="text-xs text-success font-medium">Imefunguliwa</span>
+                                        <span className="text-xs text-success font-medium">Unlocked</span>
                                       </div>
                                     );
                                   } else if (studentReq?.status === 'pending') {
                                     return (
                                       <div className="flex items-center justify-center gap-1">
                                         <Loader2 className="w-3 h-3 animate-spin text-warning flex-shrink-0" />
-                                        <span className="text-xs text-warning font-medium">Inasubiri</span>
+                                        <span className="text-xs text-warning font-medium">Pending</span>
                                       </div>
                                     );
                                   } else if (studentReq?.status === 'rejected') {
@@ -1099,7 +1099,7 @@ export default function MarksEntryPage() {
                                         onClick={() => { setUnlockTargetStudent(mark); setUnlockReason(''); setShowUnlockDialog(true); }}
                                         className="text-xs text-destructive font-medium hover:underline cursor-pointer"
                                       >
-                                        ❌ Imekataliwa · Omba tena
+                                        ❌ Rejected · Request again
                                       </button>
                                     );
                                   } else {
@@ -1109,13 +1109,13 @@ export default function MarksEntryPage() {
                                         className="inline-flex items-center gap-1 text-xs text-primary font-medium hover:underline cursor-pointer"
                                       >
                                         <Unlock className="w-3 h-3" />
-                                        Omba Idhini
+                                        Request Unlock
                                       </button>
                                     );
                                   }
                                 })()
                                 : mark.exam !== '' ? (
-                                  <span className="text-xs text-success font-medium">✓ Wazi</span>
+                                  <span className="text-xs text-success font-medium">✓ Open</span>
                                 ) : (
                                   <span className="text-xs text-muted-foreground">—</span>
                                 )}
