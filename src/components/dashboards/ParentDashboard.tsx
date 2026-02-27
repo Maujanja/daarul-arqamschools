@@ -57,6 +57,7 @@ interface SubjectRanking {
   grade: string;
   rank: number;
   totalStudents: number;
+  complete: boolean; // true when all class students have marks for this subject
 }
 
 interface DebtHistory {
@@ -93,6 +94,7 @@ export function ParentDashboard() {
   const [totalClassStudents, setTotalClassStudents] = useState(0);
   const [subjectRankings, setSubjectRankings] = useState<SubjectRanking[]>([]);
   const [historicalDebts, setHistoricalDebts] = useState<DebtHistory[]>([]);
+  const [classRankComplete, setClassRankComplete] = useState(false);
   
   // Chart refs for capturing as images
   const subjectChartRef = useRef<HTMLDivElement>(null);
@@ -102,27 +104,30 @@ export function ParentDashboard() {
   const calculateRankings = useCallback(async (studentId: string, studentClass: string, term: string, year: string) => {
     console.log('calculateRankings called with:', { studentId, studentClass, term, year });
     
-    // Get all marks for students in the same class for the selected term/year using secure query
+    // Get all marks for students in the same class for the selected term/year
     const classMarks = await fetchTable<any>('marks', { 
       class: studentClass, 
       term: term, 
       academic_year: year 
     });
     
-    // Also get subjects for name lookup
+    // Get subjects for name lookup
     const subjects = await fetchTable<any>('subjects');
+    
+    // Get all students in this class to check completeness
+    const classStudents = await fetchTable<any>('students', { class: studentClass });
+    const totalStudentsInClass = classStudents?.length || 0;
 
-    console.log('Class marks for ranking:', { classMarks, count: classMarks?.length });
+    console.log('Class marks for ranking:', { classMarks, count: classMarks?.length, totalStudentsInClass });
 
     if (!classMarks || classMarks.length === 0) {
-      console.log('No class marks found, resetting rankings');
       setClassRank(null);
       setTotalClassStudents(0);
       setSubjectRankings([]);
+      setClassRankComplete(false);
       return;
     }
 
-    // Build subject name lookup
     const subjectMap = new Map(subjects?.map((s: any) => [s.id, s.name]) || []);
 
     // Calculate average for each student
@@ -135,6 +140,18 @@ export function ParentDashboard() {
       studentAverages[mark.student_id].count += 1;
     });
 
+    // Find all unique subjects in marks for this class/term
+    const allSubjectIds = new Set(classMarks.map((m: any) => m.subject_id));
+    const totalSubjects = allSubjectIds.size;
+
+    // Check if ALL students in the class have marks for ALL subjects
+    const studentsWithMarks = Object.keys(studentAverages);
+    const allStudentsHaveAllSubjects = totalStudentsInClass > 0 &&
+      studentsWithMarks.length >= totalStudentsInClass &&
+      studentsWithMarks.every(sid => studentAverages[sid].count >= totalSubjects);
+    
+    setClassRankComplete(allStudentsHaveAllSubjects);
+
     // Sort students by average
     const rankedStudents = Object.entries(studentAverages)
       .map(([id, data]) => ({
@@ -143,15 +160,12 @@ export function ParentDashboard() {
       }))
       .sort((a, b) => b.average - a.average);
 
-    // Find current student's rank
     const studentRankIndex = rankedStudents.findIndex(s => s.studentId === studentId);
-    console.log('Student rank calculation:', { studentId, studentRankIndex, rankedStudents: rankedStudents.length });
     
     if (studentRankIndex !== -1) {
       setClassRank(studentRankIndex + 1);
       setTotalClassStudents(rankedStudents.length);
     } else {
-      // Student not found in rankings, set total but no rank
       setClassRank(null);
       setTotalClassStudents(rankedStudents.length);
     }
@@ -171,12 +185,14 @@ export function ParentDashboard() {
       });
     });
 
-    // Calculate rank for each subject
+    // Calculate rank for each subject, with completeness check
     const rankings: SubjectRanking[] = [];
     Object.entries(subjectScores).forEach(([subjectId, scores]) => {
-      // Sort by score descending
       const sorted = [...scores].sort((a, b) => b.score - a.score);
       const studentScore = sorted.find(s => s.studentId === studentId);
+      
+      // Subject is complete when all students in class have marks for it
+      const subjectComplete = totalStudentsInClass > 0 && sorted.length >= totalStudentsInClass;
       
       if (studentScore) {
         const rank = sorted.findIndex(s => s.studentId === studentId) + 1;
@@ -186,12 +202,12 @@ export function ParentDashboard() {
           score: studentScore.score,
           grade: studentScore.grade,
           rank,
-          totalStudents: sorted.length
+          totalStudents: sorted.length,
+          complete: subjectComplete
         });
       }
     });
 
-    // Sort by score descending (best subjects first)
     rankings.sort((a, b) => b.score - a.score);
     setSubjectRankings(rankings);
   }, [fetchTable]);
@@ -681,14 +697,14 @@ export function ParentDashboard() {
               <p className="text-4xl font-bold font-display gradient-text">{overallAverage.toFixed(1)}%</p>
               <GradeBadge grade={overallAverage >= 75 ? 'A' : overallAverage >= 65 ? 'B' : overallAverage >= 45 ? 'C' : overallAverage >= 30 ? 'D' : 'F'} size="lg" />
             </div>
-            {classRank && (
+            {classRank && classRankComplete && (
               <div className="text-center border-l border-border pl-4">
                 <p className="text-sm text-muted-foreground">Class Rank</p>
                 <p className="text-3xl font-bold font-display text-primary">{classRank}/{totalClassStudents}</p>
                 {classRank === 1 && <span className="text-xs text-success font-medium">🏆 Top of Class!</span>}
               </div>
             )}
-            {isSeniorClass(childClass) && studentMarks.length > 0 && (() => {
+            {isSeniorClass(childClass) && studentMarks.length >= 7 && (() => {
               const scores = studentMarks.map(m => m.total);
               const { division, totalPoints } = calculateDivision(scores);
               return (
@@ -793,14 +809,18 @@ export function ParentDashboard() {
                         <GradeBadge grade={item.grade} />
                       </td>
                       <td className="py-4 px-4 text-center">
-                        <span className={`inline-flex items-center gap-1 px-3 py-1 rounded-full text-sm font-medium ${
-                          item.rank === 1 ? 'bg-yellow-500/10 text-yellow-600' :
-                          item.rank <= 3 ? 'bg-primary/10 text-primary' :
-                          'bg-muted text-muted-foreground'
-                        }`}>
-                          {item.rank === 1 && <Trophy className="w-3 h-3" />}
-                          {item.rank}/{item.totalStudents}
-                        </span>
+                        {item.complete ? (
+                          <span className={`inline-flex items-center gap-1 px-3 py-1 rounded-full text-sm font-medium ${
+                            item.rank === 1 ? 'bg-yellow-500/10 text-yellow-600' :
+                            item.rank <= 3 ? 'bg-primary/10 text-primary' :
+                            'bg-muted text-muted-foreground'
+                          }`}>
+                            {item.rank === 1 && <Trophy className="w-3 h-3" />}
+                            {item.rank}/{item.totalStudents}
+                          </span>
+                        ) : (
+                          <span className="text-xs text-muted-foreground italic">Incomplete</span>
+                        )}
                       </td>
                       <td className="py-4 px-4 text-center">
                         {isFirst && (
@@ -964,10 +984,10 @@ export function ParentDashboard() {
       <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-5 gap-6">
         <StatCard
           title="Class Rank"
-          value={classRank ? `${classRank}/${totalClassStudents}` : '-'}
-          subtitle={classRank === 1 ? 'Top of class!' : classRank && classRank <= 3 ? 'Top 3!' : 'Overall position'}
+          value={classRank && classRankComplete ? `${classRank}/${totalClassStudents}` : '-'}
+          subtitle={classRank && classRankComplete ? (classRank === 1 ? 'Top of class!' : classRank <= 3 ? 'Top 3!' : 'Overall position') : 'Marks incomplete'}
           icon={Trophy}
-          variant={classRank === 1 ? 'success' : classRank && classRank <= 3 ? 'primary' : 'default'}
+          variant={classRank && classRankComplete ? (classRank === 1 ? 'success' : classRank <= 3 ? 'primary' : 'default') : 'default'}
           bgStyle="silk"
         />
         <StatCard
