@@ -69,7 +69,7 @@ export default function TeachersPage() {
   const { user } = useAuth();
   const { currentYear } = useAcademicYears();
   const { fetchTable } = useSecureQuery();
-  const { insert, update, remove } = useSecureData();
+  const { insert, update, remove, upsert } = useSecureData();
   const [searchQuery, setSearchQuery] = useState('');
   const [teachers, setTeachers] = useState<Teacher[]>([]);
   const [subjects, setSubjects] = useState<Subject[]>([]);
@@ -238,10 +238,7 @@ export default function TeachersPage() {
     try {
       setSaving(true);
 
-      // Delete existing assignments for this teacher
-      await remove('teacher_assignments', { teacher_id: selectedTeacher.id });
-
-      // Insert new assignments
+      // Build new assignments list
       const newAssignments: { teacher_id: string; class: string; subject_id: string; academic_year: string; stream: string | null }[] = [];
       
       Object.entries(classSubjectAssignments).forEach(([slotKey, subjectIds]) => {
@@ -260,8 +257,11 @@ export default function TeachersPage() {
         });
       });
 
+      // Delete existing assignments for this teacher first, then insert new ones
+      await remove('teacher_assignments', { teacher_id: selectedTeacher.id, academic_year: currentYear });
+
       if (newAssignments.length > 0) {
-        const result = await insert('teacher_assignments', newAssignments);
+        const result = await upsert('teacher_assignments', newAssignments);
         if (!result.success) throw new Error(result.error);
       }
 
