@@ -219,6 +219,8 @@ serve(async (req) => {
         const upsertOptions: Record<string, string> = {};
         if (table === "marks") {
           upsertOptions.onConflict = "student_id,subject_id,term,academic_year";
+        } else if (table === "teacher_assignments") {
+          upsertOptions.onConflict = "teacher_id,class,subject_id,academic_year";
         }
         const { data: upsertData, error } = await supabase
           .from(table)
