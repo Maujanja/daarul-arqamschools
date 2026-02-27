@@ -118,7 +118,15 @@ export function ParentDashboard() {
     const classStudents = await fetchTable<any>('students', { class: studentClass });
     const totalStudentsInClass = classStudents?.length || 0;
 
-    console.log('Class marks for ranking:', { classMarks, count: classMarks?.length, totalStudentsInClass });
+    // Get assigned subjects for this class from teacher_assignments to know expected subject count
+    const classAssignments = await fetchTable<any>('teacher_assignments', {
+      class: studentClass,
+      academic_year: year
+    });
+    const assignedSubjectIds = new Set(classAssignments?.map((a: any) => a.subject_id) || []);
+    const expectedSubjectCount = assignedSubjectIds.size;
+
+    console.log('Class marks for ranking:', { classMarks, count: classMarks?.length, totalStudentsInClass, expectedSubjectCount });
 
     if (!classMarks || classMarks.length === 0) {
       setClassRank(null);
@@ -140,13 +148,13 @@ export function ParentDashboard() {
       studentAverages[mark.student_id].count += 1;
     });
 
-    // Find all unique subjects in marks for this class/term
-    const allSubjectIds = new Set(classMarks.map((m: any) => m.subject_id));
-    const totalSubjects = allSubjectIds.size;
+    // Use expected subjects from teacher_assignments (not just what's in marks)
+    const totalSubjects = expectedSubjectCount > 0 ? expectedSubjectCount : new Set(classMarks.map((m: any) => m.subject_id)).size;
 
-    // Check if ALL students in the class have marks for ALL subjects
+    // Check if ALL students in the class have marks for ALL assigned subjects
     const studentsWithMarks = Object.keys(studentAverages);
     const allStudentsHaveAllSubjects = totalStudentsInClass > 0 &&
+      expectedSubjectCount > 0 &&
       studentsWithMarks.length >= totalStudentsInClass &&
       studentsWithMarks.every(sid => studentAverages[sid].count >= totalSubjects);
     
