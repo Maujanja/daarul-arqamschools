@@ -10,12 +10,14 @@ import { useAcademicYears } from '@/hooks/useAcademicYears';
 import { useSecureQuery } from '@/hooks/useSecureQuery';
 import { useSecureData } from '@/hooks/useSecureData';
 import { Loader2, Search, Save, Users, UserPlus, CheckCircle } from 'lucide-react';
+import { extractUniqueBaseClasses, parseClassStream, getStreamsForClass, hasStreams } from '@/utils/classStreams';
 
 interface Student {
   id: string;
   full_name: string;
   roll_number: string;
   class: string;
+  stream: string | null;
 }
 
 interface Subject {
@@ -54,6 +56,7 @@ export default function MyClassStudentsPage() {
   
   const [selectedClass, setSelectedClass] = useState('');
   const [selectedSubject, setSelectedSubject] = useState('');
+  const [selectedStream, setSelectedStream] = useState('');
   
   const [teacherClasses, setTeacherClasses] = useState<string[]>([]);
   const [teacherSubjects, setTeacherSubjects] = useState<Subject[]>([]);
@@ -61,22 +64,8 @@ export default function MyClassStudentsPage() {
   const [selectedStudentIds, setSelectedStudentIds] = useState<Set<string>>(new Set());
   const [existingSelections, setExistingSelections] = useState<TeacherClassStudent[]>([]);
 
-  const mapClassToFullName = (shortClass: string): string => {
-    const mappings: Record<string, string> = {
-      'S1': 'Senior 1',
-      'S2': 'Senior 2',
-      'S3': 'Senior 3',
-      'S4': 'Senior 4',
-      'P1': 'Primary 1',
-      'P2': 'Primary 2',
-      'P3': 'Primary 3',
-      'P4': 'Primary 4',
-      'P5': 'Primary 5',
-      'P6': 'Primary 6',
-      'F3A': 'Form 3 A',
-    };
-    return mappings[shortClass] || shortClass;
-  };
+  // Available streams for selected class
+  const availableStreams = selectedClass ? getStreamsForClass(selectedClass) : [];
 
   // Fetch teacher's assigned classes and subjects via secure query
   useEffect(() => {
@@ -97,15 +86,20 @@ export default function MyClassStudentsPage() {
       
       const teacher = result.data[0];
       
-      // Map short class codes to full names
+      // Extract unique base classes from class+stream strings like "Senior 3 B"
       const rawClasses = teacher.classes || [];
-      const mappedClasses = rawClasses.map((cls: string) => mapClassToFullName(cls));
+      const baseClasses = extractUniqueBaseClasses(rawClasses);
       const subjectNames = teacher.subjects || [];
       
-      setTeacherClasses(mappedClasses);
+      setTeacherClasses(baseClasses);
       
-      if (mappedClasses.length > 0) {
-        setSelectedClass(mappedClasses[0]);
+      if (baseClasses.length > 0) {
+        setSelectedClass(baseClasses[0]);
+        // Auto-select first stream if class has streams
+        if (hasStreams(baseClasses[0])) {
+          const streams = getStreamsForClass(baseClasses[0]);
+          if (streams.length > 0) setSelectedStream(streams[0]);
+        }
       }
       
       // Get subjects matching teacher's subject names
@@ -131,40 +125,66 @@ export default function MyClassStudentsPage() {
     fetchTeacherData();
   }, [user?.id, query, fetchTable]);
 
-  // Fetch students when class changes
+  // Auto-select stream when class changes
+  useEffect(() => {
+    if (selectedClass && hasStreams(selectedClass)) {
+      const streams = getStreamsForClass(selectedClass);
+      if (streams.length > 0 && !streams.includes(selectedStream)) {
+        setSelectedStream(streams[0]);
+      }
+    } else {
+      setSelectedStream('');
+    }
+  }, [selectedClass]);
+
+  // Fetch students when class/stream changes
   useEffect(() => {
     const fetchStudents = async () => {
       if (!selectedClass || !user) return;
       
-      const students = await fetchTable<Student>('students', { class: selectedClass });
+      const filters: Record<string, unknown> = { class: selectedClass };
+      if (selectedStream) {
+        filters.stream = selectedStream;
+      }
+      
+      const students = await fetchTable<Student>('students', filters);
       const sortedStudents = students.sort((a, b) => a.roll_number.localeCompare(b.roll_number));
       setAllStudentsInClass(sortedStudents);
     };
     
     fetchStudents();
-  }, [selectedClass, user, fetchTable]);
+  }, [selectedClass, selectedStream, user, fetchTable]);
 
-  // Fetch existing selections when class/subject/academic year changes
+  // Fetch existing selections when class/subject/stream/academic year changes
   useEffect(() => {
     const fetchExistingSelections = async () => {
       if (!user?.id || !selectedClass || !selectedSubject || !currentYear) return;
+      // If class has streams but none selected, wait
+      if (hasStreams(selectedClass) && !selectedStream) return;
       
-      const selections = await fetchTable<TeacherClassStudent>('teacher_class_students', {
+      const filters: Record<string, unknown> = {
         teacher_id: user.id,
         class: selectedClass,
         subject_id: selectedSubject,
         academic_year: currentYear
-      });
+      };
       
-      setExistingSelections(selections);
+      const selections = await fetchTable<TeacherClassStudent & { stream?: string | null }>('teacher_class_students', filters);
+      
+      // Filter by stream client-side (include null stream for backward compat)
+      const filtered = selectedStream 
+        ? selections.filter(s => (s as any).stream === selectedStream || !(s as any).stream)
+        : selections;
+      
+      setExistingSelections(filtered);
       
       // Set selected student IDs from existing selections
-      const selectedIds = new Set(selections.map(s => s.student_id));
+      const selectedIds = new Set(filtered.map(s => s.student_id));
       setSelectedStudentIds(selectedIds);
     };
     
     fetchExistingSelections();
-  }, [user?.id, selectedClass, selectedSubject, currentYear, fetchTable]);
+  }, [user?.id, selectedClass, selectedSubject, selectedStream, currentYear, fetchTable]);
 
   const toggleStudent = (studentId: string) => {
     setSelectedStudentIds(prev => {
@@ -207,6 +227,7 @@ export default function MyClassStudentsPage() {
           class: selectedClass,
           subject_id: selectedSubject,
           academic_year: currentYear,
+          stream: selectedStream || null,
         }));
         
         const result = await insert('teacher_class_students', insertData);
@@ -293,8 +314,8 @@ export default function MyClassStudentsPage() {
         </div>
 
         <div className="card-elevated p-6 animate-fade-in">
-          <h3 className="font-display font-semibold text-lg mb-4 text-card-foreground">Select Class and Subject</h3>
-          <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4">
+          <h3 className="font-display font-semibold text-lg mb-4 text-card-foreground">Select Class, Stream and Subject</h3>
+          <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
             <div className="space-y-2">
               <label className="text-sm font-medium text-muted-foreground">Class</label>
               <Select value={selectedClass} onValueChange={setSelectedClass}>
@@ -308,6 +329,21 @@ export default function MyClassStudentsPage() {
                 </SelectContent>
               </Select>
             </div>
+            {availableStreams.length > 0 && (
+              <div className="space-y-2">
+                <label className="text-sm font-medium text-muted-foreground">Stream</label>
+                <Select value={selectedStream} onValueChange={setSelectedStream}>
+                  <SelectTrigger>
+                    <SelectValue placeholder="Select stream" />
+                  </SelectTrigger>
+                  <SelectContent>
+                    {availableStreams.map((stream) => (
+                      <SelectItem key={stream} value={stream}>Stream {stream}</SelectItem>
+                    ))}
+                  </SelectContent>
+                </Select>
+              </div>
+            )}
             <div className="space-y-2">
               <label className="text-sm font-medium text-muted-foreground">Subject</label>
               <Select value={selectedSubject} onValueChange={setSelectedSubject}>
