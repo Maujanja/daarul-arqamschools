@@ -146,6 +146,7 @@ export function useSecureQuery() {
       const result = await query<T>(table, {
         filters,
         range: { from: page * pageSize, to: (page + 1) * pageSize - 1 },
+        orderBy: { column: 'id', ascending: true },
       });
 
       if (result.success && result.data && result.data.length > 0) {

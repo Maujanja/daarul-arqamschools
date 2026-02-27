@@ -59,7 +59,7 @@ interface ClassSeriesData {
 export function TeacherDashboard() {
   const navigate = useNavigate();
   const { user } = useAuth();
-  const { fetchTable, count } = useSecureQuery();
+  const { fetchTable, fetchAllPaginated, count } = useSecureQuery();
   const { academicYears, currentYear, loading: yearsLoading } = useAcademicYears();
   const [isLoading, setIsLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
@@ -121,8 +121,8 @@ export function TeacherDashboard() {
         }
         setStudentCounts(counts);
 
-        // Fetch marks for all assigned classes using secure query
-        const marksData = await fetchTable<any>('marks', { 
+        // Fetch marks for all assigned classes using secure query with pagination
+        const marksData = await fetchAllPaginated<any>('marks', { 
           class: teacherData.classes, 
           academic_year: selectedYear 
         });
