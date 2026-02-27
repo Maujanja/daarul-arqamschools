@@ -85,14 +85,14 @@ export const calculateDivision = (subjectScores: number[]): { division: string; 
 };
 
 /**
- * Test naming mapping
- * Senior 1 & 3: CAT 1, CAT 2, TERMINAL, CAT 3, CAT 4, ANNUAL (6 tests)
+ * Series naming mapping
+ * Senior 1 & 3: CAT 1, CAT 2, TERMINAL, CAT 3, CAT 4, ANNUAL (6 series)
  * Senior 2 & 4: Series 1-11
  * Primary & Nursery: Series 1-11
  */
 
-// Senior 1 & 3 test name mapping (Series 1-6 only)
-const SENIOR_1_3_TEST_NAMES: Record<string, string> = {
+// Senior 1 & 3 series name mapping (Series 1-6 only)
+const SENIOR_1_3_SERIES_NAMES: Record<string, string> = {
   'Series 1': 'CAT 1',
   'Series 2': 'CAT 2',
   'Series 3': 'TERMINAL',
@@ -109,7 +109,7 @@ const SENIOR_1_3_TEST_NAMES: Record<string, string> = {
  */
 export const getTestDisplayName = (testName: string, className: string): string => {
   if (isSenior1or3(className)) {
-    return SENIOR_1_3_TEST_NAMES[testName] || testName;
+    return SENIOR_1_3_SERIES_NAMES[testName] || testName;
   }
   
   // For all other classes: use "Series X" as-is
@@ -123,7 +123,7 @@ export const getTestDisplayName = (testName: string, className: string): string 
  */
 export const getTestsForClass = (className: string): { value: string; label: string }[] => {
   if (isSenior1or3(className)) {
-    return Object.entries(SENIOR_1_3_TEST_NAMES).map(([value, label]) => ({
+    return Object.entries(SENIOR_1_3_SERIES_NAMES).map(([value, label]) => ({
       value,
       label,
     }));
@@ -143,7 +143,7 @@ export const getTestsForClass = (className: string): { value: string; label: str
  */
 export const getSeriesLabel = (testName: string, className: string): string => {
   if (isSenior1or3(className)) {
-    return SENIOR_1_3_TEST_NAMES[testName] || testName;
+    return SENIOR_1_3_SERIES_NAMES[testName] || testName;
   }
   
   const match = testName.match(/Series\s+(\d+)/i);
@@ -155,7 +155,7 @@ export const getSeriesLabel = (testName: string, className: string): string => {
 
 /**
  * Get the filter label for dropdowns
- * Senior classes: "Test" label
+ * Senior classes: "CAT/Exam" label
  * Others: "Series" label  
  */
 export const getFilterLabel = (className: string): string => {

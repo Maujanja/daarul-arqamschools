@@ -690,34 +690,43 @@ export function ParentDashboard() {
             </p>
           </div>
           
-          {/* Overall Average Badge */}
-          <div className="flex items-center gap-4 mt-2 flex-wrap justify-center">
-            <div className="text-center">
-              <p className="text-sm text-muted-foreground">Overall Average</p>
-              <p className="text-4xl font-bold font-display gradient-text">{overallAverage.toFixed(1)}%</p>
-              <GradeBadge grade={overallAverage >= 75 ? 'A' : overallAverage >= 65 ? 'B' : overallAverage >= 45 ? 'C' : overallAverage >= 30 ? 'D' : 'F'} size="lg" />
-            </div>
-            {classRank && classRankComplete && (
-              <div className="text-center border-l border-border pl-4">
-                <p className="text-sm text-muted-foreground">Class Rank</p>
-                <p className="text-3xl font-bold font-display text-primary">{classRank}/{totalClassStudents}</p>
-                {classRank === 1 && <span className="text-xs text-success font-medium">🏆 Top of Class!</span>}
+          {/* Overall Average Badge - only show when marks complete */}
+          {classRankComplete && studentMarks.length > 0 && (
+            <div className="flex items-center gap-4 mt-2 flex-wrap justify-center">
+              <div className="text-center">
+                <p className="text-sm text-muted-foreground">Overall Average</p>
+                <p className="text-4xl font-bold font-display gradient-text">{overallAverage.toFixed(1)}%</p>
+                <GradeBadge grade={overallAverage >= 75 ? 'A' : overallAverage >= 65 ? 'B' : overallAverage >= 45 ? 'C' : overallAverage >= 30 ? 'D' : 'F'} size="lg" />
               </div>
-            )}
-            {isSeniorClass(childClass) && studentMarks.length >= 7 && (() => {
-              const scores = studentMarks.map(m => m.total);
-              const { division, totalPoints } = calculateDivision(scores);
-              return (
+              {classRank && (
                 <div className="text-center border-l border-border pl-4">
-                  <p className="text-sm text-muted-foreground">Division</p>
-                  <p className={`text-3xl font-bold font-display ${getDivisionBgColor(division).split(' ').find(c => c.startsWith('text-'))}`}>
-                    {division}
-                  </p>
-                  <span className="text-xs text-muted-foreground">Points: {totalPoints}</span>
+                  <p className="text-sm text-muted-foreground">Class Rank</p>
+                  <p className="text-3xl font-bold font-display text-primary">{classRank}/{totalClassStudents}</p>
+                  {classRank === 1 && <span className="text-xs text-success font-medium">🏆 Top of Class!</span>}
                 </div>
-              );
-            })()}
-          </div>
+              )}
+              {isSeniorClass(childClass) && studentMarks.length >= 7 && (() => {
+                const scores = studentMarks.map(m => m.total);
+                const { division, totalPoints } = calculateDivision(scores);
+                return (
+                  <div className="text-center border-l border-border pl-4">
+                    <p className="text-sm text-muted-foreground">Division</p>
+                    <p className={`text-3xl font-bold font-display ${getDivisionBgColor(division).split(' ').find(c => c.startsWith('text-'))}`}>
+                      {division}
+                    </p>
+                    <span className="text-xs text-muted-foreground">Points: {totalPoints}</span>
+                  </div>
+                );
+              })()}
+            </div>
+          )}
+          {!classRankComplete && (
+            <div className="mt-4 p-3 rounded-lg bg-muted/50 text-center">
+              <p className="text-sm text-muted-foreground">
+                📝 Matokeo yataonekana baada ya walimu kukamilisha kuingiza maksi za wanafunzi wote wa darasa hili.
+              </p>
+            </div>
+          )}
         </div>
       </div>
 
@@ -776,7 +785,8 @@ export function ParentDashboard() {
         </div>
       </div>
 
-
+      {/* Academic sections - only visible when class marks are complete */}
+      {classRankComplete ? (<>
       {/* 1. Subject Analysis & Class Ranking */}
       <div className="card-elevated p-6 animate-fade-in">
         <h3 className="font-display font-semibold text-lg mb-6 text-card-foreground flex items-center gap-2">
@@ -1049,6 +1059,18 @@ export function ParentDashboard() {
           seriesKeys={['Average']}
           pdfFileName={`${childName}_series_performance.pdf`}
         />
+      )}
+      </>) : (
+        <div className="card-elevated p-6 animate-fade-in text-center">
+          <div className="py-12">
+            <BookOpen className="w-12 h-12 mx-auto text-muted-foreground/50 mb-4" />
+            <h3 className="font-display font-semibold text-lg text-card-foreground mb-2">Matokeo Bado Hayajaandaliwa</h3>
+            <p className="text-muted-foreground max-w-md mx-auto">
+              Walimu bado hawakukamilisha kuingiza maksi za wanafunzi wote wa darasa hili kwa series iliyochaguliwa. 
+              Matokeo, gredi, na ripoti zitaonekana hapa baada ya maksi kukamilika.
+            </p>
+          </div>
+        </div>
       )}
 
       {/* 7. Fee Status */}
