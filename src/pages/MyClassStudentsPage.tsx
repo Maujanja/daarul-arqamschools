@@ -142,13 +142,16 @@ export default function MyClassStudentsPage() {
     const fetchStudents = async () => {
       if (!selectedClass || !user) return;
       
-      const filters: Record<string, unknown> = { class: selectedClass };
-      if (selectedStream) {
-        filters.stream = selectedStream;
-      }
+      // Fetch ALL students in the class, then filter client-side
+      // This ensures students with null stream are included (backward compatibility)
+      const students = await fetchTable<Student>('students', { class: selectedClass });
       
-      const students = await fetchTable<Student>('students', filters);
-      const sortedStudents = students.sort((a, b) => a.roll_number.localeCompare(b.roll_number));
+      // Client-side stream filter: include students matching selected stream OR with null stream
+      const filtered = selectedStream
+        ? students.filter(s => s.stream === selectedStream || !s.stream)
+        : students;
+      
+      const sortedStudents = filtered.sort((a, b) => a.roll_number.localeCompare(b.roll_number));
       setAllStudentsInClass(sortedStudents);
     };
     
