@@ -122,12 +122,20 @@ serve(async (req) => {
           break;
         }
 
-        const { data: student, error } = await supabase
+        // Normalize input: trim, collapse multiple spaces, case-insensitive
+        const normalizedName = studentName.trim().replace(/\s+/g, ' ');
+        const normalizedRoll = rollNumber.trim().toUpperCase();
+
+        // Fetch students by roll number first (exact match), then match name flexibly
+        const { data: rollMatches, error } = await supabase
           .from("students")
           .select("id, full_name, parent_id")
-          .ilike("full_name", studentName.trim())
-          .eq("roll_number", rollNumber.trim())
-          .maybeSingle();
+          .eq("roll_number", normalizedRoll);
+
+        // Find student with matching name (case-insensitive, whitespace-normalized)
+        const student = rollMatches?.find((s: any) => 
+          s.full_name.trim().replace(/\s+/g, ' ').toLowerCase() === normalizedName.toLowerCase()
+        ) || null;
 
         if (error || !student) {
           response = { success: false, error: "Student name or ID is incorrect" };
