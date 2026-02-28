@@ -13,7 +13,7 @@ import { toast } from 'sonner';
 import { calculateGrade } from '@/types';
 import { terms } from '@/data/mockData';
 import { useAuth } from '@/contexts/AuthContext';
-import { isSubjectForClass } from '@/utils/classSubjects';
+// classSubjects import removed - using marks-based subject discovery instead
 import { useAcademicYears } from '@/hooks/useAcademicYears';
 import { useSecureQuery } from '@/hooks/useSecureQuery';
 import { isSeniorClass, calculateDivision, getTestDisplayName, getTestsForClass, getFilterLabel, getDivisionBgColor } from '@/utils/seniorGrading';
@@ -276,54 +276,38 @@ export default function ReportsPage() {
 
       setClassStats(stats);
 
-      // Calculate subject statistics - filter by class subjects and remove duplicates
-      let filteredSubjects = subjects || [];
+      // Calculate subject statistics - use marks data to discover subjects with actual marks
+      // This is more reliable than hardcoded subject-class mapping
+      const subjectIdsWithMarks = [...new Set(filteredMarks.map(m => m.subject_id))];
       
-      if (selectedClass !== 'all') {
-        // Filter subjects that belong to the selected class
-        filteredSubjects = (subjects || []).filter(s => isSubjectForClass(s.name, selectedClass));
+      // Build subject stats from subjects that actually have marks
+      const subjectStatsMap = new Map<string, { name: string; totals: number[] }>();
+      
+      subjectIdsWithMarks.forEach(subjectId => {
+        const subject = (subjects || []).find(s => s.id === subjectId);
+        const subjectName = subject?.name || 'Unknown';
+        const nameLower = subjectName.toLowerCase().trim();
         
-        // Remove duplicate subject names (keep first occurrence)
-        const uniqueNames = new Set<string>();
-        filteredSubjects = filteredSubjects.filter(s => {
-          const nameLower = s.name.toLowerCase().trim();
-          if (uniqueNames.has(nameLower)) {
-            return false;
-          }
-          uniqueNames.add(nameLower);
-          return true;
-        });
-      } else {
-        // For "All Classes", remove duplicates but keep all subjects
-        const uniqueNames = new Set<string>();
-        filteredSubjects = (subjects || []).filter(s => {
-          const nameLower = s.name.toLowerCase().trim();
-          if (uniqueNames.has(nameLower)) {
-            return false;
-          }
-          uniqueNames.add(nameLower);
-          return true;
-        });
-      }
-
-      // Group marks by subject name to handle duplicate subject IDs
-      const subjectStats = filteredSubjects.map(subject => {
-        // Get all subject IDs with the same name
-        const sameNameSubjectIds = (subjects || [])
-          .filter(s => s.name.toLowerCase().trim() === subject.name.toLowerCase().trim())
-          .map(s => s.id);
+        const subjectMarks = filteredMarks.filter(m => m.subject_id === subjectId);
+        const totals = subjectMarks.map(m => m.total);
         
-        // Get marks for all matching subject IDs from filteredMarks
-        const subjectMarks = filteredMarks.filter(m => sameNameSubjectIds.includes(m.subject_id));
-        const totals = subjectMarks.map(m => m.total).filter(t => t > 0);
-        
-        return {
-          name: subject.name,
-          average: totals.length > 0 ? Math.round(totals.reduce((a, b) => a + b, 0) / totals.length) : 0,
-          highest: totals.length > 0 ? Math.max(...totals) : 0,
-          lowest: totals.length > 0 ? Math.min(...totals) : 0,
-        };
+        if (subjectStatsMap.has(nameLower)) {
+          // Merge marks for same-named subjects
+          subjectStatsMap.get(nameLower)!.totals.push(...totals);
+        } else {
+          subjectStatsMap.set(nameLower, { name: subjectName, totals: [...totals] });
+        }
       });
+      
+      const subjectStats = Array.from(subjectStatsMap.values()).map(({ name, totals }) => {
+        const validTotals = totals.filter(t => t > 0);
+        return {
+          name,
+          average: validTotals.length > 0 ? Math.round(validTotals.reduce((a, b) => a + b, 0) / validTotals.length) : 0,
+          highest: validTotals.length > 0 ? Math.max(...validTotals) : 0,
+          lowest: validTotals.length > 0 ? Math.min(...validTotals) : 0,
+        };
+      }).sort((a, b) => b.average - a.average);
 
       setSubjectsData(subjectStats);
     } catch (error) {
@@ -644,7 +628,7 @@ export default function ReportsPage() {
                         <td className="py-4 px-4 text-center text-success">{subject.highest}%</td>
                         <td className="py-4 px-4 text-center text-destructive">{subject.lowest}%</td>
                         <td className="py-4 px-4 text-center">
-                          <GradeBadge grade={subject.average >= 75 ? 'A' : subject.average >= 65 ? 'B' : 'C'} />
+                          <GradeBadge grade={subject.average >= 75 ? 'A' : subject.average >= 65 ? 'B' : subject.average >= 45 ? 'C' : subject.average >= 30 ? 'D' : 'F'} />
                         </td>
                       </tr>
                     )) : (

@@ -187,7 +187,23 @@ serve(async (req) => {
             { headers: { ...corsHeaders, "Content-Type": "application/json" } }
           );
         }
-      } else if (table === "marks" || table === "fee_payments" || table === "student_debt_history") {
+      } else if (table === "marks") {
+        // Allow parents to fetch class-wide marks for ranking when class filter is present
+        const hasClassFilter = filters && ("class" in filters);
+        if (!hasClassFilter) {
+          // No class filter = personal marks only
+          const studentIds = await resolveStudentIds();
+          if (studentIds.length > 0) {
+            query = query.in("student_id", studentIds);
+          } else {
+            return new Response(
+              JSON.stringify({ success: true, data: [] }),
+              { headers: { ...corsHeaders, "Content-Type": "application/json" } }
+            );
+          }
+        }
+        // When class filter IS present, don't restrict by student - allows ranking calculation
+      } else if (table === "fee_payments" || table === "student_debt_history") {
         const studentIds = await resolveStudentIds();
         if (studentIds.length > 0) {
           query = query.in("student_id", studentIds);
