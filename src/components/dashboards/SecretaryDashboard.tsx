@@ -610,7 +610,7 @@ export function SecretaryDashboard() {
   const [showTemplateClassDialog, setShowTemplateClassDialog] = useState(false);
   const [templateClass, setTemplateClass] = useState('');
 
-  const ALL_CLASSES = ['Nursery', 'Primary 1', 'Primary 2', 'Primary 3', 'Primary 4', 'Primary 5', 'Primary 6', 'Primary 7', 'Senior 1', 'Senior 2', 'Senior 3', 'Senior 4'];
+  const ALL_CLASSES = ['Baby Class', 'Kindergarten I', 'Kindergarten II', 'Primary 1', 'Primary 2', 'Primary 3', 'Primary 4', 'Primary 5', 'Primary 6', 'Primary 7', 'Senior 1', 'Senior 2', 'Senior 3', 'Senior 4'];
 
   // Download Excel template for fee payments - filtered by class
   const handleDownloadTemplate = () => {

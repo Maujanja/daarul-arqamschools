@@ -7,7 +7,9 @@
 // Senior 4: A, B
 
 export const CLASS_STREAMS: Record<string, string[]> = {
-  'Nursery': [],
+  'Baby Class': [],
+  'Kindergarten I': [],
+  'Kindergarten II': [],
   'Primary 1': ['A', 'B'],
   'Primary 2': ['A', 'B'],
   'Primary 3': ['A', 'B'],
