@@ -50,7 +50,7 @@ interface TeacherAssignment {
   stream: string | null;
 }
 
-const ALL_CLASSES = ['Nursery', 'Primary 1', 'Primary 2', 'Primary 3', 'Primary 4', 'Primary 5', 'Primary 6', 'Primary 7', 'Senior 1', 'Senior 2', 'Senior 3', 'Senior 4'];
+const ALL_CLASSES = ['Baby Class', 'Kindergarten I', 'Kindergarten II', 'Primary 1', 'Primary 2', 'Primary 3', 'Primary 4', 'Primary 5', 'Primary 6', 'Primary 7', 'Senior 1', 'Senior 2', 'Senior 3', 'Senior 4'];
 
 // Generate class+stream slots for assignments
 const ALL_CLASS_STREAM_SLOTS: { className: string; stream: string | null; key: string; display: string }[] = [];

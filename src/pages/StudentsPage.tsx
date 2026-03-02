@@ -89,12 +89,15 @@ interface AcademicYear {
   is_current: boolean;
 }
 
-const ALL_CLASSES = ['Nursery', 'Primary 1', 'Primary 2', 'Primary 3', 'Primary 4', 'Primary 5', 'Primary 6', 'Primary 7', 'Senior 1', 'Senior 2', 'Senior 3', 'Senior 4'];
+const ALL_CLASSES = ['Baby Class', 'Kindergarten I', 'Kindergarten II', 'Primary 1', 'Primary 2', 'Primary 3', 'Primary 4', 'Primary 5', 'Primary 6', 'Primary 7', 'Senior 1', 'Senior 2', 'Senior 3', 'Senior 4'];
 
 // Map short class codes to full class names used in students table
 const mapClassToFullName = (shortCode: string): string => {
   const mapping: Record<string, string> = {
-    'N': 'Nursery',
+    'BC': 'Baby Class',
+    'KG1': 'Kindergarten I',
+    'KG2': 'Kindergarten II',
+    'N': 'Baby Class',
     'P1': 'Primary 1',
     'P2': 'Primary 2',
     'P3': 'Primary 3',
@@ -813,19 +816,19 @@ export default function StudentsPage() {
               <Select 
                 value={newStudent.boarding_type} 
                 onValueChange={(v) => setNewStudent({ ...newStudent, boarding_type: v })}
-                disabled={newStudent.class === 'Nursery'}
+                disabled={['Baby Class', 'Kindergarten I', 'Kindergarten II'].includes(newStudent.class)}
               >
                 <SelectTrigger>
                   <SelectValue placeholder="Select type" />
                 </SelectTrigger>
                 <SelectContent>
                   <SelectItem value="day">Day Student</SelectItem>
-                  {newStudent.class !== 'Nursery' && (
+                  {!['Baby Class', 'Kindergarten I', 'Kindergarten II'].includes(newStudent.class) && (
                     <SelectItem value="boarding">Boarding Student</SelectItem>
                   )}
                 </SelectContent>
               </Select>
-              {newStudent.class === 'Nursery' && (
+              {['Baby Class', 'Kindergarten I', 'Kindergarten II'].includes(newStudent.class) && (
                 <p className="text-xs text-muted-foreground">Nursery students are day students only</p>
               )}
             </div>

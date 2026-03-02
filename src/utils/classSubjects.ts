@@ -47,6 +47,11 @@ const SECONDARY_SUBJECTS = [
 ];
 
 export const CLASS_SUBJECTS: { [classLevel: string]: string[] } = {
+  // Nursery
+  'Baby Class': P12_SUBJECTS,
+  'Kindergarten I': P12_SUBJECTS,
+  'Kindergarten II': P12_SUBJECTS,
+  
   // Primary 1-2
   'Primary 1': P12_SUBJECTS,
   'Primary 2': P12_SUBJECTS,
@@ -87,7 +92,10 @@ export function isSubjectForClass(subjectName: string, className: string): boole
 }
 
 // Get class level category
-export function getClassLevel(className: string): 'primary_lower' | 'primary_upper' | 'secondary' | 'unknown' {
+export function getClassLevel(className: string): 'nursery' | 'primary_lower' | 'primary_upper' | 'secondary' | 'unknown' {
+  if (className === 'Baby Class' || className === 'Kindergarten I' || className === 'Kindergarten II') {
+    return 'nursery';
+  }
   if (className === 'Primary 1' || className === 'Primary 2') {
     return 'primary_lower';
   }

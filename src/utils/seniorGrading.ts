@@ -13,6 +13,12 @@ export const isSenior1or3 = (className: string): boolean => {
   return /^Senior\s+[13]$/i.test(className.trim());
 };
 
+// Check if Nursery class (Baby Class, Kindergarten I, Kindergarten II)
+export const isNurseryClass = (className: string): boolean => {
+  const c = className.trim();
+  return c === 'Baby Class' || c === 'Kindergarten I' || c === 'Kindergarten II';
+};
+
 // Check if Senior 2 or Senior 4
 export const isSenior2or4 = (className: string): boolean => {
   return /^Senior\s+[24]$/i.test(className.trim());
@@ -86,13 +92,14 @@ export const calculateDivision = (subjectScores: number[]): { division: string; 
 
 /**
  * Series naming mapping
- * Senior 1 & 3: CAT 1, CAT 2, TERMINAL, CAT 3, CAT 4, ANNUAL (6 series)
+ * Senior 1 & 3: CAT 1, CAT 2, TERMINAL, CAT 3, CAT 4, ANNUAL (6 tests)
+ * Nursery (Baby Class, KG I, KG II): CAT 1, CAT 2, TERMINAL, CAT 3, CAT 4, ANNUAL (6 tests)
  * Senior 2 & 4: Series 1-11
- * Primary & Nursery: Series 1-11
+ * Primary: Series 1-11
  */
 
-// Senior 1 & 3 series name mapping (Series 1-6 only)
-const SENIOR_1_3_SERIES_NAMES: Record<string, string> = {
+// CAT-based series name mapping (Senior 1&3 + Nursery, Series 1-6 only)
+const CAT_SERIES_NAMES: Record<string, string> = {
   'Series 1': 'CAT 1',
   'Series 2': 'CAT 2',
   'Series 3': 'TERMINAL',
@@ -108,8 +115,8 @@ const SENIOR_1_3_SERIES_NAMES: Record<string, string> = {
  * @returns Display name for the test
  */
 export const getTestDisplayName = (testName: string, className: string): string => {
-  if (isSenior1or3(className)) {
-    return SENIOR_1_3_SERIES_NAMES[testName] || testName;
+  if (isSenior1or3(className) || isNurseryClass(className)) {
+    return CAT_SERIES_NAMES[testName] || testName;
   }
   
   // For all other classes: use "Series X" as-is
@@ -122,8 +129,8 @@ export const getTestDisplayName = (testName: string, className: string): string 
  * Others: 11 tests (Series 1 to Series 11)
  */
 export const getTestsForClass = (className: string): { value: string; label: string }[] => {
-  if (isSenior1or3(className)) {
-    return Object.entries(SENIOR_1_3_SERIES_NAMES).map(([value, label]) => ({
+  if (isSenior1or3(className) || isNurseryClass(className)) {
+    return Object.entries(CAT_SERIES_NAMES).map(([value, label]) => ({
       value,
       label,
     }));
@@ -142,8 +149,8 @@ export const getTestsForClass = (className: string): { value: string; label: str
  * Others: S1, S2, ... S11
  */
 export const getSeriesLabel = (testName: string, className: string): string => {
-  if (isSenior1or3(className)) {
-    return SENIOR_1_3_SERIES_NAMES[testName] || testName;
+  if (isSenior1or3(className) || isNurseryClass(className)) {
+    return CAT_SERIES_NAMES[testName] || testName;
   }
   
   const match = testName.match(/Series\s+(\d+)/i);
@@ -159,7 +166,7 @@ export const getSeriesLabel = (testName: string, className: string): string => {
  * Others: "Series" label  
  */
 export const getFilterLabel = (className: string): string => {
-  if (isSenior1or3(className)) {
+  if (isSenior1or3(className) || isNurseryClass(className)) {
     return 'CAT/Exam';
   }
   return 'Series';
