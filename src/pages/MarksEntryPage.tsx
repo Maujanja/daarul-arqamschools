@@ -338,6 +338,14 @@ export default function MarksEntryPage() {
         }
       });
       
+      // Always reset marks to empty first before applying existing data
+      setMarks(prev => prev.map(mark => ({
+        ...mark,
+        exam: '',
+        total: 0,
+        grade: '-',
+      })));
+
       if (result.success && result.data && result.data.length > 0) {
         // Track which students have existing marks (per-student locking)
         const studentsWithMarks = new Set<string>();
@@ -356,7 +364,6 @@ export default function MarksEntryPage() {
         setMarks(prev => prev.map(mark => {
           const existingMark = result.data!.find(m => m.student_id === mark.studentId);
           if (existingMark) {
-            // Recalculate grade from stored marks to ensure consistency
             const percentage = (existingMark.total / maxMarks) * 100;
             const recalcGrade = existingMark.total > 0 ? calculateGrade(percentage) : '-';
             return {
