@@ -4,7 +4,7 @@ import { useQuery } from '@tanstack/react-query';
 import { supabase } from '@/integrations/supabase/client';
 import { StatCard } from '@/components/dashboard/StatCard';
 import { SeriesSummaryTable } from '@/components/dashboard/SeriesSummaryTable';
-import { Users, GraduationCap, BookOpen, MessageSquare, FileText, DollarSign, Clock, CheckCircle, User, Calendar, UserCog } from 'lucide-react';
+import { Users, GraduationCap, BookOpen, MessageSquare, FileText, DollarSign, Clock, CheckCircle, User, Calendar, UserCog, Download, Loader2 } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
@@ -12,7 +12,9 @@ import { classes } from '@/data/mockData';
 import { useAcademicYears } from '@/hooks/useAcademicYears';
 import { useAuth } from '@/contexts/AuthContext';
 import { useSecureData } from '@/hooks/useSecureData';
-import { getTestDisplayName } from '@/utils/seniorGrading';
+import { getTestDisplayName, getTestsForClass, getFilterLabel } from '@/utils/seniorGrading';
+import { generateAnnualExamReport } from '@/utils/annualReportGenerator';
+import { toast } from 'sonner';
 
 interface FeedbackItem {
   id: string;
@@ -71,6 +73,9 @@ export function AdminDashboard() {
   const { academicYears, currentYear, loading: yearsLoading } = useAcademicYears();
   const [selectedYear, setSelectedYear] = useState('');
   const [selectedClass, setSelectedClass] = useState(classes[0]);
+  const [reportClass, setReportClass] = useState(classes[0]);
+  const [reportTerm, setReportTerm] = useState('Series 1');
+  const [generatingReport, setGeneratingReport] = useState(false);
 
   // Set initial year when academic years load
   useEffect(() => {
@@ -422,6 +427,49 @@ export function AdminDashboard() {
     await update('feedback', { status: 'reviewed' }, { id: feedbackId });
   };
 
+  const handleDownloadAnnualReport = async () => {
+    if (!user || !selectedYear) return;
+    try {
+      setGeneratingReport(true);
+
+      // Fetch students for the selected class
+      const studentsResult = await secureQuery('students', user.role, user.id, {
+        filters: { class: reportClass },
+        select: 'id, full_name, gender, roll_number, class, stream',
+      });
+      const students = studentsResult?.success ? studentsResult.data : [];
+
+      if (!students || students.length === 0) {
+        toast.error(`Hakuna wanafunzi kwa ${reportClass}`);
+        return;
+      }
+
+      // Fetch marks for the selected class/term/year
+      const marksResult = await secureQuery('marks', user.role, user.id, {
+        filters: { class: reportClass, term: reportTerm, academic_year: selectedYear },
+        range: { from: 0, to: 9999 },
+      });
+      const marks = marksResult?.success ? marksResult.data : [];
+
+      if (!marks || marks.length === 0) {
+        toast.error(`Hakuna marks kwa ${reportClass} - ${reportTerm}`);
+        return;
+      }
+
+      // Fetch subjects
+      const subjectsResult = await secureQuery('subjects', user.role, user.id);
+      const subjects = subjectsResult?.success ? subjectsResult.data : [];
+
+      generateAnnualExamReport(reportClass, reportTerm, selectedYear, students, marks, subjects);
+      toast.success('Ripoti imeshuka vizuri!');
+    } catch (error) {
+      console.error('Report generation error:', error);
+      toast.error('Imeshindikana kutengeneza ripoti');
+    } finally {
+      setGeneratingReport(false);
+    }
+  };
+
   return (
     <div className="space-y-8">
       <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4">
@@ -584,6 +632,56 @@ export function AdminDashboard() {
             <FeedbackList feedback={secretaryFeedback} onMarkReviewed={handleMarkReviewed} />
           </TabsContent>
         </Tabs>
+      </div>
+
+      {/* Annual Exam Report Download */}
+      <div className="card-elevated p-6 animate-fade-in">
+        <h3 className="font-display font-semibold text-lg text-card-foreground flex items-center gap-2 mb-4">
+          <FileText className="w-5 h-5 text-primary" />
+          Annual Examination Results (Excel)
+        </h3>
+        <p className="text-sm text-muted-foreground mb-4">
+          Download ripoti kamili ya matokeo kwa darasa, ikiwa na Result Summary, marks za kila somo, grades, positions{' '}
+          na divisions (kwa Senior tu).
+        </p>
+        <div className="grid grid-cols-1 sm:grid-cols-3 gap-4 mb-4">
+          <div className="space-y-2">
+            <label className="text-sm font-medium text-muted-foreground">Class</label>
+            <Select value={reportClass} onValueChange={(v) => { setReportClass(v); setReportTerm(getTestsForClass(v)[0]?.value || 'Series 1'); }}>
+              <SelectTrigger>
+                <SelectValue />
+              </SelectTrigger>
+              <SelectContent>
+                {classes.map((cls) => (
+                  <SelectItem key={cls} value={cls}>{cls}</SelectItem>
+                ))}
+              </SelectContent>
+            </Select>
+          </div>
+          <div className="space-y-2">
+            <label className="text-sm font-medium text-muted-foreground">{getFilterLabel(reportClass)}</label>
+            <Select value={reportTerm} onValueChange={setReportTerm}>
+              <SelectTrigger>
+                <SelectValue />
+              </SelectTrigger>
+              <SelectContent>
+                {getTestsForClass(reportClass).map((t) => (
+                  <SelectItem key={t.value} value={t.value}>{t.label}</SelectItem>
+                ))}
+              </SelectContent>
+            </Select>
+          </div>
+          <div className="flex items-end">
+            <Button
+              className="btn-gradient w-full"
+              onClick={handleDownloadAnnualReport}
+              disabled={generatingReport}
+            >
+              {generatingReport ? <Loader2 className="w-4 h-4 mr-2 animate-spin" /> : <Download className="w-4 h-4 mr-2" />}
+              Download Report
+            </Button>
+          </div>
+        </div>
       </div>
 
       {/* Quick Actions */}
