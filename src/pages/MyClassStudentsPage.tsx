@@ -33,6 +33,7 @@ interface TeacherClassStudent {
   class: string;
   subject_id: string;
   academic_year: string;
+  stream: string | null;
 }
 
 interface Teacher {
@@ -172,11 +173,11 @@ export default function MyClassStudentsPage() {
         academic_year: currentYear
       };
       
-      const selections = await fetchTable<TeacherClassStudent & { stream?: string | null }>('teacher_class_students', filters);
+      const selections = await fetchTable<TeacherClassStudent>('teacher_class_students', filters);
       
       // Filter by stream client-side (include null stream for backward compat)
       const filtered = selectedStream 
-        ? selections.filter(s => (s as any).stream === selectedStream || !(s as any).stream)
+        ? selections.filter(s => s.stream === selectedStream || !s.stream)
         : selections;
       
       setExistingSelections(filtered);
@@ -216,12 +217,34 @@ export default function MyClassStudentsPage() {
     setIsSaving(true);
     
     try {
-      // Delete existing selections for this class/subject/year using secure remove
-      // We need to delete each one by ID
-      const deletePromises = existingSelections.map(selection => 
-        remove('teacher_class_students', { id: selection.id })
+      const contextFilters = {
+        teacher_id: user.id,
+        class: selectedClass,
+        subject_id: selectedSubject,
+        academic_year: currentYear,
+      };
+
+      // Fetch all existing selections for the same teacher/class/subject/year
+      // so we can safely remove current-stream rows + conflicting rows before insert.
+      const allContextSelections = await fetchTable<TeacherClassStudent>('teacher_class_students', contextFilters);
+
+      const selectedIdsSet = new Set(Array.from(selectedStudentIds));
+      const hasClassStreams = hasStreams(selectedClass);
+
+      const isCurrentStreamRecord = (row: TeacherClassStudent) => {
+        if (!hasClassStreams) return !row.stream;
+        return selectedStream ? row.stream === selectedStream || !row.stream : !row.stream;
+      };
+
+      const rowsToDelete = allContextSelections.filter((row) =>
+        isCurrentStreamRecord(row) || selectedIdsSet.has(row.student_id)
       );
-      await Promise.all(deletePromises);
+
+      if (rowsToDelete.length > 0) {
+        await Promise.all(
+          rowsToDelete.map((selection) => remove('teacher_class_students', { id: selection.id }))
+        );
+      }
       
       // Insert new selections in smaller batches to avoid payload limits
       if (selectedStudentIds.size > 0) {
@@ -252,14 +275,11 @@ export default function MyClassStudentsPage() {
       });
       
       // Refresh existing selections
-      const selections = await fetchTable<TeacherClassStudent>('teacher_class_students', {
-        teacher_id: user.id,
-        class: selectedClass,
-        subject_id: selectedSubject,
-        academic_year: currentYear
-      });
-      
-      setExistingSelections(selections);
+      const selections = await fetchTable<TeacherClassStudent>('teacher_class_students', contextFilters);
+      const refreshedFiltered = selectedStream
+        ? selections.filter(s => s.stream === selectedStream || !s.stream)
+        : selections;
+      setExistingSelections(refreshedFiltered);
       
     } catch (error: any) {
       console.error('Error saving students:', error);
