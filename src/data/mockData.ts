@@ -64,6 +64,7 @@ export const mockFeedback: Feedback[] = [
 ];
 
 export const classes = [
+  'Baby Class', 'Kindergarten I', 'Kindergarten II',
   'Primary 1', 'Primary 2', 'Primary 3', 'Primary 4', 'Primary 5', 'Primary 6', 'Primary 7',
   'Senior 1', 'Senior 2', 'Senior 3', 'Senior 4'
 ];

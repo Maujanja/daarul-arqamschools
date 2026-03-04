@@ -1,6 +1,5 @@
 import * as XLSX from 'xlsx';
-import { isSeniorClass, scoreToPoints, calculateDivision } from './seniorGrading';
-import { calculateGrade } from '@/types';
+import { isSeniorClass, scoreToPoints, calculateDivision, calculateGradeForClass } from './seniorGrading';
 
 interface StudentData {
   id: string;
@@ -52,7 +51,7 @@ export function generateAnnualExamReport(
     activeSubjects.forEach(subject => {
       const mark = studentMarks.find(m => m.subject_id === subject.id);
       const score = mark ? mark.total : 0;
-      const grade = mark ? (mark.grade || calculateGrade(score)) : '-';
+      const grade = score > 0 ? calculateGradeForClass(score, className) : '-';
       const points = isSenior && score > 0 ? scoreToPoints(score) : 0;
       subjectScores.push({ subjectId: subject.id, score, grade, points });
     });
@@ -60,7 +59,7 @@ export function generateAnnualExamReport(
     const scoredSubjects = subjectScores.filter(s => s.score > 0);
     const totalMarks = scoredSubjects.reduce((sum, s) => sum + s.score, 0);
     const average = scoredSubjects.length > 0 ? Math.round((totalMarks / scoredSubjects.length) * 10) / 10 : 0;
-    const overallGrade = average > 0 ? calculateGrade(average) : '-';
+    const overallGrade = average > 0 ? calculateGradeForClass(average, className) : '-';
 
     // Division calculation (Senior only)
     let division = '-';
@@ -91,21 +90,24 @@ export function generateAnnualExamReport(
       division,
       totalPoints,
       position: 0, // will be set after sorting
-      remarks: average >= 30 ? 'PASS' : (average > 0 ? 'FAIL' : '-'),
+      remarks: average > 0 ? (isSenior ? (average >= 30 ? 'PASS' : 'FAIL') : (average >= 21 ? 'PASS' : 'FAIL')) : '-',
     };
   });
 
-  // Sort by average descending and assign positions
-  studentRows.sort((a, b) => b.average - a.average);
+  // Assign positions based on average (descending), then sort alphabetically for display
+  const rankedRows = [...studentRows].sort((a, b) => b.average - a.average);
   let currentPosition = 1;
-  studentRows.forEach((row, index) => {
-    if (index > 0 && row.average === studentRows[index - 1].average) {
-      row.position = studentRows[index - 1].position;
+  rankedRows.forEach((row, index) => {
+    if (index > 0 && row.average === rankedRows[index - 1].average) {
+      row.position = rankedRows[index - 1].position;
     } else {
       row.position = currentPosition;
     }
     currentPosition = index + 2;
   });
+
+  // Sort alphabetically by first name (A-Z) for display
+  studentRows.sort((a, b) => a.firstName.localeCompare(b.firstName, 'en', { sensitivity: 'base' }));
 
   // === Build Result Summary ===
   const genderGroups = { F: studentRows.filter(r => r.gender === 'F'), M: studentRows.filter(r => r.gender === 'M') };

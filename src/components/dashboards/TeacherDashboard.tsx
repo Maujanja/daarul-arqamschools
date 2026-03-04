@@ -11,6 +11,7 @@ import { useAcademicYears } from '@/hooks/useAcademicYears';
 import { SeriesSummaryTable } from '@/components/dashboard/SeriesSummaryTable';
 import { SeriesPerformanceChart } from '@/components/dashboard/SeriesPerformanceChart';
 import { getTestDisplayName, getTestsForClass, getFilterLabel } from '@/utils/seniorGrading';
+import { extractUniqueBaseClasses } from '@/utils/classStreams';
 
 interface TeacherInfo {
   id: string;
@@ -114,21 +115,23 @@ export function TeacherDashboard() {
 
       // Count students per class and fetch marks
       if (teacherData.classes && teacherData.classes.length > 0) {
+        const baseClasses = extractUniqueBaseClasses(teacherData.classes);
         const counts: StudentCount[] = [];
-        for (const cls of teacherData.classes) {
+        for (const cls of baseClasses) {
           const studentCount = await count('students', { class: cls });
           counts.push({ class: cls, count: studentCount || 0 });
         }
         setStudentCounts(counts);
 
         // Fetch marks for all assigned classes using secure query with pagination
+        // Use baseClasses (e.g. "Senior 3 B" -> "Senior 3") since marks store base class names
         const marksData = await fetchAllPaginated<any>('marks', { 
-          class: teacherData.classes, 
+          class: baseClasses, 
           academic_year: selectedYear 
         });
 
         // We need to also fetch students separately to join the data
-        const studentsData = await fetchTable<any>('students', { class: teacherData.classes });
+        const studentsData = await fetchTable<any>('students', { class: baseClasses });
 
         if (marksData && marksData.length > 0) {
           // Build a lookup map for student info
@@ -170,9 +173,9 @@ export function TeacherDashboard() {
           const allSeriesLabels = ['Series 1', 'Series 2', 'Series 3', 'Series 4', 'Series 5', 'Series 6', 'Series 7', 'Series 8', 'Series 9', 'Series 10', 'Series 11'];
           const classSummary: any[] = [];
           
-          console.log('TeacherDashboard: Processing marks for series summary', { marksCount: marksData.length, classes: teacherData.classes });
+          console.log('TeacherDashboard: Processing marks for series summary', { marksCount: marksData.length, classes: baseClasses });
           
-          teacherData.classes.forEach((cls: string) => {
+          baseClasses.forEach((cls: string) => {
             const classMarks = marksData.filter((m: any) => m.class === cls);
             const seriesAverages: Record<string, number | null> = {};
             
