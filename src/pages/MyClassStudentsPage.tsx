@@ -218,13 +218,14 @@ export default function MyClassStudentsPage() {
     try {
       // Delete existing selections for this class/subject/year using secure remove
       // We need to delete each one by ID
-      for (const selection of existingSelections) {
-        await remove('teacher_class_students', { id: selection.id });
-      }
+      const deletePromises = existingSelections.map(selection => 
+        remove('teacher_class_students', { id: selection.id })
+      );
+      await Promise.all(deletePromises);
       
-      // Insert new selections with current academic year
+      // Insert new selections in smaller batches to avoid payload limits
       if (selectedStudentIds.size > 0) {
-        const insertData = Array.from(selectedStudentIds).map(studentId => ({
+        const allInsertData = Array.from(selectedStudentIds).map(studentId => ({
           teacher_id: user.id,
           student_id: studentId,
           class: selectedClass,
@@ -233,10 +234,15 @@ export default function MyClassStudentsPage() {
           stream: selectedStream || null,
         }));
         
-        const result = await insert('teacher_class_students', insertData);
-        
-        if (!result.success) {
-          throw new Error(result.error || 'Failed to save students');
+        // Insert in batches of 50
+        const batchSize = 50;
+        for (let i = 0; i < allInsertData.length; i += batchSize) {
+          const batch = allInsertData.slice(i, i + batchSize);
+          const result = await insert('teacher_class_students', batch);
+          
+          if (!result.success) {
+            throw new Error(result.error || 'Failed to save students');
+          }
         }
       }
       

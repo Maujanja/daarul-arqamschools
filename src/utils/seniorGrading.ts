@@ -8,6 +8,42 @@ export const isSeniorClass = (className: string): boolean => {
   return /^Senior\s+[1-4]$/i.test(className.trim());
 };
 
+// Check if a class is Primary level (Primary 1-7)
+export const isPrimaryClass = (className: string): boolean => {
+  return /^Primary\s+[1-7]$/i.test(className.trim());
+};
+
+/**
+ * Primary Grading System
+ * A (81-100), B (61-80), C (41-60), D (21-40), E (0-20)
+ */
+export type PrimaryGrade = 'A' | 'B' | 'C' | 'D' | 'E';
+
+export const calculatePrimaryGrade = (score: number): PrimaryGrade => {
+  if (score >= 81) return 'A';
+  if (score >= 61) return 'B';
+  if (score >= 41) return 'C';
+  if (score >= 21) return 'D';
+  return 'E';
+};
+
+/**
+ * Calculate grade based on class level
+ * Primary: A(81-100), B(61-80), C(41-60), D(21-40), E(0-20)
+ * Senior/Others: A(75-100), B(65-74), C(45-64), D(30-44), F(0-29)
+ */
+export const calculateGradeForClass = (score: number, className: string): string => {
+  if (isPrimaryClass(className) || isNurseryClass(className)) {
+    return calculatePrimaryGrade(score);
+  }
+  // Senior / default grading
+  if (score >= 75) return 'A';
+  if (score >= 65) return 'B';
+  if (score >= 45) return 'C';
+  if (score >= 30) return 'D';
+  return 'F';
+};
+
 // Check if Senior 1 or Senior 3
 export const isSenior1or3 = (className: string): boolean => {
   return /^Senior\s+[13]$/i.test(className.trim());
