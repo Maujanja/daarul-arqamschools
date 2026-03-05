@@ -22,6 +22,17 @@ interface SubjectData {
   name: string;
 }
 
+const gradeWeight: Record<string, number> = { A: 1, B: 2, C: 3, D: 4, E: 5, F: 5 };
+
+const abbreviateSubject = (name: string) => {
+  const cleaned = name.replace(/[^A-Za-z0-9 ]/g, '').trim();
+  if (!cleaned) return 'SUB';
+  if (cleaned.length <= 14) return cleaned.toUpperCase();
+  const words = cleaned.split(/\s+/);
+  if (words.length === 1) return cleaned.slice(0, 12).toUpperCase();
+  return words.map(w => w[0]).join('').toUpperCase();
+};
+
 /**
  * Generate Annual Examination Results Excel report matching the school's format
  * Divisions and Points only for Senior classes
@@ -36,6 +47,8 @@ export function generateAnnualExamReport(
 ) {
   const wb = XLSX.utils.book_new();
   const isSenior = isSeniorClass(className);
+  const gradeScale = isSenior ? ['A', 'B', 'C', 'D', 'F'] : ['A', 'B', 'C', 'D', 'E'];
+  const leadingColumns = isSenior ? 7 : 5;
 
   // Discover subjects that have marks for this class
   const subjectIdsWithMarks = [...new Set(marks.map(m => m.subject_id))];
@@ -61,7 +74,6 @@ export function generateAnnualExamReport(
     const average = scoredSubjects.length > 0 ? Math.round((totalMarks / scoredSubjects.length) * 10) / 10 : 0;
     const overallGrade = average > 0 ? calculateGradeForClass(average, className) : '-';
 
-    // Division calculation (Senior only)
     let division = '-';
     let totalPoints = 0;
     if (isSenior && scoredSubjects.length > 0) {
@@ -71,7 +83,6 @@ export function generateAnnualExamReport(
       totalPoints = divResult.totalPoints;
     }
 
-    // Split name into parts
     const nameParts = student.full_name.trim().split(/\s+/);
     const firstName = nameParts[0] || '';
     const middleName = nameParts.length > 2 ? nameParts.slice(1, -1).join(' ') : '';
@@ -89,41 +100,36 @@ export function generateAnnualExamReport(
       overallGrade,
       division,
       totalPoints,
-      position: 0, // will be set after sorting
+      position: 0,
       remarks: average > 0 ? (isSenior ? (average >= 30 ? 'PASS' : 'FAIL') : (average >= 21 ? 'PASS' : 'FAIL')) : '-',
     };
   });
 
-  // Assign positions based on average (descending), then sort alphabetically for display
+  // Position by performance
   const rankedRows = [...studentRows].sort((a, b) => b.average - a.average);
   let currentPosition = 1;
   rankedRows.forEach((row, index) => {
-    if (index > 0 && row.average === rankedRows[index - 1].average) {
-      row.position = rankedRows[index - 1].position;
-    } else {
-      row.position = currentPosition;
-    }
+    if (index > 0 && row.average === rankedRows[index - 1].average) row.position = rankedRows[index - 1].position;
+    else row.position = currentPosition;
     currentPosition = index + 2;
   });
 
-  // Sort alphabetically by first name (A-Z) for display
-  studentRows.sort((a, b) => a.firstName.localeCompare(b.firstName, 'en', { sensitivity: 'base' }));
+  // Display order A-Z
+  studentRows.sort((a, b) => `${a.firstName} ${a.middleName} ${a.surName}`.localeCompare(`${b.firstName} ${b.middleName} ${b.surName}`, 'en', { sensitivity: 'base' }));
 
-  // === Build Result Summary ===
   const genderGroups = { F: studentRows.filter(r => r.gender === 'F'), M: studentRows.filter(r => r.gender === 'M') };
-  
-  const countGrades = (rows: typeof studentRows) => ({
-    A: rows.filter(r => r.overallGrade === 'A').length,
-    B: rows.filter(r => r.overallGrade === 'B').length,
-    C: rows.filter(r => r.overallGrade === 'C').length,
-    D: rows.filter(r => r.overallGrade === 'D').length,
-    F: rows.filter(r => r.overallGrade === 'F').length,
-    INC: 0,
-    ABS: 0,
-    PASS: rows.filter(r => r.remarks === 'PASS').length,
-    FAIL: rows.filter(r => r.remarks === 'FAIL').length,
-    TOTAL: rows.filter(r => r.average > 0).length,
-  });
+
+  const countGrades = (rows: typeof studentRows) => {
+    const counts = Object.fromEntries(gradeScale.map(g => [g, rows.filter(r => r.overallGrade === g).length])) as Record<string, number>;
+    return {
+      ...counts,
+      INC: 0,
+      ABS: 0,
+      PASS: rows.filter(r => r.remarks === 'PASS').length,
+      FAIL: rows.filter(r => r.remarks === 'FAIL').length,
+      TOTAL: rows.filter(r => r.average > 0).length,
+    };
+  };
 
   const countDivisions = (rows: typeof studentRows) => ({
     I: rows.filter(r => r.division === 'I').length,
@@ -134,28 +140,18 @@ export function generateAnnualExamReport(
     TOTAL: rows.filter(r => r.division !== '-').length,
   });
 
-  // === Build worksheet data ===
   const wsData: any[][] = [];
 
-  // Row 1: Bismillah
   wsData.push(['Bismillaahir Rahmaanir Rahiim']);
-  // Row 2: School name
-  wsData.push(['DAARUL-ARQAM SCHOOLS']);
-  // Row 3: Report title
+  wsData.push(['DAARUL-ARQAM SECONDARY SCHOOL']);
   const yearOnly = academicYear.split('-')[0] || academicYear;
   wsData.push([`${className.toUpperCase()} ${term.toUpperCase()} EXAMINATION RESULTS — ${yearOnly}`]);
-
-  // Row 4: Empty
   wsData.push([]);
 
-  // Result Summary header
-  const summaryHeaderRow = ['RESULT SUMMARY', '', '', '', '', 'G/S', 'A', 'B', 'C', 'D', 'F', 'INC', 'ABS', 'PASS', 'FAIL', 'TOTAL'];
-  if (isSenior) {
-    summaryHeaderRow.push('', 'DIVISION', '', '', 'I', 'II', 'III', 'IV', 'O', 'TOTAL');
-  }
+  const summaryHeaderRow = ['RESULT SUMMARY', '', '', '', '', 'G/S', ...gradeScale, 'INC', 'ABS', 'PASS', 'FAIL', 'TOTAL'];
+  if (isSenior) summaryHeaderRow.push('', 'DIVISION', '', '', 'I', 'II', 'III', 'IV', 'O', 'TOTAL');
   wsData.push(summaryHeaderRow);
 
-  // Summary data rows
   const genderLabels = [
     { label: 'F', rows: genderGroups.F },
     { label: 'M', rows: genderGroups.M },
@@ -164,7 +160,7 @@ export function generateAnnualExamReport(
 
   genderLabels.forEach(({ label, rows }) => {
     const grades = countGrades(rows);
-    const summaryRow: any[] = ['', '', '', '', '', label, grades.A, grades.B, grades.C, grades.D, grades.F, grades.INC, grades.ABS, grades.PASS, grades.FAIL, grades.TOTAL];
+    const summaryRow: any[] = ['', '', '', '', '', label, ...gradeScale.map(g => grades[g]), grades.INC, grades.ABS, grades.PASS, grades.FAIL, grades.TOTAL];
     if (isSenior) {
       const divs = countDivisions(rows);
       summaryRow.push('', '', '', '', divs.I, divs.II, divs.III, divs.IV, divs.O, divs.TOTAL);
@@ -172,37 +168,20 @@ export function generateAnnualExamReport(
     wsData.push(summaryRow);
   });
 
-  // Empty row before main table
   wsData.push([]);
 
-  // === Main table header ===
   const headerRow: string[] = ['S/N', 'SEX', 'FIRST NAME', 'MIDDLE NAME', 'SUR NAME'];
-  if (isSenior) {
-    headerRow.push('DIVISION', 'POINTS');
-  }
+  if (isSenior) headerRow.push('DIVISION', 'POINTS');
 
-  // Add subject columns (marks + grade + points for senior)
-  activeSubjects.forEach(subject => {
-    headerRow.push(subject.name.toUpperCase());
-  });
-
+  activeSubjects.forEach(subject => headerRow.push(subject.name.toUpperCase()));
   headerRow.push('TOTAL', 'AVERAGE', 'GRADE', 'POSITION', 'REMARKS');
 
-  // Subject grade columns
-  activeSubjects.forEach(subject => {
-    headerRow.push(`${subject.name.toUpperCase()} (G)`);
-  });
+  activeSubjects.forEach(subject => headerRow.push(`${abbreviateSubject(subject.name)}\n(G)`));
+  if (isSenior) activeSubjects.forEach(subject => headerRow.push(`${abbreviateSubject(subject.name)}\n(P)`));
 
-  if (isSenior) {
-    // Subject points columns
-    activeSubjects.forEach(subject => {
-      headerRow.push(`${subject.name.toUpperCase()} (P)`);
-    });
-  }
-
+  const mainHeaderRowIndex = wsData.length;
   wsData.push(headerRow);
 
-  // === Student data rows ===
   studentRows.forEach((row, index) => {
     const dataRow: any[] = [
       String(index + 1).padStart(3, '0'),
@@ -212,14 +191,9 @@ export function generateAnnualExamReport(
       row.surName,
     ];
 
-    if (isSenior) {
-      dataRow.push(row.division, row.totalPoints > 0 ? row.totalPoints : '');
-    }
+    if (isSenior) dataRow.push(row.division, row.totalPoints > 0 ? row.totalPoints : '');
 
-    // Subject marks
-    row.subjectScores.forEach(s => {
-      dataRow.push(s.score > 0 ? s.score : '');
-    });
+    row.subjectScores.forEach(s => dataRow.push(s.score > 0 ? s.score : ''));
 
     dataRow.push(
       row.totalMarks > 0 ? row.totalMarks : '',
@@ -229,48 +203,102 @@ export function generateAnnualExamReport(
       row.remarks,
     );
 
-    // Subject grades
-    row.subjectScores.forEach(s => {
-      dataRow.push(s.score > 0 ? s.grade : '');
-    });
-
-    if (isSenior) {
-      // Subject points
-      row.subjectScores.forEach(s => {
-        dataRow.push(s.points > 0 ? s.points : '');
-      });
-    }
+    row.subjectScores.forEach(s => dataRow.push(s.score > 0 ? s.grade : ''));
+    if (isSenior) row.subjectScores.forEach(s => dataRow.push(s.points > 0 ? s.points : ''));
 
     wsData.push(dataRow);
   });
 
-  // Create worksheet
+  // Bottom section (missing in previous version)
+  wsData.push([]);
+  const subjectNames = activeSubjects.map(s => s.name.toUpperCase());
+  const prefix = ['SUBJECT SUMMARY', ...Array(leadingColumns - 1).fill('')];
+  wsData.push([...prefix, ...subjectNames, 'TOTAL', 'VOLUME', 'G.P.A']);
+
+  const subjectAverages = activeSubjects.map(subject => {
+    const scores = studentRows
+      .map(r => r.subjectScores.find(s => s.subjectId === subject.id)?.score || 0)
+      .filter(score => score > 0);
+    return scores.length > 0 ? Math.round((scores.reduce((a, b) => a + b, 0) / scores.length) * 10) / 10 : 0;
+  });
+
+  wsData.push(['SUBJECT AVERAGE', ...Array(leadingColumns - 1).fill(''), ...subjectAverages.map(v => (v > 0 ? v : '')), '', '', '']);
+  wsData.push(['GRADE', ...Array(leadingColumns - 1).fill(''), ...subjectAverages.map(v => (v > 0 ? calculateGradeForClass(v, className) : '')), '', '', '']);
+
+  const rankedSubjects = [...subjectAverages]
+    .map((avg, i) => ({ i, avg }))
+    .filter(x => x.avg > 0)
+    .sort((a, b) => b.avg - a.avg);
+  const subjectRanks: Array<string | number> = subjectAverages.map(() => '');
+  rankedSubjects.forEach((item, i) => { subjectRanks[item.i] = i + 1; });
+  wsData.push(['SUBJECT RANK', ...Array(leadingColumns - 1).fill(''), ...subjectRanks, '', '', '']);
+
+  wsData.push(['INDIVIDUAL SUBJECT GRADE SCORES', ...Array(leadingColumns - 1).fill(''), ...Array(activeSubjects.length).fill(''), '', '', '']);
+
+  let grandVolume = 0;
+  gradeScale.forEach(grade => {
+    const counts = activeSubjects.map(subject => studentRows.reduce((sum, row) => {
+      const ss = row.subjectScores.find(s => s.subjectId === subject.id);
+      return sum + (ss && ss.score > 0 && ss.grade === grade ? 1 : 0);
+    }, 0));
+
+    const total = counts.reduce((a, b) => a + b, 0);
+    const volume = total * (gradeWeight[grade] ?? 0);
+    grandVolume += volume;
+
+    wsData.push([
+      '',
+      ...Array(Math.max(0, leadingColumns - 2)).fill(''),
+      grade,
+      ...counts,
+      total,
+      volume,
+      '',
+    ]);
+  });
+
+  const candidatesPerSubject = activeSubjects.map(subject => studentRows.reduce((sum, row) => {
+    const ss = row.subjectScores.find(s => s.subjectId === subject.id);
+    return sum + (ss && ss.score > 0 ? 1 : 0);
+  }, 0));
+  const candidatesTotal = candidatesPerSubject.reduce((a, b) => a + b, 0);
+  const gpa = candidatesTotal > 0 ? grandVolume / candidatesTotal : 0;
+
+  wsData.push([
+    'NUMBER OF CANDIDATES',
+    ...Array(leadingColumns - 1).fill(''),
+    ...candidatesPerSubject,
+    candidatesTotal,
+    grandVolume,
+    gpa > 0 ? Number(gpa.toFixed(4)) : '',
+  ]);
+
   const ws = XLSX.utils.aoa_to_sheet(wsData);
 
-  // Set column widths
   const colWidths: XLSX.ColInfo[] = [
-    { wch: 5 },  // S/N
-    { wch: 5 },  // SEX
-    { wch: 14 }, // First
-    { wch: 14 }, // Middle
-    { wch: 14 }, // Sur
+    { wch: 5 },
+    { wch: 5 },
+    { wch: 14 },
+    { wch: 14 },
+    { wch: 14 },
   ];
-  if (isSenior) {
-    colWidths.push({ wch: 8 }, { wch: 7 }); // Division, Points
-  }
+  if (isSenior) colWidths.push({ wch: 8 }, { wch: 7 });
   activeSubjects.forEach(() => colWidths.push({ wch: 8 }));
-  colWidths.push({ wch: 7 }, { wch: 8 }, { wch: 6 }, { wch: 8 }, { wch: 8 }); // Total, Avg, Grade, Pos, Remarks
-  activeSubjects.forEach(() => colWidths.push({ wch: 6 })); // Grade cols
-  if (isSenior) {
-    activeSubjects.forEach(() => colWidths.push({ wch: 6 })); // Points cols
-  }
+  colWidths.push({ wch: 7 }, { wch: 8 }, { wch: 6 }, { wch: 8 }, { wch: 9 });
+  activeSubjects.forEach(() => colWidths.push({ wch: 7 }));
+  if (isSenior) activeSubjects.forEach(() => colWidths.push({ wch: 7 }));
+
+  const maxCols = Math.max(...wsData.map(r => r.length));
+  while (colWidths.length < maxCols) colWidths.push({ wch: 9 });
   ws['!cols'] = colWidths;
 
-  // Add worksheet to workbook
+  const rowsMeta = wsData.map(() => ({ hpx: 22 }));
+  rowsMeta[mainHeaderRowIndex] = { hpx: 42 }; // stacked headers to mimic vertical style
+  ws['!rows'] = rowsMeta;
+
   const sheetName = className.length > 31 ? className.substring(0, 31) : className;
   XLSX.utils.book_append_sheet(wb, ws, sheetName);
 
-  // Download
   const fileName = `${className.replace(/\s+/g, '_')}_${term.replace(/\s+/g, '_')}_Results_${academicYear}.xlsx`;
   XLSX.writeFile(wb, fileName);
 }
