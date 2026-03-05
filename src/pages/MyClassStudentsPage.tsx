@@ -49,7 +49,7 @@ export default function MyClassStudentsPage() {
   const { toast } = useToast();
   const { currentYear } = useAcademicYears();
   const { fetchTable, query } = useSecureQuery();
-  const { insert, remove } = useSecureData();
+  const { insert, remove, upsert } = useSecureData();
   
   const [isLoading, setIsLoading] = useState(true);
   const [isSaving, setIsSaving] = useState(false);
@@ -147,9 +147,11 @@ export default function MyClassStudentsPage() {
       // This ensures students with null stream are included (backward compatibility)
       const students = await fetchTable<Student>('students', { class: selectedClass });
       
-      // Client-side stream filter: include students matching selected stream OR with null stream
+      // Stream classes: strict stream match to avoid cross-stream duplicates
       const filtered = selectedStream
-        ? students.filter(s => s.stream === selectedStream || !s.stream)
+        ? (hasStreams(selectedClass)
+            ? students.filter(s => s.stream === selectedStream)
+            : students.filter(s => s.stream === selectedStream || !s.stream))
         : students;
       
       const sortedStudents = filtered.sort((a, b) => a.roll_number.localeCompare(b.roll_number));
@@ -177,7 +179,9 @@ export default function MyClassStudentsPage() {
       
       // Filter by stream client-side (include null stream for backward compat)
       const filtered = selectedStream 
-        ? selections.filter(s => s.stream === selectedStream || !s.stream)
+        ? (hasStreams(selectedClass)
+            ? selections.filter(s => s.stream === selectedStream)
+            : selections.filter(s => s.stream === selectedStream || !s.stream))
         : selections;
       
       setExistingSelections(filtered);
@@ -224,29 +228,18 @@ export default function MyClassStudentsPage() {
         academic_year: currentYear,
       };
 
-      // Fetch all existing selections for the same teacher/class/subject/year
-      // so we can safely remove current-stream rows + conflicting rows before insert.
-      const allContextSelections = await fetchTable<TeacherClassStudent>('teacher_class_students', contextFilters);
-
-      const selectedIdsSet = new Set(Array.from(selectedStudentIds));
+      // Delete only current stream rows first (plus legacy null stream rows when class has streams)
       const hasClassStreams = hasStreams(selectedClass);
-
-      const isCurrentStreamRecord = (row: TeacherClassStudent) => {
-        if (!hasClassStreams) return !row.stream;
-        return selectedStream ? row.stream === selectedStream || !row.stream : !row.stream;
-      };
-
-      const rowsToDelete = allContextSelections.filter((row) =>
-        isCurrentStreamRecord(row) || selectedIdsSet.has(row.student_id)
-      );
-
-      if (rowsToDelete.length > 0) {
-        await Promise.all(
-          rowsToDelete.map((selection) => remove('teacher_class_students', { id: selection.id }))
-        );
+      if (hasClassStreams && selectedStream) {
+        await Promise.all([
+          remove('teacher_class_students', { ...contextFilters, stream: selectedStream }),
+          remove('teacher_class_students', { ...contextFilters, stream: null }),
+        ]);
+      } else {
+        await remove('teacher_class_students', { ...contextFilters, stream: null });
       }
       
-      // Insert new selections in smaller batches to avoid payload limits
+      // Upsert new selections in batches to avoid duplicate-key save failures
       if (selectedStudentIds.size > 0) {
         const allInsertData = Array.from(selectedStudentIds).map(studentId => ({
           teacher_id: user.id,
@@ -257,11 +250,10 @@ export default function MyClassStudentsPage() {
           stream: selectedStream || null,
         }));
         
-        // Insert in batches of 50
         const batchSize = 50;
         for (let i = 0; i < allInsertData.length; i += batchSize) {
           const batch = allInsertData.slice(i, i + batchSize);
-          const result = await insert('teacher_class_students', batch);
+          const result = await upsert('teacher_class_students', batch);
           
           if (!result.success) {
             throw new Error(result.error || 'Failed to save students');
@@ -277,7 +269,9 @@ export default function MyClassStudentsPage() {
       // Refresh existing selections
       const selections = await fetchTable<TeacherClassStudent>('teacher_class_students', contextFilters);
       const refreshedFiltered = selectedStream
-        ? selections.filter(s => s.stream === selectedStream || !s.stream)
+        ? (hasStreams(selectedClass)
+            ? selections.filter(s => s.stream === selectedStream)
+            : selections.filter(s => s.stream === selectedStream || !s.stream))
         : selections;
       setExistingSelections(refreshedFiltered);
       

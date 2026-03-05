@@ -63,7 +63,7 @@ const permissions: Record<string, Record<AllowedTable, AllowedOperation[]>> = {
     feedback: ["update"],
     parents: [],
     teacher_assignments: [],
-    teacher_class_students: ["insert", "delete"],
+    teacher_class_students: ["insert", "delete", "upsert"],
     subjects: [],
     academic_years: [],
     announcements: [],
@@ -221,6 +221,8 @@ serve(async (req) => {
           upsertOptions.onConflict = "student_id,subject_id,term,academic_year";
         } else if (table === "teacher_assignments") {
           upsertOptions.onConflict = "teacher_id,class,subject_id,academic_year,stream";
+        } else if (table === "teacher_class_students") {
+          upsertOptions.onConflict = "teacher_id,student_id,class,subject_id,academic_year";
         }
         const { data: upsertData, error } = await supabase
           .from(table)

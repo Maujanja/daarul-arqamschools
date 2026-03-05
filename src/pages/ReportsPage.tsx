@@ -17,6 +17,7 @@ import { useAuth } from '@/contexts/AuthContext';
 import { useAcademicYears } from '@/hooks/useAcademicYears';
 import { useSecureQuery } from '@/hooks/useSecureQuery';
 import { isSeniorClass, calculateDivision, getTestDisplayName, getTestsForClass, getFilterLabel, getDivisionBgColor } from '@/utils/seniorGrading';
+import { extractUniqueBaseClasses } from '@/utils/classStreams';
 
 interface Student {
   id: string;
@@ -140,7 +141,7 @@ export default function ReportsPage() {
         
         if (teacherResult.success && teacherResult.data && teacherResult.data.length > 0) {
           const teacher = teacherResult.data[0];
-          teacherClasses = teacher.classes || [];
+          teacherClasses = extractUniqueBaseClasses(teacher.classes || []);
           
           // Get subject IDs that match teacher's subject names
           if (teacher.subjects && teacher.subjects.length > 0) {
@@ -154,6 +155,12 @@ export default function ReportsPage() {
                 .map(s => s.id);
             }
           }
+        }
+
+        // Fallback: some teachers rely only on assignment records
+        if (teacherClasses.length === 0) {
+          const assignments = await fetchTable<{ class: string }>('teacher_assignments', { teacher_id: user.id });
+          teacherClasses = extractUniqueBaseClasses(assignments.map(a => a.class));
         }
       }
 
@@ -190,7 +197,9 @@ export default function ReportsPage() {
         marksFilters.subject_id = teacherSubjectIds;
       }
       if (isTeacher && teacherClasses.length > 0) {
-        marksFilters.class = teacherClasses;
+        if (selectedClass === 'all') {
+          marksFilters.class = teacherClasses;
+        }
       }
 
       // Fetch marks with pagination support
