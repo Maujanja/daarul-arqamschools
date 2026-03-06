@@ -463,7 +463,7 @@ export function AdminDashboard() {
       const subjects = subjectsResult?.success ? subjectsResult.data : [];
 
       if (reportFormat === 'pdf') {
-        generateAnnualExamReportPDF(reportClass, reportTerm, selectedYear, students, marks, subjects);
+        await generateAnnualExamReportPDF(reportClass, reportTerm, selectedYear, students, marks, subjects);
       } else {
         generateAnnualExamReport(reportClass, reportTerm, selectedYear, students, marks, subjects);
       }
