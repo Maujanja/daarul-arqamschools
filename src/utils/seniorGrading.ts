@@ -5,12 +5,12 @@
 
 // Check if a class is Senior level
 export const isSeniorClass = (className: string): boolean => {
-  return /^Senior\s+[1-4]$/i.test(className.trim());
+  return /^Senior\s+[1-4]/i.test(className.trim());
 };
 
 // Check if a class is Primary level (Primary 1-7)
 export const isPrimaryClass = (className: string): boolean => {
-  return /^Primary\s+[1-7]$/i.test(className.trim());
+  return /^Primary\s+[1-7]/i.test(className.trim());
 };
 
 /**
