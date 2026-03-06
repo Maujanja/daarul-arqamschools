@@ -34,7 +34,29 @@ const abbreviateSubject = (name: string): string => {
   return words.map(w => w[0]).join('').toUpperCase();
 };
 
-export function generateAnnualExamReportPDF(
+const loadLogoAsBase64 = (): Promise<string | null> => {
+  return new Promise((resolve) => {
+    const img = new Image();
+    img.crossOrigin = 'anonymous';
+    img.onload = () => {
+      const canvas = document.createElement('canvas');
+      canvas.width = img.width;
+      canvas.height = img.height;
+      const ctx = canvas.getContext('2d');
+      if (ctx) {
+        ctx.drawImage(img, 0, 0);
+        resolve(canvas.toDataURL('image/png'));
+      } else {
+        resolve(null);
+      }
+    };
+    img.onerror = () => resolve(null);
+    // Dynamic import workaround for Vite asset
+    import('../assets/das-logo.png').then(mod => { img.src = mod.default; }).catch(() => resolve(null));
+  });
+};
+
+export async function generateAnnualExamReportPDF(
   className: string,
   term: string,
   academicYear: string,
@@ -44,6 +66,9 @@ export function generateAnnualExamReportPDF(
 ) {
   const isSenior = isSeniorClass(className);
   const gradeScale = isSenior ? ['A', 'B', 'C', 'D', 'F'] : ['A', 'B', 'C', 'D', 'E'];
+
+  // Load logo
+  const logoBase64 = await loadLogoAsBase64();
 
   // Discover subjects with marks
   const subjectIdsWithMarks = [...new Set(marks.map(m => m.subject_id))];
@@ -137,24 +162,32 @@ export function generateAnnualExamReportPDF(
   const doc = new jsPDF({ orientation: isLandscape ? 'landscape' : 'portrait', unit: 'mm', format: 'a4' });
   const pageWidth = doc.internal.pageSize.getWidth();
 
-  // Title
+  // Logo + Title
+  let headerY = 10;
+  if (logoBase64) {
+    const logoSize = 14;
+    const logoX = (pageWidth - logoSize) / 2;
+    doc.addImage(logoBase64, 'PNG', logoX, 6, logoSize, logoSize);
+    headerY = 22;
+  }
+
   doc.setFontSize(10);
   doc.setFont('helvetica', 'italic');
-  doc.text('Bismillaahir Rahmaanir Rahiim', pageWidth / 2, 10, { align: 'center' });
+  doc.text('Bismillaahir Rahmaanir Rahiim', pageWidth / 2, headerY, { align: 'center' });
 
   doc.setFontSize(16);
   doc.setFont('helvetica', 'bold');
-  doc.text('DAARUL-ARQAM SECONDARY SCHOOL', pageWidth / 2, 18, { align: 'center' });
+  doc.text('DAARUL-ARQAM SECONDARY SCHOOL', pageWidth / 2, headerY + 8, { align: 'center' });
 
   const yearOnly = academicYear.split('-')[0] || academicYear;
   doc.setFontSize(11);
   doc.setFont('helvetica', 'normal');
-  doc.text(`${className.toUpperCase()} ${term.toUpperCase()} EXAMINATION RESULTS — ${yearOnly}`, pageWidth / 2, 25, { align: 'center' });
+  doc.text(`${className.toUpperCase()} ${term.toUpperCase()} EXAMINATION RESULTS — ${yearOnly}`, pageWidth / 2, headerY + 15, { align: 'center' });
 
-  // Result Summary Table
+  const summaryStartY = headerY + 21;
   doc.setFontSize(9);
   doc.setFont('helvetica', 'bold');
-  doc.text('RESULT SUMMARY', 14, 33);
+  doc.text('RESULT SUMMARY', 14, summaryStartY);
 
   const summaryHead = ['G/S', ...gradeScale, 'PASS', 'FAIL', 'TOTAL'];
   if (isSenior) summaryHead.push('I', 'II', 'III', 'IV', 'O');
@@ -174,7 +207,7 @@ export function generateAnnualExamReportPDF(
   });
 
   autoTable(doc, {
-    startY: 35,
+    startY: summaryStartY + 2,
     head: [summaryHead],
     body: summaryBody,
     theme: 'grid',
