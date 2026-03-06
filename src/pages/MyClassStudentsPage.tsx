@@ -147,11 +147,9 @@ export default function MyClassStudentsPage() {
       // This ensures students with null stream are included (backward compatibility)
       const students = await fetchTable<Student>('students', { class: selectedClass });
       
-      // Stream classes: strict stream match to avoid cross-stream duplicates
+      // Include students whose stream matches OR whose stream is null/empty (backward compat)
       const filtered = selectedStream
-        ? (hasStreams(selectedClass)
-            ? students.filter(s => s.stream === selectedStream)
-            : students.filter(s => s.stream === selectedStream || !s.stream))
+        ? students.filter(s => s.stream === selectedStream || !s.stream || s.stream === '')
         : students;
       
       const sortedStudents = filtered.sort((a, b) => a.roll_number.localeCompare(b.roll_number));

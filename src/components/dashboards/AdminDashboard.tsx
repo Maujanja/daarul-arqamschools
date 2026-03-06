@@ -14,6 +14,7 @@ import { useAuth } from '@/contexts/AuthContext';
 import { useSecureData } from '@/hooks/useSecureData';
 import { getTestDisplayName, getTestsForClass, getFilterLabel } from '@/utils/seniorGrading';
 import { generateAnnualExamReport } from '@/utils/annualReportGenerator';
+import { generateAnnualExamReportPDF } from '@/utils/annualReportPdfGenerator';
 import { toast } from 'sonner';
 
 interface FeedbackItem {
@@ -76,6 +77,7 @@ export function AdminDashboard() {
   const [reportClass, setReportClass] = useState(classes[0]);
   const [reportTerm, setReportTerm] = useState('Series 1');
   const [generatingReport, setGeneratingReport] = useState(false);
+  const [reportFormat, setReportFormat] = useState<'excel' | 'pdf'>('excel');
 
   // Set initial year when academic years load
   useEffect(() => {
@@ -460,7 +462,11 @@ export function AdminDashboard() {
       const subjectsResult = await secureQuery('subjects', user.role, user.id);
       const subjects = subjectsResult?.success ? subjectsResult.data : [];
 
-      generateAnnualExamReport(reportClass, reportTerm, selectedYear, students, marks, subjects);
+      if (reportFormat === 'pdf') {
+        generateAnnualExamReportPDF(reportClass, reportTerm, selectedYear, students, marks, subjects);
+      } else {
+        generateAnnualExamReport(reportClass, reportTerm, selectedYear, students, marks, subjects);
+      }
       toast.success('Ripoti imeshuka vizuri!');
     } catch (error) {
       console.error('Report generation error:', error);
@@ -638,13 +644,13 @@ export function AdminDashboard() {
       <div className="card-elevated p-6 animate-fade-in">
         <h3 className="font-display font-semibold text-lg text-card-foreground flex items-center gap-2 mb-4">
           <FileText className="w-5 h-5 text-primary" />
-          Annual Examination Results (Excel)
+          Annual Examination Results
         </h3>
         <p className="text-sm text-muted-foreground mb-4">
           Download ripoti kamili ya matokeo kwa darasa, ikiwa na Result Summary, marks za kila somo, grades, positions{' '}
-          na divisions (kwa Senior tu).
+          na divisions (kwa Senior tu). Chagua format: Excel au PDF.
         </p>
-        <div className="grid grid-cols-1 sm:grid-cols-3 gap-4 mb-4">
+        <div className="grid grid-cols-1 sm:grid-cols-4 gap-4 mb-4">
           <div className="space-y-2">
             <label className="text-sm font-medium text-muted-foreground">Class</label>
             <Select value={reportClass} onValueChange={(v) => { setReportClass(v); setReportTerm(getTestsForClass(v)[0]?.value || 'Series 1'); }}>
@@ -671,6 +677,18 @@ export function AdminDashboard() {
               </SelectContent>
             </Select>
           </div>
+          <div className="space-y-2">
+            <label className="text-sm font-medium text-muted-foreground">Format</label>
+            <Select value={reportFormat} onValueChange={(v) => setReportFormat(v as 'excel' | 'pdf')}>
+              <SelectTrigger>
+                <SelectValue />
+              </SelectTrigger>
+              <SelectContent>
+                <SelectItem value="excel">📊 Excel (.xlsx)</SelectItem>
+                <SelectItem value="pdf">📄 PDF (.pdf)</SelectItem>
+              </SelectContent>
+            </Select>
+          </div>
           <div className="flex items-end">
             <Button
               className="btn-gradient w-full"
@@ -678,7 +696,7 @@ export function AdminDashboard() {
               disabled={generatingReport}
             >
               {generatingReport ? <Loader2 className="w-4 h-4 mr-2 animate-spin" /> : <Download className="w-4 h-4 mr-2" />}
-              Download Report
+              Download {reportFormat === 'pdf' ? 'PDF' : 'Excel'}
             </Button>
           </div>
         </div>
