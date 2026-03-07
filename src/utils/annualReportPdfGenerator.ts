@@ -161,6 +161,8 @@ export async function generateAnnualExamReportPDF(
     III: rows.filter(r => r.division === 'III').length,
     IV: rows.filter(r => r.division === 'IV').length,
     O: rows.filter(r => r.division === '0').length,
+    ABS: rows.filter(r => r.division === 'ABS').length,
+    INC: rows.filter(r => r.division === 'INC').length,
   });
 
   // Determine orientation based on number of subjects
@@ -196,7 +198,7 @@ export async function generateAnnualExamReportPDF(
   doc.text('RESULT SUMMARY', 14, summaryStartY);
 
   const summaryHead = ['G/S', ...gradeScale, 'PASS', 'FAIL', 'TOTAL'];
-  if (isSenior) summaryHead.push('I', 'II', 'III', 'IV', 'O');
+  if (isSenior) summaryHead.push('I', 'II', 'III', 'IV', 'O', 'ABS', 'INC');
 
   const summaryBody = [
     { label: 'F', rows: femaleRows },
@@ -207,7 +209,7 @@ export async function generateAnnualExamReportPDF(
     const row: (string | number)[] = [label, ...gradeScale.map(g => grades[g] || 0), grades.PASS, grades.FAIL, grades.TOTAL];
     if (isSenior) {
       const divs = countDivisions(rows);
-      row.push(divs.I, divs.II, divs.III, divs.IV, divs.O);
+      row.push(divs.I, divs.II, divs.III, divs.IV, divs.O, divs.ABS, divs.INC);
     }
     return row;
   });
