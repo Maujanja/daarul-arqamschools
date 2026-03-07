@@ -76,11 +76,17 @@ export function generateAnnualExamReport(
 
     let division = '-';
     let totalPoints = 0;
-    if (isSenior && scoredSubjects.length > 0) {
-      const scores = scoredSubjects.map(s => s.score);
-      const divResult = calculateDivision(scores);
-      division = divResult.division;
-      totalPoints = divResult.totalPoints;
+    if (isSenior) {
+      if (scoredSubjects.length === 0) {
+        division = 'ABS';
+      } else if (scoredSubjects.length < 7) {
+        division = 'INC';
+      } else {
+        const scores = scoredSubjects.map(s => s.score);
+        const divResult = calculateDivision(scores);
+        division = divResult.division;
+        totalPoints = divResult.totalPoints;
+      }
     }
 
     const nameParts = student.full_name.trim().split(/\s+/);
@@ -137,6 +143,8 @@ export function generateAnnualExamReport(
     III: rows.filter(r => r.division === 'III').length,
     IV: rows.filter(r => r.division === 'IV').length,
     O: rows.filter(r => r.division === '0').length,
+    ABS: rows.filter(r => r.division === 'ABS').length,
+    INC: rows.filter(r => r.division === 'INC').length,
     TOTAL: rows.filter(r => r.division !== '-').length,
   });
 
@@ -149,7 +157,7 @@ export function generateAnnualExamReport(
   wsData.push([]);
 
   const summaryHeaderRow = ['RESULT SUMMARY', '', '', '', '', 'G/S', ...gradeScale, 'INC', 'ABS', 'PASS', 'FAIL', 'TOTAL'];
-  if (isSenior) summaryHeaderRow.push('', 'DIVISION', '', '', 'I', 'II', 'III', 'IV', 'O', 'TOTAL');
+  if (isSenior) summaryHeaderRow.push('', 'DIVISION', '', '', 'I', 'II', 'III', 'IV', 'O', 'ABS', 'INC', 'TOTAL');
   wsData.push(summaryHeaderRow);
 
   const genderLabels = [
@@ -163,7 +171,7 @@ export function generateAnnualExamReport(
     const summaryRow: any[] = ['', '', '', '', '', label, ...gradeScale.map(g => grades[g]), grades.INC, grades.ABS, grades.PASS, grades.FAIL, grades.TOTAL];
     if (isSenior) {
       const divs = countDivisions(rows);
-      summaryRow.push('', '', '', '', divs.I, divs.II, divs.III, divs.IV, divs.O, divs.TOTAL);
+      summaryRow.push('', '', '', '', divs.I, divs.II, divs.III, divs.IV, divs.O, divs.ABS, divs.INC, divs.TOTAL);
     }
     wsData.push(summaryRow);
   });
