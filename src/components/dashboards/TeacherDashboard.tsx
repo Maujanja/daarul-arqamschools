@@ -10,7 +10,7 @@ import { terms } from '@/data/mockData';
 import { useAcademicYears } from '@/hooks/useAcademicYears';
 import { SeriesSummaryTable } from '@/components/dashboard/SeriesSummaryTable';
 import { SeriesPerformanceChart } from '@/components/dashboard/SeriesPerformanceChart';
-import { getTestDisplayName, getTestsForClass, getFilterLabel } from '@/utils/seniorGrading';
+import { getTestDisplayName, getTestsForClass, getFilterLabel, calculateGradeForClass, isPrimaryClass } from '@/utils/seniorGrading';
 import { extractUniqueBaseClasses } from '@/utils/classStreams';
 
 interface TeacherInfo {
@@ -161,9 +161,13 @@ export function TeacherDashboard() {
               full_name: data.name,
               class: data.class,
               average: data.count > 0 ? Math.round(data.total / data.count) : 0,
-              grade: getGrade(data.count > 0 ? data.total / data.count : 0)
+              grade: calculateGradeForClass(data.count > 0 ? data.total / data.count : 0, data.class)
             }))
-            .filter(student => student.average < 45)
+            .filter(student => {
+              // Primary: below C means < 41, Senior: below C means < 45
+              const threshold = isPrimaryClass(student.class) ? 41 : 45;
+              return student.average > 0 && student.average < threshold;
+            })
             .sort((a, b) => a.average - b.average)
             .slice(0, 10);
 
@@ -201,7 +205,7 @@ export function TeacherDashboard() {
               name: cls,
               seriesData: seriesAverages,
               average: overallAvg,
-              grade: overallAvg ? getGrade(overallAvg) : '-'
+              grade: overallAvg ? calculateGradeForClass(overallAvg, cls) : '-'
             });
           });
 
@@ -239,13 +243,7 @@ export function TeacherDashboard() {
     }
   }, [user, selectedYear, fetchTable, count]);
 
-  const getGrade = (score: number): string => {
-    if (score >= 75) return 'A';
-    if (score >= 65) return 'B';
-    if (score >= 45) return 'C';
-    if (score >= 30) return 'D';
-    return 'F';
-  };
+  // getGrade is no longer needed - using calculateGradeForClass from seniorGrading instead
 
   // Refetch data when selectedYear or selectedTerm changes
   useEffect(() => {
@@ -470,7 +468,7 @@ export function TeacherDashboard() {
             <div className="text-center py-8 text-muted-foreground">
               <AlertTriangle className="w-12 h-12 mx-auto mb-3 text-muted-foreground/50" />
               <p>No students currently need additional support</p>
-              <p className="text-sm mt-1">Students with average below 45% will appear here</p>
+              <p className="text-sm mt-1">Students performing below grade C will appear here</p>
             </div>
           )}
         </CardContent>

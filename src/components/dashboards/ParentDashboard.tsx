@@ -10,7 +10,7 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@
 import { supabase } from '@/integrations/supabase/client';
 import { useSecureQuery } from '@/hooks/useSecureQuery';
 import { terms } from '@/data/mockData';
-import { isSeniorClass, calculateDivision, getTestDisplayName, getTestsForClass, getFilterLabel, getDivisionBgColor } from '@/utils/seniorGrading';
+import { isSeniorClass, isPrimaryClass, calculateDivision, calculateGradeForClass, getTestDisplayName, getTestsForClass, getFilterLabel, getDivisionBgColor } from '@/utils/seniorGrading';
 import { useAuth } from '@/contexts/AuthContext';
 import { useAcademicYears } from '@/hooks/useAcademicYears';
 import { BarChart, Bar, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer, LineChart, Line, Legend, PieChart, Pie, Cell } from 'recharts';
@@ -430,7 +430,7 @@ export function ParentDashboard() {
 
   // Grade distribution for pie chart
   const gradeDistribution = subjectAverages.reduce((acc, s) => {
-    const grade = s.average >= 75 ? 'A' : s.average >= 65 ? 'B' : s.average >= 45 ? 'C' : s.average >= 30 ? 'D' : 'F';
+    const grade = calculateGradeForClass(s.average, childClass);
     acc[grade] = (acc[grade] || 0) + 1;
     return acc;
   }, {} as Record<string, number>);
@@ -446,6 +446,7 @@ export function ParentDashboard() {
     'B': 'hsl(199, 89%, 48%)',
     'C': 'hsl(48, 96%, 53%)',
     'D': 'hsl(25, 95%, 53%)',
+    'E': 'hsl(15, 90%, 55%)',
     'F': 'hsl(0, 84%, 60%)'
   };
 
@@ -497,7 +498,7 @@ export function ParentDashboard() {
       });
 
       const average = totalCount > 0 ? totalSum / totalCount : 0;
-      const grade = average >= 75 ? 'A' : average >= 65 ? 'B' : average >= 45 ? 'C' : average >= 30 ? 'D' : 'F';
+      const grade = average > 0 ? calculateGradeForClass(average, childClass) : '-';
 
       return {
         sn: index + 1,
@@ -556,7 +557,7 @@ export function ParentDashboard() {
     
     // Subject table below chart
     const tableData = subjectAverages.map(s => {
-      const grade = s.average >= 75 ? 'A' : s.average >= 65 ? 'B' : s.average >= 45 ? 'C' : s.average >= 30 ? 'D' : 'F';
+      const grade = calculateGradeForClass(s.average, childClass);
       return [s.subject, `${s.average}%`, grade];
     });
     
@@ -601,7 +602,9 @@ export function ParentDashboard() {
     }
     
     // Grade distribution table below chart
-    const gradeLabels = ['A (75-100%)', 'B (65-74%)', 'C (45-64%)', 'D (30-44%)', 'F (0-29%)'];
+    const gradeLabels = isPrimaryClass(childClass) 
+      ? ['A (81-100%)', 'B (61-80%)', 'C (41-60%)', 'D (21-40%)', 'E (0-20%)']
+      : ['A (75-100%)', 'B (65-74%)', 'C (45-64%)', 'D (30-44%)', 'F (0-29%)'];
     const tableData = Object.entries(gradeDistribution).map(([grade, count]) => {
       const label = gradeLabels.find(l => l.startsWith(grade)) || grade;
       return [label, count.toString(), `${Math.round((count / subjectAverages.length) * 100)}%`];
@@ -636,7 +639,7 @@ export function ParentDashboard() {
     doc.text('Subject Performance', 20, 80);
     
     const tableData = subjectAverages.map(s => {
-      const grade = s.average >= 75 ? 'A' : s.average >= 65 ? 'B' : s.average >= 45 ? 'C' : s.average >= 30 ? 'D' : 'F';
+      const grade = calculateGradeForClass(s.average, childClass);
       return [s.subject, `${s.average}%`, grade];
     });
     
@@ -704,7 +707,7 @@ export function ParentDashboard() {
               <div className="text-center">
                 <p className="text-sm text-muted-foreground">Overall Average</p>
                 <p className="text-4xl font-bold font-display gradient-text">{overallAverage.toFixed(1)}%</p>
-                <GradeBadge grade={overallAverage >= 75 ? 'A' : overallAverage >= 65 ? 'B' : overallAverage >= 45 ? 'C' : overallAverage >= 30 ? 'D' : 'F'} size="lg" />
+                <GradeBadge grade={calculateGradeForClass(overallAverage, childClass)} size="lg" />
               </div>
               {classRank && (
                 <div className="text-center border-l border-border pl-4">
@@ -810,7 +813,8 @@ export function ParentDashboard() {
                 {subjectRankings.map((item, index) => {
                   const isTop = index === 0;
                   const isFirst = item.rank === 1;
-                  const needsSupport = index === subjectRankings.length - 1 && item.score < 45;
+                   const supportThreshold = isPrimaryClass(childClass) ? 41 : 45;
+                   const needsSupport = index === subjectRankings.length - 1 && item.score < supportThreshold;
                   
                   return (
                     <tr key={item.subject_id} className="border-b border-border/50 table-row-hover">
@@ -868,9 +872,10 @@ export function ParentDashboard() {
               </thead>
               <tbody>
                 {subjectAverages.map((item, index) => {
-                  const grade = item.average >= 75 ? 'A' : item.average >= 65 ? 'B' : item.average >= 45 ? 'C' : item.average >= 30 ? 'D' : 'F';
-                  const isTop = index === 0;
-                  const needsSupport = index === subjectAverages.length - 1 && item.average < 45;
+                   const grade = calculateGradeForClass(item.average, childClass);
+                   const isTop = index === 0;
+                   const supportThreshold = isPrimaryClass(childClass) ? 41 : 45;
+                   const needsSupport = index === subjectAverages.length - 1 && item.average < supportThreshold;
                   
                   return (
                     <tr key={item.subject} className="border-b border-border/50 table-row-hover">
