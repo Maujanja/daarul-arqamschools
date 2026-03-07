@@ -96,11 +96,17 @@ export async function generateAnnualExamReportPDF(
 
     let division = '-';
     let totalPoints = 0;
-    if (isSenior && scoredSubjects.length > 0) {
-      const scores = scoredSubjects.map(s => s.score);
-      const divResult = calculateDivision(scores);
-      division = divResult.division;
-      totalPoints = divResult.totalPoints;
+    if (isSenior) {
+      if (scoredSubjects.length === 0) {
+        division = 'ABS';
+      } else if (scoredSubjects.length < 7) {
+        division = 'INC';
+      } else {
+        const scores = scoredSubjects.map(s => s.score);
+        const divResult = calculateDivision(scores);
+        division = divResult.division;
+        totalPoints = divResult.totalPoints;
+      }
     }
 
     const nameParts = student.full_name.trim().split(/\s+/);
