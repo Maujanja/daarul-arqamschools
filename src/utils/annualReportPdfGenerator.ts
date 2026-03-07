@@ -271,106 +271,21 @@ export async function generateAnnualExamReportPDF(
     margin: { left: 5, right: 5 },
   });
 
-  // Subject Summary Section
-  let summaryY = (doc as any).lastAutoTable.finalY + 6;
+  // Pass/Fail Summary at the bottom
+  let passFailY = (doc as any).lastAutoTable.finalY + 8;
   
-  // Check if we need a new page
-  if (summaryY > doc.internal.pageSize.getHeight() - 60) {
+  if (passFailY > doc.internal.pageSize.getHeight() - 30) {
     doc.addPage();
-    summaryY = 15;
+    passFailY = 15;
   }
+
+  const passCount = studentRows.filter(r => r.remarks === 'PASS').length;
+  const failCount = studentRows.filter(r => r.remarks === 'FAIL').length;
+  const totalSat = passCount + failCount;
 
   doc.setFontSize(9);
   doc.setFont('helvetica', 'bold');
-  doc.text('SUBJECT SUMMARY', 14, summaryY);
-
-  const subjectAverages = activeSubjects.map(subject => {
-    const scores = studentRows
-      .map(r => r.subjectScores.find(s => s.subjectId === subject.id)?.score || 0)
-      .filter(score => score > 0);
-    return scores.length > 0 ? Math.round((scores.reduce((a, b) => a + b, 0) / scores.length) * 10) / 10 : 0;
-  });
-
-  const rankedSubjects = [...subjectAverages]
-    .map((avg, i) => ({ i, avg }))
-    .filter(x => x.avg > 0)
-    .sort((a, b) => b.avg - a.avg);
-  const subjectRanks: (string | number)[] = subjectAverages.map(() => '');
-  rankedSubjects.forEach((item, i) => { subjectRanks[item.i] = i + 1; });
-
-  const subSummaryHead = ['', ...activeSubjects.map(s => abbreviateSubject(s.name))];
-  const subSummaryBody = [
-    ['AVERAGE', ...subjectAverages.map(v => v > 0 ? String(v) : '')],
-    ['GRADE', ...subjectAverages.map(v => v > 0 ? calculateGradeForClass(v, className) : '')],
-    ['RANK', ...subjectRanks.map(v => String(v))],
-  ];
-
-  autoTable(doc, {
-    startY: summaryY + 2,
-    head: [subSummaryHead],
-    body: subSummaryBody,
-    theme: 'grid',
-    styles: { fontSize: 6, cellPadding: 1.5, halign: 'center' },
-    headStyles: { fillColor: [41, 128, 185], textColor: 255, fontStyle: 'bold', fontSize: 6 },
-    columnStyles: { 0: { fontStyle: 'bold', halign: 'left', cellWidth: 18 } },
-    margin: { left: 14, right: 14 },
-  });
-
-  // Individual Subject Grade Scores
-  let gradeScoreY = (doc as any).lastAutoTable.finalY + 6;
-  if (gradeScoreY > doc.internal.pageSize.getHeight() - 50) {
-    doc.addPage();
-    gradeScoreY = 15;
-  }
-
-  doc.setFontSize(9);
-  doc.setFont('helvetica', 'bold');
-  doc.text('INDIVIDUAL SUBJECT GRADE SCORES', 14, gradeScoreY);
-
-  let grandVolume = 0;
-  const gradeScoreHead = ['GRADE', ...activeSubjects.map(s => abbreviateSubject(s.name)), 'TOTAL', 'VOLUME'];
-  const gradeScoreBody: (string | number)[][] = [];
-
-  gradeScale.forEach(grade => {
-    const counts = activeSubjects.map(subject =>
-      studentRows.reduce((sum, row) => {
-        const ss = row.subjectScores.find(s => s.subjectId === subject.id);
-        return sum + (ss && ss.score > 0 && ss.grade === grade ? 1 : 0);
-      }, 0)
-    );
-    const total = counts.reduce((a, b) => a + b, 0);
-    const volume = total * (gradeWeight[grade] ?? 0);
-    grandVolume += volume;
-    gradeScoreBody.push([grade, ...counts, total, volume]);
-  });
-
-  const candidatesPerSubject = activeSubjects.map(subject =>
-    studentRows.reduce((sum, row) => {
-      const ss = row.subjectScores.find(s => s.subjectId === subject.id);
-      return sum + (ss && ss.score > 0 ? 1 : 0);
-    }, 0)
-  );
-  const candidatesTotal = candidatesPerSubject.reduce((a, b) => a + b, 0);
-  const gpa = candidatesTotal > 0 ? grandVolume / candidatesTotal : 0;
-
-  gradeScoreBody.push(['CANDIDATES', ...candidatesPerSubject, candidatesTotal, '']);
-
-  autoTable(doc, {
-    startY: gradeScoreY + 2,
-    head: [gradeScoreHead],
-    body: gradeScoreBody,
-    theme: 'grid',
-    styles: { fontSize: 6, cellPadding: 1.5, halign: 'center' },
-    headStyles: { fillColor: [41, 128, 185], textColor: 255, fontStyle: 'bold', fontSize: 6 },
-    columnStyles: { 0: { fontStyle: 'bold', halign: 'left', cellWidth: 18 } },
-    margin: { left: 14, right: 14 },
-  });
-
-  // GPA line
-  const gpaY = (doc as any).lastAutoTable.finalY + 5;
-  doc.setFontSize(8);
-  doc.setFont('helvetica', 'bold');
-  doc.text(`G.P.A: ${gpa > 0 ? gpa.toFixed(4) : '-'}    |    Grand Volume: ${grandVolume}    |    Total Candidates: ${candidatesTotal}`, 14, gpaY);
+  doc.text(`PASS: ${passCount}    |    FAIL: ${failCount}    |    TOTAL SAT: ${totalSat}    |    REGISTERED: ${studentRows.length}`, 14, passFailY);
 
   // Footer
   const footerY = doc.internal.pageSize.getHeight() - 8;
