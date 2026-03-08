@@ -9,7 +9,17 @@ import { useToast } from '@/hooks/use-toast';
 import { useAcademicYears } from '@/hooks/useAcademicYears';
 import { useSecureQuery } from '@/hooks/useSecureQuery';
 import { useSecureData } from '@/hooks/useSecureData';
-import { Loader2, Search, Save, Users, UserPlus, CheckCircle } from 'lucide-react';
+import { Loader2, Search, Save, Users, UserPlus, CheckCircle, AlertTriangle } from 'lucide-react';
+import {
+  AlertDialog,
+  AlertDialogAction,
+  AlertDialogCancel,
+  AlertDialogContent,
+  AlertDialogDescription,
+  AlertDialogFooter,
+  AlertDialogHeader,
+  AlertDialogTitle,
+} from '@/components/ui/alert-dialog';
 import { extractUniqueBaseClasses, parseClassStream, getStreamsForClass, hasStreams } from '@/utils/classStreams';
 
 interface Student {
@@ -65,7 +75,8 @@ export default function MyClassStudentsPage() {
   const [selectedStudentIds, setSelectedStudentIds] = useState<Set<string>>(new Set());
   const [existingSelections, setExistingSelections] = useState<TeacherClassStudent[]>([]);
   const [resolvedTeacherId, setResolvedTeacherId] = useState('');
-
+  const [showRemovalConfirm, setShowRemovalConfirm] = useState(false);
+  const [pendingRemovedNames, setPendingRemovedNames] = useState<string[]>([]);
   // Available streams for selected class
   const availableStreams = selectedClass ? getStreamsForClass(selectedClass) : [];
 
@@ -219,6 +230,29 @@ export default function MyClassStudentsPage() {
     const currentTeacherId = resolvedTeacherId || user?.id;
     if (!currentTeacherId || !selectedClass || !selectedSubject || !currentYear) return;
 
+    // Detect students that were previously selected but are now removed
+    const previousStudentIds = new Set(existingSelections.map(s => s.student_id));
+    const removedStudentIds = [...previousStudentIds].filter(id => !selectedStudentIds.has(id));
+
+    // If there are removals, show confirmation dialog first
+    if (removedStudentIds.length > 0) {
+      const removedNames = removedStudentIds.map(id => {
+        const student = allStudentsInClass.find(s => s.id === id);
+        return student ? student.full_name : 'Unknown';
+      });
+      setPendingRemovedNames(removedNames);
+      setShowRemovalConfirm(true);
+      return;
+    }
+
+    // No removals, save directly
+    await executeSave(removedStudentIds);
+  };
+
+  const executeSave = async (removedStudentIds: string[]) => {
+    const currentTeacherId = resolvedTeacherId || user?.id;
+    if (!currentTeacherId || !selectedClass || !selectedSubject || !currentYear) return;
+
     setIsSaving(true);
 
     try {
@@ -229,12 +263,7 @@ export default function MyClassStudentsPage() {
         academic_year: currentYear,
       };
 
-      // Detect students that were previously selected but are now removed
-      const previousStudentIds = new Set(existingSelections.map(s => s.student_id));
-      const removedStudentIds = [...previousStudentIds].filter(id => !selectedStudentIds.has(id));
-
       // Delete marks for removed students (this subject, all terms in this academic year)
-      // Don't filter by teacher_id since it may differ between auth user_id and teachers table id
       if (removedStudentIds.length > 0) {
         const deletePromises = removedStudentIds.map(studentId =>
           remove('marks', {
@@ -305,6 +334,13 @@ export default function MyClassStudentsPage() {
     } finally {
       setIsSaving(false);
     }
+  };
+
+  const handleConfirmRemoval = async () => {
+    setShowRemovalConfirm(false);
+    const previousStudentIds = new Set(existingSelections.map(s => s.student_id));
+    const removedStudentIds = [...previousStudentIds].filter(id => !selectedStudentIds.has(id));
+    await executeSave(removedStudentIds);
   };
 
   const filteredStudents = allStudentsInClass.filter(student =>
@@ -506,6 +542,40 @@ export default function MyClassStudentsPage() {
             </div>
           )}
         </div>
+
+        {/* Confirmation dialog for student removal */}
+        <AlertDialog open={showRemovalConfirm} onOpenChange={setShowRemovalConfirm}>
+          <AlertDialogContent>
+            <AlertDialogHeader>
+              <AlertDialogTitle className="flex items-center gap-2">
+                <AlertTriangle className="w-5 h-5 text-destructive" />
+                Thibitisha Kuondoa Wanafunzi
+              </AlertDialogTitle>
+              <AlertDialogDescription asChild>
+                <div className="space-y-3">
+                  <p>Unaondoa wanafunzi wafuatao na <strong>maksi zao zote</strong> za somo hili zitafutwa kabisa:</p>
+                  <ul className="list-disc pl-5 space-y-1 text-sm">
+                    {pendingRemovedNames.map((name, i) => (
+                      <li key={i} className="text-destructive font-medium">{name}</li>
+                    ))}
+                  </ul>
+                  <p className="text-sm font-medium text-destructive">
+                    Hatua hii haiwezi kutenduliwa. Maksi yatafutwa kwenye dashboard na annual report.
+                  </p>
+                </div>
+              </AlertDialogDescription>
+            </AlertDialogHeader>
+            <AlertDialogFooter>
+              <AlertDialogCancel>Ghairi</AlertDialogCancel>
+              <AlertDialogAction
+                onClick={handleConfirmRemoval}
+                className="bg-destructive text-destructive-foreground hover:bg-destructive/90"
+              >
+                Ndio, Ondoa na Futa Maksi
+              </AlertDialogAction>
+            </AlertDialogFooter>
+          </AlertDialogContent>
+        </AlertDialog>
       </div>
     </DashboardLayout>
   );
