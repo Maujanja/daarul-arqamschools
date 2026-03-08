@@ -158,7 +158,7 @@ export function generateAnnualExamReport(
 
   wsData.push(['Bismillaahir Rahmaanir Rahiim']);
   wsData.push(['DAARUL-ARQAM SECONDARY SCHOOL']);
-  wsData.push([`${className.toUpperCase()} ${term.toUpperCase()} EXAMINATION RESULTS — ${academicYear}`]);
+  wsData.push([`${className.toUpperCase()} ${displayTerm.toUpperCase()} EXAMINATION RESULTS — ${academicYear}`]);
   wsData.push([]);
 
   const summaryHeaderRow = ['RESULT SUMMARY', '', '', '', '', 'G/S', ...gradeScale, 'INC', 'ABS', 'PASS', 'FAIL', 'TOTAL'];

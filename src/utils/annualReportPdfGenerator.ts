@@ -193,7 +193,7 @@ export async function generateAnnualExamReportPDF(
 
   doc.setFontSize(11);
   doc.setFont('helvetica', 'normal');
-  doc.text(`${className.toUpperCase()} ${term.toUpperCase()} EXAMINATION RESULTS — ${academicYear}`, pageWidth / 2, headerY + 15, { align: 'center' });
+  doc.text(`${className.toUpperCase()} ${displayTerm.toUpperCase()} EXAMINATION RESULTS — ${academicYear}`, pageWidth / 2, headerY + 15, { align: 'center' });
 
   const summaryStartY = headerY + 21;
   doc.setFontSize(9);
