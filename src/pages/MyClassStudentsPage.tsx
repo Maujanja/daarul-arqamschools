@@ -229,6 +229,24 @@ export default function MyClassStudentsPage() {
         academic_year: currentYear,
       };
 
+      // Detect students that were previously selected but are now removed
+      const previousStudentIds = new Set(existingSelections.map(s => s.student_id));
+      const removedStudentIds = [...previousStudentIds].filter(id => !selectedStudentIds.has(id));
+
+      // Delete marks for removed students (this subject, this teacher, all terms in this academic year)
+      if (removedStudentIds.length > 0) {
+        const deletePromises = removedStudentIds.map(studentId =>
+          remove('marks', {
+            student_id: studentId,
+            subject_id: selectedSubject,
+            class: selectedClass,
+            academic_year: currentYear,
+            teacher_id: currentTeacherId,
+          })
+        );
+        await Promise.all(deletePromises);
+      }
+
       // Delete only current stream rows first (plus legacy null stream rows when class has streams)
       const hasClassStreams = hasStreams(selectedClass);
       if (hasClassStreams && selectedStream) {
@@ -261,10 +279,11 @@ export default function MyClassStudentsPage() {
           }
         }
       }
-      
+
+      const removedCount = removedStudentIds.length;
       toast({
         title: "Students Saved!",
-        description: `You have selected ${selectedStudentIds.size} students for ${selectedClass} - ${teacherSubjects.find(s => s.id === selectedSubject)?.name}`,
+        description: `Selected ${selectedStudentIds.size} students for ${selectedClass} - ${teacherSubjects.find(s => s.id === selectedSubject)?.name}${removedCount > 0 ? `. Removed ${removedCount} student(s) and their marks.` : ''}`,
       });
       
       // Refresh existing selections
