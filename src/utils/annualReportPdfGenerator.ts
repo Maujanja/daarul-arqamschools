@@ -138,8 +138,11 @@ export async function generateAnnualExamReportPDF(
     currentPosition = index + 2;
   });
 
-  // Sort A-Z
-  studentRows.sort((a, b) => a.firstName.localeCompare(b.firstName, 'en', { sensitivity: 'base' }));
+  // Sort by Gender (F first, then M), then alphabetically within each gender
+  studentRows.sort((a, b) => {
+    if (a.gender !== b.gender) return a.gender === 'F' ? -1 : 1;
+    return a.firstName.localeCompare(b.firstName, 'en', { sensitivity: 'base' });
+  });
 
   // Gender groups
   const femaleRows = studentRows.filter(r => r.gender === 'F');
