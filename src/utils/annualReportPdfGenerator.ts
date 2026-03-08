@@ -65,6 +65,7 @@ export async function generateAnnualExamReportPDF(
   subjects: SubjectData[],
 ) {
   const isSenior = isSeniorClass(className);
+  const displayTerm = getTestDisplayName(term, className);
   const gradeScale = isSenior ? ['A', 'B', 'C', 'D', 'F'] : ['A', 'B', 'C', 'D', 'E'];
 
   // Load logo
