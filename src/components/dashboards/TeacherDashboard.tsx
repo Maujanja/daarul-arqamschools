@@ -98,8 +98,8 @@ export function TeacherDashboard() {
     setError(null);
 
     try {
-      // Fetch teacher data using secure query
-      const teachersData = await fetchTable<TeacherInfo>('teachers', { id: user.id });
+      // Fetch current teacher profile (data-query scopes to logged-in teacher)
+      const teachersData = await fetchTable<TeacherInfo>('teachers', undefined, { limit: 1 });
       const teacherData = teachersData?.[0] || null;
 
       console.log('TeacherDashboard: Teacher result:', { teacherData });
