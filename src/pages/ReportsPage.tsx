@@ -192,7 +192,7 @@ export default function ReportsPage() {
       // Fetch marks - filter by term, year, class, and teacher's subjects if teacher
       // Build filters
       const marksFilters: Record<string, unknown> = {
-        term: selectedTerm,
+        term: buildTermFilter(selectedTerm),
         academic_year: selectedYear,
       };
       
