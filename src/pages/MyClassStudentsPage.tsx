@@ -230,6 +230,29 @@ export default function MyClassStudentsPage() {
     const currentTeacherId = resolvedTeacherId || user?.id;
     if (!currentTeacherId || !selectedClass || !selectedSubject || !currentYear) return;
 
+    // Detect students that were previously selected but are now removed
+    const previousStudentIds = new Set(existingSelections.map(s => s.student_id));
+    const removedStudentIds = [...previousStudentIds].filter(id => !selectedStudentIds.has(id));
+
+    // If there are removals, show confirmation dialog first
+    if (removedStudentIds.length > 0) {
+      const removedNames = removedStudentIds.map(id => {
+        const student = allStudentsInClass.find(s => s.id === id);
+        return student ? student.full_name : 'Unknown';
+      });
+      setPendingRemovedNames(removedNames);
+      setShowRemovalConfirm(true);
+      return;
+    }
+
+    // No removals, save directly
+    await executeSave(removedStudentIds);
+  };
+
+  const executeSave = async (removedStudentIds: string[]) => {
+    const currentTeacherId = resolvedTeacherId || user?.id;
+    if (!currentTeacherId || !selectedClass || !selectedSubject || !currentYear) return;
+
     setIsSaving(true);
 
     try {
@@ -240,12 +263,7 @@ export default function MyClassStudentsPage() {
         academic_year: currentYear,
       };
 
-      // Detect students that were previously selected but are now removed
-      const previousStudentIds = new Set(existingSelections.map(s => s.student_id));
-      const removedStudentIds = [...previousStudentIds].filter(id => !selectedStudentIds.has(id));
-
       // Delete marks for removed students (this subject, all terms in this academic year)
-      // Don't filter by teacher_id since it may differ between auth user_id and teachers table id
       if (removedStudentIds.length > 0) {
         const deletePromises = removedStudentIds.map(studentId =>
           remove('marks', {
@@ -316,6 +334,13 @@ export default function MyClassStudentsPage() {
     } finally {
       setIsSaving(false);
     }
+  };
+
+  const handleConfirmRemoval = async () => {
+    setShowRemovalConfirm(false);
+    const previousStudentIds = new Set(existingSelections.map(s => s.student_id));
+    const removedStudentIds = [...previousStudentIds].filter(id => !selectedStudentIds.has(id));
+    await executeSave(removedStudentIds);
   };
 
   const filteredStudents = allStudentsInClass.filter(student =>
