@@ -114,6 +114,27 @@ serve(async (req) => {
       );
     }
 
+    // Expand term aliases: "Series X" ↔ "Test X" so marks stored under either name are found
+    const expandTermAliases = (value: unknown): unknown => {
+      const expand = (v: string): string[] => {
+        const seriesMatch = v.match(/^Series\s+(\d+)$/i);
+        if (seriesMatch) return [`Series ${seriesMatch[1]}`, `Test ${seriesMatch[1]}`];
+        const testMatch = v.match(/^Test\s+(\d+)$/i);
+        if (testMatch) return [`Series ${testMatch[1]}`, `Test ${testMatch[1]}`];
+        return [v];
+      };
+
+      if (Array.isArray(value)) {
+        const expanded = value.flatMap((v) => (typeof v === "string" ? expand(v) : [v]));
+        return Array.from(new Set(expanded));
+      }
+      if (typeof value === "string") {
+        const aliases = expand(value);
+        return aliases.length > 1 ? aliases : value;
+      }
+      return value;
+    };
+
     const normalizeTeacherFilter = (value: unknown): unknown => {
       if (userRole !== "teacher" || !userId || resolvedTeacherIds.length === 0) {
         return value;
@@ -168,19 +189,20 @@ serve(async (req) => {
         }
       }
 
-      // Apply filters
-      if (filters) {
-        for (const [key, value] of Object.entries(filters)) {
-          if (value !== undefined && value !== null) {
-            const normalizedValue = key === "teacher_id" ? normalizeTeacherFilter(value) : value;
-            if (Array.isArray(normalizedValue)) {
-              countQuery = countQuery.in(key, normalizedValue);
-            } else {
-              countQuery = countQuery.eq(key, normalizedValue);
-            }
+    // Apply filters
+    if (filters) {
+      for (const [key, value] of Object.entries(filters)) {
+        if (value !== undefined && value !== null) {
+          let normalizedValue = key === "teacher_id" ? normalizeTeacherFilter(value) : value;
+          if (key === "term" && table === "marks") normalizedValue = expandTermAliases(normalizedValue);
+          if (Array.isArray(normalizedValue)) {
+            countQuery = countQuery.in(key, normalizedValue);
+          } else {
+            countQuery = countQuery.eq(key, normalizedValue);
           }
         }
       }
+    }
 
       const { count, error } = await countQuery;
       if (error) throw error;
@@ -283,7 +305,8 @@ serve(async (req) => {
     if (filters) {
       for (const [key, value] of Object.entries(filters)) {
         if (value !== undefined && value !== null) {
-          const normalizedValue = key === "teacher_id" ? normalizeTeacherFilter(value) : value;
+          let normalizedValue = key === "teacher_id" ? normalizeTeacherFilter(value) : value;
+          if (key === "term" && table === "marks") normalizedValue = expandTermAliases(normalizedValue);
           if (Array.isArray(normalizedValue)) {
             query = query.in(key, normalizedValue);
           } else {

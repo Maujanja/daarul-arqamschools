@@ -71,6 +71,16 @@ interface DebtHistory {
 }
 
 export function ParentDashboard() {
+  // Helper: check if a term matches considering aliases (Series X ↔ Test X)
+  const termMatches = (markTerm: string, selectedTerm: string): boolean => {
+    if (markTerm === selectedTerm) return true;
+    const seriesMatch = selectedTerm.match(/^Series\s+(\d+)$/i);
+    if (seriesMatch) return markTerm === `Test ${seriesMatch[1]}`;
+    const testMatch = selectedTerm.match(/^Test\s+(\d+)$/i);
+    if (testMatch) return markTerm === `Series ${testMatch[1]}`;
+    return false;
+  };
+
   const { user } = useAuth();
   const { fetchTable } = useSecureQuery();
   const { academicYears, currentYear, loading: yearsLoading } = useAcademicYears();
@@ -289,9 +299,9 @@ export function ParentDashboard() {
           }));
           setAllMarks(formattedMarks);
           
-          // Filter by selected term and year
+          // Filter by selected term and year (with term aliasing)
           const filtered = formattedMarks.filter(
-            (m: any) => m.term === selectedTerm && m.academic_year === selectedYear
+            (m: any) => termMatches(m.term, selectedTerm) && m.academic_year === selectedYear
           );
           setStudentMarks(filtered);
           
@@ -385,7 +395,7 @@ export function ParentDashboard() {
   useEffect(() => {
     if (allMarks.length > 0) {
       const filtered = allMarks.filter(
-        m => m.term === selectedTerm && m.academic_year === selectedYear
+        m => termMatches(m.term, selectedTerm) && m.academic_year === selectedYear
       );
       setStudentMarks(filtered);
       
