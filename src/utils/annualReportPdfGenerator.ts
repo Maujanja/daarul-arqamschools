@@ -271,10 +271,108 @@ export async function generateAnnualExamReportPDF(
     margin: { left: 5, right: 5 },
   });
 
-  // Pass/Fail Summary at the bottom
+  // ===== SUBJECT SUMMARY TABLE =====
+  let subjSummaryY = (doc as any).lastAutoTable.finalY + 8;
+  if (subjSummaryY > doc.internal.pageSize.getHeight() - 40) {
+    doc.addPage();
+    subjSummaryY = 15;
+  }
+
+  doc.setFontSize(9);
+  doc.setFont('helvetica', 'bold');
+  doc.text('SUBJECT SUMMARY', 14, subjSummaryY);
+
+  // Calculate per-subject stats
+  const subjectStats = activeSubjects.map(subject => {
+    const subjectMarks = marks.filter(m => m.subject_id === subject.id && m.total > 0);
+    const total = subjectMarks.reduce((sum, m) => sum + m.total, 0);
+    const avg = subjectMarks.length > 0 ? Math.round(total / subjectMarks.length) : 0;
+    const grade = avg > 0 ? calculateGradeForClass(avg, className) : '-';
+    return { name: abbreviateSubject(subject.name), avg, grade, count: subjectMarks.length };
+  });
+
+  // Rank subjects by average (descending)
+  const rankedStats = [...subjectStats].sort((a, b) => b.avg - a.avg);
+  subjectStats.forEach(stat => {
+    stat['rank'] = stat.avg > 0 ? rankedStats.findIndex(r => r.name === stat.name) + 1 : '-';
+  });
+
+  const subjSummaryHead = ['', ...subjectStats.map(s => s.name)];
+  const subjSummaryBody = [
+    ['SUBJECT AVERAGE', ...subjectStats.map(s => s.avg > 0 ? String(s.avg) : '')],
+    ['GRADE', ...subjectStats.map(s => s.grade)],
+    ['SUBJECT RANK', ...subjectStats.map(s => String(s['rank']))],
+  ];
+
+  autoTable(doc, {
+    startY: subjSummaryY + 2,
+    head: [subjSummaryHead],
+    body: subjSummaryBody,
+    theme: 'grid',
+    styles: { fontSize: 6, cellPadding: 1.5, halign: 'center' },
+    headStyles: { fillColor: [41, 128, 185], textColor: 255, fontStyle: 'bold', fontSize: 5.5 },
+    columnStyles: { 0: { halign: 'left', fontStyle: 'bold', cellWidth: 28 } },
+    margin: { left: 5, right: 5 },
+  });
+
+  // ===== INDIVIDUAL SUBJECT GRADE SCORES TABLE =====
+  let gradeScoresY = (doc as any).lastAutoTable.finalY + 6;
+  if (gradeScoresY > doc.internal.pageSize.getHeight() - 40) {
+    doc.addPage();
+    gradeScoresY = 15;
+  }
+
+  doc.setFontSize(9);
+  doc.setFont('helvetica', 'bold');
+  doc.text('INDIVIDUAL SUBJECT GRADE SCORES', 14, gradeScoresY);
+
+  const gradeScoresHead = ['GRADE', ...subjectStats.map(s => s.name), 'TOTAL', 'WEIGHTED'];
+  const gradeScoresBody = gradeScale.map((grade, gi) => {
+    const counts = activeSubjects.map(subject => {
+      return studentRows.filter(r => {
+        const sc = r.subjectScores.find(s => s.subjectId === subject.id);
+        return sc && sc.score > 0 && sc.grade === grade;
+      }).length;
+    });
+    const total = counts.reduce((s, c) => s + c, 0);
+    const weight = total * (gi + 1);
+    return [grade, ...counts.map(String), String(total), String(weight)];
+  });
+
+  autoTable(doc, {
+    startY: gradeScoresY + 2,
+    head: [gradeScoresHead],
+    body: gradeScoresBody,
+    theme: 'grid',
+    styles: { fontSize: 6, cellPadding: 1.5, halign: 'center' },
+    headStyles: { fillColor: [41, 128, 185], textColor: 255, fontStyle: 'bold', fontSize: 5.5 },
+    columnStyles: { 0: { fontStyle: 'bold', cellWidth: 12 } },
+    margin: { left: 5, right: 5 },
+  });
+
+  // ===== NUMBER OF CANDIDATES ROW =====
+  const candidateCounts = activeSubjects.map(subject => {
+    return studentRows.filter(r => {
+      const sc = r.subjectScores.find(s => s.subjectId === subject.id);
+      return sc && sc.score > 0;
+    }).length;
+  });
+  const totalCandidates = candidateCounts.reduce((s, c) => s + c, 0);
+
+  autoTable(doc, {
+    startY: (doc as any).lastAutoTable.finalY,
+    head: [['CANDIDATES', ...subjectStats.map(s => s.name), 'TOTAL']],
+    body: [[' ', ...candidateCounts.map(String), String(totalCandidates)]],
+    theme: 'grid',
+    styles: { fontSize: 6, cellPadding: 1.5, halign: 'center' },
+    headStyles: { fillColor: [100, 100, 100], textColor: 255, fontStyle: 'bold', fontSize: 5.5 },
+    columnStyles: { 0: { fontStyle: 'bold', cellWidth: 12 } },
+    margin: { left: 5, right: 5 },
+  });
+
+  // ===== Pass/Fail Summary =====
   let passFailY = (doc as any).lastAutoTable.finalY + 8;
-  
-  if (passFailY > doc.internal.pageSize.getHeight() - 30) {
+  if (passFailY > doc.internal.pageSize.getHeight() - 20) {
     doc.addPage();
     passFailY = 15;
   }
