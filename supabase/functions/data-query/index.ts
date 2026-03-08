@@ -114,6 +114,27 @@ serve(async (req) => {
       );
     }
 
+    // Expand term aliases: "Series X" ↔ "Test X" so marks stored under either name are found
+    const expandTermAliases = (value: unknown): unknown => {
+      const expand = (v: string): string[] => {
+        const seriesMatch = v.match(/^Series\s+(\d+)$/i);
+        if (seriesMatch) return [`Series ${seriesMatch[1]}`, `Test ${seriesMatch[1]}`];
+        const testMatch = v.match(/^Test\s+(\d+)$/i);
+        if (testMatch) return [`Series ${testMatch[1]}`, `Test ${testMatch[1]}`];
+        return [v];
+      };
+
+      if (Array.isArray(value)) {
+        const expanded = value.flatMap((v) => (typeof v === "string" ? expand(v) : [v]));
+        return Array.from(new Set(expanded));
+      }
+      if (typeof value === "string") {
+        const aliases = expand(value);
+        return aliases.length > 1 ? aliases : value;
+      }
+      return value;
+    };
+
     const normalizeTeacherFilter = (value: unknown): unknown => {
       if (userRole !== "teacher" || !userId || resolvedTeacherIds.length === 0) {
         return value;
