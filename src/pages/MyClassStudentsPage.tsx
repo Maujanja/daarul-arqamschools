@@ -216,13 +216,14 @@ export default function MyClassStudentsPage() {
   };
 
   const handleSave = async () => {
-    if (!user?.id || !selectedClass || !selectedSubject || !currentYear) return;
-    
+    const currentTeacherId = resolvedTeacherId || user?.id;
+    if (!currentTeacherId || !selectedClass || !selectedSubject || !currentYear) return;
+
     setIsSaving(true);
-    
+
     try {
       const contextFilters = {
-        teacher_id: user.id,
+        teacher_id: currentTeacherId,
         class: selectedClass,
         subject_id: selectedSubject,
         academic_year: currentYear,
@@ -238,11 +239,11 @@ export default function MyClassStudentsPage() {
       } else {
         await remove('teacher_class_students', { ...contextFilters, stream: null });
       }
-      
+
       // Upsert new selections in batches to avoid duplicate-key save failures
       if (selectedStudentIds.size > 0) {
         const allInsertData = Array.from(selectedStudentIds).map(studentId => ({
-          teacher_id: user.id,
+          teacher_id: currentTeacherId,
           student_id: studentId,
           class: selectedClass,
           subject_id: selectedSubject,
