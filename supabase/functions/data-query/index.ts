@@ -159,6 +159,13 @@ serve(async (req) => {
         } else if (table === "feedback") {
           countQuery = countQuery.eq("parent_id", userId);
         }
+      } else if (userRole === "teacher" && userId) {
+        if (table === "teachers") {
+          countQuery = countQuery.or(`id.eq.${userId},user_id.eq.${userId}`);
+        } else if (["teacher_assignments", "teacher_class_students", "marks_unlock_requests"].includes(table)) {
+          const teacherIds = resolvedTeacherIds.length > 0 ? resolvedTeacherIds : [userId];
+          countQuery = countQuery.in("teacher_id", teacherIds);
+        }
       }
 
       // Apply filters
