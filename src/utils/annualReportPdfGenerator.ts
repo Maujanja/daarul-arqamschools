@@ -1,6 +1,6 @@
 import jsPDF from 'jspdf';
 import autoTable from 'jspdf-autotable';
-import { isSeniorClass, scoreToPoints, calculateDivision, calculateGradeForClass } from './seniorGrading';
+import { isSeniorClass, scoreToPoints, calculateDivision, calculateGradeForClass, getTestDisplayName } from './seniorGrading';
 
 interface StudentData {
   id: string;
@@ -65,6 +65,7 @@ export async function generateAnnualExamReportPDF(
   subjects: SubjectData[],
 ) {
   const isSenior = isSeniorClass(className);
+  const displayTerm = getTestDisplayName(term, className);
   const gradeScale = isSenior ? ['A', 'B', 'C', 'D', 'F'] : ['A', 'B', 'C', 'D', 'E'];
 
   // Load logo
@@ -138,8 +139,11 @@ export async function generateAnnualExamReportPDF(
     currentPosition = index + 2;
   });
 
-  // Sort A-Z
-  studentRows.sort((a, b) => a.firstName.localeCompare(b.firstName, 'en', { sensitivity: 'base' }));
+  // Sort by Gender (F first, then M), then alphabetically within each gender
+  studentRows.sort((a, b) => {
+    if (a.gender !== b.gender) return a.gender === 'F' ? -1 : 1;
+    return a.firstName.localeCompare(b.firstName, 'en', { sensitivity: 'base' });
+  });
 
   // Gender groups
   const femaleRows = studentRows.filter(r => r.gender === 'F');
@@ -187,10 +191,9 @@ export async function generateAnnualExamReportPDF(
   doc.setFont('helvetica', 'bold');
   doc.text('DAARUL-ARQAM SECONDARY SCHOOL', pageWidth / 2, headerY + 8, { align: 'center' });
 
-  const yearOnly = academicYear.split('-')[0] || academicYear;
   doc.setFontSize(11);
   doc.setFont('helvetica', 'normal');
-  doc.text(`${className.toUpperCase()} ${term.toUpperCase()} EXAMINATION RESULTS — ${yearOnly}`, pageWidth / 2, headerY + 15, { align: 'center' });
+  doc.text(`${className.toUpperCase()} ${displayTerm.toUpperCase()} EXAMINATION RESULTS — ${academicYear}`, pageWidth / 2, headerY + 15, { align: 'center' });
 
   const summaryStartY = headerY + 21;
   doc.setFontSize(9);

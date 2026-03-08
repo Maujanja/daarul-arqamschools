@@ -1,5 +1,5 @@
 import * as XLSX from 'xlsx';
-import { isSeniorClass, scoreToPoints, calculateDivision, calculateGradeForClass } from './seniorGrading';
+import { isSeniorClass, scoreToPoints, calculateDivision, calculateGradeForClass, getTestDisplayName } from './seniorGrading';
 
 interface StudentData {
   id: string;
@@ -47,6 +47,7 @@ export function generateAnnualExamReport(
 ) {
   const wb = XLSX.utils.book_new();
   const isSenior = isSeniorClass(className);
+  const displayTerm = getTestDisplayName(term, className);
   const gradeScale = isSenior ? ['A', 'B', 'C', 'D', 'F'] : ['A', 'B', 'C', 'D', 'E'];
   const leadingColumns = isSenior ? 7 : 5;
 
@@ -120,8 +121,13 @@ export function generateAnnualExamReport(
     currentPosition = index + 2;
   });
 
-  // Display order A-Z
-  studentRows.sort((a, b) => `${a.firstName} ${a.middleName} ${a.surName}`.localeCompare(`${b.firstName} ${b.middleName} ${b.surName}`, 'en', { sensitivity: 'base' }));
+  // Sort by Gender (F first, then M), then alphabetically within each gender
+  studentRows.sort((a, b) => {
+    if (a.gender !== b.gender) return a.gender === 'F' ? -1 : 1;
+    const nameA = `${a.firstName} ${a.middleName} ${a.surName}`;
+    const nameB = `${b.firstName} ${b.middleName} ${b.surName}`;
+    return nameA.localeCompare(nameB, 'en', { sensitivity: 'base' });
+  });
 
   const genderGroups = { F: studentRows.filter(r => r.gender === 'F'), M: studentRows.filter(r => r.gender === 'M') };
 
@@ -152,8 +158,7 @@ export function generateAnnualExamReport(
 
   wsData.push(['Bismillaahir Rahmaanir Rahiim']);
   wsData.push(['DAARUL-ARQAM SECONDARY SCHOOL']);
-  const yearOnly = academicYear.split('-')[0] || academicYear;
-  wsData.push([`${className.toUpperCase()} ${term.toUpperCase()} EXAMINATION RESULTS — ${yearOnly}`]);
+  wsData.push([`${className.toUpperCase()} ${displayTerm.toUpperCase()} EXAMINATION RESULTS — ${academicYear}`]);
   wsData.push([]);
 
   const summaryHeaderRow = ['RESULT SUMMARY', '', '', '', '', 'G/S', ...gradeScale, 'INC', 'ABS', 'PASS', 'FAIL', 'TOTAL'];
