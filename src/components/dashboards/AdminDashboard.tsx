@@ -467,10 +467,10 @@ export function AdminDashboard() {
       } else {
         generateAnnualExamReport(reportClass, reportTerm, selectedYear, students, marks, subjects);
       }
-      toast.success('Ripoti imeshuka vizuri!');
+      toast.success('Report downloaded successfully!');
     } catch (error) {
       console.error('Report generation error:', error);
-      toast.error('Imeshindikana kutengeneza ripoti');
+      toast.error('Failed to generate report');
     } finally {
       setGeneratingReport(false);
     }
