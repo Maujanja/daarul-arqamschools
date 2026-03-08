@@ -247,8 +247,8 @@ export async function generateAnnualExamReportPDF(
       row.remarks,
     );
 
-    row.subjectScores.forEach(s => dataRow.push(s.score > 0 ? s.grade : ''));
-    if (isSenior) row.subjectScores.forEach(s => dataRow.push(s.points > 0 ? s.points : ''));
+
+
 
     return dataRow;
   });
