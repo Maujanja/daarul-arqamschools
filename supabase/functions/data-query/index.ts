@@ -305,7 +305,8 @@ serve(async (req) => {
     if (filters) {
       for (const [key, value] of Object.entries(filters)) {
         if (value !== undefined && value !== null) {
-          const normalizedValue = key === "teacher_id" ? normalizeTeacherFilter(value) : value;
+          let normalizedValue = key === "teacher_id" ? normalizeTeacherFilter(value) : value;
+          if (key === "term" && table === "marks") normalizedValue = expandTermAliases(normalizedValue);
           if (Array.isArray(normalizedValue)) {
             query = query.in(key, normalizedValue);
           } else {
