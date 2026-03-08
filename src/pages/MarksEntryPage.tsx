@@ -668,7 +668,7 @@ export default function MarksEntryPage() {
         grade: mark.grade,
         term: selectedTerm,
         academic_year: selectedYear,
-        teacher_id: isTeacher && user?.id ? user.id : null,
+        teacher_id: isTeacher ? (resolvedTeacherId || user?.id || null) : null,
       }));
 
       for (const markData of marksToInsert) {
