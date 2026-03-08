@@ -73,6 +73,15 @@ export default function ReportsPage() {
   
   const isTeacher = user?.role === 'teacher';
 
+  const buildTermFilter = (term: string): string[] => {
+    const normalized = term.trim();
+    const seriesMatch = normalized.match(/^Series\s+(\d+)$/i);
+    if (!seriesMatch) return [normalized];
+
+    const num = seriesMatch[1];
+    return Array.from(new Set([`Series ${num}`, `Test ${num}`]));
+  };
+
   // Computed data from studentsData
   const gradeDistribution = useMemo(() => {
     if (studentsData.length === 0) return [];
