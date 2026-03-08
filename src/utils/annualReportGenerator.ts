@@ -152,8 +152,7 @@ export function generateAnnualExamReport(
 
   wsData.push(['Bismillaahir Rahmaanir Rahiim']);
   wsData.push(['DAARUL-ARQAM SECONDARY SCHOOL']);
-  const yearOnly = academicYear.split('-')[0] || academicYear;
-  wsData.push([`${className.toUpperCase()} ${term.toUpperCase()} EXAMINATION RESULTS — ${yearOnly}`]);
+  wsData.push([`${className.toUpperCase()} ${term.toUpperCase()} EXAMINATION RESULTS — ${academicYear}`]);
   wsData.push([]);
 
   const summaryHeaderRow = ['RESULT SUMMARY', '', '', '', '', 'G/S', ...gradeScale, 'INC', 'ABS', 'PASS', 'FAIL', 'TOTAL'];
