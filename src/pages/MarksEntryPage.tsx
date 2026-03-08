@@ -131,6 +131,7 @@ export default function MarksEntryPage() {
   const [subjects, setSubjects] = useState<Subject[]>([]);
   const [marks, setMarks] = useState<StudentMark[]>([]);
   const [teacherAssignments, setTeacherAssignments] = useState<TeacherAssignment[]>([]);
+  const [resolvedTeacherId, setResolvedTeacherId] = useState('');
   
   // Per-student locking: track which students have existing marks
   const [lockedStudentIds, setLockedStudentIds] = useState<Set<string>>(new Set());
@@ -145,6 +146,15 @@ export default function MarksEntryPage() {
   const [unlockTargetStudent, setUnlockTargetStudent] = useState<StudentMark | null>(null);
 
   const isTeacher = user?.role === 'teacher';
+
+  const buildTermFilter = (term: string): string[] => {
+    const normalized = term.trim();
+    const seriesMatch = normalized.match(/^Series\s+(\d+)$/i);
+    if (!seriesMatch) return [normalized];
+
+    const num = seriesMatch[1];
+    return Array.from(new Set([`Series ${num}`, `Test ${num}`]));
+  };
   
   const handleAddSeries = () => {
     const newSeries = `Series ${newSeriesNumber}`;
@@ -206,7 +216,15 @@ export default function MarksEntryPage() {
       setSubjects(subjectsData);
 
       if (isTeacher && user?.id) {
-        const assignmentsData = await fetchTable<TeacherAssignment>('teacher_assignments', { teacher_id: user.id });
+        let currentTeacherId = user.id;
+
+        const teacherResult = await query<{ id: string }>('teachers', { limit: 1 });
+        if (teacherResult.success && teacherResult.data && teacherResult.data.length > 0) {
+          currentTeacherId = teacherResult.data[0].id || user.id;
+        }
+        setResolvedTeacherId(currentTeacherId);
+
+        const assignmentsData = await fetchTable<TeacherAssignment>('teacher_assignments', { teacher_id: currentTeacherId });
         
         if (assignmentsData && assignmentsData.length > 0) {
           const mappedAssignments = assignmentsData.map(a => ({
@@ -243,7 +261,7 @@ export default function MarksEntryPage() {
     };
     
     fetchInitialData();
-  }, [isTeacher, user?.id, user, fetchTable]);
+  }, [isTeacher, user?.id, user, fetchTable, query]);
 
   // Auto-select stream when class changes and streams are available
   useEffect(() => {
@@ -280,9 +298,11 @@ export default function MarksEntryPage() {
         return recordStream === selectedStream || !recordStream; // Match selected or null/empty
       };
       
-      if (isTeacher && user?.id) {
+      const currentTeacherId = resolvedTeacherId || user?.id;
+
+      if (isTeacher && currentTeacherId) {
         const filters: Record<string, unknown> = {
-          teacher_id: user.id,
+          teacher_id: currentTeacherId,
           class: selectedClass,
           subject_id: selectedSubject
         };
@@ -297,6 +317,12 @@ export default function MarksEntryPage() {
           const allStudents = await fetchTable<Student & { stream?: string | null }>('students', { class: selectedClass });
           studentsToShow = allStudents
             .filter(s => studentIds.includes(s.id))
+            .sort((a, b) => a.roll_number.localeCompare(b.roll_number));
+        } else {
+          // Fallback: if no explicit student selection exists, show all students in assigned class/stream
+          const allStudents = await fetchTable<Student & { stream?: string | null }>('students', { class: selectedClass });
+          studentsToShow = allStudents
+            .filter(s => matchesStream((s as any).stream))
             .sort((a, b) => a.roll_number.localeCompare(b.roll_number));
         }
       } else {
@@ -334,7 +360,7 @@ export default function MarksEntryPage() {
         filters: {
           class: selectedClass,
           subject_id: selectedSubject,
-          term: selectedTerm,
+          term: buildTermFilter(selectedTerm),
           academic_year: selectedYear
         }
       });
@@ -382,7 +408,8 @@ export default function MarksEntryPage() {
     };
     
     const checkUnlockRequests = async () => {
-      if (!isTeacher || !user?.id || !selectedClass || !selectedSubject || !selectedTerm || !selectedYear) {
+      const currentTeacherId = resolvedTeacherId || user?.id;
+      if (!isTeacher || !currentTeacherId || !selectedClass || !selectedSubject || !selectedTerm || !selectedYear) {
         setApprovedStudentIds(new Set());
         setUnlockRequests([]);
         return;
@@ -390,7 +417,7 @@ export default function MarksEntryPage() {
       
       const result = await query<UnlockRequest>('marks_unlock_requests', {
         filters: {
-          teacher_id: user.id,
+          teacher_id: currentTeacherId,
           class: selectedClass,
           subject_id: selectedSubject,
           term: selectedTerm,
@@ -434,14 +461,15 @@ export default function MarksEntryPage() {
   const hasLockedStudents = isTeacher && lockedStudentIds.size > 0;
 
   const handleRequestUnlock = async () => {
-    if (!user?.id || !selectedClass || !selectedSubject || !selectedTerm || !selectedYear) return;
+    const currentTeacherId = resolvedTeacherId || user?.id;
+    if (!currentTeacherId || !selectedClass || !selectedSubject || !selectedTerm || !selectedYear) return;
     if (!unlockTargetStudent) return;
     
     setIsRequestingUnlock(true);
     try {
       const result = await insert('marks_unlock_requests', {
-        teacher_id: user.id,
-        teacher_name: user.name || 'Teacher',
+        teacher_id: currentTeacherId,
+        teacher_name: user?.name || 'Teacher',
         class: selectedClass,
         subject_id: selectedSubject,
         subject_name: selectedSubjectData?.name || '',
@@ -464,7 +492,7 @@ export default function MarksEntryPage() {
         setUnlockTargetStudent(null);
         // Add to local tracking
         setUnlockRequests(prev => [...prev, { 
-          id: '', teacher_id: user.id, status: 'pending', class: selectedClass, 
+          id: '', teacher_id: currentTeacherId, status: 'pending', class: selectedClass, 
           subject_id: selectedSubject, term: selectedTerm, academic_year: selectedYear,
           student_id: unlockTargetStudent.studentId, student_name: unlockTargetStudent.studentName
         }]);
@@ -640,7 +668,7 @@ export default function MarksEntryPage() {
         grade: mark.grade,
         term: selectedTerm,
         academic_year: selectedYear,
-        teacher_id: isTeacher && user?.id ? user.id : null,
+        teacher_id: isTeacher ? (resolvedTeacherId || user?.id || null) : null,
       }));
 
       for (const markData of marksToInsert) {

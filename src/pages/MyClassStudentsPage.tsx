@@ -64,6 +64,7 @@ export default function MyClassStudentsPage() {
   const [allStudentsInClass, setAllStudentsInClass] = useState<Student[]>([]);
   const [selectedStudentIds, setSelectedStudentIds] = useState<Set<string>>(new Set());
   const [existingSelections, setExistingSelections] = useState<TeacherClassStudent[]>([]);
+  const [resolvedTeacherId, setResolvedTeacherId] = useState('');
 
   // Available streams for selected class
   const availableStreams = selectedClass ? getStreamsForClass(selectedClass) : [];
@@ -72,28 +73,28 @@ export default function MyClassStudentsPage() {
   useEffect(() => {
     const fetchTeacherData = async () => {
       if (!user?.id) return;
-      
+
       setIsLoading(true);
-      
-      // Get teacher data via secure query
-      const result = await query<Teacher>('teachers', {
-        filters: { id: user.id }
-      });
-      
+
+      // Get current teacher profile (data-query already scopes to the logged-in teacher)
+      const result = await query<Teacher>('teachers', { limit: 1 });
+
       if (!result.success || !result.data || result.data.length === 0) {
         setIsLoading(false);
         return;
       }
-      
+
       const teacher = result.data[0];
-      
+      const currentTeacherId = teacher.id || user.id;
+      setResolvedTeacherId(currentTeacherId);
+
       // Extract unique base classes from class+stream strings like "Senior 3 B"
       const rawClasses = teacher.classes || [];
       const baseClasses = extractUniqueBaseClasses(rawClasses);
       const subjectNames = teacher.subjects || [];
-      
+
       setTeacherClasses(baseClasses);
-      
+
       if (baseClasses.length > 0) {
         setSelectedClass(baseClasses[0]);
         // Auto-select first stream if class has streams
@@ -102,27 +103,27 @@ export default function MyClassStudentsPage() {
           if (streams.length > 0) setSelectedStream(streams[0]);
         }
       }
-      
+
       // Get subjects matching teacher's subject names
       const allSubjects = await fetchTable<Subject>('subjects');
-      
+
       if (allSubjects) {
-        const matchedSubjects = allSubjects.filter(s => 
-          subjectNames.some((name: string) => 
+        const matchedSubjects = allSubjects.filter(s =>
+          subjectNames.some((name: string) =>
             s.name.toLowerCase().includes(name.toLowerCase()) ||
             name.toLowerCase().includes(s.name.toLowerCase())
           )
         );
         setTeacherSubjects(matchedSubjects);
-        
+
         if (matchedSubjects.length > 0) {
           setSelectedSubject(matchedSubjects[0].id);
         }
       }
-      
+
       setIsLoading(false);
     };
-    
+
     fetchTeacherData();
   }, [user?.id, query, fetchTable]);
 
@@ -162,35 +163,36 @@ export default function MyClassStudentsPage() {
   // Fetch existing selections when class/subject/stream/academic year changes
   useEffect(() => {
     const fetchExistingSelections = async () => {
-      if (!user?.id || !selectedClass || !selectedSubject || !currentYear) return;
+      const currentTeacherId = resolvedTeacherId || user?.id;
+      if (!currentTeacherId || !selectedClass || !selectedSubject || !currentYear) return;
       // If class has streams but none selected, wait
       if (hasStreams(selectedClass) && !selectedStream) return;
-      
+
       const filters: Record<string, unknown> = {
-        teacher_id: user.id,
+        teacher_id: currentTeacherId,
         class: selectedClass,
         subject_id: selectedSubject,
         academic_year: currentYear
       };
-      
+
       const selections = await fetchTable<TeacherClassStudent>('teacher_class_students', filters);
-      
+
       // Filter by stream client-side (include null stream for backward compat)
-      const filtered = selectedStream 
+      const filtered = selectedStream
         ? (hasStreams(selectedClass)
-            ? selections.filter(s => s.stream === selectedStream)
+            ? selections.filter(s => s.stream === selectedStream || !s.stream)
             : selections.filter(s => s.stream === selectedStream || !s.stream))
         : selections;
-      
+
       setExistingSelections(filtered);
-      
+
       // Set selected student IDs from existing selections
       const selectedIds = new Set(filtered.map(s => s.student_id));
       setSelectedStudentIds(selectedIds);
     };
-    
+
     fetchExistingSelections();
-  }, [user?.id, selectedClass, selectedSubject, selectedStream, currentYear, fetchTable]);
+  }, [resolvedTeacherId, user?.id, selectedClass, selectedSubject, selectedStream, currentYear, fetchTable]);
 
   const toggleStudent = (studentId: string) => {
     setSelectedStudentIds(prev => {
@@ -214,13 +216,14 @@ export default function MyClassStudentsPage() {
   };
 
   const handleSave = async () => {
-    if (!user?.id || !selectedClass || !selectedSubject || !currentYear) return;
-    
+    const currentTeacherId = resolvedTeacherId || user?.id;
+    if (!currentTeacherId || !selectedClass || !selectedSubject || !currentYear) return;
+
     setIsSaving(true);
-    
+
     try {
       const contextFilters = {
-        teacher_id: user.id,
+        teacher_id: currentTeacherId,
         class: selectedClass,
         subject_id: selectedSubject,
         academic_year: currentYear,
@@ -236,11 +239,11 @@ export default function MyClassStudentsPage() {
       } else {
         await remove('teacher_class_students', { ...contextFilters, stream: null });
       }
-      
+
       // Upsert new selections in batches to avoid duplicate-key save failures
       if (selectedStudentIds.size > 0) {
         const allInsertData = Array.from(selectedStudentIds).map(studentId => ({
-          teacher_id: user.id,
+          teacher_id: currentTeacherId,
           student_id: studentId,
           class: selectedClass,
           subject_id: selectedSubject,

@@ -9,7 +9,7 @@ import { useAcademicYears } from '@/hooks/useAcademicYears';
 import { Search, Plus, MoreHorizontal, GraduationCap, Calendar, Loader2, Download, FileText, ArrowRightLeft, Users, Camera, User } from 'lucide-react';
 import { generateStudentReportPDF, generateAllStudentsReportPDF } from '@/utils/pdfGenerator';
 import { terms } from '@/data/mockData';
-import { getStreamsForClass, hasStreams } from '@/utils/classStreams';
+import { getStreamsForClass, hasStreams, extractUniqueBaseClasses } from '@/utils/classStreams';
 import { toast } from 'sonner';
 import {
   DropdownMenu,
@@ -160,17 +160,18 @@ export default function StudentsPage() {
       
       let teacherClasses: string[] = [];
       let teacherSubjectIds: string[] = [];
+      let resolvedTeacherId = user.id;
       
       // If teacher, get their assigned classes and subjects
       if (isTeacher && user) {
         const teacherResult = await query<Teacher>('teachers', {
-          filters: { id: user.id },
           limit: 1
         });
         
         if (teacherResult.success && teacherResult.data && teacherResult.data.length > 0) {
           const teacher = teacherResult.data[0];
-          teacherClasses = teacher.classes || [];
+          resolvedTeacherId = teacher.id || user.id;
+          teacherClasses = extractUniqueBaseClasses(teacher.classes || []);
           
           // Get subject IDs that match teacher's subject names
           if (teacher.subjects && teacher.subjects.length > 0) {
@@ -184,6 +185,12 @@ export default function StudentsPage() {
                 .map(s => s.id);
             }
           }
+        }
+
+        // Fallback to assignment table when classes array is missing/outdated
+        if (teacherClasses.length === 0) {
+          const assignments = await fetchTable<{ class: string }>('teacher_assignments', { teacher_id: resolvedTeacherId });
+          teacherClasses = extractUniqueBaseClasses(assignments.map(a => a.class));
         }
       }
 

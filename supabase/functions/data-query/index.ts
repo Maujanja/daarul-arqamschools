@@ -98,6 +98,42 @@ serve(async (req) => {
     const supabaseServiceKey = Deno.env.get("SUPABASE_SERVICE_ROLE_KEY")!;
     const supabase = createClient(supabaseUrl, supabaseServiceKey);
 
+    // Resolve teacher identity (supports both teachers.id and teachers.user_id login IDs)
+    let resolvedTeacherIds: string[] = [];
+    if (userRole === "teacher" && userId) {
+      const { data: teacherRows } = await supabase
+        .from("teachers")
+        .select("id")
+        .or(`id.eq.${userId},user_id.eq.${userId}`);
+
+      resolvedTeacherIds = Array.from(
+        new Set([
+          userId,
+          ...(teacherRows?.map((row) => row.id).filter(Boolean) ?? []),
+        ])
+      );
+    }
+
+    const normalizeTeacherFilter = (value: unknown): unknown => {
+      if (userRole !== "teacher" || !userId || resolvedTeacherIds.length === 0) {
+        return value;
+      }
+
+      if (Array.isArray(value)) {
+        const normalized = value.map((v) => String(v));
+        if (normalized.includes(userId)) {
+          return Array.from(new Set([...normalized.filter((v) => v !== userId), ...resolvedTeacherIds]));
+        }
+        return value;
+      }
+
+      if (typeof value === "string" && value === userId) {
+        return resolvedTeacherIds;
+      }
+
+      return value;
+    };
+
     // Handle count-only queries
     if (countOnly) {
       let countQuery = supabase.from(table).select("*", { count: "exact", head: true });
@@ -123,16 +159,24 @@ serve(async (req) => {
         } else if (table === "feedback") {
           countQuery = countQuery.eq("parent_id", userId);
         }
+      } else if (userRole === "teacher" && userId) {
+        if (table === "teachers") {
+          countQuery = countQuery.or(`id.eq.${userId},user_id.eq.${userId}`);
+        } else if (["teacher_assignments", "teacher_class_students", "marks_unlock_requests"].includes(table)) {
+          const teacherIds = resolvedTeacherIds.length > 0 ? resolvedTeacherIds : [userId];
+          countQuery = countQuery.in("teacher_id", teacherIds);
+        }
       }
 
       // Apply filters
       if (filters) {
         for (const [key, value] of Object.entries(filters)) {
           if (value !== undefined && value !== null) {
-            if (Array.isArray(value)) {
-              countQuery = countQuery.in(key, value);
+            const normalizedValue = key === "teacher_id" ? normalizeTeacherFilter(value) : value;
+            if (Array.isArray(normalizedValue)) {
+              countQuery = countQuery.in(key, normalizedValue);
             } else {
-              countQuery = countQuery.eq(key, value);
+              countQuery = countQuery.eq(key, normalizedValue);
             }
           }
         }
@@ -219,9 +263,12 @@ serve(async (req) => {
         query = query.eq("id", userId);
       }
     } else if (userRole === "teacher" && userId) {
-      // Teachers can see their own data
+      // Teachers can see their own record even if login id maps via teachers.user_id
       if (table === "teachers") {
-        query = query.eq("id", userId);
+        query = query.or(`id.eq.${userId},user_id.eq.${userId}`);
+      } else if (["teacher_assignments", "teacher_class_students", "marks_unlock_requests"].includes(table)) {
+        const teacherIds = resolvedTeacherIds.length > 0 ? resolvedTeacherIds : [userId];
+        query = query.in("teacher_id", teacherIds);
       } else if (table === "feedback") {
         query = query.eq("recipient_type", "teacher");
       }
@@ -236,10 +283,11 @@ serve(async (req) => {
     if (filters) {
       for (const [key, value] of Object.entries(filters)) {
         if (value !== undefined && value !== null) {
-          if (Array.isArray(value)) {
-            query = query.in(key, value);
+          const normalizedValue = key === "teacher_id" ? normalizeTeacherFilter(value) : value;
+          if (Array.isArray(normalizedValue)) {
+            query = query.in(key, normalizedValue);
           } else {
-            query = query.eq(key, value);
+            query = query.eq(key, normalizedValue);
           }
         }
       }
