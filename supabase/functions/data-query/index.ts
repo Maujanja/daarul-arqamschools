@@ -172,10 +172,11 @@ serve(async (req) => {
       if (filters) {
         for (const [key, value] of Object.entries(filters)) {
           if (value !== undefined && value !== null) {
-            if (Array.isArray(value)) {
-              countQuery = countQuery.in(key, value);
+            const normalizedValue = key === "teacher_id" ? normalizeTeacherFilter(value) : value;
+            if (Array.isArray(normalizedValue)) {
+              countQuery = countQuery.in(key, normalizedValue);
             } else {
-              countQuery = countQuery.eq(key, value);
+              countQuery = countQuery.eq(key, normalizedValue);
             }
           }
         }
