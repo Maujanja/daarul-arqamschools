@@ -120,8 +120,13 @@ export function generateAnnualExamReport(
     currentPosition = index + 2;
   });
 
-  // Display order A-Z
-  studentRows.sort((a, b) => `${a.firstName} ${a.middleName} ${a.surName}`.localeCompare(`${b.firstName} ${b.middleName} ${b.surName}`, 'en', { sensitivity: 'base' }));
+  // Sort by Gender (F first, then M), then alphabetically within each gender
+  studentRows.sort((a, b) => {
+    if (a.gender !== b.gender) return a.gender === 'F' ? -1 : 1;
+    const nameA = `${a.firstName} ${a.middleName} ${a.surName}`;
+    const nameB = `${b.firstName} ${b.middleName} ${b.surName}`;
+    return nameA.localeCompare(nameB, 'en', { sensitivity: 'base' });
+  });
 
   const genderGroups = { F: studentRows.filter(r => r.gender === 'F'), M: studentRows.filter(r => r.gender === 'M') };
 
