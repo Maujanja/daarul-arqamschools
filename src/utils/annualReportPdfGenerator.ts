@@ -1,6 +1,6 @@
 import jsPDF from 'jspdf';
 import autoTable from 'jspdf-autotable';
-import { isSeniorClass, scoreToPoints, calculateDivision, calculateGradeForClass } from './seniorGrading';
+import { isSeniorClass, scoreToPoints, calculateDivision, calculateGradeForClass, getTestDisplayName } from './seniorGrading';
 
 interface StudentData {
   id: string;
