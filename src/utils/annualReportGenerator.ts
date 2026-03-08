@@ -47,6 +47,7 @@ export function generateAnnualExamReport(
 ) {
   const wb = XLSX.utils.book_new();
   const isSenior = isSeniorClass(className);
+  const displayTerm = getTestDisplayName(term, className);
   const gradeScale = isSenior ? ['A', 'B', 'C', 'D', 'F'] : ['A', 'B', 'C', 'D', 'E'];
   const leadingColumns = isSenior ? 7 : 5;
 
