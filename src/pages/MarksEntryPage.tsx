@@ -298,9 +298,11 @@ export default function MarksEntryPage() {
         return recordStream === selectedStream || !recordStream; // Match selected or null/empty
       };
       
-      if (isTeacher && user?.id) {
+      const currentTeacherId = resolvedTeacherId || user?.id;
+
+      if (isTeacher && currentTeacherId) {
         const filters: Record<string, unknown> = {
-          teacher_id: user.id,
+          teacher_id: currentTeacherId,
           class: selectedClass,
           subject_id: selectedSubject
         };
@@ -315,6 +317,12 @@ export default function MarksEntryPage() {
           const allStudents = await fetchTable<Student & { stream?: string | null }>('students', { class: selectedClass });
           studentsToShow = allStudents
             .filter(s => studentIds.includes(s.id))
+            .sort((a, b) => a.roll_number.localeCompare(b.roll_number));
+        } else {
+          // Fallback: if no explicit student selection exists, show all students in assigned class/stream
+          const allStudents = await fetchTable<Student & { stream?: string | null }>('students', { class: selectedClass });
+          studentsToShow = allStudents
+            .filter(s => matchesStream((s as any).stream))
             .sort((a, b) => a.roll_number.localeCompare(b.roll_number));
         }
       } else {
