@@ -189,19 +189,20 @@ serve(async (req) => {
         }
       }
 
-      // Apply filters
-      if (filters) {
-        for (const [key, value] of Object.entries(filters)) {
-          if (value !== undefined && value !== null) {
-            const normalizedValue = key === "teacher_id" ? normalizeTeacherFilter(value) : value;
-            if (Array.isArray(normalizedValue)) {
-              countQuery = countQuery.in(key, normalizedValue);
-            } else {
-              countQuery = countQuery.eq(key, normalizedValue);
-            }
+    // Apply filters
+    if (filters) {
+      for (const [key, value] of Object.entries(filters)) {
+        if (value !== undefined && value !== null) {
+          let normalizedValue = key === "teacher_id" ? normalizeTeacherFilter(value) : value;
+          if (key === "term" && table === "marks") normalizedValue = expandTermAliases(normalizedValue);
+          if (Array.isArray(normalizedValue)) {
+            countQuery = countQuery.in(key, normalizedValue);
+          } else {
+            countQuery = countQuery.eq(key, normalizedValue);
           }
         }
       }
+    }
 
       const { count, error } = await countQuery;
       if (error) throw error;
