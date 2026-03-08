@@ -163,35 +163,36 @@ export default function MyClassStudentsPage() {
   // Fetch existing selections when class/subject/stream/academic year changes
   useEffect(() => {
     const fetchExistingSelections = async () => {
-      if (!user?.id || !selectedClass || !selectedSubject || !currentYear) return;
+      const currentTeacherId = resolvedTeacherId || user?.id;
+      if (!currentTeacherId || !selectedClass || !selectedSubject || !currentYear) return;
       // If class has streams but none selected, wait
       if (hasStreams(selectedClass) && !selectedStream) return;
-      
+
       const filters: Record<string, unknown> = {
-        teacher_id: user.id,
+        teacher_id: currentTeacherId,
         class: selectedClass,
         subject_id: selectedSubject,
         academic_year: currentYear
       };
-      
+
       const selections = await fetchTable<TeacherClassStudent>('teacher_class_students', filters);
-      
+
       // Filter by stream client-side (include null stream for backward compat)
-      const filtered = selectedStream 
+      const filtered = selectedStream
         ? (hasStreams(selectedClass)
-            ? selections.filter(s => s.stream === selectedStream)
+            ? selections.filter(s => s.stream === selectedStream || !s.stream)
             : selections.filter(s => s.stream === selectedStream || !s.stream))
         : selections;
-      
+
       setExistingSelections(filtered);
-      
+
       // Set selected student IDs from existing selections
       const selectedIds = new Set(filtered.map(s => s.student_id));
       setSelectedStudentIds(selectedIds);
     };
-    
+
     fetchExistingSelections();
-  }, [user?.id, selectedClass, selectedSubject, selectedStream, currentYear, fetchTable]);
+  }, [resolvedTeacherId, user?.id, selectedClass, selectedSubject, selectedStream, currentYear, fetchTable]);
 
   const toggleStudent = (studentId: string) => {
     setSelectedStudentIds(prev => {
