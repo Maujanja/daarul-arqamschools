@@ -9,7 +9,7 @@ import { useAcademicYears } from '@/hooks/useAcademicYears';
 import { Search, Plus, MoreHorizontal, GraduationCap, Calendar, Loader2, Download, FileText, ArrowRightLeft, Users, Camera, User } from 'lucide-react';
 import { generateStudentReportPDF, generateAllStudentsReportPDF } from '@/utils/pdfGenerator';
 import { terms } from '@/data/mockData';
-import { getStreamsForClass, hasStreams } from '@/utils/classStreams';
+import { getStreamsForClass, hasStreams, extractUniqueBaseClasses } from '@/utils/classStreams';
 import { toast } from 'sonner';
 import {
   DropdownMenu,
