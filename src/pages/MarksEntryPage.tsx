@@ -461,14 +461,15 @@ export default function MarksEntryPage() {
   const hasLockedStudents = isTeacher && lockedStudentIds.size > 0;
 
   const handleRequestUnlock = async () => {
-    if (!user?.id || !selectedClass || !selectedSubject || !selectedTerm || !selectedYear) return;
+    const currentTeacherId = resolvedTeacherId || user?.id;
+    if (!currentTeacherId || !selectedClass || !selectedSubject || !selectedTerm || !selectedYear) return;
     if (!unlockTargetStudent) return;
     
     setIsRequestingUnlock(true);
     try {
       const result = await insert('marks_unlock_requests', {
-        teacher_id: user.id,
-        teacher_name: user.name || 'Teacher',
+        teacher_id: currentTeacherId,
+        teacher_name: user?.name || 'Teacher',
         class: selectedClass,
         subject_id: selectedSubject,
         subject_name: selectedSubjectData?.name || '',
@@ -491,7 +492,7 @@ export default function MarksEntryPage() {
         setUnlockTargetStudent(null);
         // Add to local tracking
         setUnlockRequests(prev => [...prev, { 
-          id: '', teacher_id: user.id, status: 'pending', class: selectedClass, 
+          id: '', teacher_id: currentTeacherId, status: 'pending', class: selectedClass, 
           subject_id: selectedSubject, term: selectedTerm, academic_year: selectedYear,
           student_id: unlockTargetStudent.studentId, student_name: unlockTargetStudent.studentName
         }]);
