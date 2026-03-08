@@ -131,6 +131,7 @@ export default function MarksEntryPage() {
   const [subjects, setSubjects] = useState<Subject[]>([]);
   const [marks, setMarks] = useState<StudentMark[]>([]);
   const [teacherAssignments, setTeacherAssignments] = useState<TeacherAssignment[]>([]);
+  const [resolvedTeacherId, setResolvedTeacherId] = useState('');
   
   // Per-student locking: track which students have existing marks
   const [lockedStudentIds, setLockedStudentIds] = useState<Set<string>>(new Set());
@@ -145,6 +146,15 @@ export default function MarksEntryPage() {
   const [unlockTargetStudent, setUnlockTargetStudent] = useState<StudentMark | null>(null);
 
   const isTeacher = user?.role === 'teacher';
+
+  const buildTermFilter = (term: string): string[] => {
+    const normalized = term.trim();
+    const seriesMatch = normalized.match(/^Series\s+(\d+)$/i);
+    if (!seriesMatch) return [normalized];
+
+    const num = seriesMatch[1];
+    return Array.from(new Set([`Series ${num}`, `Test ${num}`]));
+  };
   
   const handleAddSeries = () => {
     const newSeries = `Series ${newSeriesNumber}`;
