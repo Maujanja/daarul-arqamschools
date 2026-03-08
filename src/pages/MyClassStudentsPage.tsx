@@ -75,7 +75,8 @@ export default function MyClassStudentsPage() {
   const [selectedStudentIds, setSelectedStudentIds] = useState<Set<string>>(new Set());
   const [existingSelections, setExistingSelections] = useState<TeacherClassStudent[]>([]);
   const [resolvedTeacherId, setResolvedTeacherId] = useState('');
-
+  const [showRemovalConfirm, setShowRemovalConfirm] = useState(false);
+  const [pendingRemovedNames, setPendingRemovedNames] = useState<string[]>([]);
   // Available streams for selected class
   const availableStreams = selectedClass ? getStreamsForClass(selectedClass) : [];
 
