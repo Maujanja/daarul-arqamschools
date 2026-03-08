@@ -395,7 +395,7 @@ export function ParentDashboard() {
   useEffect(() => {
     if (allMarks.length > 0) {
       const filtered = allMarks.filter(
-        m => m.term === selectedTerm && m.academic_year === selectedYear
+        m => termMatches(m.term, selectedTerm) && m.academic_year === selectedYear
       );
       setStudentMarks(filtered);
       
