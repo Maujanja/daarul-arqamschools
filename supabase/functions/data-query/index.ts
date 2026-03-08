@@ -283,10 +283,11 @@ serve(async (req) => {
     if (filters) {
       for (const [key, value] of Object.entries(filters)) {
         if (value !== undefined && value !== null) {
-          if (Array.isArray(value)) {
-            query = query.in(key, value);
+          const normalizedValue = key === "teacher_id" ? normalizeTeacherFilter(value) : value;
+          if (Array.isArray(normalizedValue)) {
+            query = query.in(key, normalizedValue);
           } else {
-            query = query.eq(key, value);
+            query = query.eq(key, normalizedValue);
           }
         }
       }
