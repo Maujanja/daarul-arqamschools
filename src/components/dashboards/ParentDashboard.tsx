@@ -71,6 +71,16 @@ interface DebtHistory {
 }
 
 export function ParentDashboard() {
+  // Helper: check if a term matches considering aliases (Series X ↔ Test X)
+  const termMatches = (markTerm: string, selectedTerm: string): boolean => {
+    if (markTerm === selectedTerm) return true;
+    const seriesMatch = selectedTerm.match(/^Series\s+(\d+)$/i);
+    if (seriesMatch) return markTerm === `Test ${seriesMatch[1]}`;
+    const testMatch = selectedTerm.match(/^Test\s+(\d+)$/i);
+    if (testMatch) return markTerm === `Series ${testMatch[1]}`;
+    return false;
+  };
+
   const { user } = useAuth();
   const { fetchTable } = useSecureQuery();
   const { academicYears, currentYear, loading: yearsLoading } = useAcademicYears();
