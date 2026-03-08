@@ -195,10 +195,14 @@ export function ParentDashboard() {
       if (!subjectScores[subjectId]) {
         subjectScores[subjectId] = [];
       }
+      // Recalculate grade using class-appropriate scale instead of stored grade
+      const recalculatedGrade = mark.total > 0 
+        ? calculateGradeForClass((mark.total / 100) * 100, studentClass) 
+        : '-';
       subjectScores[subjectId].push({
         studentId: mark.student_id,
         score: mark.total,
-        grade: mark.grade,
+        grade: recalculatedGrade,
         subjectName: subjectMap.get(mark.subject_id) || 'Unknown'
       });
     });
@@ -295,7 +299,8 @@ export function ParentDashboard() {
             academic_year: m.academic_year,
             exam: m.exam,
             total: m.total,
-            grade: m.grade,
+            // Recalculate grade using class-appropriate scale
+            grade: m.total > 0 ? calculateGradeForClass(m.total, studentData.class) : '-',
           }));
           setAllMarks(formattedMarks);
           

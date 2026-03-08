@@ -233,7 +233,8 @@ export default function MyClassStudentsPage() {
       const previousStudentIds = new Set(existingSelections.map(s => s.student_id));
       const removedStudentIds = [...previousStudentIds].filter(id => !selectedStudentIds.has(id));
 
-      // Delete marks for removed students (this subject, this teacher, all terms in this academic year)
+      // Delete marks for removed students (this subject, all terms in this academic year)
+      // Don't filter by teacher_id since it may differ between auth user_id and teachers table id
       if (removedStudentIds.length > 0) {
         const deletePromises = removedStudentIds.map(studentId =>
           remove('marks', {
@@ -241,7 +242,6 @@ export default function MyClassStudentsPage() {
             subject_id: selectedSubject,
             class: selectedClass,
             academic_year: currentYear,
-            teacher_id: currentTeacherId,
           })
         );
         await Promise.all(deletePromises);
