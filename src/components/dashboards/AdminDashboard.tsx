@@ -647,8 +647,8 @@ export function AdminDashboard() {
           Annual Examination Results
         </h3>
         <p className="text-sm text-muted-foreground mb-4">
-          Download ripoti kamili ya matokeo kwa darasa, ikiwa na Result Summary, marks za kila somo, grades, positions{' '}
-          na divisions (kwa Senior tu). Chagua format: Excel au PDF.
+          Download the complete class results report including Result Summary, individual subject marks, grades, positions{' '}
+          and divisions (Senior only). Choose format: Excel or PDF.
         </p>
         <div className="grid grid-cols-1 sm:grid-cols-4 gap-4 mb-4">
           <div className="space-y-2">

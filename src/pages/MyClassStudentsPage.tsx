@@ -549,29 +549,29 @@ export default function MyClassStudentsPage() {
             <AlertDialogHeader>
               <AlertDialogTitle className="flex items-center gap-2">
                 <AlertTriangle className="w-5 h-5 text-destructive" />
-                Thibitisha Kuondoa Wanafunzi
+                Confirm Student Removal
               </AlertDialogTitle>
               <AlertDialogDescription asChild>
                 <div className="space-y-3">
-                  <p>Unaondoa wanafunzi wafuatao na <strong>maksi zao zote</strong> za somo hili zitafutwa kabisa:</p>
+                  <p>You are removing the following students and <strong>all their marks</strong> for this subject will be permanently deleted:</p>
                   <ul className="list-disc pl-5 space-y-1 text-sm">
                     {pendingRemovedNames.map((name, i) => (
                       <li key={i} className="text-destructive font-medium">{name}</li>
                     ))}
                   </ul>
                   <p className="text-sm font-medium text-destructive">
-                    Hatua hii haiwezi kutenduliwa. Maksi yatafutwa kwenye dashboard na annual report.
+                    This action cannot be undone. Marks will be removed from dashboards and annual reports.
                   </p>
                 </div>
               </AlertDialogDescription>
             </AlertDialogHeader>
             <AlertDialogFooter>
-              <AlertDialogCancel>Ghairi</AlertDialogCancel>
+              <AlertDialogCancel>Cancel</AlertDialogCancel>
               <AlertDialogAction
                 onClick={handleConfirmRemoval}
                 className="bg-destructive text-destructive-foreground hover:bg-destructive/90"
               >
-                Ndio, Ondoa na Futa Maksi
+                Yes, Remove & Delete Marks
               </AlertDialogAction>
             </AlertDialogFooter>
           </AlertDialogContent>
