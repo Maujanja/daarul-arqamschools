@@ -263,9 +263,12 @@ serve(async (req) => {
         query = query.eq("id", userId);
       }
     } else if (userRole === "teacher" && userId) {
-      // Teachers can see their own data
+      // Teachers can see their own record even if login id maps via teachers.user_id
       if (table === "teachers") {
-        query = query.eq("id", userId);
+        query = query.or(`id.eq.${userId},user_id.eq.${userId}`);
+      } else if (["teacher_assignments", "teacher_class_students", "marks_unlock_requests"].includes(table)) {
+        const teacherIds = resolvedTeacherIds.length > 0 ? resolvedTeacherIds : [userId];
+        query = query.in("teacher_id", teacherIds);
       } else if (table === "feedback") {
         query = query.eq("recipient_type", "teacher");
       }
