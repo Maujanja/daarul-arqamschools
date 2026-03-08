@@ -299,9 +299,9 @@ export function ParentDashboard() {
           }));
           setAllMarks(formattedMarks);
           
-          // Filter by selected term and year
+          // Filter by selected term and year (with term aliasing)
           const filtered = formattedMarks.filter(
-            (m: any) => m.term === selectedTerm && m.academic_year === selectedYear
+            (m: any) => termMatches(m.term, selectedTerm) && m.academic_year === selectedYear
           );
           setStudentMarks(filtered);
           
