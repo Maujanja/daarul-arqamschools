@@ -542,6 +542,40 @@ export default function MyClassStudentsPage() {
             </div>
           )}
         </div>
+
+        {/* Confirmation dialog for student removal */}
+        <AlertDialog open={showRemovalConfirm} onOpenChange={setShowRemovalConfirm}>
+          <AlertDialogContent>
+            <AlertDialogHeader>
+              <AlertDialogTitle className="flex items-center gap-2">
+                <AlertTriangle className="w-5 h-5 text-destructive" />
+                Thibitisha Kuondoa Wanafunzi
+              </AlertDialogTitle>
+              <AlertDialogDescription asChild>
+                <div className="space-y-3">
+                  <p>Unaondoa wanafunzi wafuatao na <strong>maksi zao zote</strong> za somo hili zitafutwa kabisa:</p>
+                  <ul className="list-disc pl-5 space-y-1 text-sm">
+                    {pendingRemovedNames.map((name, i) => (
+                      <li key={i} className="text-destructive font-medium">{name}</li>
+                    ))}
+                  </ul>
+                  <p className="text-sm font-medium text-destructive">
+                    Hatua hii haiwezi kutenduliwa. Maksi yatafutwa kwenye dashboard na annual report.
+                  </p>
+                </div>
+              </AlertDialogDescription>
+            </AlertDialogHeader>
+            <AlertDialogFooter>
+              <AlertDialogCancel>Ghairi</AlertDialogCancel>
+              <AlertDialogAction
+                onClick={handleConfirmRemoval}
+                className="bg-destructive text-destructive-foreground hover:bg-destructive/90"
+              >
+                Ndio, Ondoa na Futa Maksi
+              </AlertDialogAction>
+            </AlertDialogFooter>
+          </AlertDialogContent>
+        </AlertDialog>
       </div>
     </DashboardLayout>
   );
