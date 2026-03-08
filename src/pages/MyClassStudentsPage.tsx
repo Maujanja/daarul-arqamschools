@@ -64,6 +64,7 @@ export default function MyClassStudentsPage() {
   const [allStudentsInClass, setAllStudentsInClass] = useState<Student[]>([]);
   const [selectedStudentIds, setSelectedStudentIds] = useState<Set<string>>(new Set());
   const [existingSelections, setExistingSelections] = useState<TeacherClassStudent[]>([]);
+  const [resolvedTeacherId, setResolvedTeacherId] = useState('');
 
   // Available streams for selected class
   const availableStreams = selectedClass ? getStreamsForClass(selectedClass) : [];
@@ -72,28 +73,28 @@ export default function MyClassStudentsPage() {
   useEffect(() => {
     const fetchTeacherData = async () => {
       if (!user?.id) return;
-      
+
       setIsLoading(true);
-      
-      // Get teacher data via secure query
-      const result = await query<Teacher>('teachers', {
-        filters: { id: user.id }
-      });
-      
+
+      // Get current teacher profile (data-query already scopes to the logged-in teacher)
+      const result = await query<Teacher>('teachers', { limit: 1 });
+
       if (!result.success || !result.data || result.data.length === 0) {
         setIsLoading(false);
         return;
       }
-      
+
       const teacher = result.data[0];
-      
+      const currentTeacherId = teacher.id || user.id;
+      setResolvedTeacherId(currentTeacherId);
+
       // Extract unique base classes from class+stream strings like "Senior 3 B"
       const rawClasses = teacher.classes || [];
       const baseClasses = extractUniqueBaseClasses(rawClasses);
       const subjectNames = teacher.subjects || [];
-      
+
       setTeacherClasses(baseClasses);
-      
+
       if (baseClasses.length > 0) {
         setSelectedClass(baseClasses[0]);
         // Auto-select first stream if class has streams
@@ -102,27 +103,27 @@ export default function MyClassStudentsPage() {
           if (streams.length > 0) setSelectedStream(streams[0]);
         }
       }
-      
+
       // Get subjects matching teacher's subject names
       const allSubjects = await fetchTable<Subject>('subjects');
-      
+
       if (allSubjects) {
-        const matchedSubjects = allSubjects.filter(s => 
-          subjectNames.some((name: string) => 
+        const matchedSubjects = allSubjects.filter(s =>
+          subjectNames.some((name: string) =>
             s.name.toLowerCase().includes(name.toLowerCase()) ||
             name.toLowerCase().includes(s.name.toLowerCase())
           )
         );
         setTeacherSubjects(matchedSubjects);
-        
+
         if (matchedSubjects.length > 0) {
           setSelectedSubject(matchedSubjects[0].id);
         }
       }
-      
+
       setIsLoading(false);
     };
-    
+
     fetchTeacherData();
   }, [user?.id, query, fetchTable]);
 
