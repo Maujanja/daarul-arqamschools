@@ -140,16 +140,15 @@ export default function ReportsPage() {
       
       let teacherClasses: string[] = [];
       let teacherSubjectIds: string[] = [];
+      let resolvedTeacherId = user.id;
       
       // If teacher, get their assigned classes and subjects
       if (isTeacher && user) {
-        const teacherResult = await query<Teacher>('teachers', {
-          filters: { id: user.id },
-          limit: 1
-        });
+        const teacherResult = await query<Teacher>('teachers', { limit: 1 });
         
         if (teacherResult.success && teacherResult.data && teacherResult.data.length > 0) {
           const teacher = teacherResult.data[0];
+          resolvedTeacherId = teacher.id || user.id;
           teacherClasses = extractUniqueBaseClasses(teacher.classes || []);
           
           // Get subject IDs that match teacher's subject names
@@ -168,7 +167,7 @@ export default function ReportsPage() {
 
         // Fallback: some teachers rely only on assignment records
         if (teacherClasses.length === 0) {
-          const assignments = await fetchTable<{ class: string }>('teacher_assignments', { teacher_id: user.id });
+          const assignments = await fetchTable<{ class: string }>('teacher_assignments', { teacher_id: resolvedTeacherId });
           teacherClasses = extractUniqueBaseClasses(assignments.map(a => a.class));
         }
       }
