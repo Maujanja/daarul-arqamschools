@@ -1208,26 +1208,53 @@ export default function MarksEntryPage() {
         <div className="card-elevated p-6 animate-fade-in">
           <h3 className="font-display font-semibold text-lg mb-4 text-card-foreground">Grading Scale</h3>
           <div className="flex flex-wrap gap-4">
-            <div className="flex items-center gap-2">
-              <GradeBadge grade="A" size="sm" />
-              <span className="text-sm text-muted-foreground">75-100</span>
-            </div>
-            <div className="flex items-center gap-2">
-              <GradeBadge grade="B" size="sm" />
-              <span className="text-sm text-muted-foreground">65-74</span>
-            </div>
-            <div className="flex items-center gap-2">
-              <GradeBadge grade="C" size="sm" />
-              <span className="text-sm text-muted-foreground">45-64</span>
-            </div>
-            <div className="flex items-center gap-2">
-              <GradeBadge grade="D" size="sm" />
-              <span className="text-sm text-muted-foreground">30-44</span>
-            </div>
-            <div className="flex items-center gap-2">
-              <GradeBadge grade="F" size="sm" />
-              <span className="text-sm text-muted-foreground">0-29</span>
-            </div>
+            {(isPrimaryClass(selectedClass) || isNurseryClass(selectedClass)) ? (
+              <>
+                <div className="flex items-center gap-2">
+                  <GradeBadge grade="A" size="sm" />
+                  <span className="text-sm text-muted-foreground">81-100</span>
+                </div>
+                <div className="flex items-center gap-2">
+                  <GradeBadge grade="B" size="sm" />
+                  <span className="text-sm text-muted-foreground">61-80</span>
+                </div>
+                <div className="flex items-center gap-2">
+                  <GradeBadge grade="C" size="sm" />
+                  <span className="text-sm text-muted-foreground">41-60</span>
+                </div>
+                <div className="flex items-center gap-2">
+                  <GradeBadge grade="D" size="sm" />
+                  <span className="text-sm text-muted-foreground">21-40</span>
+                </div>
+                <div className="flex items-center gap-2">
+                  <GradeBadge grade="E" size="sm" />
+                  <span className="text-sm text-muted-foreground">0-20</span>
+                </div>
+              </>
+            ) : (
+              <>
+                <div className="flex items-center gap-2">
+                  <GradeBadge grade="A" size="sm" />
+                  <span className="text-sm text-muted-foreground">75-100</span>
+                </div>
+                <div className="flex items-center gap-2">
+                  <GradeBadge grade="B" size="sm" />
+                  <span className="text-sm text-muted-foreground">65-74</span>
+                </div>
+                <div className="flex items-center gap-2">
+                  <GradeBadge grade="C" size="sm" />
+                  <span className="text-sm text-muted-foreground">45-64</span>
+                </div>
+                <div className="flex items-center gap-2">
+                  <GradeBadge grade="D" size="sm" />
+                  <span className="text-sm text-muted-foreground">30-44</span>
+                </div>
+                <div className="flex items-center gap-2">
+                  <GradeBadge grade="F" size="sm" />
+                  <span className="text-sm text-muted-foreground">0-29</span>
+                </div>
+              </>
+            )}
           </div>
         </div>
       </div>
