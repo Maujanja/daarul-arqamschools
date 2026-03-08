@@ -467,10 +467,10 @@ export function AdminDashboard() {
       } else {
         generateAnnualExamReport(reportClass, reportTerm, selectedYear, students, marks, subjects);
       }
-      toast.success('Ripoti imeshuka vizuri!');
+      toast.success('Report downloaded successfully!');
     } catch (error) {
       console.error('Report generation error:', error);
-      toast.error('Imeshindikana kutengeneza ripoti');
+      toast.error('Failed to generate report');
     } finally {
       setGeneratingReport(false);
     }
@@ -647,8 +647,8 @@ export function AdminDashboard() {
           Annual Examination Results
         </h3>
         <p className="text-sm text-muted-foreground mb-4">
-          Download ripoti kamili ya matokeo kwa darasa, ikiwa na Result Summary, marks za kila somo, grades, positions{' '}
-          na divisions (kwa Senior tu). Chagua format: Excel au PDF.
+          Download the complete class results report including Result Summary, individual subject marks, grades, positions{' '}
+          and divisions (Senior only). Choose format: Excel or PDF.
         </p>
         <div className="grid grid-cols-1 sm:grid-cols-4 gap-4 mb-4">
           <div className="space-y-2">
