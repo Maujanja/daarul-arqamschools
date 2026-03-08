@@ -98,6 +98,42 @@ serve(async (req) => {
     const supabaseServiceKey = Deno.env.get("SUPABASE_SERVICE_ROLE_KEY")!;
     const supabase = createClient(supabaseUrl, supabaseServiceKey);
 
+    // Resolve teacher identity (supports both teachers.id and teachers.user_id login IDs)
+    let resolvedTeacherIds: string[] = [];
+    if (userRole === "teacher" && userId) {
+      const { data: teacherRows } = await supabase
+        .from("teachers")
+        .select("id")
+        .or(`id.eq.${userId},user_id.eq.${userId}`);
+
+      resolvedTeacherIds = Array.from(
+        new Set([
+          userId,
+          ...(teacherRows?.map((row) => row.id).filter(Boolean) ?? []),
+        ])
+      );
+    }
+
+    const normalizeTeacherFilter = (value: unknown): unknown => {
+      if (userRole !== "teacher" || !userId || resolvedTeacherIds.length === 0) {
+        return value;
+      }
+
+      if (Array.isArray(value)) {
+        const normalized = value.map((v) => String(v));
+        if (normalized.includes(userId)) {
+          return Array.from(new Set([...normalized.filter((v) => v !== userId), ...resolvedTeacherIds]));
+        }
+        return value;
+      }
+
+      if (typeof value === "string" && value === userId) {
+        return resolvedTeacherIds;
+      }
+
+      return value;
+    };
+
     // Handle count-only queries
     if (countOnly) {
       let countQuery = supabase.from(table).select("*", { count: "exact", head: true });
