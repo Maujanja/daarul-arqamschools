@@ -9,7 +9,17 @@ import { useToast } from '@/hooks/use-toast';
 import { useAcademicYears } from '@/hooks/useAcademicYears';
 import { useSecureQuery } from '@/hooks/useSecureQuery';
 import { useSecureData } from '@/hooks/useSecureData';
-import { Loader2, Search, Save, Users, UserPlus, CheckCircle } from 'lucide-react';
+import { Loader2, Search, Save, Users, UserPlus, CheckCircle, AlertTriangle } from 'lucide-react';
+import {
+  AlertDialog,
+  AlertDialogAction,
+  AlertDialogCancel,
+  AlertDialogContent,
+  AlertDialogDescription,
+  AlertDialogFooter,
+  AlertDialogHeader,
+  AlertDialogTitle,
+} from '@/components/ui/alert-dialog';
 import { extractUniqueBaseClasses, parseClassStream, getStreamsForClass, hasStreams } from '@/utils/classStreams';
 
 interface Student {
