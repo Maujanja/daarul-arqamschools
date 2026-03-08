@@ -232,9 +232,6 @@ export async function generateAnnualExamReportPDF(
   if (isSenior) mainHead.push('DIV', 'PTS');
   activeSubjects.forEach(s => mainHead.push(abbreviateSubject(s.name)));
   mainHead.push('TOT', 'AVG', 'GRD', 'POS', 'RMK');
-  // Grade columns
-  activeSubjects.forEach(s => mainHead.push(abbreviateSubject(s.name) + '(G)'));
-  if (isSenior) activeSubjects.forEach(s => mainHead.push(abbreviateSubject(s.name) + '(P)'));
 
   const mainBody = studentRows.map((row, idx) => {
     const name = `${row.firstName} ${row.surName}`;
@@ -250,8 +247,8 @@ export async function generateAnnualExamReportPDF(
       row.remarks,
     );
 
-    row.subjectScores.forEach(s => dataRow.push(s.score > 0 ? s.grade : ''));
-    if (isSenior) row.subjectScores.forEach(s => dataRow.push(s.points > 0 ? s.points : ''));
+
+
 
     return dataRow;
   });
