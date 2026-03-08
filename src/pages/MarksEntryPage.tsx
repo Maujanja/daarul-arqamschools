@@ -216,7 +216,15 @@ export default function MarksEntryPage() {
       setSubjects(subjectsData);
 
       if (isTeacher && user?.id) {
-        const assignmentsData = await fetchTable<TeacherAssignment>('teacher_assignments', { teacher_id: user.id });
+        let currentTeacherId = user.id;
+
+        const teacherResult = await query<{ id: string }>('teachers', { limit: 1 });
+        if (teacherResult.success && teacherResult.data && teacherResult.data.length > 0) {
+          currentTeacherId = teacherResult.data[0].id || user.id;
+        }
+        setResolvedTeacherId(currentTeacherId);
+
+        const assignmentsData = await fetchTable<TeacherAssignment>('teacher_assignments', { teacher_id: currentTeacherId });
         
         if (assignmentsData && assignmentsData.length > 0) {
           const mappedAssignments = assignmentsData.map(a => ({
@@ -253,7 +261,7 @@ export default function MarksEntryPage() {
     };
     
     fetchInitialData();
-  }, [isTeacher, user?.id, user, fetchTable]);
+  }, [isTeacher, user?.id, user, fetchTable, query]);
 
   // Auto-select stream when class changes and streams are available
   useEffect(() => {
