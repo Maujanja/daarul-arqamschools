@@ -408,7 +408,8 @@ export default function MarksEntryPage() {
     };
     
     const checkUnlockRequests = async () => {
-      if (!isTeacher || !user?.id || !selectedClass || !selectedSubject || !selectedTerm || !selectedYear) {
+      const currentTeacherId = resolvedTeacherId || user?.id;
+      if (!isTeacher || !currentTeacherId || !selectedClass || !selectedSubject || !selectedTerm || !selectedYear) {
         setApprovedStudentIds(new Set());
         setUnlockRequests([]);
         return;
@@ -416,7 +417,7 @@ export default function MarksEntryPage() {
       
       const result = await query<UnlockRequest>('marks_unlock_requests', {
         filters: {
-          teacher_id: user.id,
+          teacher_id: currentTeacherId,
           class: selectedClass,
           subject_id: selectedSubject,
           term: selectedTerm,
