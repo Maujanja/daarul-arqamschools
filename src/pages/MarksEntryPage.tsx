@@ -360,7 +360,7 @@ export default function MarksEntryPage() {
         filters: {
           class: selectedClass,
           subject_id: selectedSubject,
-          term: selectedTerm,
+          term: buildTermFilter(selectedTerm),
           academic_year: selectedYear
         }
       });
