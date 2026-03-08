@@ -299,7 +299,8 @@ export function ParentDashboard() {
             academic_year: m.academic_year,
             exam: m.exam,
             total: m.total,
-            grade: m.grade,
+            // Recalculate grade using class-appropriate scale
+            grade: m.total > 0 ? calculateGradeForClass(m.total, studentData.class) : '-',
           }));
           setAllMarks(formattedMarks);
           
