@@ -479,6 +479,40 @@ export function AdminDashboard() {
     }
   };
 
+  const handlePreviewReport = async () => {
+    if (!user || !selectedYear) return;
+    try {
+      setLoadingPreview(true);
+
+      const [studentsResult, marksResult, subjectsResult] = await Promise.all([
+        secureQuery('students', user.role, user.id, {
+          filters: { class: reportClass },
+          select: 'id, full_name, gender, roll_number, class, stream',
+        }),
+        secureQuery('marks', user.role, user.id, {
+          filters: { class: reportClass, term: reportTerm, academic_year: selectedYear },
+          range: { from: 0, to: 9999 },
+        }),
+        secureQuery('subjects', user.role, user.id),
+      ]);
+
+      const students = studentsResult?.success ? studentsResult.data : [];
+      const marks = marksResult?.success ? marksResult.data : [];
+      const subjects = subjectsResult?.success ? subjectsResult.data : [];
+
+      if (!students?.length) { toast.error(`No students found for ${reportClass}`); return; }
+      if (!marks?.length) { toast.error(`No marks found for ${reportClass} - ${reportTerm}`); return; }
+
+      setPreviewData({ students, marks, subjects });
+      setShowPreview(true);
+    } catch (error) {
+      console.error('Preview error:', error);
+      toast.error('Failed to load report preview');
+    } finally {
+      setLoadingPreview(false);
+    }
+  };
+
   return (
     <div className="space-y-8">
       <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4">
