@@ -16,6 +16,7 @@ import { getTestDisplayName, getTestsForClass, getFilterLabel } from '@/utils/se
 import { generateAnnualExamReport } from '@/utils/annualReportGenerator';
 import { generateAnnualExamReportPDF } from '@/utils/annualReportPdfGenerator';
 import { toast } from 'sonner';
+import { AnnualReportPreview } from '@/components/dashboard/AnnualReportPreview';
 
 interface FeedbackItem {
   id: string;
