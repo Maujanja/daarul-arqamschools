@@ -726,17 +726,45 @@ export function AdminDashboard() {
               </SelectContent>
             </Select>
           </div>
-          <div className="flex items-end">
+          <div className="flex items-end gap-2">
             <Button
-              className="btn-gradient w-full"
+              variant="outline"
+              className="flex-1"
+              onClick={handlePreviewReport}
+              disabled={loadingPreview || generatingReport}
+            >
+              {loadingPreview ? <Loader2 className="w-4 h-4 mr-2 animate-spin" /> : <Eye className="w-4 h-4 mr-2" />}
+              Preview
+            </Button>
+            <Button
+              className="btn-gradient flex-1"
               onClick={handleDownloadAnnualReport}
-              disabled={generatingReport}
+              disabled={generatingReport || loadingPreview}
             >
               {generatingReport ? <Loader2 className="w-4 h-4 mr-2 animate-spin" /> : <Download className="w-4 h-4 mr-2" />}
               Download {reportFormat === 'pdf' ? 'PDF' : 'Excel'}
             </Button>
           </div>
         </div>
+
+        {/* Report Preview Dialog */}
+        {previewData && (
+          <AnnualReportPreview
+            open={showPreview}
+            onClose={() => setShowPreview(false)}
+            onDownload={(format) => {
+              setReportFormat(format);
+              setShowPreview(false);
+              setTimeout(() => handleDownloadAnnualReport(), 100);
+            }}
+            className={reportClass}
+            term={reportTerm}
+            academicYear={selectedYear}
+            students={previewData.students}
+            marks={previewData.marks}
+            subjects={previewData.subjects}
+          />
+        )}
       </div>
 
       {/* Quick Actions */}
