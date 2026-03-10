@@ -79,7 +79,9 @@ export function AdminDashboard() {
   const [reportTerm, setReportTerm] = useState('Series 1');
   const [generatingReport, setGeneratingReport] = useState(false);
   const [reportFormat, setReportFormat] = useState<'excel' | 'pdf'>('excel');
-
+  const [showPreview, setShowPreview] = useState(false);
+  const [previewData, setPreviewData] = useState<{ students: any[]; marks: any[]; subjects: any[] } | null>(null);
+  const [loadingPreview, setLoadingPreview] = useState(false);
   // Set initial year when academic years load
   useEffect(() => {
     if (currentYear) {
