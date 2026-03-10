@@ -310,21 +310,17 @@ export default function MarksEntryPage() {
         
         const selectedStudents = await fetchTable<TeacherClassStudent & { stream?: string | null }>('teacher_class_students', filters);
         
-        if (selectedStudents && selectedStudents.length > 0) {
-          // Client-side stream filter: include records where stream matches OR stream is null
-          const filteredSelections = selectedStudents.filter(s => matchesStream(s.stream));
-          const studentIds = filteredSelections.map(s => s.student_id);
+        // Client-side stream filter: include records where stream matches OR stream is null
+        const filteredSelections = (selectedStudents || []).filter(s => matchesStream(s.stream));
+        const studentIds = filteredSelections.map(s => s.student_id);
+        
+        if (studentIds.length > 0) {
           const allStudents = await fetchTable<Student & { stream?: string | null }>('students', { class: selectedClass });
           studentsToShow = allStudents
             .filter(s => studentIds.includes(s.id))
             .sort((a, b) => a.roll_number.localeCompare(b.roll_number));
-        } else {
-          // Fallback: if no explicit student selection exists, show all students in assigned class/stream
-          const allStudents = await fetchTable<Student & { stream?: string | null }>('students', { class: selectedClass });
-          studentsToShow = allStudents
-            .filter(s => matchesStream((s as any).stream))
-            .sort((a, b) => a.roll_number.localeCompare(b.roll_number));
         }
+        // If no students are assigned, show empty list - teacher must add students via "My Students" first
       } else {
         const allStudents = await fetchTable<Student & { stream?: string | null }>('students', { class: selectedClass });
         // Client-side stream filter for backward compat
