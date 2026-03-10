@@ -164,12 +164,12 @@ export function AnnualReportPreview({
 
   return (
     <Dialog open={open} onOpenChange={(v) => !v && onClose()}>
-      <DialogContent className="max-w-[98vw] w-full max-h-[95vh] p-0">
-        <DialogHeader className="p-4 pb-2 border-b flex flex-row items-center justify-between">
-          <DialogTitle className="text-lg font-bold">
+      <DialogContent className="max-w-[98vw] w-full max-h-[95vh] p-0 overflow-hidden">
+        <DialogHeader className="p-3 sm:p-4 pb-2 border-b">
+          <DialogTitle className="text-sm sm:text-lg font-bold leading-tight">
             {className.toUpperCase()} — {displayTerm.toUpperCase()} RESULTS ({academicYear})
           </DialogTitle>
-          <div className="flex items-center gap-2">
+          <div className="flex items-center gap-2 mt-2">
             <Button size="sm" variant="outline" onClick={() => onDownload('excel')}>
               <Download className="w-4 h-4 mr-1" /> Excel
             </Button>
@@ -179,8 +179,8 @@ export function AnnualReportPreview({
           </div>
         </DialogHeader>
 
-        <ScrollArea className="max-h-[calc(95vh-80px)]">
-          <div className="p-4 space-y-6 overflow-x-auto">
+        <div className="overflow-auto max-h-[calc(95vh-100px)]">
+          <div className="p-3 sm:p-4 space-y-6 min-w-[700px]">
             {/* Header */}
             <div className="text-center space-y-1">
               <p className="text-sm italic text-muted-foreground">Bismillaahir Rahmaanir Rahiim</p>
