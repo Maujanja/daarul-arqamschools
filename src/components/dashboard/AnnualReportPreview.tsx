@@ -381,7 +381,7 @@ export function AnnualReportPreview({
               </table>
             </div>
           </div>
-        </ScrollArea>
+          </div>
       </DialogContent>
     </Dialog>
   );
