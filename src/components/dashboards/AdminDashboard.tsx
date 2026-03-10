@@ -4,7 +4,7 @@ import { useQuery } from '@tanstack/react-query';
 import { supabase } from '@/integrations/supabase/client';
 import { StatCard } from '@/components/dashboard/StatCard';
 import { SeriesSummaryTable } from '@/components/dashboard/SeriesSummaryTable';
-import { Users, GraduationCap, BookOpen, MessageSquare, FileText, DollarSign, Clock, CheckCircle, User, Calendar, UserCog, Download, Loader2 } from 'lucide-react';
+import { Users, GraduationCap, BookOpen, MessageSquare, FileText, DollarSign, Clock, CheckCircle, User, Calendar, UserCog, Download, Loader2, Eye } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
@@ -16,6 +16,7 @@ import { getTestDisplayName, getTestsForClass, getFilterLabel } from '@/utils/se
 import { generateAnnualExamReport } from '@/utils/annualReportGenerator';
 import { generateAnnualExamReportPDF } from '@/utils/annualReportPdfGenerator';
 import { toast } from 'sonner';
+import { AnnualReportPreview } from '@/components/dashboard/AnnualReportPreview';
 
 interface FeedbackItem {
   id: string;
@@ -78,7 +79,9 @@ export function AdminDashboard() {
   const [reportTerm, setReportTerm] = useState('Series 1');
   const [generatingReport, setGeneratingReport] = useState(false);
   const [reportFormat, setReportFormat] = useState<'excel' | 'pdf'>('excel');
-
+  const [showPreview, setShowPreview] = useState(false);
+  const [previewData, setPreviewData] = useState<{ students: any[]; marks: any[]; subjects: any[] } | null>(null);
+  const [loadingPreview, setLoadingPreview] = useState(false);
   // Set initial year when academic years load
   useEffect(() => {
     if (currentYear) {
@@ -476,6 +479,40 @@ export function AdminDashboard() {
     }
   };
 
+  const handlePreviewReport = async () => {
+    if (!user || !selectedYear) return;
+    try {
+      setLoadingPreview(true);
+
+      const [studentsResult, marksResult, subjectsResult] = await Promise.all([
+        secureQuery('students', user.role, user.id, {
+          filters: { class: reportClass },
+          select: 'id, full_name, gender, roll_number, class, stream',
+        }),
+        secureQuery('marks', user.role, user.id, {
+          filters: { class: reportClass, term: reportTerm, academic_year: selectedYear },
+          range: { from: 0, to: 9999 },
+        }),
+        secureQuery('subjects', user.role, user.id),
+      ]);
+
+      const students = studentsResult?.success ? studentsResult.data : [];
+      const marks = marksResult?.success ? marksResult.data : [];
+      const subjects = subjectsResult?.success ? subjectsResult.data : [];
+
+      if (!students?.length) { toast.error(`No students found for ${reportClass}`); return; }
+      if (!marks?.length) { toast.error(`No marks found for ${reportClass} - ${reportTerm}`); return; }
+
+      setPreviewData({ students, marks, subjects });
+      setShowPreview(true);
+    } catch (error) {
+      console.error('Preview error:', error);
+      toast.error('Failed to load report preview');
+    } finally {
+      setLoadingPreview(false);
+    }
+  };
+
   return (
     <div className="space-y-8">
       <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4">
@@ -689,17 +726,45 @@ export function AdminDashboard() {
               </SelectContent>
             </Select>
           </div>
-          <div className="flex items-end">
+          <div className="flex items-end gap-2">
             <Button
-              className="btn-gradient w-full"
+              variant="outline"
+              className="flex-1"
+              onClick={handlePreviewReport}
+              disabled={loadingPreview || generatingReport}
+            >
+              {loadingPreview ? <Loader2 className="w-4 h-4 mr-2 animate-spin" /> : <Eye className="w-4 h-4 mr-2" />}
+              Preview
+            </Button>
+            <Button
+              className="btn-gradient flex-1"
               onClick={handleDownloadAnnualReport}
-              disabled={generatingReport}
+              disabled={generatingReport || loadingPreview}
             >
               {generatingReport ? <Loader2 className="w-4 h-4 mr-2 animate-spin" /> : <Download className="w-4 h-4 mr-2" />}
               Download {reportFormat === 'pdf' ? 'PDF' : 'Excel'}
             </Button>
           </div>
         </div>
+
+        {/* Report Preview Dialog */}
+        {previewData && (
+          <AnnualReportPreview
+            open={showPreview}
+            onClose={() => setShowPreview(false)}
+            onDownload={(format) => {
+              setReportFormat(format);
+              setShowPreview(false);
+              setTimeout(() => handleDownloadAnnualReport(), 100);
+            }}
+            className={reportClass}
+            term={reportTerm}
+            academicYear={selectedYear}
+            students={previewData.students}
+            marks={previewData.marks}
+            subjects={previewData.subjects}
+          />
+        )}
       </div>
 
       {/* Quick Actions */}
