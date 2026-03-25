@@ -154,6 +154,10 @@ export default function MarksEntryPage() {
   const [unlockReason, setUnlockReason] = useState('');
   const [isRequestingUnlock, setIsRequestingUnlock] = useState(false);
   const [unlockTargetStudent, setUnlockTargetStudent] = useState<StudentMark | null>(null);
+  // Delete student from subject
+  const [showDeleteDialog, setShowDeleteDialog] = useState(false);
+  const [deleteTargetStudent, setDeleteTargetStudent] = useState<StudentMark | null>(null);
+  const [isDeleting, setIsDeleting] = useState(false);
 
   const isTeacher = user?.role === 'teacher';
 
