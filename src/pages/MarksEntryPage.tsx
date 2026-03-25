@@ -124,6 +124,7 @@ export default function MarksEntryPage() {
   const { fetchTable, query } = useSecureQuery();
   const { upsert, insert, update, remove } = useSecureData();
   const fileInputRef = useRef<HTMLInputElement>(null);
+  const marksLoadRequestRef = useRef(0);
   const [selectedClass, setSelectedClass] = useState('');
   const [selectedSubject, setSelectedSubject] = useState('');
   const [selectedStream, setSelectedStream] = useState<string>('');
@@ -333,7 +334,10 @@ export default function MarksEntryPage() {
           const allStudents = await fetchTable<Student & { stream?: string | null }>('students', { class: selectedClass });
           studentsToShow = allStudents
             .filter(s => studentIds.includes(s.id))
-            .sort((a, b) => a.roll_number.localeCompare(b.roll_number));
+            .sort((a, b) =>
+              a.full_name.localeCompare(b.full_name, undefined, { sensitivity: 'base' }) ||
+              a.roll_number.localeCompare(b.roll_number, undefined, { numeric: true, sensitivity: 'base' })
+            );
         }
         // If no students are assigned, show empty list - teacher must add students via "My Students" first
       } else {
@@ -341,7 +345,10 @@ export default function MarksEntryPage() {
         // Client-side stream filter for backward compat
         studentsToShow = allStudents
           .filter(s => matchesStream((s as any).stream))
-          .sort((a, b) => a.roll_number.localeCompare(b.roll_number));
+          .sort((a, b) =>
+            a.full_name.localeCompare(b.full_name, undefined, { sensitivity: 'base' }) ||
+            a.roll_number.localeCompare(b.roll_number, undefined, { numeric: true, sensitivity: 'base' })
+          );
       }
       
       setStudents(studentsToShow);
@@ -377,8 +384,14 @@ export default function MarksEntryPage() {
 
   // Load existing marks AND check unlock requests when subject/term/year changes
   useEffect(() => {
+    const requestId = ++marksLoadRequestRef.current;
+
     const loadExistingMarks = async () => {
-      if (!selectedSubject || students.length === 0 || !user) return;
+      if (!selectedSubject || students.length === 0 || !user) {
+        if (marksLoadRequestRef.current !== requestId) return;
+        setLockedStudentIds(new Set());
+        return;
+      }
       
       const result = await query<Mark>('marks', {
         filters: {
@@ -388,6 +401,8 @@ export default function MarksEntryPage() {
           academic_year: selectedYear
         }
       });
+
+      if (marksLoadRequestRef.current !== requestId) return;
       
       // Always reset marks to empty first before applying existing data
       setMarks(prev => prev.map(mark => ({
@@ -448,6 +463,8 @@ export default function MarksEntryPage() {
           academic_year: selectedYear
         }
       });
+
+      if (marksLoadRequestRef.current !== requestId) return;
       
       if (result.success && result.data && result.data.length > 0) {
         setUnlockRequests(result.data);
@@ -467,6 +484,12 @@ export default function MarksEntryPage() {
     
     loadExistingMarks();
     checkUnlockRequests();
+
+    return () => {
+      if (marksLoadRequestRef.current === requestId) {
+        marksLoadRequestRef.current++;
+      }
+    };
   }, [selectedSubject, selectedTerm, selectedYear, students, selectedClass, user, query, isTeacher]);
 
   // Get unlock request for a specific student
