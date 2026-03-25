@@ -7,12 +7,22 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import { calculateGrade } from '@/types';
 import { calculateGradeForClass, isPrimaryClass, isNurseryClass } from '@/utils/seniorGrading';
-import { Save, Loader2, Upload, Download, FileSpreadsheet, Edit3, Lock, ShieldAlert, Unlock, CheckCircle, Plus } from 'lucide-react';
+import { Save, Loader2, Upload, Download, FileSpreadsheet, Edit3, Lock, ShieldAlert, Unlock, CheckCircle, Plus, Trash2 } from 'lucide-react';
 import { useToast } from '@/hooks/use-toast';
 import { useAuth } from '@/contexts/AuthContext';
 import * as XLSX from 'xlsx';
 import { terms, DEFAULT_SERIES_COUNT } from '@/data/mockData';
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger } from '@/components/ui/dialog';
+import {
+  AlertDialog,
+  AlertDialogAction,
+  AlertDialogCancel,
+  AlertDialogContent,
+  AlertDialogDescription,
+  AlertDialogFooter,
+  AlertDialogHeader,
+  AlertDialogTitle,
+} from '@/components/ui/alert-dialog';
 import { Textarea } from '@/components/ui/textarea';
 import { useAcademicYears } from '@/hooks/useAcademicYears';
 import { useSecureQuery } from '@/hooks/useSecureQuery';
@@ -112,7 +122,7 @@ export default function MarksEntryPage() {
   const { user } = useAuth();
   const { academicYears, currentYear, loading: yearsLoading } = useAcademicYears();
   const { fetchTable, query } = useSecureQuery();
-  const { upsert, insert, update } = useSecureData();
+  const { upsert, insert, update, remove } = useSecureData();
   const fileInputRef = useRef<HTMLInputElement>(null);
   const [selectedClass, setSelectedClass] = useState('');
   const [selectedSubject, setSelectedSubject] = useState('');
@@ -304,7 +314,8 @@ export default function MarksEntryPage() {
         const filters: Record<string, unknown> = {
           teacher_id: currentTeacherId,
           class: selectedClass,
-          subject_id: selectedSubject
+          subject_id: selectedSubject,
+          academic_year: selectedYear
         };
         // Don't filter by stream at DB level - filter client-side for backward compat
         
@@ -345,7 +356,20 @@ export default function MarksEntryPage() {
     };
     
     fetchStudents();
-  }, [selectedClass, selectedSubject, selectedStream, isTeacher, user?.id, user, fetchTable]);
+  }, [selectedClass, selectedSubject, selectedStream, selectedYear, isTeacher, user?.id, user, fetchTable]);
+
+  // Clear marks immediately when series/year changes to prevent stale data
+  useEffect(() => {
+    setMarks(prev => prev.map(mark => ({
+      ...mark,
+      exam: '' as const,
+      total: 0,
+      grade: '-',
+    })));
+    setLockedStudentIds(new Set());
+    setApprovedStudentIds(new Set());
+    setUnlockRequests([]);
+  }, [selectedTerm, selectedYear]);
 
   // Load existing marks AND check unlock requests when subject/term/year changes
   useEffect(() => {
@@ -503,6 +527,56 @@ export default function MarksEntryPage() {
       });
     } finally {
       setIsRequestingUnlock(false);
+    }
+  };
+
+  const handleDeleteStudent = async () => {
+    if (!deleteTargetStudent || !user) return;
+    const currentTeacherId = resolvedTeacherId || user.id;
+    
+    setIsDeleting(true);
+    try {
+      // 1. Delete from teacher_class_students (all terms)
+      await remove('teacher_class_students', {
+        teacher_id: currentTeacherId,
+        student_id: deleteTargetStudent.studentId,
+        class: selectedClass,
+        subject_id: selectedSubject,
+        academic_year: selectedYear,
+      });
+      
+      // 2. Delete ALL marks for this student in this subject/class/year (all terms)
+      await remove('marks', {
+        student_id: deleteTargetStudent.studentId,
+        subject_id: selectedSubject,
+        class: selectedClass,
+        academic_year: selectedYear,
+      });
+      
+      // 3. Remove from local state immediately
+      setStudents(prev => prev.filter(s => s.id !== deleteTargetStudent.studentId));
+      setMarks(prev => prev.filter(m => m.studentId !== deleteTargetStudent.studentId));
+      setLockedStudentIds(prev => {
+        const newSet = new Set(prev);
+        newSet.delete(deleteTargetStudent.studentId);
+        return newSet;
+      });
+      
+      toast({
+        title: "Student Removed",
+        description: `${deleteTargetStudent.studentName} has been removed from this subject. All marks deleted.`,
+      });
+    } catch (error: any) {
+      console.error('Error deleting student:', error);
+      toast({
+        title: "Error",
+        description: error.message || "Failed to remove student.",
+        variant: "destructive",
+      });
+    } finally {
+      setIsDeleting(false);
+      setShowDeleteDialog(false);
+      setDeleteTargetStudent(null);
     }
   };
 
@@ -1083,6 +1157,7 @@ export default function MarksEntryPage() {
                         <th className="text-center py-3 px-4 text-sm font-medium text-muted-foreground">Total</th>
                         <th className="text-center py-3 px-4 text-sm font-medium text-muted-foreground">Grade</th>
                         {isTeacher && <th className="text-center py-3 px-4 text-sm font-medium text-muted-foreground">Status</th>}
+                        {isTeacher && <th className="text-center py-3 px-4 text-sm font-medium text-muted-foreground">Action</th>}
                       </tr>
                     </thead>
                     <tbody>
@@ -1167,6 +1242,20 @@ export default function MarksEntryPage() {
                                 )}
                               </td>
                             )}
+                            {isTeacher && (
+                              <td className="py-4 px-4 text-center">
+                                <button
+                                  onClick={() => {
+                                    setDeleteTargetStudent(mark);
+                                    setShowDeleteDialog(true);
+                                  }}
+                                  className="inline-flex items-center justify-center w-8 h-8 rounded-full hover:bg-destructive/10 text-muted-foreground hover:text-destructive transition-colors"
+                                  title={`Remove ${mark.studentName}`}
+                                >
+                                  <Trash2 className="w-4 h-4" />
+                                </button>
+                              </td>
+                            )}
                           </tr>
                         );
                       })}
@@ -1175,6 +1264,29 @@ export default function MarksEntryPage() {
                 </div>
               )}
             </div>
+
+            {/* Delete Student Confirmation Dialog */}
+            <AlertDialog open={showDeleteDialog} onOpenChange={(open) => { if (!open) { setShowDeleteDialog(false); setDeleteTargetStudent(null); } }}>
+              <AlertDialogContent>
+                <AlertDialogHeader>
+                  <AlertDialogTitle>Remove Student from Subject?</AlertDialogTitle>
+                  <AlertDialogDescription className="space-y-2">
+                    <p>Are you sure you want to remove <strong>{deleteTargetStudent?.studentName}</strong> from <strong>{selectedSubjectData?.name}</strong>?</p>
+                    <p className="text-destructive font-medium">⚠️ This will permanently delete ALL marks for this student in this subject for the year {selectedYear}. The student will no longer appear in this subject's reports.</p>
+                  </AlertDialogDescription>
+                </AlertDialogHeader>
+                <AlertDialogFooter>
+                  <AlertDialogCancel disabled={isDeleting}>Cancel</AlertDialogCancel>
+                  <AlertDialogAction 
+                    onClick={handleDeleteStudent} 
+                    disabled={isDeleting}
+                    className="bg-destructive text-destructive-foreground hover:bg-destructive/90"
+                  >
+                    {isDeleting ? <><Loader2 className="w-4 h-4 mr-2 animate-spin" />Removing...</> : 'Yes, Remove Student'}
+                  </AlertDialogAction>
+                </AlertDialogFooter>
+              </AlertDialogContent>
+            </AlertDialog>
           </TabsContent>
         </Tabs>
 
