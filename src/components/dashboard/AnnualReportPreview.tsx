@@ -1,5 +1,5 @@
 import { useMemo } from 'react';
-import { isSeniorClass, scoreToPoints, calculateDivision, calculateGradeForClass, getTestDisplayName } from '@/utils/seniorGrading';
+import { isSeniorClass, isNurseryClass, scoreToPoints, calculateDivision, calculateGradeForClass, getTestDisplayName } from '@/utils/seniorGrading';
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from '@/components/ui/dialog';
 import { Button } from '@/components/ui/button';
 import { Download, X } from 'lucide-react';
