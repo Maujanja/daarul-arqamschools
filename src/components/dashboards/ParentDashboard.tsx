@@ -120,6 +120,7 @@ export function ParentDashboard() {
   const [classRankComplete, setClassRankComplete] = useState(false);
   const [installments, setInstallments] = useState<(FeeInstallment | StudentCustomInstallment)[]>([]);
   const [dueInstallmentAmount, setDueInstallmentAmount] = useState(0);
+  const [showAllInstallments, setShowAllInstallments] = useState(false);
   
   // Chart refs for capturing as images
   const subjectChartRef = useRef<HTMLDivElement>(null);
