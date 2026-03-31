@@ -26,7 +26,10 @@ type AllowedTable =
   | "admin_credentials_public"
   | "secretary_credentials_public"
   | "secretary_credentials"
-  | "marks_unlock_requests";
+  | "marks_unlock_requests"
+  | "family_groups"
+  | "family_group_members"
+  | "family_group_installments";
 
 interface QueryRequest {
   table: AllowedTable;
