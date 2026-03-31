@@ -586,6 +586,10 @@ export function SecretaryDashboard() {
     setSelectedStudentForInstallment(student);
     setShowCustomInstallmentDialog(true);
     
+    // Load discount info into same dialog
+    setDiscountAmount(student.custom_fee?.toString() || '');
+    setDiscountNotes(student.discount_notes || '');
+    
     // Fetch existing custom installments for this student
     const existing = await fetchTable<StudentCustomInstallment>('student_custom_installments', {
       student_id: student.id,
@@ -604,7 +608,7 @@ export function SecretaryDashboard() {
       );
     } else {
       // Default rows with standard due dates based on student's class
-      const studentClass = selectedStudentForInstallment?.class || '';
+      const studentClass = student.class || '';
       const classDates = getInstallmentDueDatesForClass(studentClass);
       setCustomInstallmentRows(
         classDates.map(inst => ({
