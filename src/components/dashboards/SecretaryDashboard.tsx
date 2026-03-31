@@ -1615,82 +1615,128 @@ export function SecretaryDashboard() {
 
       {/* Fee Structure & Installments Management Dialog */}
       <Dialog open={showFeeStructureDialog} onOpenChange={setShowFeeStructureDialog}>
-        <DialogContent className="max-w-4xl max-h-[85vh] overflow-y-auto">
+        <DialogContent className="max-w-4xl w-[95vw] max-h-[90vh] overflow-y-auto p-4 sm:p-6">
           <DialogHeader>
-            <DialogTitle>Manage Fees & Installments - {selectedYear}</DialogTitle>
+            <DialogTitle className="text-base sm:text-lg">Manage Fees & Installments - {selectedYear}</DialogTitle>
           </DialogHeader>
-          <div className="space-y-6 py-4">
-            {/* Current Fee Structure with Installments */}
+          <div className="space-y-6 py-2 sm:py-4">
+            {/* Current Fee Structure - Card layout on mobile, table on desktop */}
             <div>
-              <h4 className="font-medium mb-3">Current Fee Structure & Installments</h4>
+              <h4 className="font-medium mb-3 text-sm sm:text-base">Current Fee Structure & Installments</h4>
               {feeStructure.length > 0 ? (
-                <div className="overflow-x-auto">
-                  <table className="w-full text-sm">
-                    <thead>
-                      <tr className="border-b">
-                        <th className="text-left py-2 px-3">Class</th>
-                        <th className="text-left py-2 px-3">Type</th>
-                        <th className="text-right py-2 px-3">Total Fee</th>
-                        <th className="text-right py-2 px-3">Inst. 1 (Jan 1)</th>
-                        <th className="text-right py-2 px-3">Inst. 2 (Mar 30)</th>
-                        <th className="text-right py-2 px-3">Inst. 3 (Jun 30)</th>
-                        <th className="text-right py-2 px-3">Inst. 4 (Sep 15)</th>
-                        <th className="text-right py-2 px-3">Action</th>
-                      </tr>
-                    </thead>
-                    <tbody>
-                      {feeStructure.map((fs) => {
-                        const classInstallments = feeInstallments.filter(
-                          fi => fi.class === fs.class && fi.boarding_type === fs.boarding_type
-                        );
-                        return (
-                          <tr key={fs.id} className="border-b">
-                            <td className="py-2 px-3">{fs.class}</td>
-                            <td className="py-2 px-3 capitalize">{fs.boarding_type}</td>
-                            <td className="py-2 px-3 text-right font-medium">{Number(fs.total_fee).toLocaleString()}</td>
-                            {[1,2,3,4].map(num => {
-                              const inst = classInstallments.find(ci => ci.installment_number === num);
+                <>
+                  {/* Desktop table */}
+                  <div className="hidden md:block overflow-x-auto">
+                    <table className="w-full text-sm">
+                      <thead>
+                        <tr className="border-b">
+                          <th className="text-left py-2 px-3">Class</th>
+                          <th className="text-left py-2 px-3">Type</th>
+                          <th className="text-right py-2 px-3">Total Fee</th>
+                          <th className="text-right py-2 px-3">Inst. 1 (Jan 1)</th>
+                          <th className="text-right py-2 px-3">Inst. 2 (Mar 30)</th>
+                          <th className="text-right py-2 px-3">Inst. 3 (Jun 30)</th>
+                          <th className="text-right py-2 px-3">Inst. 4 (Sep 15)</th>
+                          <th className="text-right py-2 px-3">Action</th>
+                        </tr>
+                      </thead>
+                      <tbody>
+                        {feeStructure.map((fs) => {
+                          const classInstallments = feeInstallments.filter(
+                            fi => fi.class === fs.class && fi.boarding_type === fs.boarding_type
+                          );
+                          return (
+                            <tr key={fs.id} className="border-b">
+                              <td className="py-2 px-3">{fs.class}</td>
+                              <td className="py-2 px-3 capitalize">{fs.boarding_type}</td>
+                              <td className="py-2 px-3 text-right font-medium">{Number(fs.total_fee).toLocaleString()}</td>
+                              {[1,2,3,4].map(num => {
+                                const inst = classInstallments.find(ci => ci.installment_number === num);
+                                return (
+                                  <td key={num} className="py-2 px-3 text-right text-muted-foreground">
+                                    {inst ? `TZS ${Number(inst.amount).toLocaleString()}` : '-'}
+                                  </td>
+                                );
+                              })}
+                              <td className="py-2 px-3 text-right">
+                                <div className="flex gap-1 justify-end">
+                                  <Button size="sm" variant="outline" onClick={() => {
+                                    setInstallmentClass(fs.class);
+                                    setInstallmentBoardingType(fs.boarding_type);
+                                    loadInstallmentsForClass(fs.class, fs.boarding_type);
+                                    setNewFeeYear(fs.academic_year);
+                                  }}>
+                                    <Edit className="w-3 h-3" />
+                                  </Button>
+                                  <Button size="sm" variant="outline" className="text-destructive" onClick={() => handleDeleteFeeStructure(fs.id)}>
+                                    <Trash2 className="w-3 h-3" />
+                                  </Button>
+                                </div>
+                              </td>
+                            </tr>
+                          );
+                        })}
+                      </tbody>
+                    </table>
+                  </div>
+
+                  {/* Mobile card layout */}
+                  <div className="md:hidden space-y-3">
+                    {feeStructure.map((fs) => {
+                      const classInstallments = feeInstallments.filter(
+                        fi => fi.class === fs.class && fi.boarding_type === fs.boarding_type
+                      );
+                      return (
+                        <div key={fs.id} className="border border-border rounded-lg p-3 space-y-2">
+                          <div className="flex items-center justify-between">
+                            <div>
+                              <p className="font-semibold text-sm text-card-foreground">{fs.class}</p>
+                              <p className="text-xs text-muted-foreground capitalize">{fs.boarding_type} • Total: TZS {Number(fs.total_fee).toLocaleString()}</p>
+                            </div>
+                            <div className="flex gap-1">
+                              <Button size="icon" variant="outline" className="h-8 w-8" onClick={() => {
+                                setInstallmentClass(fs.class);
+                                setInstallmentBoardingType(fs.boarding_type);
+                                loadInstallmentsForClass(fs.class, fs.boarding_type);
+                                setNewFeeYear(fs.academic_year);
+                              }}>
+                                <Edit className="w-3 h-3" />
+                              </Button>
+                              <Button size="icon" variant="outline" className="h-8 w-8 text-destructive" onClick={() => handleDeleteFeeStructure(fs.id)}>
+                                <Trash2 className="w-3 h-3" />
+                              </Button>
+                            </div>
+                          </div>
+                          <div className="grid grid-cols-2 gap-1.5 text-xs">
+                            {getInstallmentDueDatesForClass(fs.class).map(instDef => {
+                              const inst = classInstallments.find(ci => ci.installment_number === instDef.number);
                               return (
-                                <td key={num} className="py-2 px-3 text-right text-muted-foreground">
-                                  {inst ? `TZS ${Number(inst.amount).toLocaleString()}` : '-'}
-                                </td>
+                                <div key={instDef.number} className="flex justify-between bg-muted/40 rounded px-2 py-1">
+                                  <span className="text-muted-foreground">Inst. {instDef.number}</span>
+                                  <span className="font-medium">{inst ? `${Number(inst.amount).toLocaleString()}` : '-'}</span>
+                                </div>
                               );
                             })}
-                            <td className="py-2 px-3 text-right">
-                              <div className="flex gap-1 justify-end">
-                                <Button size="sm" variant="outline" onClick={() => {
-                                  setInstallmentClass(fs.class);
-                                  setInstallmentBoardingType(fs.boarding_type);
-                                  loadInstallmentsForClass(fs.class, fs.boarding_type);
-                                  setNewFeeYear(fs.academic_year);
-                                }}>
-                                  <Edit className="w-3 h-3" />
-                                </Button>
-                                <Button size="sm" variant="outline" className="text-destructive" onClick={() => handleDeleteFeeStructure(fs.id)}>
-                                  <Trash2 className="w-3 h-3" />
-                                </Button>
-                              </div>
-                            </td>
-                          </tr>
-                        );
-                      })}
-                    </tbody>
-                  </table>
-                </div>
+                          </div>
+                        </div>
+                      );
+                    })}
+                  </div>
+                </>
               ) : (
                 <p className="text-sm text-muted-foreground">No fee structure set for this year.</p>
               )}
             </div>
 
             {/* Set Installments Form */}
-            <div className="border-t pt-4 bg-accent/10 -mx-6 px-6 py-4 rounded-lg">
-              <h4 className="font-medium mb-3 flex items-center gap-2">
+            <div className="border-t pt-4 bg-accent/10 -mx-4 sm:-mx-6 px-4 sm:px-6 py-4 rounded-lg">
+              <h4 className="font-medium mb-3 text-sm sm:text-base flex items-center gap-2">
                 <Calendar className="w-4 h-4 text-primary" />
                 {installmentClass ? `Set Installments: ${installmentClass} (${installmentBoardingType})` : 'Set Installments for a Class'}
               </h4>
-              <div className="grid grid-cols-1 sm:grid-cols-3 gap-4 mb-4">
+              <div className="grid grid-cols-1 sm:grid-cols-3 gap-3 sm:gap-4 mb-4">
                 <div className="space-y-2">
-                  <Label>Academic Year</Label>
+                  <Label className="text-xs sm:text-sm">Academic Year</Label>
                   <Select value={newFeeYear || selectedYear} onValueChange={setNewFeeYear}>
                     <SelectTrigger>
                       <SelectValue placeholder="Select year" />
@@ -1703,7 +1749,7 @@ export function SecretaryDashboard() {
                   </Select>
                 </div>
                 <div className="space-y-2">
-                  <Label>Class</Label>
+                  <Label className="text-xs sm:text-sm">Class</Label>
                   <Select value={installmentClass} onValueChange={(v) => {
                     setInstallmentClass(v);
                     loadInstallmentsForClass(v, installmentBoardingType);
@@ -1719,7 +1765,7 @@ export function SecretaryDashboard() {
                   </Select>
                 </div>
                 <div className="space-y-2">
-                  <Label>Type</Label>
+                  <Label className="text-xs sm:text-sm">Type</Label>
                   <Select value={installmentBoardingType} onValueChange={(v) => {
                     setInstallmentBoardingType(v);
                     if (installmentClass) loadInstallmentsForClass(installmentClass, v);
@@ -1737,24 +1783,24 @@ export function SecretaryDashboard() {
 
               {installmentClass && (
                 <>
-                  <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4 mb-4">
+                  <div className="grid grid-cols-2 sm:grid-cols-2 lg:grid-cols-4 gap-3 sm:gap-4 mb-4">
                     {getInstallmentDueDatesForClass(installmentClass).map(inst => (
-                      <div key={inst.number} className="space-y-2">
-                        <Label className="text-xs">{inst.label}</Label>
+                      <div key={inst.number} className="space-y-1.5">
+                        <Label className="text-xs leading-tight">{inst.label}</Label>
                         <Input
                           type="number"
-                          placeholder="Amount (TZS)"
+                          placeholder="Amount"
                           value={installmentAmounts[inst.number]}
                           onChange={(e) => setInstallmentAmounts(prev => ({...prev, [inst.number]: e.target.value}))}
                         />
                       </div>
                     ))}
                   </div>
-                  <div className="flex items-center justify-between">
+                  <div className="flex flex-col sm:flex-row items-start sm:items-center justify-between gap-2">
                     <p className="text-sm text-muted-foreground">
                       Total: TZS {Object.values(installmentAmounts).reduce((sum, v) => sum + (parseFloat(v) || 0), 0).toLocaleString()}
                     </p>
-                    <Button onClick={handleSaveInstallments} disabled={isSubmitting}>
+                    <Button onClick={handleSaveInstallments} disabled={isSubmitting} className="w-full sm:w-auto">
                       {isSubmitting ? <Loader2 className="w-4 h-4 animate-spin mr-2" /> : null}
                       Save Installments
                     </Button>
@@ -1764,7 +1810,7 @@ export function SecretaryDashboard() {
             </div>
           </div>
           <DialogFooter>
-            <Button variant="outline" onClick={() => { setShowFeeStructureDialog(false); setEditingFeeStructure(null); setInstallmentClass(''); }}>
+            <Button variant="outline" className="w-full sm:w-auto" onClick={() => { setShowFeeStructureDialog(false); setEditingFeeStructure(null); setInstallmentClass(''); }}>
               Close
             </Button>
           </DialogFooter>
