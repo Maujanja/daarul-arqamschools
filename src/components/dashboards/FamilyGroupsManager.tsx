@@ -461,29 +461,59 @@ export function FamilyGroupsManager({ selectedYear, students, onDataChanged }: P
               <Input value={groupNotes} onChange={e => setGroupNotes(e.target.value)} placeholder="Additional notes..." />
             </div>
             <div>
-              <Label>Select Students ({selectedMembers.length} selected)</Label>
-              <div className="mt-2 max-h-60 overflow-y-auto border rounded-lg p-2 space-y-1">
-                {students
-                  .filter(s => !assignedStudentIds.has(s.id) || selectedMembers.includes(s.id))
-                  .sort((a, b) => a.full_name.localeCompare(b.full_name))
-                  .map(student => (
-                    <div
-                      key={student.id}
-                      className={`flex items-center justify-between p-2 rounded cursor-pointer transition-colors ${
-                        selectedMembers.includes(student.id) ? 'bg-primary/10 border border-primary/30' : 'hover:bg-muted/50'
-                      }`}
-                      onClick={() => toggleMember(student.id)}
-                    >
-                      <div>
-                        <p className="text-sm font-medium text-card-foreground">{student.full_name}</p>
-                        <p className="text-xs text-muted-foreground">{student.class} • {student.roll_number}</p>
-                      </div>
-                      {selectedMembers.includes(student.id) && (
-                        <span className="text-xs bg-primary text-primary-foreground px-2 py-0.5 rounded-full">Selected</span>
+              <Label>Students (type name to match)</Label>
+              <p className="text-xs text-muted-foreground mb-2">
+                Type each student's name. The system will automatically match even with minor spelling errors.
+              </p>
+              <div className="space-y-2">
+                {memberEntries.map((entry, index) => (
+                  <div key={index} className="flex items-start gap-2">
+                    <div className="flex-1">
+                      <Input
+                        value={entry.typedName}
+                        onChange={e => updateMemberMatch(index, e.target.value)}
+                        placeholder="Type student name..."
+                        className={entry.matchedStudentId ? 'border-success' : entry.typedName.length > 2 ? 'border-destructive' : ''}
+                      />
+                      {entry.typedName.length > 0 && (
+                        <div className="mt-1 flex items-center gap-1">
+                          {entry.matchedStudentId ? (
+                            <>
+                              <CheckCircle className="w-3 h-3 text-success" />
+                              <span className="text-xs text-success">
+                                Matched: <strong>{entry.matchedName}</strong> ({entry.matchedClass})
+                                {entry.score < 1 && <span className="text-muted-foreground ml-1">({Math.round(entry.score * 100)}% match)</span>}
+                              </span>
+                            </>
+                          ) : entry.typedName.length > 2 ? (
+                            <>
+                              <XCircle className="w-3 h-3 text-destructive" />
+                              <span className="text-xs text-destructive">No matching student found</span>
+                            </>
+                          ) : null}
+                        </div>
                       )}
                     </div>
-                  ))}
+                    <Button
+                      variant="ghost"
+                      size="sm"
+                      className="mt-1"
+                      onClick={() => removeMemberEntry(index)}
+                      disabled={memberEntries.length <= 1}
+                    >
+                      <Trash2 className="w-4 h-4 text-destructive" />
+                    </Button>
+                  </div>
+                ))}
               </div>
+              <Button variant="outline" size="sm" className="mt-2" onClick={addMemberEntry}>
+                <Plus className="w-3 h-3 mr-1" /> Add Another Student
+              </Button>
+              {selectedMembers.length > 0 && (
+                <p className="text-xs text-success mt-2 font-medium">
+                  {selectedMembers.length} student{selectedMembers.length !== 1 ? 's' : ''} matched successfully
+                </p>
+              )}
             </div>
           </div>
           <DialogFooter>
