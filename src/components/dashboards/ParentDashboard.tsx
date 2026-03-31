@@ -120,6 +120,7 @@ export function ParentDashboard() {
   const [classRankComplete, setClassRankComplete] = useState(false);
   const [installments, setInstallments] = useState<(FeeInstallment | StudentCustomInstallment)[]>([]);
   const [dueInstallmentAmount, setDueInstallmentAmount] = useState(0);
+  const [showAllInstallments, setShowAllInstallments] = useState(false);
   
   // Chart refs for capturing as images
   const subjectChartRef = useRef<HTMLDivElement>(null);
@@ -401,28 +402,27 @@ export function ParentDashboard() {
         
         setInstallments(studentInstallments);
         
-        // Calculate due installment amount based on current date
-        // An installment is "due" from its due_date until paid
-        // Past unpaid installments accumulate into current dues
+        // Calculate due installment amount - show only the NEXT unpaid installment
         const today = new Date();
-        today.setHours(23, 59, 59, 999); // End of today to ensure same-day comparison works
+        today.setHours(23, 59, 59, 999);
         const totalPaidSoFar = payments.reduce((sum: number, p: any) => sum + Number(p.amount), 0);
-        let cumulativeDue = 0;
         
         const sortedInstallments = [...studentInstallments]
           .sort((a, b) => new Date(a.due_date).getTime() - new Date(b.due_date).getTime());
         
-        sortedInstallments.forEach(inst => {
-          const dueDate = new Date(inst.due_date + 'T00:00:00');
-          if (dueDate <= today) {
-            cumulativeDue += Number(inst.amount);
+        // Find the first unpaid installment (cumulative amount > paid)
+        let cumulativeAmount = 0;
+        let nextDueInstallmentAmount = 0;
+        for (const inst of sortedInstallments) {
+          cumulativeAmount += Number(inst.amount);
+          if (cumulativeAmount > totalPaidSoFar) {
+            // This installment is not fully paid - show its amount as "current due"
+            nextDueInstallmentAmount = Number(inst.amount);
+            break;
           }
-        });
+        }
         
-        
-        
-        const dueAmount = Math.max(0, cumulativeDue - totalPaidSoFar);
-        setDueInstallmentAmount(dueAmount);
+        setDueInstallmentAmount(nextDueInstallmentAmount);
         
         // Fetch historical debts using secure query
         const debtsData = await fetchTable<any>('student_debt_history', { 
@@ -1182,26 +1182,28 @@ export function ParentDashboard() {
             </div>
 
             {/* Installment breakdown */}
-            {installments.length > 0 && (
-              <div className="mb-6">
-                <h4 className="font-medium text-card-foreground mb-3">Installment Schedule</h4>
-                <div className="space-y-2">
-                  {installments
-                    .sort((a, b) => new Date(a.due_date).getTime() - new Date(b.due_date).getTime())
-                    .map((inst, index) => {
+            {installments.length > 0 && (() => {
+              const sortedInsts = [...installments].sort((a, b) => new Date(a.due_date).getTime() - new Date(b.due_date).getTime());
+              const isSpecialCase = sortedInsts.length > 4;
+              const visibleInstallments = isSpecialCase && !showAllInstallments 
+                ? sortedInsts.slice(0, 4) 
+                : sortedInsts;
+              
+              return (
+                <div className="mb-6">
+                  <h4 className="font-medium text-card-foreground mb-3">Installment Schedule</h4>
+                  <div className="space-y-2">
+                    {visibleInstallments.map((inst, index) => {
                       const today = new Date();
                       today.setHours(23, 59, 59, 999);
                       const dueDate = new Date(inst.due_date + 'T00:00:00');
                       const isDue = dueDate <= today;
-                      const isPast = dueDate < today;
                       
-                      // Calculate cumulative amounts up to this installment
-                      const sortedInsts = [...installments].sort((a, b) => new Date(a.due_date).getTime() - new Date(b.due_date).getTime());
+                      // Use actual index in full sorted list for cumulative calculation
+                      const actualIndex = sortedInsts.findIndex(i => i === inst);
                       const cumulativeDue = sortedInsts
-                        .slice(0, index + 1)
+                        .slice(0, actualIndex + 1)
                         .reduce((sum, i) => sum + Number(i.amount), 0);
-                      const installmentPaid = Math.min(paidAmount, cumulativeDue);
-                      const installmentRemaining = Math.max(0, cumulativeDue - paidAmount);
                       const isFullyPaid = paidAmount >= cumulativeDue;
                       
                       return (
@@ -1212,18 +1214,18 @@ export function ParentDashboard() {
                         }`}>
                           <div className="flex items-center gap-3">
                             <div className={`w-8 h-8 rounded-full flex items-center justify-center text-xs font-bold ${
-                              isFullyPaid ? 'bg-success/20 text-success' :
+                              isFullyPaid ? 'bg-success text-white' :
                               isDue ? 'bg-destructive/20 text-destructive' :
                               'bg-muted text-muted-foreground'
                             }`}>
-                              {index + 1}
+                              {isFullyPaid ? '✓' : actualIndex + 1}
                             </div>
                             <div>
-                              <p className="font-medium text-card-foreground">
+                              <p className={`font-medium ${isFullyPaid ? 'text-success line-through' : 'text-card-foreground'}`}>
                                 TZS {Number(inst.amount).toLocaleString()}
                               </p>
                               <p className="text-xs text-muted-foreground">
-                                Due: {new Date(inst.due_date).toLocaleDateString('en-US', { year: 'numeric', month: 'short', day: 'numeric' })}
+                                Due: {new Date(inst.due_date + 'T00:00:00').toLocaleDateString('en-US', { year: 'numeric', month: 'short', day: 'numeric' })}
                               </p>
                             </div>
                           </div>
@@ -1245,9 +1247,30 @@ export function ParentDashboard() {
                         </div>
                       );
                     })}
+                  </div>
+                  {isSpecialCase && !showAllInstallments && (
+                    <Button 
+                      variant="ghost" 
+                      size="sm" 
+                      className="mt-2 w-full text-primary"
+                      onClick={() => setShowAllInstallments(true)}
+                    >
+                      See more installments ({sortedInsts.length - 4} more)
+                    </Button>
+                  )}
+                  {isSpecialCase && showAllInstallments && (
+                    <Button 
+                      variant="ghost" 
+                      size="sm" 
+                      className="mt-2 w-full text-primary"
+                      onClick={() => setShowAllInstallments(false)}
+                    >
+                      Show less
+                    </Button>
+                  )}
                 </div>
-              </div>
-            )}
+              );
+            })()}
             
             {expectedFee > 0 && (
               <div className="mb-4">
