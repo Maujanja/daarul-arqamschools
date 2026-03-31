@@ -402,17 +402,27 @@ export function ParentDashboard() {
         setInstallments(studentInstallments);
         
         // Calculate due installment amount based on current date
+        // An installment is "due" from its due_date until paid
+        // Past unpaid installments accumulate into current dues
         const today = new Date();
+        today.setHours(23, 59, 59, 999); // End of today to ensure same-day comparison works
         const totalPaidSoFar = payments.reduce((sum: number, p: any) => sum + Number(p.amount), 0);
         let cumulativeDue = 0;
         
-        studentInstallments
-          .sort((a, b) => new Date(a.due_date).getTime() - new Date(b.due_date).getTime())
-          .forEach(inst => {
-            if (new Date(inst.due_date) <= today) {
-              cumulativeDue += Number(inst.amount);
-            }
-          });
+        const sortedInstallments = [...studentInstallments]
+          .sort((a, b) => new Date(a.due_date).getTime() - new Date(b.due_date).getTime());
+        
+        sortedInstallments.forEach(inst => {
+          const dueDate = new Date(inst.due_date + 'T00:00:00');
+          const isDue = dueDate <= today;
+          console.log(`[Installment Debug] #${inst.installment_number}: amount=${inst.amount}, due_date=${inst.due_date}, parsed=${dueDate.toISOString()}, today=${today.toISOString()}, isDue=${isDue}`);
+          if (isDue) {
+            cumulativeDue += Number(inst.amount);
+          }
+        });
+        
+        console.log(`[Installment Debug] cumulativeDue=${cumulativeDue}, totalPaid=${totalPaidSoFar}, dueAmount=${Math.max(0, cumulativeDue - totalPaidSoFar)}`);
+        console.log(`[Installment Debug] Total installments found: ${studentInstallments.length}, class=${studentData.class}, boarding=${studentData.boarding_type}, year=${selectedYear}`);
         
         const dueAmount = Math.max(0, cumulativeDue - totalPaidSoFar);
         setDueInstallmentAmount(dueAmount);
@@ -1183,7 +1193,8 @@ export function ParentDashboard() {
                     .sort((a, b) => new Date(a.due_date).getTime() - new Date(b.due_date).getTime())
                     .map((inst, index) => {
                       const today = new Date();
-                      const dueDate = new Date(inst.due_date);
+                      today.setHours(23, 59, 59, 999);
+                      const dueDate = new Date(inst.due_date + 'T00:00:00');
                       const isDue = dueDate <= today;
                       const isPast = dueDate < today;
                       
