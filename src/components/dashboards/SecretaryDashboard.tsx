@@ -1669,6 +1669,7 @@ export function SecretaryDashboard() {
                                     setInstallmentBoardingType(fs.boarding_type);
                                     loadInstallmentsForClass(fs.class, fs.boarding_type);
                                     setNewFeeYear(fs.academic_year);
+                                    setTimeout(() => document.getElementById('installment-edit-form')?.scrollIntoView({ behavior: 'smooth', block: 'start' }), 100);
                                   }}>
                                     <Edit className="w-3 h-3" />
                                   </Button>
