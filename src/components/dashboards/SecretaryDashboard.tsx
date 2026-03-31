@@ -432,6 +432,10 @@ export function SecretaryDashboard() {
     setNewTotalFee(fs.total_fee.toString());
     setNewFeeYear(fs.academic_year);
     setShowFeeStructureDialog(true);
+    // Scroll edit form into view after state update
+    setTimeout(() => {
+      document.getElementById('fee-edit-form')?.scrollIntoView({ behavior: 'smooth', block: 'center' });
+    }, 100);
   };
 
   // Student discount functions
@@ -1418,8 +1422,8 @@ export function SecretaryDashboard() {
             </div>
 
             {/* Add/Edit Fee Structure Form */}
-            <div className="border-t pt-4">
-              <h4 className="font-medium mb-3">{editingFeeStructure ? 'Edit Fee' : 'Add New Fee'}</h4>
+            <div id="fee-edit-form" className={`border-t pt-4 ${editingFeeStructure ? 'bg-accent/30 -mx-6 px-6 py-4 rounded-lg border-2 border-primary/30' : ''}`}>
+              <h4 className="font-medium mb-3">{editingFeeStructure ? `✏️ Editing: ${editingFeeStructure.class} (${editingFeeStructure.boarding_type})` : 'Add New Fee'}</h4>
               <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
                 <div className="space-y-2">
                   <Label>Academic Year</Label>

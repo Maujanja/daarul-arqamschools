@@ -189,7 +189,7 @@ export async function generateAnnualExamReportPDF(
 
   doc.setFontSize(16);
   doc.setFont('helvetica', 'bold');
-  doc.text('DAARUL-ARQAM SECONDARY SCHOOL', pageWidth / 2, headerY + 8, { align: 'center' });
+  doc.text(isSenior ? 'DAARUL-ARQAM SECONDARY SCHOOL' : 'DAARUL-ARQAM PRIMARY SCHOOL', pageWidth / 2, headerY + 8, { align: 'center' });
 
   doc.setFontSize(11);
   doc.setFont('helvetica', 'normal');
@@ -391,7 +391,7 @@ export async function generateAnnualExamReportPDF(
   doc.setFont('helvetica', 'normal');
   doc.setTextColor(128, 128, 128);
   doc.text(`Generated: ${new Date().toLocaleDateString()}`, 14, footerY);
-  doc.text('Daarul-Arqam Secondary School', pageWidth - 14, footerY, { align: 'right' });
+  doc.text(isSenior ? 'Daarul-Arqam Secondary School' : 'Daarul-Arqam Primary School', pageWidth - 14, footerY, { align: 'right' });
 
   const fileName = `${className.replace(/\s+/g, '_')}_${term.replace(/\s+/g, '_')}_Results_${academicYear}.pdf`;
   doc.save(fileName);

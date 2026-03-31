@@ -157,7 +157,7 @@ export function generateAnnualExamReport(
   const wsData: any[][] = [];
 
   wsData.push(['Bismillaahir Rahmaanir Rahiim']);
-  wsData.push(['DAARUL-ARQAM SECONDARY SCHOOL']);
+  wsData.push([isSenior ? 'DAARUL-ARQAM SECONDARY SCHOOL' : 'DAARUL-ARQAM PRIMARY SCHOOL']);
   wsData.push([`${className.toUpperCase()} ${displayTerm.toUpperCase()} EXAMINATION RESULTS — ${academicYear}`]);
   wsData.push([]);
 
