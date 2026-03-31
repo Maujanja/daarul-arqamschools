@@ -1918,7 +1918,7 @@ export function SecretaryDashboard() {
               </div>
             </div>
           )}
-          <DialogFooter className="flex-col sm:flex-row gap-2">
+          <DialogFooter className="flex-col sm:flex-row gap-2 p-4 sm:p-6 pt-2 sm:pt-2 shrink-0 border-t">
             <Button variant="outline" className="w-full sm:w-auto" onClick={() => setShowCustomInstallmentDialog(false)}>Cancel</Button>
             <Button className="w-full sm:w-auto" onClick={handleSaveCustomInstallments} disabled={isSubmitting}>
               {isSubmitting ? <Loader2 className="w-4 h-4 animate-spin mr-2" /> : null}
