@@ -1099,11 +1099,11 @@ export function ParentDashboard() {
           bgStyle="cherries"
         />
         <StatCard
-          title="Fee Balance"
-          value={balance > 0 ? `TZS ${(balance / 1000000).toFixed(1)}M` : 'None'}
-          subtitle={balance > 0 ? 'Outstanding' : 'Fully paid'}
+          title="Installment Due"
+          value={dueInstallmentAmount > 0 ? `TZS ${(dueInstallmentAmount / 1000000).toFixed(1)}M` : 'None'}
+          subtitle={dueInstallmentAmount > 0 ? 'Current dues' : 'No dues now'}
           icon={DollarSign}
-          variant={balance > 0 ? 'warning' : 'success'}
+          variant={dueInstallmentAmount > 0 ? 'warning' : 'success'}
           bgStyle="silk"
         />
       </div>
