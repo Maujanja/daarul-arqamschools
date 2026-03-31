@@ -1916,7 +1916,7 @@ export function SecretaryDashboard() {
                   onChange={(e) => setDiscountNotes(e.target.value)}
                 />
                 <p className="text-xs text-muted-foreground">
-                  Eleza sababu ya mwanafunzi kuwa special case (mfano: mtoto wa mfanyakazi, scholarship, makubaliano maalum)
+                  Explain why this student is a special case (e.g. staff child, scholarship, special arrangement)
                 </p>
               </div>
 
