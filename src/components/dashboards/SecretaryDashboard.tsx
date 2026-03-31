@@ -2001,7 +2001,7 @@ export function SecretaryDashboard() {
             <Button variant="outline" className="w-full sm:w-auto" onClick={() => setShowCustomInstallmentDialog(false)}>Cancel</Button>
             <Button className="w-full sm:w-auto" onClick={handleSaveCustomInstallments} disabled={isSubmitting}>
               {isSubmitting ? <Loader2 className="w-4 h-4 animate-spin mr-2" /> : null}
-              Save Custom Installments
+              Save Special Case
             </Button>
           </DialogFooter>
         </DialogContent>
