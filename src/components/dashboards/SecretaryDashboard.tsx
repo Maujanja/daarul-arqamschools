@@ -2007,75 +2007,7 @@ export function SecretaryDashboard() {
         </DialogContent>
       </Dialog>
 
-      {/* Student Discount Dialog */}
-      <Dialog open={showDiscountDialog} onOpenChange={setShowDiscountDialog}>
-        <DialogContent>
-          <DialogHeader>
-            <DialogTitle>
-              <div className="flex items-center gap-2">
-                <Percent className="w-5 h-5 text-success" />
-                Custom Fee / Discount
-              </div>
-            </DialogTitle>
-          </DialogHeader>
-          {selectedStudentForDiscount && (
-            <div className="space-y-4 py-4">
-              <div className="p-3 bg-muted rounded-lg">
-                <p className="font-medium">{selectedStudentForDiscount.full_name}</p>
-                <p className="text-sm text-muted-foreground">{selectedStudentForDiscount.class} • {selectedStudentForDiscount.boarding_type || 'Day'}</p>
-              </div>
-              
-              <div className="space-y-2">
-                <Label>Custom Fee Amount (TZS)</Label>
-                <Input
-                  type="number"
-                  placeholder="Enter fee amount (e.g. 1500000)"
-                  value={discountAmount}
-                  onChange={(e) => setDiscountAmount(e.target.value)}
-                />
-                <p className="text-xs text-muted-foreground">
-                  If this student has a discount, enter the total amount they should pay (e.g. if fee is 2M and discount is 500K, enter 1500000).
-                  This amount will be their expected fee - once paid in full, the system will show them as complete.
-                </p>
-              </div>
-              
-              <div className="space-y-2">
-                <Label>Discount Reason (Optional)</Label>
-                <Input
-                  placeholder="e.g. Staff child, Scholarship"
-                  value={discountNotes}
-                  onChange={(e) => setDiscountNotes(e.target.value)}
-                />
-              </div>
-
-              {selectedStudentForDiscount.custom_fee !== null && selectedStudentForDiscount.custom_fee !== undefined && (
-                <div className="p-3 bg-success/10 rounded-lg">
-                  <p className="text-sm text-success font-medium">
-                    Current Fee: TZS {Number(selectedStudentForDiscount.custom_fee).toLocaleString()}
-                  </p>
-                  {selectedStudentForDiscount.discount_notes && (
-                    <p className="text-xs text-muted-foreground mt-1">{selectedStudentForDiscount.discount_notes}</p>
-                  )}
-                </div>
-              )}
-            </div>
-          )}
-          <DialogFooter className="flex-col sm:flex-row gap-2">
-            {selectedStudentForDiscount?.custom_fee !== null && selectedStudentForDiscount?.custom_fee !== undefined && (
-              <Button variant="outline" className="text-destructive" onClick={handleRemoveDiscount} disabled={isSubmitting}>
-                Remove Discount
-              </Button>
-            )}
-            <Button variant="outline" onClick={() => setShowDiscountDialog(false)}>
-              Cancel
-            </Button>
-            <Button onClick={handleSaveDiscount} disabled={isSubmitting}>
-              {isSubmitting ? <Loader2 className="w-4 h-4 animate-spin mr-2" /> : null}
-              Save
-            </Button>
-          </DialogFooter>
-        </DialogContent>
-      </Dialog>
+      {/* Student Discount Dialog removed - merged into Special Case dialog above */}
 
       {/* Student Photo Management Dialog */}
       <Dialog open={showPhotoDialog} onOpenChange={setShowPhotoDialog}>
