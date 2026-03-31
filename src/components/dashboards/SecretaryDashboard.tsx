@@ -1619,11 +1619,11 @@ export function SecretaryDashboard() {
 
       {/* Fee Structure & Installments Management Dialog */}
       <Dialog open={showFeeStructureDialog} onOpenChange={setShowFeeStructureDialog}>
-        <DialogContent className="max-w-4xl w-[95vw] max-h-[90vh] overflow-y-auto p-4 sm:p-6">
-          <DialogHeader>
+        <DialogContent className="max-w-4xl w-[95vw] max-h-[85vh] flex flex-col p-0 sm:p-0 gap-0">
+          <DialogHeader className="p-4 sm:p-6 pb-2 sm:pb-2 shrink-0">
             <DialogTitle className="text-base sm:text-lg">Manage Fees & Installments - {selectedYear}</DialogTitle>
           </DialogHeader>
-          <div className="space-y-6 py-2 sm:py-4">
+          <div className="space-y-6 py-2 sm:py-4 px-4 sm:px-6 overflow-y-auto flex-1 overscroll-contain touch-pan-y">
             {/* Current Fee Structure - Card layout on mobile, table on desktop */}
             <div>
               <h4 className="font-medium mb-3 text-sm sm:text-base">Current Fee Structure & Installments</h4>
