@@ -15,6 +15,7 @@ import { useToast } from '@/hooks/use-toast';
 import { useAcademicYears } from '@/hooks/useAcademicYears';
 import { StudentAvatarUpload } from '@/components/StudentAvatarUpload';
 import * as XLSX from 'xlsx';
+import { FamilyGroupsManager } from './FamilyGroupsManager';
 
 import { 
   Users, 
