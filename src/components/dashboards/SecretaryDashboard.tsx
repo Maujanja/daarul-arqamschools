@@ -1916,12 +1916,12 @@ export function SecretaryDashboard() {
                   onChange={(e) => setDiscountNotes(e.target.value)}
                 />
                 <p className="text-xs text-muted-foreground">
-                  Eleza sababu ya mwanafunzi kuwa special case (mfano: mtoto wa mfanyakazi, scholarship, makubaliano maalum)
+                  Explain why this student is a special case (e.g. staff child, scholarship, special arrangement)
                 </p>
               </div>
 
               <p className="text-xs sm:text-sm text-muted-foreground font-medium">
-                Weka kiwango cha ada kwa kila installment na tarehe yake ya kulipia. Custom fee itahesabiwa kutoka jumla ya installments zote.
+                Set the fee amount for each installment and its due date. The custom fee will be calculated from the total of all installments.
               </p>
 
               <div className="space-y-3">
@@ -1992,7 +1992,7 @@ export function SecretaryDashboard() {
                   Add Installment
                 </Button>
                 <p className="text-sm font-medium text-primary">
-                  Custom Fee (Jumla): TZS {customInstallmentRows.reduce((sum, r) => sum + (parseFloat(r.amount) || 0), 0).toLocaleString()}
+                  Custom Fee (Total): TZS {customInstallmentRows.reduce((sum, r) => sum + (parseFloat(r.amount) || 0), 0).toLocaleString()}
                 </p>
               </div>
             </div>
