@@ -1,5 +1,5 @@
 import * as XLSX from 'xlsx';
-import { isSeniorClass, scoreToPoints, calculateDivision, calculateGradeForClass, getTestDisplayName } from './seniorGrading';
+import { isSeniorClass, isNurseryClass, scoreToPoints, calculateDivision, calculateGradeForClass, getTestDisplayName } from './seniorGrading';
 
 interface StudentData {
   id: string;
@@ -157,7 +157,8 @@ export function generateAnnualExamReport(
   const wsData: any[][] = [];
 
   wsData.push(['Bismillaahir Rahmaanir Rahiim']);
-  wsData.push([isSenior ? 'DAARUL-ARQAM SECONDARY SCHOOL' : 'DAARUL-ARQAM PRIMARY SCHOOL']);
+  const schoolName = isSenior ? 'DAARUL-ARQAM SECONDARY SCHOOL' : isNurseryClass(className) ? 'DAARUL-ARQAM NURSERY SCHOOL' : 'DAARUL-ARQAM PRIMARY SCHOOL';
+  wsData.push([schoolName]);
   wsData.push([`${className.toUpperCase()} ${displayTerm.toUpperCase()} EXAMINATION RESULTS — ${academicYear}`]);
   wsData.push([]);
 

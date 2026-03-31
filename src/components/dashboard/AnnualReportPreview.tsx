@@ -1,5 +1,5 @@
 import { useMemo } from 'react';
-import { isSeniorClass, scoreToPoints, calculateDivision, calculateGradeForClass, getTestDisplayName } from '@/utils/seniorGrading';
+import { isSeniorClass, isNurseryClass, scoreToPoints, calculateDivision, calculateGradeForClass, getTestDisplayName } from '@/utils/seniorGrading';
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from '@/components/ui/dialog';
 import { Button } from '@/components/ui/button';
 import { Download, X } from 'lucide-react';
@@ -184,7 +184,7 @@ export function AnnualReportPreview({
             {/* Header */}
             <div className="text-center space-y-1">
               <p className="text-sm italic text-muted-foreground">Bismillaahir Rahmaanir Rahiim</p>
-              <h2 className="text-xl font-bold">{isSenior ? 'DAARUL-ARQAM SECONDARY SCHOOL' : 'DAARUL-ARQAM PRIMARY SCHOOL'}</h2>
+              <h2 className="text-xl font-bold">{isSenior ? 'DAARUL-ARQAM SECONDARY SCHOOL' : isNurseryClass(className) ? 'DAARUL-ARQAM NURSERY SCHOOL' : 'DAARUL-ARQAM PRIMARY SCHOOL'}</h2>
               <p className="text-sm font-medium">{className.toUpperCase()} {displayTerm.toUpperCase()} EXAMINATION RESULTS — {academicYear}</p>
             </div>
 
