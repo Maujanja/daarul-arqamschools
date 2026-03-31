@@ -1146,37 +1146,105 @@ export function ParentDashboard() {
         </div>
       )}
 
-      {/* 7. Fee Status */}
+      {/* 7. Fee Status - Installment Based */}
       <div className="card-elevated p-6 animate-fade-in">
         <h3 className="font-display font-semibold text-lg mb-6 text-card-foreground flex items-center gap-2">
           <DollarSign className="w-5 h-5 text-primary" />
-          Fee Status - {selectedYear} ({selectedTerm})
+          Fee Status - {selectedYear}
         </h3>
         {expectedFee > 0 || paidAmount > 0 ? (
           <>
+            {/* Installment-based debt display */}
             <div className="grid grid-cols-1 md:grid-cols-3 gap-6 mb-6">
               <div className="p-4 rounded-lg bg-muted/50">
-                <p className="text-sm text-muted-foreground">Expected Fee</p>
+                <p className="text-sm text-muted-foreground">Annual Fee (Total)</p>
                 <p className="text-2xl font-bold text-card-foreground">
                   {expectedFee > 0 ? `TZS ${expectedFee.toLocaleString()}` : 'Not Set'}
                 </p>
               </div>
               <div className="p-4 rounded-lg bg-success/10">
-                <p className="text-sm text-muted-foreground">Paid Amount</p>
+                <p className="text-sm text-muted-foreground">Total Paid</p>
                 <p className="text-2xl font-bold text-success">TZS {paidAmount.toLocaleString()}</p>
               </div>
-              <div className={`p-4 rounded-lg ${balance > 0 ? 'bg-destructive/10' : 'bg-success/10'}`}>
-                <p className="text-sm text-muted-foreground">Balance</p>
-                <p className={`text-2xl font-bold ${balance > 0 ? 'text-destructive' : 'text-success'}`}>
-                  {expectedFee > 0 ? (balance > 0 ? `TZS ${balance.toLocaleString()}` : 'Fully Paid') : 'N/A'}
+              <div className={`p-4 rounded-lg ${dueInstallmentAmount > 0 ? 'bg-destructive/10' : 'bg-success/10'}`}>
+                <p className="text-sm text-muted-foreground">Current Due (Installments)</p>
+                <p className={`text-2xl font-bold ${dueInstallmentAmount > 0 ? 'text-destructive' : 'text-success'}`}>
+                  {dueInstallmentAmount > 0 ? `TZS ${dueInstallmentAmount.toLocaleString()}` : 'No dues'}
                 </p>
               </div>
             </div>
+
+            {/* Installment breakdown */}
+            {installments.length > 0 && (
+              <div className="mb-6">
+                <h4 className="font-medium text-card-foreground mb-3">Installment Schedule</h4>
+                <div className="space-y-2">
+                  {installments
+                    .sort((a, b) => new Date(a.due_date).getTime() - new Date(b.due_date).getTime())
+                    .map((inst, index) => {
+                      const today = new Date();
+                      const dueDate = new Date(inst.due_date);
+                      const isDue = dueDate <= today;
+                      const isPast = dueDate < today;
+                      
+                      // Calculate cumulative amounts up to this installment
+                      const sortedInsts = [...installments].sort((a, b) => new Date(a.due_date).getTime() - new Date(b.due_date).getTime());
+                      const cumulativeDue = sortedInsts
+                        .slice(0, index + 1)
+                        .reduce((sum, i) => sum + Number(i.amount), 0);
+                      const installmentPaid = Math.min(paidAmount, cumulativeDue);
+                      const installmentRemaining = Math.max(0, cumulativeDue - paidAmount);
+                      const isFullyPaid = paidAmount >= cumulativeDue;
+                      
+                      return (
+                        <div key={index} className={`flex items-center justify-between p-3 rounded-lg border ${
+                          isFullyPaid ? 'bg-success/5 border-success/20' :
+                          isDue ? 'bg-destructive/5 border-destructive/20' :
+                          'bg-muted/30 border-border/50'
+                        }`}>
+                          <div className="flex items-center gap-3">
+                            <div className={`w-8 h-8 rounded-full flex items-center justify-center text-xs font-bold ${
+                              isFullyPaid ? 'bg-success/20 text-success' :
+                              isDue ? 'bg-destructive/20 text-destructive' :
+                              'bg-muted text-muted-foreground'
+                            }`}>
+                              {index + 1}
+                            </div>
+                            <div>
+                              <p className="font-medium text-card-foreground">
+                                TZS {Number(inst.amount).toLocaleString()}
+                              </p>
+                              <p className="text-xs text-muted-foreground">
+                                Due: {new Date(inst.due_date).toLocaleDateString('en-US', { year: 'numeric', month: 'short', day: 'numeric' })}
+                              </p>
+                            </div>
+                          </div>
+                          <div className="text-right">
+                            {isFullyPaid ? (
+                              <span className="inline-flex items-center gap-1 px-2 py-1 rounded-full text-xs font-medium bg-success/10 text-success">
+                                ✓ Paid
+                              </span>
+                            ) : isDue ? (
+                              <span className="inline-flex items-center gap-1 px-2 py-1 rounded-full text-xs font-medium bg-destructive/10 text-destructive">
+                                Due Now
+                              </span>
+                            ) : (
+                              <span className="inline-flex items-center gap-1 px-2 py-1 rounded-full text-xs font-medium bg-muted text-muted-foreground">
+                                Upcoming
+                              </span>
+                            )}
+                          </div>
+                        </div>
+                      );
+                    })}
+                </div>
+              </div>
+            )}
             
             {expectedFee > 0 && (
               <div className="mb-4">
                 <div className="flex justify-between text-sm mb-2">
-                  <span className="text-muted-foreground">Payment Progress</span>
+                  <span className="text-muted-foreground">Annual Payment Progress</span>
                   <span className="font-medium text-card-foreground">
                     {Math.round((paidAmount / expectedFee) * 100)}%
                   </span>
@@ -1213,7 +1281,7 @@ export function ParentDashboard() {
           </>
         ) : (
           <p className="text-muted-foreground text-center py-8">
-            No fee information available for {selectedYear} - {selectedTerm}
+            No fee information available for {selectedYear}
           </p>
         )}
       </div>
