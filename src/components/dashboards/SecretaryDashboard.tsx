@@ -1953,45 +1953,49 @@ export function SecretaryDashboard() {
                       <div className="space-y-1 sm:flex-1">
                         <Label className="text-xs">Due Date (Month & Day)</Label>
                         <div className="flex gap-1">
-                          <select
-                            className="flex h-10 w-full rounded-md border border-input bg-background px-2 py-2 text-sm ring-offset-background focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring"
-                            value={row.due_date ? new Date(row.due_date + 'T00:00:00').getMonth() : 0}
+                          <Input
+                            type="number"
+                            min={1}
+                            max={12}
+                            placeholder="MM"
+                            className="w-16"
+                            value={row.due_date ? new Date(row.due_date + 'T00:00:00').getMonth() + 1 : 1}
                             onChange={(e) => {
                               const updated = [...customInstallmentRows];
                               const currentDate = new Date(row.due_date + 'T00:00:00');
                               const year = parseInt(selectedYear.split('-')[0]);
-                              const newMonth = parseInt(e.target.value);
-                              const maxDay = new Date(year, newMonth + 1, 0).getDate();
+                              let newMonth = Math.max(1, Math.min(12, parseInt(e.target.value) || 1));
+                              const maxDay = new Date(year, newMonth, 0).getDate();
                               const day = Math.min(currentDate.getDate(), maxDay);
-                              const mm = String(newMonth + 1).padStart(2, '0');
+                              const mm = String(newMonth).padStart(2, '0');
                               const dd = String(day).padStart(2, '0');
                               updated[index].due_date = `${year}-${mm}-${dd}`;
                               setCustomInstallmentRows(updated);
                             }}
-                          >
-                            {['Jan','Feb','Mar','Apr','May','Jun','Jul','Aug','Sep','Oct','Nov','Dec'].map((m, i) => (
-                              <option key={i} value={i}>{m}</option>
-                            ))}
-                          </select>
-                          <select
-                            className="flex h-10 w-20 rounded-md border border-input bg-background px-2 py-2 text-sm ring-offset-background focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring"
+                          />
+                          <span className="flex items-center text-muted-foreground">/</span>
+                          <Input
+                            type="number"
+                            min={1}
+                            max={31}
+                            placeholder="DD"
+                            className="w-16"
                             value={row.due_date ? new Date(row.due_date + 'T00:00:00').getDate() : 1}
                             onChange={(e) => {
                               const updated = [...customInstallmentRows];
                               const currentDate = new Date(row.due_date + 'T00:00:00');
                               const year = parseInt(selectedYear.split('-')[0]);
-                              const mm = String(currentDate.getMonth() + 1).padStart(2, '0');
-                              const dd = String(parseInt(e.target.value)).padStart(2, '0');
+                              const month = currentDate.getMonth() + 1;
+                              const maxDay = new Date(year, month, 0).getDate();
+                              let day = Math.max(1, Math.min(maxDay, parseInt(e.target.value) || 1));
+                              const mm = String(month).padStart(2, '0');
+                              const dd = String(day).padStart(2, '0');
                               updated[index].due_date = `${year}-${mm}-${dd}`;
                               setCustomInstallmentRows(updated);
                             }}
-                          >
-                            {Array.from({length: new Date(parseInt(selectedYear.split('-')[0]), row.due_date ? new Date(row.due_date + 'T00:00:00').getMonth() + 1 : 1, 0).getDate()}, (_, i) => (
-                              <option key={i + 1} value={i + 1}>{i + 1}</option>
-                            ))}
-                          </select>
+                          />
+                          <span className="flex items-center text-xs text-muted-foreground">/ {selectedYear.split('-')[0]}</span>
                         </div>
-                        <span className="text-xs text-muted-foreground">Year: {selectedYear.split('-')[0]}</span>
                       </div>
                     </div>
                     <div className="sm:flex-1 space-y-1">
