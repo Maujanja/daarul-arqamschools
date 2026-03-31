@@ -1198,6 +1198,11 @@ export function ParentDashboard() {
         <h3 className="font-display font-semibold text-lg mb-6 text-card-foreground flex items-center gap-2">
           <DollarSign className="w-5 h-5 text-primary" />
           Fee Status - {selectedYear}
+          {familyParentName && (
+            <span className="text-sm font-normal text-muted-foreground ml-2">
+              (Family: {familyParentName})
+            </span>
+          )}
         </h3>
         {expectedFee > 0 || paidAmount > 0 ? (
           <>
