@@ -1,4 +1,4 @@
-import { useState, useEffect, useCallback } from 'react';
+import { useState, useEffect, useCallback, useRef } from 'react';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
@@ -7,7 +7,7 @@ import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter } from '
 import { useSecureQuery } from '@/hooks/useSecureQuery';
 import { useSecureData } from '@/hooks/useSecureData';
 import { useToast } from '@/hooks/use-toast';
-import { Plus, Trash2, Users, Edit, ChevronDown, ChevronUp, Loader2, Calendar } from 'lucide-react';
+import { Plus, Trash2, Users, Edit, ChevronDown, ChevronUp, Loader2, Calendar, Search, CheckCircle, XCircle } from 'lucide-react';
 
 interface Student {
   id: string;
