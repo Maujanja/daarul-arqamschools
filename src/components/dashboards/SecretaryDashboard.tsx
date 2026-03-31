@@ -1623,7 +1623,7 @@ export function SecretaryDashboard() {
           <DialogHeader className="p-4 sm:p-6 pb-2 sm:pb-2 shrink-0">
             <DialogTitle className="text-base sm:text-lg">Manage Fees & Installments - {selectedYear}</DialogTitle>
           </DialogHeader>
-          <div className="space-y-6 py-2 sm:py-4 px-4 sm:px-6 overflow-y-auto flex-1 overscroll-contain touch-pan-y">
+          <div className="space-y-6 py-2 sm:py-4 px-4 sm:px-6 overflow-y-auto flex-1 min-h-0 overscroll-contain" style={{ WebkitOverflowScrolling: 'touch' }}>
             {/* Current Fee Structure - Card layout on mobile, table on desktop */}
             <div>
               <h4 className="font-medium mb-3 text-sm sm:text-base">Current Fee Structure & Installments</h4>
@@ -1833,7 +1833,7 @@ export function SecretaryDashboard() {
             </DialogTitle>
           </DialogHeader>
           {selectedStudentForInstallment && (
-            <div className="space-y-4 py-2 sm:py-4 px-4 sm:px-6 overflow-y-auto flex-1 overscroll-contain touch-pan-y">
+            <div className="space-y-4 py-2 sm:py-4 px-4 sm:px-6 overflow-y-auto flex-1 min-h-0 overscroll-contain" style={{ WebkitOverflowScrolling: 'touch' }}>
               <div className="p-3 bg-muted rounded-lg">
                 <p className="font-medium text-sm sm:text-base">{selectedStudentForInstallment.full_name}</p>
                 <p className="text-xs sm:text-sm text-muted-foreground">
