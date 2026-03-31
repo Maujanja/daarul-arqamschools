@@ -683,7 +683,11 @@ export function FamilyGroupsManager({ selectedYear, students, onDataChanged }: P
             <Button
               variant="outline"
               size="sm"
-              onClick={() => setInstRows([...instRows, { amount: '', due_date: `${new Date().getFullYear()}-01-01` }])}
+              onClick={() => {
+                const [startYearText, endYearText] = selectedYear.split('-');
+                const defaultYear = endYearText || startYearText || String(new Date().getFullYear());
+                setInstRows([...instRows, { amount: '', due_date: `${defaultYear}-01-01` }]);
+              }}
             >
               <Plus className="w-4 h-4 mr-1" /> Add Installment
             </Button>
