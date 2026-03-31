@@ -654,11 +654,13 @@ export function SecretaryDashboard() {
       const totalCustomFee = records.reduce((sum, r) => sum + r.amount, 0);
       await update('students', { 
         custom_fee: totalCustomFee,
-        discount_notes: `Special installments (${records.length} installments)`
+        discount_notes: discountNotes || `Special installments (${records.length} installments)`
       }, { id: selectedStudentForInstallment.id });
 
-      toast({ title: "Success", description: `Custom installments saved for ${selectedStudentForInstallment.full_name}` });
+      toast({ title: "Success", description: `Special case saved for ${selectedStudentForInstallment.full_name}` });
       setShowCustomInstallmentDialog(false);
+      setDiscountAmount('');
+      setDiscountNotes('');
       fetchData();
     } catch (error: any) {
       toast({ title: "Error", description: error.message, variant: "destructive" });
