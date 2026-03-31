@@ -189,7 +189,8 @@ export async function generateAnnualExamReportPDF(
 
   doc.setFontSize(16);
   doc.setFont('helvetica', 'bold');
-  doc.text(isSenior ? 'DAARUL-ARQAM SECONDARY SCHOOL' : 'DAARUL-ARQAM PRIMARY SCHOOL', pageWidth / 2, headerY + 8, { align: 'center' });
+  const schoolName = isSenior ? 'DAARUL-ARQAM SECONDARY SCHOOL' : isNurseryClass(className) ? 'DAARUL-ARQAM NURSERY SCHOOL' : 'DAARUL-ARQAM PRIMARY SCHOOL';
+  doc.text(schoolName, pageWidth / 2, headerY + 8, { align: 'center' });
 
   doc.setFontSize(11);
   doc.setFont('helvetica', 'normal');
