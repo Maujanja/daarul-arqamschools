@@ -337,7 +337,6 @@ export function ParentDashboard() {
         await calculateRankings(studentData.id, studentData.class, selectedTerm, selectedYear);
         
         // Get fee payments for this student using secure query
-        // Payments are stored with term='Annual' by Secretary
         const allPayments = await fetchTable<any>('fee_payments', { student_id: studentData.id });
         const payments = allPayments?.filter((p: any) => 
           p.academic_year === selectedYear
@@ -352,28 +351,71 @@ export function ParentDashboard() {
           setPaidAmount(0);
         }
         
-        // Get expected fee - check for custom_fee first, then fee_structure
-        // Student's custom_fee takes priority over fee_structure
-        if (studentData.custom_fee !== null && studentData.custom_fee !== undefined) {
-          setExpectedFee(Number(studentData.custom_fee));
+        // Fetch installments - check for custom installments first, then class installments
+        const customInstallments = await fetchTable<StudentCustomInstallment>('student_custom_installments', {
+          student_id: studentData.id,
+          academic_year: selectedYear,
+        });
+        
+        let studentInstallments: (FeeInstallment | StudentCustomInstallment)[] = [];
+        
+        if (customInstallments && customInstallments.length > 0) {
+          // Special case student - use custom installments
+          studentInstallments = customInstallments;
+          const totalCustomFee = customInstallments.reduce((sum, ci) => sum + Number(ci.amount), 0);
+          setExpectedFee(totalCustomFee);
         } else {
-          // Get fee structure - this uses publicly readable table
-          // Secretary stores fees as 'Annual', so we query for 'Annual' term
-          const { data: feeStructure } = await supabase
-            .from('fee_structure')
-            .select('total_fee, boarding_type')
-            .eq('class', studentData.class)
-            .eq('boarding_type', studentData.boarding_type || 'day')
-            .eq('academic_year', selectedYear)
-            .eq('term', 'Annual')
-            .maybeSingle();
+          // Regular student - use class-level installments
+          const classInstallments = await fetchTable<FeeInstallment>('fee_installments', {
+            class: studentData.class,
+            boarding_type: studentData.boarding_type || 'day',
+            academic_year: selectedYear,
+          });
           
-          if (feeStructure) {
-            setExpectedFee(Number(feeStructure.total_fee));
+          if (classInstallments && classInstallments.length > 0) {
+            studentInstallments = classInstallments;
+            const totalFee = classInstallments.reduce((sum, ci) => sum + Number(ci.amount), 0);
+            setExpectedFee(totalFee);
           } else {
-            setExpectedFee(0);
+            // Fallback to fee_structure
+            if (studentData.custom_fee !== null && studentData.custom_fee !== undefined) {
+              setExpectedFee(Number(studentData.custom_fee));
+            } else {
+              const { data: feeStructure } = await supabase
+                .from('fee_structure')
+                .select('total_fee, boarding_type')
+                .eq('class', studentData.class)
+                .eq('boarding_type', studentData.boarding_type || 'day')
+                .eq('academic_year', selectedYear)
+                .eq('term', 'Annual')
+                .maybeSingle();
+              
+              if (feeStructure) {
+                setExpectedFee(Number(feeStructure.total_fee));
+              } else {
+                setExpectedFee(0);
+              }
+            }
           }
         }
+        
+        setInstallments(studentInstallments);
+        
+        // Calculate due installment amount based on current date
+        const today = new Date();
+        const totalPaidSoFar = payments.reduce((sum: number, p: any) => sum + Number(p.amount), 0);
+        let cumulativeDue = 0;
+        
+        studentInstallments
+          .sort((a, b) => new Date(a.due_date).getTime() - new Date(b.due_date).getTime())
+          .forEach(inst => {
+            if (new Date(inst.due_date) <= today) {
+              cumulativeDue += Number(inst.amount);
+            }
+          });
+        
+        const dueAmount = Math.max(0, cumulativeDue - totalPaidSoFar);
+        setDueInstallmentAmount(dueAmount);
         
         // Fetch historical debts using secure query
         const debtsData = await fetchTable<any>('student_debt_history', { 
