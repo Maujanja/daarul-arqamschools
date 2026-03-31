@@ -39,6 +39,19 @@ interface FeeStructure {
   boarding_type: string;
 }
 
+interface FeeInstallment {
+  installment_number: number;
+  amount: number;
+  due_date: string;
+}
+
+interface StudentCustomInstallment {
+  installment_number: number;
+  amount: number;
+  due_date: string;
+  notes: string | null;
+}
+
 interface Announcement {
   id: string;
   title: string;
