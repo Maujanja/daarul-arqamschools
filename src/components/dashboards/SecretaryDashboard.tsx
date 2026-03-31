@@ -1641,7 +1641,9 @@ export function SecretaryDashboard() {
               
               return (
                 <div className="p-3 rounded-lg bg-muted/50 border border-border space-y-2">
-                  <p className="text-sm font-medium text-card-foreground">Installment Status</p>
+                  <p className="text-sm font-medium text-card-foreground">
+                    Installment Status {isFamilyGroup && <span className="text-xs text-primary ml-1">(Family Group)</span>}
+                  </p>
                   {currentInstNum > 0 ? (
                     <>
                       <div className="flex justify-between text-sm">
