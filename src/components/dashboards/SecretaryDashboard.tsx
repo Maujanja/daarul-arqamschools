@@ -603,10 +603,11 @@ export function SecretaryDashboard() {
         }))
       );
     } else {
-      // Default 4 rows with standard due dates
-      const year = parseInt(selectedYear.split('-')[0]);
+      // Default rows with standard due dates based on student's class
+      const studentClass = selectedStudentForInstallment?.class || '';
+      const classDates = getInstallmentDueDatesForClass(studentClass);
       setCustomInstallmentRows(
-        INSTALLMENT_DUE_DATES.map(inst => ({
+        classDates.map(inst => ({
           amount: '',
           due_date: getInstallmentDueDate(selectedYear, inst.number),
           notes: '',
