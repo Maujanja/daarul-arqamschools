@@ -1209,7 +1209,9 @@ export function ParentDashboard() {
             {/* Installment-based debt display */}
             <div className="grid grid-cols-1 md:grid-cols-3 gap-6 mb-6">
               <div className="p-4 rounded-lg bg-muted/50">
-                <p className="text-sm text-muted-foreground">Annual Fee (Total)</p>
+                <p className="text-sm text-muted-foreground">
+                  {familyParentName ? 'Family Annual Fee (Combined)' : 'Annual Fee (Total)'}
+                </p>
                 <p className="text-2xl font-bold text-card-foreground">
                   {expectedFee > 0 ? `TZS ${expectedFee.toLocaleString()}` : 'Not Set'}
                 </p>
