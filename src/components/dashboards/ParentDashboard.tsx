@@ -1179,19 +1179,22 @@ export function ParentDashboard() {
                 let cumulativeAmt = 0;
                 let currentInstIndex = -1;
                 let carryOverDebt = 0;
+                let paidTowardsCurrentInst = 0;
                 for (let i = 0; i < sortedInsts.length; i++) {
                   cumulativeAmt += Number(sortedInsts[i].amount);
                   if (cumulativeAmt > paidAmount) {
                     currentInstIndex = i;
-                    // carryover = what was due up to previous installments minus what's paid
                     const prevCumulative = cumulativeAmt - Number(sortedInsts[i].amount);
                     carryOverDebt = Math.max(0, prevCumulative - paidAmount);
+                    // How much has been paid towards this specific installment
+                    paidTowardsCurrentInst = Math.max(0, paidAmount - prevCumulative);
                     break;
                   }
                 }
                 const allPaid = currentInstIndex === -1;
                 const currentInst = currentInstIndex >= 0 ? sortedInsts[currentInstIndex] : null;
-                const totalDueNow = currentInst ? Number(currentInst.amount) + carryOverDebt : 0;
+                const totalDueNow = currentInst ? Number(currentInst.amount) + carryOverDebt - paidTowardsCurrentInst : 0;
+                const instAmount = currentInst ? Number(currentInst.amount) : 0;
 
                 return (
                   <div className={`p-4 rounded-lg ${allPaid ? 'bg-success/10' : 'bg-destructive/10'}`}>
@@ -1201,13 +1204,36 @@ export function ParentDashboard() {
                     <p className={`text-2xl font-bold ${allPaid ? 'text-success' : 'text-destructive'}`}>
                       {allPaid ? '✓ Complete' : `TZS ${totalDueNow.toLocaleString()}`}
                     </p>
+                    {!allPaid && (
+                      <div className="mt-2 space-y-1">
+                        <div className="flex justify-between text-xs">
+                          <span className="text-muted-foreground">Installment amount:</span>
+                          <span className="font-medium text-card-foreground">TZS {instAmount.toLocaleString()}</span>
+                        </div>
+                        <div className="flex justify-between text-xs">
+                          <span className="text-muted-foreground">Paid so far:</span>
+                          <span className="font-medium text-success">TZS {paidTowardsCurrentInst.toLocaleString()}</span>
+                        </div>
+                        <div className="flex justify-between text-xs">
+                          <span className="text-muted-foreground">Remaining:</span>
+                          <span className="font-medium text-destructive">TZS {Math.max(0, instAmount - paidTowardsCurrentInst).toLocaleString()}</span>
+                        </div>
+                        {/* Mini progress for current installment */}
+                        <div className="h-1.5 bg-muted rounded-full overflow-hidden mt-1">
+                          <div 
+                            className="h-full bg-success rounded-full transition-all duration-500"
+                            style={{ width: `${Math.min(100, Math.round((paidTowardsCurrentInst / instAmount) * 100))}%` }}
+                          />
+                        </div>
+                      </div>
+                    )}
                     {carryOverDebt > 0 && (
-                      <p className="text-xs text-destructive mt-1 flex items-center gap-1">
+                      <p className="text-xs text-destructive mt-2 flex items-center gap-1">
                         <AlertTriangle className="w-3 h-3" />
-                        Includes TZS {carryOverDebt.toLocaleString()} unpaid debt from previous installment(s)
+                        + TZS {carryOverDebt.toLocaleString()} unpaid debt from previous installment(s)
                       </p>
                     )}
-                    {currentInst && carryOverDebt === 0 && (
+                    {currentInst && (
                       <p className="text-xs text-muted-foreground mt-1">
                         Due: {new Date(currentInst.due_date + 'T00:00:00').toLocaleDateString('en-US', { month: 'short', day: 'numeric', year: 'numeric' })}
                       </p>
