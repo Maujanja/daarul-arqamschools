@@ -307,7 +307,8 @@ export function FamilyGroupsManager({ selectedYear, students, onDataChanged }: P
   };
 
   const handleSaveInstallments = async () => {
-    const year = parseInt(selectedYear.split('-')[0]);
+    const startYear = parseInt(selectedYear.split('-')[0]);
+    const endYear = parseInt(selectedYear.split('-')[1]);
     setIsSubmitting(true);
     try {
       // Remove existing installments
