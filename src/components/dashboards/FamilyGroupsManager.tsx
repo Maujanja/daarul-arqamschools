@@ -386,7 +386,7 @@ export function FamilyGroupsManager({ selectedYear, students, onDataChanged }: P
 
       preparedInstallments.push({
         family_group_id: instGroupId,
-        installment_number: i + 1,
+        installment_number: preparedInstallments.length + 1,
         amount,
         due_date: `${dueYear}-${String(month).padStart(2, '0')}-${String(normalizedDay).padStart(2, '0')}`,
         academic_year: selectedYear,
