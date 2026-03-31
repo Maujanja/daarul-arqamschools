@@ -101,6 +101,39 @@ export type Database = {
         }
         Relationships: []
       }
+      fee_installments: {
+        Row: {
+          academic_year: string
+          amount: number
+          boarding_type: string
+          class: string
+          created_at: string
+          due_date: string
+          id: string
+          installment_number: number
+        }
+        Insert: {
+          academic_year: string
+          amount?: number
+          boarding_type?: string
+          class: string
+          created_at?: string
+          due_date: string
+          id?: string
+          installment_number: number
+        }
+        Update: {
+          academic_year?: string
+          amount?: number
+          boarding_type?: string
+          class?: string
+          created_at?: string
+          due_date?: string
+          id?: string
+          installment_number?: number
+        }
+        Relationships: []
+      }
       fee_payments: {
         Row: {
           academic_year: string
@@ -451,6 +484,47 @@ export type Database = {
           username?: string
         }
         Relationships: []
+      }
+      student_custom_installments: {
+        Row: {
+          academic_year: string
+          amount: number
+          created_at: string
+          due_date: string
+          id: string
+          installment_number: number
+          notes: string | null
+          student_id: string
+        }
+        Insert: {
+          academic_year: string
+          amount?: number
+          created_at?: string
+          due_date: string
+          id?: string
+          installment_number: number
+          notes?: string | null
+          student_id: string
+        }
+        Update: {
+          academic_year?: string
+          amount?: number
+          created_at?: string
+          due_date?: string
+          id?: string
+          installment_number?: number
+          notes?: string | null
+          student_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "student_custom_installments_student_id_fkey"
+            columns: ["student_id"]
+            isOneToOne: false
+            referencedRelation: "students"
+            referencedColumns: ["id"]
+          },
+        ]
       }
       student_debt_history: {
         Row: {

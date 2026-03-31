@@ -39,6 +39,19 @@ interface FeeStructure {
   boarding_type: string;
 }
 
+interface FeeInstallment {
+  installment_number: number;
+  amount: number;
+  due_date: string;
+}
+
+interface StudentCustomInstallment {
+  installment_number: number;
+  amount: number;
+  due_date: string;
+  notes: string | null;
+}
+
 interface Announcement {
   id: string;
   title: string;
@@ -105,6 +118,8 @@ export function ParentDashboard() {
   const [subjectRankings, setSubjectRankings] = useState<SubjectRanking[]>([]);
   const [historicalDebts, setHistoricalDebts] = useState<DebtHistory[]>([]);
   const [classRankComplete, setClassRankComplete] = useState(false);
+  const [installments, setInstallments] = useState<(FeeInstallment | StudentCustomInstallment)[]>([]);
+  const [dueInstallmentAmount, setDueInstallmentAmount] = useState(0);
   
   // Chart refs for capturing as images
   const subjectChartRef = useRef<HTMLDivElement>(null);
@@ -322,7 +337,6 @@ export function ParentDashboard() {
         await calculateRankings(studentData.id, studentData.class, selectedTerm, selectedYear);
         
         // Get fee payments for this student using secure query
-        // Payments are stored with term='Annual' by Secretary
         const allPayments = await fetchTable<any>('fee_payments', { student_id: studentData.id });
         const payments = allPayments?.filter((p: any) => 
           p.academic_year === selectedYear
@@ -337,28 +351,71 @@ export function ParentDashboard() {
           setPaidAmount(0);
         }
         
-        // Get expected fee - check for custom_fee first, then fee_structure
-        // Student's custom_fee takes priority over fee_structure
-        if (studentData.custom_fee !== null && studentData.custom_fee !== undefined) {
-          setExpectedFee(Number(studentData.custom_fee));
+        // Fetch installments - check for custom installments first, then class installments
+        const customInstallments = await fetchTable<StudentCustomInstallment>('student_custom_installments', {
+          student_id: studentData.id,
+          academic_year: selectedYear,
+        });
+        
+        let studentInstallments: (FeeInstallment | StudentCustomInstallment)[] = [];
+        
+        if (customInstallments && customInstallments.length > 0) {
+          // Special case student - use custom installments
+          studentInstallments = customInstallments;
+          const totalCustomFee = customInstallments.reduce((sum, ci) => sum + Number(ci.amount), 0);
+          setExpectedFee(totalCustomFee);
         } else {
-          // Get fee structure - this uses publicly readable table
-          // Secretary stores fees as 'Annual', so we query for 'Annual' term
-          const { data: feeStructure } = await supabase
-            .from('fee_structure')
-            .select('total_fee, boarding_type')
-            .eq('class', studentData.class)
-            .eq('boarding_type', studentData.boarding_type || 'day')
-            .eq('academic_year', selectedYear)
-            .eq('term', 'Annual')
-            .maybeSingle();
+          // Regular student - use class-level installments
+          const classInstallments = await fetchTable<FeeInstallment>('fee_installments', {
+            class: studentData.class,
+            boarding_type: studentData.boarding_type || 'day',
+            academic_year: selectedYear,
+          });
           
-          if (feeStructure) {
-            setExpectedFee(Number(feeStructure.total_fee));
+          if (classInstallments && classInstallments.length > 0) {
+            studentInstallments = classInstallments;
+            const totalFee = classInstallments.reduce((sum, ci) => sum + Number(ci.amount), 0);
+            setExpectedFee(totalFee);
           } else {
-            setExpectedFee(0);
+            // Fallback to fee_structure
+            if (studentData.custom_fee !== null && studentData.custom_fee !== undefined) {
+              setExpectedFee(Number(studentData.custom_fee));
+            } else {
+              const { data: feeStructure } = await supabase
+                .from('fee_structure')
+                .select('total_fee, boarding_type')
+                .eq('class', studentData.class)
+                .eq('boarding_type', studentData.boarding_type || 'day')
+                .eq('academic_year', selectedYear)
+                .eq('term', 'Annual')
+                .maybeSingle();
+              
+              if (feeStructure) {
+                setExpectedFee(Number(feeStructure.total_fee));
+              } else {
+                setExpectedFee(0);
+              }
+            }
           }
         }
+        
+        setInstallments(studentInstallments);
+        
+        // Calculate due installment amount based on current date
+        const today = new Date();
+        const totalPaidSoFar = payments.reduce((sum: number, p: any) => sum + Number(p.amount), 0);
+        let cumulativeDue = 0;
+        
+        studentInstallments
+          .sort((a, b) => new Date(a.due_date).getTime() - new Date(b.due_date).getTime())
+          .forEach(inst => {
+            if (new Date(inst.due_date) <= today) {
+              cumulativeDue += Number(inst.amount);
+            }
+          });
+        
+        const dueAmount = Math.max(0, cumulativeDue - totalPaidSoFar);
+        setDueInstallmentAmount(dueAmount);
         
         // Fetch historical debts using secure query
         const debtsData = await fetchTable<any>('student_debt_history', { 
@@ -1042,11 +1099,11 @@ export function ParentDashboard() {
           bgStyle="cherries"
         />
         <StatCard
-          title="Fee Balance"
-          value={balance > 0 ? `TZS ${(balance / 1000000).toFixed(1)}M` : 'None'}
-          subtitle={balance > 0 ? 'Outstanding' : 'Fully paid'}
+          title="Installment Due"
+          value={dueInstallmentAmount > 0 ? `TZS ${(dueInstallmentAmount / 1000000).toFixed(1)}M` : 'None'}
+          subtitle={dueInstallmentAmount > 0 ? 'Current dues' : 'No dues now'}
           icon={DollarSign}
-          variant={balance > 0 ? 'warning' : 'success'}
+          variant={dueInstallmentAmount > 0 ? 'warning' : 'success'}
           bgStyle="silk"
         />
       </div>
@@ -1089,37 +1146,105 @@ export function ParentDashboard() {
         </div>
       )}
 
-      {/* 7. Fee Status */}
+      {/* 7. Fee Status - Installment Based */}
       <div className="card-elevated p-6 animate-fade-in">
         <h3 className="font-display font-semibold text-lg mb-6 text-card-foreground flex items-center gap-2">
           <DollarSign className="w-5 h-5 text-primary" />
-          Fee Status - {selectedYear} ({selectedTerm})
+          Fee Status - {selectedYear}
         </h3>
         {expectedFee > 0 || paidAmount > 0 ? (
           <>
+            {/* Installment-based debt display */}
             <div className="grid grid-cols-1 md:grid-cols-3 gap-6 mb-6">
               <div className="p-4 rounded-lg bg-muted/50">
-                <p className="text-sm text-muted-foreground">Expected Fee</p>
+                <p className="text-sm text-muted-foreground">Annual Fee (Total)</p>
                 <p className="text-2xl font-bold text-card-foreground">
                   {expectedFee > 0 ? `TZS ${expectedFee.toLocaleString()}` : 'Not Set'}
                 </p>
               </div>
               <div className="p-4 rounded-lg bg-success/10">
-                <p className="text-sm text-muted-foreground">Paid Amount</p>
+                <p className="text-sm text-muted-foreground">Total Paid</p>
                 <p className="text-2xl font-bold text-success">TZS {paidAmount.toLocaleString()}</p>
               </div>
-              <div className={`p-4 rounded-lg ${balance > 0 ? 'bg-destructive/10' : 'bg-success/10'}`}>
-                <p className="text-sm text-muted-foreground">Balance</p>
-                <p className={`text-2xl font-bold ${balance > 0 ? 'text-destructive' : 'text-success'}`}>
-                  {expectedFee > 0 ? (balance > 0 ? `TZS ${balance.toLocaleString()}` : 'Fully Paid') : 'N/A'}
+              <div className={`p-4 rounded-lg ${dueInstallmentAmount > 0 ? 'bg-destructive/10' : 'bg-success/10'}`}>
+                <p className="text-sm text-muted-foreground">Current Due (Installments)</p>
+                <p className={`text-2xl font-bold ${dueInstallmentAmount > 0 ? 'text-destructive' : 'text-success'}`}>
+                  {dueInstallmentAmount > 0 ? `TZS ${dueInstallmentAmount.toLocaleString()}` : 'No dues'}
                 </p>
               </div>
             </div>
+
+            {/* Installment breakdown */}
+            {installments.length > 0 && (
+              <div className="mb-6">
+                <h4 className="font-medium text-card-foreground mb-3">Installment Schedule</h4>
+                <div className="space-y-2">
+                  {installments
+                    .sort((a, b) => new Date(a.due_date).getTime() - new Date(b.due_date).getTime())
+                    .map((inst, index) => {
+                      const today = new Date();
+                      const dueDate = new Date(inst.due_date);
+                      const isDue = dueDate <= today;
+                      const isPast = dueDate < today;
+                      
+                      // Calculate cumulative amounts up to this installment
+                      const sortedInsts = [...installments].sort((a, b) => new Date(a.due_date).getTime() - new Date(b.due_date).getTime());
+                      const cumulativeDue = sortedInsts
+                        .slice(0, index + 1)
+                        .reduce((sum, i) => sum + Number(i.amount), 0);
+                      const installmentPaid = Math.min(paidAmount, cumulativeDue);
+                      const installmentRemaining = Math.max(0, cumulativeDue - paidAmount);
+                      const isFullyPaid = paidAmount >= cumulativeDue;
+                      
+                      return (
+                        <div key={index} className={`flex items-center justify-between p-3 rounded-lg border ${
+                          isFullyPaid ? 'bg-success/5 border-success/20' :
+                          isDue ? 'bg-destructive/5 border-destructive/20' :
+                          'bg-muted/30 border-border/50'
+                        }`}>
+                          <div className="flex items-center gap-3">
+                            <div className={`w-8 h-8 rounded-full flex items-center justify-center text-xs font-bold ${
+                              isFullyPaid ? 'bg-success/20 text-success' :
+                              isDue ? 'bg-destructive/20 text-destructive' :
+                              'bg-muted text-muted-foreground'
+                            }`}>
+                              {index + 1}
+                            </div>
+                            <div>
+                              <p className="font-medium text-card-foreground">
+                                TZS {Number(inst.amount).toLocaleString()}
+                              </p>
+                              <p className="text-xs text-muted-foreground">
+                                Due: {new Date(inst.due_date).toLocaleDateString('en-US', { year: 'numeric', month: 'short', day: 'numeric' })}
+                              </p>
+                            </div>
+                          </div>
+                          <div className="text-right">
+                            {isFullyPaid ? (
+                              <span className="inline-flex items-center gap-1 px-2 py-1 rounded-full text-xs font-medium bg-success/10 text-success">
+                                ✓ Paid
+                              </span>
+                            ) : isDue ? (
+                              <span className="inline-flex items-center gap-1 px-2 py-1 rounded-full text-xs font-medium bg-destructive/10 text-destructive">
+                                Due Now
+                              </span>
+                            ) : (
+                              <span className="inline-flex items-center gap-1 px-2 py-1 rounded-full text-xs font-medium bg-muted text-muted-foreground">
+                                Upcoming
+                              </span>
+                            )}
+                          </div>
+                        </div>
+                      );
+                    })}
+                </div>
+              </div>
+            )}
             
             {expectedFee > 0 && (
               <div className="mb-4">
                 <div className="flex justify-between text-sm mb-2">
-                  <span className="text-muted-foreground">Payment Progress</span>
+                  <span className="text-muted-foreground">Annual Payment Progress</span>
                   <span className="font-medium text-card-foreground">
                     {Math.round((paidAmount / expectedFee) * 100)}%
                   </span>
@@ -1156,7 +1281,7 @@ export function ParentDashboard() {
           </>
         ) : (
           <p className="text-muted-foreground text-center py-8">
-            No fee information available for {selectedYear} - {selectedTerm}
+            No fee information available for {selectedYear}
           </p>
         )}
       </div>

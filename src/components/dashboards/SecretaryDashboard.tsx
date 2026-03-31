@@ -84,6 +84,26 @@ interface FeeStructure {
   boarding_type: string;
 }
 
+interface FeeInstallment {
+  id: string;
+  class: string;
+  academic_year: string;
+  boarding_type: string;
+  installment_number: number;
+  amount: number;
+  due_date: string;
+}
+
+interface StudentCustomInstallment {
+  id: string;
+  student_id: string;
+  academic_year: string;
+  installment_number: number;
+  amount: number;
+  due_date: string;
+  notes: string | null;
+}
+
 interface ChatMessage {
   role: 'user' | 'assistant';
   content: string;
@@ -117,6 +137,22 @@ interface DebtHistory {
   created_at: string;
   studentName?: string;
   studentClass?: string;
+}
+
+// Fixed installment due dates (month-day)
+const INSTALLMENT_DUE_DATES = [
+  { number: 1, month: 0, day: 1, label: 'Installment 1 (Jan 1)' },
+  { number: 2, month: 2, day: 30, label: 'Installment 2 (Mar 30)' },
+  { number: 3, month: 5, day: 30, label: 'Installment 3 (Jun 30)' },
+  { number: 4, month: 8, day: 15, label: 'Installment 4 (Sep 15)' },
+];
+
+function getInstallmentDueDate(academicYear: string, installmentNumber: number): string {
+  const year = parseInt(academicYear.split('-')[0]);
+  const inst = INSTALLMENT_DUE_DATES.find(i => i.number === installmentNumber);
+  if (!inst) return `${year}-01-01`;
+  const date = new Date(year, inst.month, inst.day);
+  return date.toISOString().split('T')[0];
 }
 
 export function SecretaryDashboard() {
@@ -166,6 +202,18 @@ export function SecretaryDashboard() {
   const [newFeeYear, setNewFeeYear] = useState('');
   const [newTotalFee, setNewTotalFee] = useState('');
   
+  // Installments state
+  const [feeInstallments, setFeeInstallments] = useState<FeeInstallment[]>([]);
+  const [installmentAmounts, setInstallmentAmounts] = useState<Record<number, string>>({1: '', 2: '', 3: '', 4: ''});
+  const [installmentClass, setInstallmentClass] = useState('');
+  const [installmentBoardingType, setInstallmentBoardingType] = useState('day');
+  
+  // Student custom installments
+  const [showCustomInstallmentDialog, setShowCustomInstallmentDialog] = useState(false);
+  const [selectedStudentForInstallment, setSelectedStudentForInstallment] = useState<Student | null>(null);
+  const [studentCustomInstallments, setStudentCustomInstallments] = useState<StudentCustomInstallment[]>([]);
+  const [customInstallmentRows, setCustomInstallmentRows] = useState<{amount: string; due_date: string; notes: string}[]>([]);
+  
   // Student discount management
   const [showDiscountDialog, setShowDiscountDialog] = useState(false);
   const [selectedStudentForDiscount, setSelectedStudentForDiscount] = useState<Student | null>(null);
@@ -196,18 +244,20 @@ export function SecretaryDashboard() {
     
     try {
       // Fetch data using secure queries
-      const [studentsRes, paymentsRes, structureRes, feedbackRes, debtHistoryRes, parentsRes] = await Promise.all([
+      const [studentsRes, paymentsRes, structureRes, feedbackRes, debtHistoryRes, parentsRes, installmentsRes] = await Promise.all([
         fetchTable<Student>('students'),
         fetchTable<FeePayment>('fee_payments', { academic_year: selectedYear }),
         fetchTable<FeeStructure>('fee_structure', { academic_year: selectedYear }),
         fetchTable<any>('feedback', { recipient_type: 'secretary' }),
         fetchTable<any>('student_debt_history', { is_cleared: false }),
-        fetchTable<any>('parents')
+        fetchTable<any>('parents'),
+        fetchTable<FeeInstallment>('fee_installments', { academic_year: selectedYear }),
       ]);
 
       setStudents(studentsRes || []);
       setFeePayments(paymentsRes || []);
       setFeeStructure(structureRes || []);
+      setFeeInstallments(installmentsRes || []);
       
       // Enrich feedback with parent and student names
       if (feedbackRes) {
@@ -438,7 +488,179 @@ export function SecretaryDashboard() {
     }, 100);
   };
 
-  // Student discount functions
+  // Installment management functions
+  const handleSaveInstallments = async () => {
+    const yearToUse = newFeeYear || selectedYear;
+    if (!installmentClass || !yearToUse) {
+      toast({ title: "Error", description: "Please select class and year", variant: "destructive" });
+      return;
+    }
+
+    const hasAnyAmount = Object.values(installmentAmounts).some(v => v && parseFloat(v) > 0);
+    if (!hasAnyAmount) {
+      toast({ title: "Error", description: "Please enter at least one installment amount", variant: "destructive" });
+      return;
+    }
+
+    setIsSubmitting(true);
+    try {
+      // Delete existing installments for this class/year/boarding combo
+      await remove('fee_installments', { 
+        class: installmentClass, 
+        academic_year: yearToUse, 
+        boarding_type: installmentBoardingType 
+      });
+
+      // Insert new installments
+      const records = INSTALLMENT_DUE_DATES
+        .filter(inst => installmentAmounts[inst.number] && parseFloat(installmentAmounts[inst.number]) > 0)
+        .map(inst => ({
+          class: installmentClass,
+          academic_year: yearToUse,
+          boarding_type: installmentBoardingType,
+          installment_number: inst.number,
+          amount: parseFloat(installmentAmounts[inst.number]),
+          due_date: getInstallmentDueDate(yearToUse, inst.number),
+        }));
+
+      if (records.length > 0) {
+        const result = await insert('fee_installments', records);
+        if (!result.success) throw new Error(result.error);
+      }
+
+      // Auto-update total fee in fee_structure
+      const totalFee = records.reduce((sum, r) => sum + r.amount, 0);
+      if (totalFee > 0) {
+        // Check if fee_structure exists
+        const existingStructure = feeStructure.find(
+          fs => fs.class === installmentClass && fs.boarding_type === installmentBoardingType && fs.academic_year === yearToUse
+        );
+        if (existingStructure) {
+          await update('fee_structure', { total_fee: totalFee }, { id: existingStructure.id });
+        } else {
+          await insert('fee_structure', {
+            class: installmentClass,
+            boarding_type: installmentBoardingType,
+            total_fee: totalFee,
+            tuition_fee: totalFee,
+            academic_year: yearToUse,
+            term: 'Annual'
+          });
+        }
+      }
+
+      toast({ title: "Success", description: `Installments saved for ${installmentClass} (${installmentBoardingType})` });
+      setInstallmentAmounts({1: '', 2: '', 3: '', 4: ''});
+      setInstallmentClass('');
+      fetchData();
+    } catch (error: any) {
+      toast({ title: "Error", description: error.message, variant: "destructive" });
+    } finally {
+      setIsSubmitting(false);
+    }
+  };
+
+  const loadInstallmentsForClass = (cls: string, boardingType: string) => {
+    const existing = feeInstallments.filter(
+      fi => fi.class === cls && fi.boarding_type === boardingType
+    );
+    const amounts: Record<number, string> = {1: '', 2: '', 3: '', 4: ''};
+    existing.forEach(fi => {
+      amounts[fi.installment_number] = fi.amount.toString();
+    });
+    setInstallmentAmounts(amounts);
+  };
+
+  // Student custom installment functions
+  const openCustomInstallmentDialog = async (student: Student) => {
+    setSelectedStudentForInstallment(student);
+    setShowCustomInstallmentDialog(true);
+    
+    // Fetch existing custom installments for this student
+    const existing = await fetchTable<StudentCustomInstallment>('student_custom_installments', {
+      student_id: student.id,
+      academic_year: selectedYear,
+    });
+    
+    setStudentCustomInstallments(existing || []);
+    
+    if (existing && existing.length > 0) {
+      setCustomInstallmentRows(
+        existing.sort((a, b) => a.installment_number - b.installment_number).map(ci => ({
+          amount: ci.amount.toString(),
+          due_date: ci.due_date,
+          notes: ci.notes || '',
+        }))
+      );
+    } else {
+      // Default 4 rows with standard due dates
+      const year = parseInt(selectedYear.split('-')[0]);
+      setCustomInstallmentRows(
+        INSTALLMENT_DUE_DATES.map(inst => ({
+          amount: '',
+          due_date: getInstallmentDueDate(selectedYear, inst.number),
+          notes: '',
+        }))
+      );
+    }
+  };
+
+  const handleSaveCustomInstallments = async () => {
+    if (!selectedStudentForInstallment) return;
+    
+    const validRows = customInstallmentRows.filter(r => r.amount && parseFloat(r.amount) > 0);
+    if (validRows.length === 0) {
+      toast({ title: "Error", description: "Please enter at least one installment", variant: "destructive" });
+      return;
+    }
+
+    setIsSubmitting(true);
+    try {
+      // Delete existing custom installments
+      await remove('student_custom_installments', {
+        student_id: selectedStudentForInstallment.id,
+        academic_year: selectedYear,
+      });
+
+      // Insert new
+      const records = validRows.map((row, idx) => ({
+        student_id: selectedStudentForInstallment.id,
+        academic_year: selectedYear,
+        installment_number: idx + 1,
+        amount: parseFloat(row.amount),
+        due_date: row.due_date,
+        notes: row.notes || null,
+      }));
+
+      const result = await insert('student_custom_installments', records);
+      if (!result.success) throw new Error(result.error);
+
+      // Update student custom_fee to total of all custom installments
+      const totalCustomFee = records.reduce((sum, r) => sum + r.amount, 0);
+      await update('students', { 
+        custom_fee: totalCustomFee,
+        discount_notes: `Special installments (${records.length} installments)`
+      }, { id: selectedStudentForInstallment.id });
+
+      toast({ title: "Success", description: `Custom installments saved for ${selectedStudentForInstallment.full_name}` });
+      setShowCustomInstallmentDialog(false);
+      fetchData();
+    } catch (error: any) {
+      toast({ title: "Error", description: error.message, variant: "destructive" });
+    } finally {
+      setIsSubmitting(false);
+    }
+  };
+
+  const addCustomInstallmentRow = () => {
+    const year = parseInt(selectedYear.split('-')[0]);
+    setCustomInstallmentRows(prev => [...prev, { amount: '', due_date: `${year}-01-01`, notes: '' }]);
+  };
+
+  const removeCustomInstallmentRow = (index: number) => {
+    setCustomInstallmentRows(prev => prev.filter((_, i) => i !== index));
+  };
+
   const openDiscountDialog = (student: Student) => {
     setSelectedStudentForDiscount(student);
     setDiscountAmount(student.custom_fee?.toString() || '');
@@ -1178,6 +1400,14 @@ export function SecretaryDashboard() {
                                     </Button>
                                     <Button
                                       size="sm"
+                                      variant="outline"
+                                      onClick={() => openCustomInstallmentDialog(student)}
+                                      title="Special Installments"
+                                    >
+                                      <Calendar className="w-3 h-3" />
+                                    </Button>
+                                    <Button
+                                      size="sm"
                                       onClick={() => {
                                         setSelectedStudentId(student.id);
                                         setShowAddPaymentDialog(true);
@@ -1372,16 +1602,16 @@ export function SecretaryDashboard() {
         </DialogContent>
       </Dialog>
 
-      {/* Fee Structure Management Dialog */}
+      {/* Fee Structure & Installments Management Dialog */}
       <Dialog open={showFeeStructureDialog} onOpenChange={setShowFeeStructureDialog}>
-        <DialogContent className="max-w-3xl max-h-[80vh] overflow-y-auto">
+        <DialogContent className="max-w-4xl max-h-[85vh] overflow-y-auto">
           <DialogHeader>
-            <DialogTitle>Manage Fees - {selectedYear}</DialogTitle>
+            <DialogTitle>Manage Fees & Installments - {selectedYear}</DialogTitle>
           </DialogHeader>
           <div className="space-y-6 py-4">
-            {/* Current Fee Structure */}
+            {/* Current Fee Structure with Installments */}
             <div>
-              <h4 className="font-medium mb-3">Current Fee Structure</h4>
+              <h4 className="font-medium mb-3">Current Fee Structure & Installments</h4>
               {feeStructure.length > 0 ? (
                 <div className="overflow-x-auto">
                   <table className="w-full text-sm">
@@ -1389,42 +1619,65 @@ export function SecretaryDashboard() {
                       <tr className="border-b">
                         <th className="text-left py-2 px-3">Class</th>
                         <th className="text-left py-2 px-3">Type</th>
-                        <th className="text-left py-2 px-3">Year</th>
-                        <th className="text-right py-2 px-3">Fee (TZS)</th>
+                        <th className="text-right py-2 px-3">Total Fee</th>
+                        <th className="text-right py-2 px-3">Inst. 1 (Jan 1)</th>
+                        <th className="text-right py-2 px-3">Inst. 2 (Mar 30)</th>
+                        <th className="text-right py-2 px-3">Inst. 3 (Jun 30)</th>
+                        <th className="text-right py-2 px-3">Inst. 4 (Sep 15)</th>
                         <th className="text-right py-2 px-3">Action</th>
                       </tr>
                     </thead>
                     <tbody>
-                      {feeStructure.map((fs) => (
-                        <tr key={fs.id} className="border-b">
-                          <td className="py-2 px-3">{fs.class}</td>
-                          <td className="py-2 px-3 capitalize">{fs.boarding_type}</td>
-                          <td className="py-2 px-3">{fs.academic_year}</td>
-                          <td className="py-2 px-3 text-right font-medium">{Number(fs.total_fee).toLocaleString()}</td>
-                          <td className="py-2 px-3 text-right">
-                            <div className="flex gap-1 justify-end">
-                              <Button size="sm" variant="outline" onClick={() => openEditFeeStructure(fs)}>
-                                <Edit className="w-3 h-3" />
-                              </Button>
-                              <Button size="sm" variant="outline" className="text-destructive" onClick={() => handleDeleteFeeStructure(fs.id)}>
-                                <Trash2 className="w-3 h-3" />
-                              </Button>
-                            </div>
-                          </td>
-                        </tr>
-                      ))}
+                      {feeStructure.map((fs) => {
+                        const classInstallments = feeInstallments.filter(
+                          fi => fi.class === fs.class && fi.boarding_type === fs.boarding_type
+                        );
+                        return (
+                          <tr key={fs.id} className="border-b">
+                            <td className="py-2 px-3">{fs.class}</td>
+                            <td className="py-2 px-3 capitalize">{fs.boarding_type}</td>
+                            <td className="py-2 px-3 text-right font-medium">{Number(fs.total_fee).toLocaleString()}</td>
+                            {[1,2,3,4].map(num => {
+                              const inst = classInstallments.find(ci => ci.installment_number === num);
+                              return (
+                                <td key={num} className="py-2 px-3 text-right text-muted-foreground">
+                                  {inst ? `TZS ${Number(inst.amount).toLocaleString()}` : '-'}
+                                </td>
+                              );
+                            })}
+                            <td className="py-2 px-3 text-right">
+                              <div className="flex gap-1 justify-end">
+                                <Button size="sm" variant="outline" onClick={() => {
+                                  setInstallmentClass(fs.class);
+                                  setInstallmentBoardingType(fs.boarding_type);
+                                  loadInstallmentsForClass(fs.class, fs.boarding_type);
+                                  setNewFeeYear(fs.academic_year);
+                                }}>
+                                  <Edit className="w-3 h-3" />
+                                </Button>
+                                <Button size="sm" variant="outline" className="text-destructive" onClick={() => handleDeleteFeeStructure(fs.id)}>
+                                  <Trash2 className="w-3 h-3" />
+                                </Button>
+                              </div>
+                            </td>
+                          </tr>
+                        );
+                      })}
                     </tbody>
                   </table>
                 </div>
               ) : (
-              <p className="text-sm text-muted-foreground">No fee structure set for this year/series.</p>
+                <p className="text-sm text-muted-foreground">No fee structure set for this year.</p>
               )}
             </div>
 
-            {/* Add/Edit Fee Structure Form */}
-            <div id="fee-edit-form" className={`border-t pt-4 ${editingFeeStructure ? 'bg-accent/30 -mx-6 px-6 py-4 rounded-lg border-2 border-primary/30' : ''}`}>
-              <h4 className="font-medium mb-3">{editingFeeStructure ? `✏️ Editing: ${editingFeeStructure.class} (${editingFeeStructure.boarding_type})` : 'Add New Fee'}</h4>
-              <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
+            {/* Set Installments Form */}
+            <div className="border-t pt-4 bg-accent/10 -mx-6 px-6 py-4 rounded-lg">
+              <h4 className="font-medium mb-3 flex items-center gap-2">
+                <Calendar className="w-4 h-4 text-primary" />
+                {installmentClass ? `Set Installments: ${installmentClass} (${installmentBoardingType})` : 'Set Installments for a Class'}
+              </h4>
+              <div className="grid grid-cols-1 sm:grid-cols-3 gap-4 mb-4">
                 <div className="space-y-2">
                   <Label>Academic Year</Label>
                   <Select value={newFeeYear || selectedYear} onValueChange={setNewFeeYear}>
@@ -1440,12 +1693,15 @@ export function SecretaryDashboard() {
                 </div>
                 <div className="space-y-2">
                   <Label>Class</Label>
-                  <Select value={newFeeClass} onValueChange={setNewFeeClass} disabled={!!editingFeeStructure}>
+                  <Select value={installmentClass} onValueChange={(v) => {
+                    setInstallmentClass(v);
+                    loadInstallmentsForClass(v, installmentBoardingType);
+                  }}>
                     <SelectTrigger>
                       <SelectValue placeholder="Select class" />
                     </SelectTrigger>
                     <SelectContent>
-                      {['Primary 1', 'Primary 2', 'Primary 3', 'Primary 4', 'Primary 5', 'Primary 6', 'Primary 7', 'Senior 1', 'Senior 2', 'Senior 3', 'Senior 4'].map((cls) => (
+                      {ALL_CLASSES.map((cls) => (
                         <SelectItem key={cls} value={cls}>{cls}</SelectItem>
                       ))}
                     </SelectContent>
@@ -1453,7 +1709,10 @@ export function SecretaryDashboard() {
                 </div>
                 <div className="space-y-2">
                   <Label>Type</Label>
-                  <Select value={newBoardingType} onValueChange={setNewBoardingType} disabled={!!editingFeeStructure}>
+                  <Select value={installmentBoardingType} onValueChange={(v) => {
+                    setInstallmentBoardingType(v);
+                    if (installmentClass) loadInstallmentsForClass(installmentClass, v);
+                  }}>
                     <SelectTrigger>
                       <SelectValue />
                     </SelectTrigger>
@@ -1463,32 +1722,136 @@ export function SecretaryDashboard() {
                     </SelectContent>
                   </Select>
                 </div>
-                <div className="space-y-2">
-                  <Label>Amount (TZS)</Label>
-                  <Input
-                    type="number"
-                    placeholder="e.g. 1960000"
-                    value={newTotalFee}
-                    onChange={(e) => setNewTotalFee(e.target.value)}
-                  />
-                </div>
               </div>
-              <div className="flex gap-2 mt-4">
-                {editingFeeStructure && (
-                  <Button variant="outline" onClick={() => { setEditingFeeStructure(null); setNewFeeClass(''); setNewBoardingType('day'); setNewTotalFee(''); setNewFeeYear(''); }}>
-                    Cancel Edit
-                  </Button>
-                )}
-                <Button onClick={handleSaveFeeStructure} disabled={isSubmitting}>
-                  {isSubmitting ? <Loader2 className="w-4 h-4 animate-spin mr-2" /> : null}
-                  {editingFeeStructure ? 'Update' : 'Add'}
-                </Button>
-              </div>
+
+              {installmentClass && (
+                <>
+                  <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4 mb-4">
+                    {INSTALLMENT_DUE_DATES.map(inst => (
+                      <div key={inst.number} className="space-y-2">
+                        <Label className="text-xs">{inst.label}</Label>
+                        <Input
+                          type="number"
+                          placeholder="Amount (TZS)"
+                          value={installmentAmounts[inst.number]}
+                          onChange={(e) => setInstallmentAmounts(prev => ({...prev, [inst.number]: e.target.value}))}
+                        />
+                      </div>
+                    ))}
+                  </div>
+                  <div className="flex items-center justify-between">
+                    <p className="text-sm text-muted-foreground">
+                      Total: TZS {Object.values(installmentAmounts).reduce((sum, v) => sum + (parseFloat(v) || 0), 0).toLocaleString()}
+                    </p>
+                    <Button onClick={handleSaveInstallments} disabled={isSubmitting}>
+                      {isSubmitting ? <Loader2 className="w-4 h-4 animate-spin mr-2" /> : null}
+                      Save Installments
+                    </Button>
+                  </div>
+                </>
+              )}
             </div>
           </div>
           <DialogFooter>
-            <Button variant="outline" onClick={() => { setShowFeeStructureDialog(false); setEditingFeeStructure(null); }}>
+            <Button variant="outline" onClick={() => { setShowFeeStructureDialog(false); setEditingFeeStructure(null); setInstallmentClass(''); }}>
               Close
+            </Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
+
+      {/* Student Custom Installments Dialog */}
+      <Dialog open={showCustomInstallmentDialog} onOpenChange={setShowCustomInstallmentDialog}>
+        <DialogContent className="max-w-2xl max-h-[85vh] overflow-y-auto">
+          <DialogHeader>
+            <DialogTitle className="flex items-center gap-2">
+              <Settings className="w-5 h-5 text-primary" />
+              Special Case Installments
+            </DialogTitle>
+          </DialogHeader>
+          {selectedStudentForInstallment && (
+            <div className="space-y-4 py-4">
+              <div className="p-3 bg-muted rounded-lg">
+                <p className="font-medium">{selectedStudentForInstallment.full_name}</p>
+                <p className="text-sm text-muted-foreground">
+                  {selectedStudentForInstallment.class} • {selectedStudentForInstallment.boarding_type || 'Day'} • {selectedYear}
+                </p>
+              </div>
+
+              <p className="text-sm text-muted-foreground">
+                Set custom installment amounts and due dates for this student. You can add more than 4 installments.
+              </p>
+
+              <div className="space-y-3">
+                {customInstallmentRows.map((row, index) => (
+                  <div key={index} className="grid grid-cols-12 gap-2 items-end">
+                    <div className="col-span-1 text-sm font-medium text-muted-foreground pt-6">
+                      #{index + 1}
+                    </div>
+                    <div className="col-span-4 space-y-1">
+                      <Label className="text-xs">Amount (TZS)</Label>
+                      <Input
+                        type="number"
+                        placeholder="Amount"
+                        value={row.amount}
+                        onChange={(e) => {
+                          const updated = [...customInstallmentRows];
+                          updated[index].amount = e.target.value;
+                          setCustomInstallmentRows(updated);
+                        }}
+                      />
+                    </div>
+                    <div className="col-span-3 space-y-1">
+                      <Label className="text-xs">Due Date</Label>
+                      <Input
+                        type="date"
+                        value={row.due_date}
+                        onChange={(e) => {
+                          const updated = [...customInstallmentRows];
+                          updated[index].due_date = e.target.value;
+                          setCustomInstallmentRows(updated);
+                        }}
+                      />
+                    </div>
+                    <div className="col-span-3 space-y-1">
+                      <Label className="text-xs">Notes</Label>
+                      <Input
+                        placeholder="Optional"
+                        value={row.notes}
+                        onChange={(e) => {
+                          const updated = [...customInstallmentRows];
+                          updated[index].notes = e.target.value;
+                          setCustomInstallmentRows(updated);
+                        }}
+                      />
+                    </div>
+                    <div className="col-span-1">
+                      {customInstallmentRows.length > 1 && (
+                        <Button size="sm" variant="ghost" className="text-destructive" onClick={() => removeCustomInstallmentRow(index)}>
+                          <Trash2 className="w-3 h-3" />
+                        </Button>
+                      )}
+                    </div>
+                  </div>
+                ))}
+              </div>
+
+              <div className="flex items-center justify-between">
+                <Button variant="outline" size="sm" onClick={addCustomInstallmentRow}>
+                  <Plus className="w-3 h-3 mr-1" />
+                  Add Installment
+                </Button>
+                <p className="text-sm font-medium">
+                  Total: TZS {customInstallmentRows.reduce((sum, r) => sum + (parseFloat(r.amount) || 0), 0).toLocaleString()}
+                </p>
+              </div>
+            </div>
+          )}
+          <DialogFooter>
+            <Button variant="outline" onClick={() => setShowCustomInstallmentDialog(false)}>Cancel</Button>
+            <Button onClick={handleSaveCustomInstallments} disabled={isSubmitting}>
+              {isSubmitting ? <Loader2 className="w-4 h-4 animate-spin mr-2" /> : null}
+              Save Custom Installments
             </Button>
           </DialogFooter>
         </DialogContent>

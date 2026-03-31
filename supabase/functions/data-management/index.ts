@@ -11,6 +11,8 @@ type AllowedTable =
   | "marks" 
   | "fee_payments" 
   | "fee_structure" 
+  | "fee_installments"
+  | "student_custom_installments"
   | "student_debt_history" 
   | "feedback" 
   | "parents" 
@@ -41,6 +43,8 @@ const permissions: Record<string, Record<AllowedTable, AllowedOperation[]>> = {
     marks: ["insert", "update", "delete", "upsert"],
     fee_payments: ["insert", "update", "delete"],
     fee_structure: ["insert", "update", "delete"],
+    fee_installments: ["insert", "update", "delete"],
+    student_custom_installments: ["insert", "update", "delete"],
     student_debt_history: ["insert", "update", "delete"],
     feedback: ["update", "delete"],
     parents: ["insert", "update", "delete"],
@@ -59,6 +63,8 @@ const permissions: Record<string, Record<AllowedTable, AllowedOperation[]>> = {
     marks: ["insert", "update", "delete", "upsert"],
     fee_payments: [],
     fee_structure: [],
+    fee_installments: [],
+    student_custom_installments: [],
     student_debt_history: [],
     feedback: ["update"],
     parents: [],
@@ -77,6 +83,8 @@ const permissions: Record<string, Record<AllowedTable, AllowedOperation[]>> = {
     marks: [],
     fee_payments: ["insert", "update", "delete"],
     fee_structure: ["insert", "update", "delete"],
+    fee_installments: ["insert", "update", "delete"],
+    student_custom_installments: ["insert", "update", "delete"],
     student_debt_history: ["insert", "update", "delete"],
     feedback: ["update"],
     parents: ["insert", "update"],
@@ -95,6 +103,8 @@ const permissions: Record<string, Record<AllowedTable, AllowedOperation[]>> = {
     marks: [],
     fee_payments: [],
     fee_structure: [],
+    fee_installments: [],
+    student_custom_installments: [],
     student_debt_history: [],
     feedback: ["insert"],
     parents: [],
