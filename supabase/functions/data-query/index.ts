@@ -44,7 +44,8 @@ interface QueryRequest {
 // Define which roles can read which tables
 const readPermissions: Record<string, AllowedTable[]> = {
   admin: [
-    "students", "marks", "fee_payments", "fee_structure", "student_debt_history",
+    "students", "marks", "fee_payments", "fee_structure", "fee_installments",
+    "student_custom_installments", "student_debt_history",
     "feedback", "parents", "teacher_assignments", "teacher_class_students",
     "subjects", "academic_years", "announcements", "teachers", "teachers_public",
     "admin_credentials_public", "secretary_credentials_public", "secretary_credentials",
@@ -56,12 +57,14 @@ const readPermissions: Record<string, AllowedTable[]> = {
     "marks_unlock_requests"
   ],
   secretary: [
-    "students", "marks", "fee_payments", "fee_structure", "student_debt_history",
+    "students", "marks", "fee_payments", "fee_structure", "fee_installments",
+    "student_custom_installments", "student_debt_history",
     "parents", "subjects", "academic_years", "announcements", "feedback",
     "teachers_public", "secretary_credentials_public"
   ],
   parent: [
-    "students", "marks", "fee_payments", "fee_structure", "student_debt_history",
+    "students", "marks", "fee_payments", "fee_structure", "fee_installments",
+    "student_custom_installments", "student_debt_history",
     "subjects", "academic_years", "announcements", "feedback", "parents"
   ],
 };
