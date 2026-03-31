@@ -1921,7 +1921,7 @@ export function SecretaryDashboard() {
               </div>
 
               <p className="text-xs sm:text-sm text-muted-foreground font-medium">
-                Weka kiwango cha ada kwa kila installment na tarehe yake ya kulipia. Custom fee itahesabiwa kutoka jumla ya installments zote.
+                Set the fee amount for each installment and its due date. The custom fee will be calculated from the total of all installments.
               </p>
 
               <div className="space-y-3">
