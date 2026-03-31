@@ -1895,7 +1895,7 @@ export function SecretaryDashboard() {
           <DialogHeader className="p-4 sm:p-6 pb-2 sm:pb-2 shrink-0">
             <DialogTitle className="flex items-center gap-2 text-base sm:text-lg">
               <Settings className="w-5 h-5 text-primary" />
-              Special Case Installments
+              Special Case - Custom Fee & Installments
             </DialogTitle>
           </DialogHeader>
           {selectedStudentForInstallment && (
@@ -1907,8 +1907,21 @@ export function SecretaryDashboard() {
                 </p>
               </div>
 
-              <p className="text-xs sm:text-sm text-muted-foreground">
-                Set custom installment amounts and due dates. You can add more than 4 installments.
+              {/* Discount/Reason Section */}
+              <div className="space-y-2 border border-border rounded-lg p-3">
+                <Label className="text-xs sm:text-sm font-semibold">Reason / Notes</Label>
+                <Input
+                  placeholder="e.g. Staff child, Scholarship, Special arrangement"
+                  value={discountNotes}
+                  onChange={(e) => setDiscountNotes(e.target.value)}
+                />
+                <p className="text-xs text-muted-foreground">
+                  Eleza sababu ya mwanafunzi kuwa special case (mfano: mtoto wa mfanyakazi, scholarship, makubaliano maalum)
+                </p>
+              </div>
+
+              <p className="text-xs sm:text-sm text-muted-foreground font-medium">
+                Weka kiwango cha ada kwa kila installment na tarehe yake ya kulipia. Custom fee itahesabiwa kutoka jumla ya installments zote.
               </p>
 
               <div className="space-y-3">
