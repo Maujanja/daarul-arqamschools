@@ -1253,7 +1253,7 @@ export function ParentDashboard() {
                       variant="ghost" 
                       size="sm" 
                       className="mt-2 w-full text-primary"
-                      onClick={() => setShowAll(true)}
+                      onClick={() => setShowAllInstallments(true)}
                     >
                       See more installments ({sortedInsts.length - 4} more)
                     </Button>
