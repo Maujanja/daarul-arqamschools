@@ -419,8 +419,7 @@ export function ParentDashboard() {
           }
         });
         
-        console.log(`[Installment Debug] cumulativeDue=${cumulativeDue}, totalPaid=${totalPaidSoFar}, dueAmount=${Math.max(0, cumulativeDue - totalPaidSoFar)}`);
-        console.log(`[Installment Debug] Total installments found: ${studentInstallments.length}, class=${studentData.class}, boarding=${studentData.boarding_type}, year=${selectedYear}`);
+        
         
         const dueAmount = Math.max(0, cumulativeDue - totalPaidSoFar);
         setDueInstallmentAmount(dueAmount);
