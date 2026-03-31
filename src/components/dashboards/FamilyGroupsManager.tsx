@@ -112,6 +112,7 @@ export function FamilyGroupsManager({ selectedYear, students, onDataChanged }: P
   const [parentName, setParentName] = useState('');
   const [groupNotes, setGroupNotes] = useState('');
   const [selectedMembers, setSelectedMembers] = useState<string[]>([]);
+  const [memberEntries, setMemberEntries] = useState<MemberEntry[]>([]);
 
   // Installments dialog
   const [showInstDialog, setShowInstDialog] = useState(false);
