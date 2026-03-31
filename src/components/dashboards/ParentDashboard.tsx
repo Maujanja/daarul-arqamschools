@@ -338,11 +338,40 @@ export function ParentDashboard() {
         // Calculate class rank and subject rankings
         await calculateRankings(studentData.id, studentData.class, selectedTerm, selectedYear);
         
-        // Get fee payments for this student using secure query
-        const allPayments = await fetchTable<any>('fee_payments', { student_id: studentData.id });
-        const payments = allPayments?.filter((p: any) => 
-          p.academic_year === selectedYear
-        ) || [];
+        // Check if this student is in a family group
+        const familyMemberships = await fetchTable<any>('family_group_members', {
+          student_id: studentData.id,
+          academic_year: selectedYear,
+        });
+
+        let familyGroupId: string | null = null;
+        let familyStudentIds: string[] = [studentData.id];
+
+        if (familyMemberships && familyMemberships.length > 0) {
+          familyGroupId = familyMemberships[0].family_group_id;
+          
+          // Get the family group for parent name
+          const familyGroups = await fetchTable<any>('family_groups', { academic_year: selectedYear });
+          const familyGroup = familyGroups?.find((g: any) => g.id === familyGroupId);
+          setFamilyParentName(familyGroup?.parent_name || null);
+          
+          // Get all members of this family group
+          const allFamilyMembers = await fetchTable<any>('family_group_members', {
+            family_group_id: familyGroupId,
+            academic_year: selectedYear,
+          });
+          familyStudentIds = allFamilyMembers?.map((m: any) => m.student_id) || [studentData.id];
+        } else {
+          setFamilyParentName(null);
+        }
+
+        // Get fee payments - aggregate for all family members if in a group
+        let payments: any[] = [];
+        for (const sid of familyStudentIds) {
+          const studentPayments = await fetchTable<any>('fee_payments', { student_id: sid });
+          const yearPayments = studentPayments?.filter((p: any) => p.academic_year === selectedYear) || [];
+          payments.push(...yearPayments);
+        }
         
         if (payments.length > 0) {
           setFeePayments(payments);
@@ -353,49 +382,61 @@ export function ParentDashboard() {
           setPaidAmount(0);
         }
         
-        // Fetch installments - check for custom installments first, then class installments
-        const customInstallments = await fetchTable<StudentCustomInstallment>('student_custom_installments', {
-          student_id: studentData.id,
-          academic_year: selectedYear,
-        });
-        
+        // Fetch installments - if in family group, use family group installments (replaces class installments)
         let studentInstallments: (FeeInstallment | StudentCustomInstallment)[] = [];
         
-        if (customInstallments && customInstallments.length > 0) {
-          // Special case student - use custom installments
-          studentInstallments = customInstallments;
-          const totalCustomFee = customInstallments.reduce((sum, ci) => sum + Number(ci.amount), 0);
-          setExpectedFee(totalCustomFee);
-        } else {
-          // Regular student - use class-level installments
-          const classInstallments = await fetchTable<FeeInstallment>('fee_installments', {
-            class: studentData.class,
-            boarding_type: studentData.boarding_type || 'day',
+        if (familyGroupId) {
+          // Family group - use family group installments
+          const familyInstallments = await fetchTable<any>('family_group_installments', {
+            family_group_id: familyGroupId,
             academic_year: selectedYear,
           });
           
-          if (classInstallments && classInstallments.length > 0) {
-            studentInstallments = classInstallments;
-            const totalFee = classInstallments.reduce((sum, ci) => sum + Number(ci.amount), 0);
-            setExpectedFee(totalFee);
+          if (familyInstallments && familyInstallments.length > 0) {
+            studentInstallments = familyInstallments;
+            const totalFamilyFee = familyInstallments.reduce((sum: number, ci: any) => sum + Number(ci.amount), 0);
+            setExpectedFee(totalFamilyFee);
+          }
+        } else {
+          // Not in family group - use existing logic
+          const customInstallments = await fetchTable<StudentCustomInstallment>('student_custom_installments', {
+            student_id: studentData.id,
+            academic_year: selectedYear,
+          });
+          
+          if (customInstallments && customInstallments.length > 0) {
+            studentInstallments = customInstallments;
+            const totalCustomFee = customInstallments.reduce((sum, ci) => sum + Number(ci.amount), 0);
+            setExpectedFee(totalCustomFee);
           } else {
-            // Fallback to fee_structure
-            if (studentData.custom_fee !== null && studentData.custom_fee !== undefined) {
-              setExpectedFee(Number(studentData.custom_fee));
+            const classInstallments = await fetchTable<FeeInstallment>('fee_installments', {
+              class: studentData.class,
+              boarding_type: studentData.boarding_type || 'day',
+              academic_year: selectedYear,
+            });
+            
+            if (classInstallments && classInstallments.length > 0) {
+              studentInstallments = classInstallments;
+              const totalFee = classInstallments.reduce((sum, ci) => sum + Number(ci.amount), 0);
+              setExpectedFee(totalFee);
             } else {
-              const { data: feeStructure } = await supabase
-                .from('fee_structure')
-                .select('total_fee, boarding_type')
-                .eq('class', studentData.class)
-                .eq('boarding_type', studentData.boarding_type || 'day')
-                .eq('academic_year', selectedYear)
-                .eq('term', 'Annual')
-                .maybeSingle();
-              
-              if (feeStructure) {
-                setExpectedFee(Number(feeStructure.total_fee));
+              if (studentData.custom_fee !== null && studentData.custom_fee !== undefined) {
+                setExpectedFee(Number(studentData.custom_fee));
               } else {
-                setExpectedFee(0);
+                const { data: feeStructure } = await supabase
+                  .from('fee_structure')
+                  .select('total_fee, boarding_type')
+                  .eq('class', studentData.class)
+                  .eq('boarding_type', studentData.boarding_type || 'day')
+                  .eq('academic_year', selectedYear)
+                  .eq('term', 'Annual')
+                  .maybeSingle();
+                
+                if (feeStructure) {
+                  setExpectedFee(Number(feeStructure.total_fee));
+                } else {
+                  setExpectedFee(0);
+                }
               }
             }
           }
@@ -403,7 +444,7 @@ export function ParentDashboard() {
         
         setInstallments(studentInstallments);
         
-        // Calculate due installment amount - show only the NEXT unpaid installment
+        // Calculate due installment amount
         const today = new Date();
         today.setHours(23, 59, 59, 999);
         const totalPaidSoFar = payments.reduce((sum: number, p: any) => sum + Number(p.amount), 0);
@@ -411,13 +452,11 @@ export function ParentDashboard() {
         const sortedInstallments = [...studentInstallments]
           .sort((a, b) => new Date(a.due_date).getTime() - new Date(b.due_date).getTime());
         
-        // Find the first unpaid installment (cumulative amount > paid)
         let cumulativeAmount = 0;
         let nextDueInstallmentAmount = 0;
         for (const inst of sortedInstallments) {
           cumulativeAmount += Number(inst.amount);
           if (cumulativeAmount > totalPaidSoFar) {
-            // This installment is not fully paid - show its amount as "current due"
             nextDueInstallmentAmount = Number(inst.amount);
             break;
           }
