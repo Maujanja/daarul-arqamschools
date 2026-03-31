@@ -304,6 +304,17 @@ export function FamilyGroupsManager({ selectedYear, students, onDataChanged }: P
     }
   };
 
+  const formatDateForInput = (dateStr: string): string => {
+    // Ensure the date is in YYYY-MM-DD format for <input type="date">
+    try {
+      const d = new Date(dateStr + (dateStr.includes('T') ? '' : 'T00:00:00'));
+      if (isNaN(d.getTime())) return dateStr;
+      return `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, '0')}-${String(d.getDate()).padStart(2, '0')}`;
+    } catch {
+      return dateStr;
+    }
+  };
+
   const openInstDialog = (groupId: string) => {
     const [startYearText, endYearText] = selectedYear.split('-');
     const defaultYear = endYearText || startYearText || String(new Date().getFullYear());
@@ -313,7 +324,7 @@ export function FamilyGroupsManager({ selectedYear, students, onDataChanged }: P
     if (existing.length > 0) {
       setInstRows(existing.map(i => ({
         amount: String(i.amount),
-        due_date: i.due_date,
+        due_date: formatDateForInput(i.due_date),
       })));
     } else {
       setInstRows([
@@ -334,7 +345,7 @@ export function FamilyGroupsManager({ selectedYear, students, onDataChanged }: P
       due_date: string;
       academic_year: string;
     }[] = [];
-    const adjustedRows: number[] = [];
+    
 
     for (let i = 0; i < instRows.length; i++) {
       const row = instRows[i];
@@ -345,62 +356,43 @@ export function FamilyGroupsManager({ selectedYear, students, onDataChanged }: P
       if (!rawDate) {
         toast({
           title: "Error",
+          description: `Installment #${i + 1} has no date set`,
+          variant: "destructive",
+        });
+        return;
+      }
+
+      // Parse the date - accept YYYY-MM-DD or any parseable date format
+      let parsedDate: Date;
+      const strictMatch = rawDate.match(/^(\d{4})-(\d{1,2})-(\d{1,2})$/);
+      if (strictMatch) {
+        parsedDate = new Date(
+          Number.parseInt(strictMatch[1], 10),
+          Number.parseInt(strictMatch[2], 10) - 1,
+          Number.parseInt(strictMatch[3], 10)
+        );
+      } else {
+        parsedDate = new Date(rawDate + 'T00:00:00');
+      }
+
+      if (isNaN(parsedDate.getTime())) {
+        toast({
+          title: "Error",
           description: `Installment #${i + 1} has an invalid date`,
           variant: "destructive",
         });
         return;
       }
 
-      const match = rawDate.match(/^(\d{4})-(\d{2})-(\d{2})$/);
-      if (!match) {
-        toast({
-          title: "Error",
-          description: `Installment #${i + 1} date format must be YYYY-MM-DD`,
-          variant: "destructive",
-        });
-        return;
-      }
-
-      const year = Number.parseInt(match[1], 10);
-      const month = Number.parseInt(match[2], 10);
-      const day = Number.parseInt(match[3], 10);
-
-      if (!Number.isInteger(year) || year < 1900 || year > 2100) {
-        toast({
-          title: "Error",
-          description: `Installment #${i + 1} has an invalid year`,
-          variant: "destructive",
-        });
-        return;
-      }
-
-      if (!Number.isInteger(month) || month < 1 || month > 12) {
-        toast({
-          title: "Error",
-          description: `Installment #${i + 1} has an invalid month`,
-          variant: "destructive",
-        });
-        return;
-      }
-
-      if (!Number.isInteger(day) || day < 1) {
-        toast({
-          title: "Error",
-          description: `Installment #${i + 1} has an invalid day`,
-          variant: "destructive",
-        });
-        return;
-      }
-
-      const maxDay = new Date(year, month, 0).getDate();
-      const normalizedDay = Math.min(day, maxDay);
-      if (normalizedDay !== day) adjustedRows.push(i + 1);
+      const year = parsedDate.getFullYear();
+      const month = parsedDate.getMonth() + 1;
+      const day = parsedDate.getDate();
 
       preparedInstallments.push({
         family_group_id: instGroupId,
         installment_number: preparedInstallments.length + 1,
         amount,
-        due_date: `${year}-${String(month).padStart(2, '0')}-${String(normalizedDay).padStart(2, '0')}`,
+        due_date: `${year}-${String(month).padStart(2, '0')}-${String(day).padStart(2, '0')}`,
         academic_year: selectedYear,
       });
     }
@@ -429,10 +421,7 @@ export function FamilyGroupsManager({ selectedYear, students, onDataChanged }: P
 
       toast({
         title: "Success",
-        description:
-          adjustedRows.length > 0
-            ? `Family installments saved (${adjustedRows.length} invalid date${adjustedRows.length > 1 ? 's' : ''} adjusted to month-end)`
-            : "Family installments saved",
+        description: "Family installments saved",
       });
       setShowInstDialog(false);
       fetchFamilyData();

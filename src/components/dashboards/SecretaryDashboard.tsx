@@ -166,7 +166,7 @@ function getInstallmentDueDate(academicYear: string, installmentNumber: number):
   return date.toISOString().split('T')[0];
 }
 
-export function SecretaryDashboard() {
+export function SecretaryDashboard({ isAdminMode = false }: { isAdminMode?: boolean } = {}) {
   const { toast } = useToast();
   const navigate = useNavigate();
   const { fetchTable } = useSecureQuery();
@@ -1018,8 +1018,12 @@ export function SecretaryDashboard() {
       {/* Header */}
       <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4">
         <div>
-          <h1 className="text-3xl font-display font-bold text-foreground">Secretary Dashboard</h1>
-          <p className="text-muted-foreground mt-1">Fee and Payment Management</p>
+          <h1 className="text-3xl font-display font-bold text-foreground">
+            {isAdminMode ? 'Fee & Payment Management' : 'Secretary Dashboard'}
+          </h1>
+          <p className="text-muted-foreground mt-1">
+            {isAdminMode ? 'Admin Secretary Operations' : 'Fee and Payment Management'}
+          </p>
         </div>
         <div className="flex gap-2 flex-wrap">
           <Button variant="outline" onClick={() => setShowFeeStructureDialog(true)}>

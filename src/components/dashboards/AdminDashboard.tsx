@@ -4,7 +4,7 @@ import { useQuery } from '@tanstack/react-query';
 import { supabase } from '@/integrations/supabase/client';
 import { StatCard } from '@/components/dashboard/StatCard';
 import { SeriesSummaryTable } from '@/components/dashboard/SeriesSummaryTable';
-import { Users, GraduationCap, BookOpen, MessageSquare, FileText, DollarSign, Clock, CheckCircle, User, Calendar, UserCog, Download, Loader2, Eye } from 'lucide-react';
+import { Users, GraduationCap, BookOpen, MessageSquare, FileText, DollarSign, Clock, CheckCircle, User, Calendar, UserCog, Download, Loader2, Eye, Briefcase } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
@@ -17,6 +17,7 @@ import { generateAnnualExamReport } from '@/utils/annualReportGenerator';
 import { generateAnnualExamReportPDF } from '@/utils/annualReportPdfGenerator';
 import { toast } from 'sonner';
 import { AnnualReportPreview } from '@/components/dashboard/AnnualReportPreview';
+import { SecretaryDashboard } from '@/components/dashboards/SecretaryDashboard';
 
 interface FeedbackItem {
   id: string;
@@ -74,6 +75,7 @@ export function AdminDashboard() {
   const { update } = useSecureData();
   const { academicYears, currentYear, loading: yearsLoading } = useAcademicYears();
   const [selectedYear, setSelectedYear] = useState('');
+  const [adminMode, setAdminMode] = useState<'overview' | 'secretary'>('overview');
   const [selectedClass, setSelectedClass] = useState(classes[0]);
   const [reportClass, setReportClass] = useState(classes[0]);
   const [reportTerm, setReportTerm] = useState('Series 1');
@@ -520,18 +522,48 @@ export function AdminDashboard() {
           <h1 className="text-3xl font-display font-bold text-white drop-shadow-md">Dashboard</h1>
           <p className="text-white/80 mt-1">Welcome! Here is your school overview.</p>
         </div>
-        <Select value={selectedYear} onValueChange={setSelectedYear}>
-          <SelectTrigger className="w-[140px]">
-            <Calendar className="w-4 h-4 mr-2" />
-            <SelectValue />
-          </SelectTrigger>
-          <SelectContent>
-            {academicYears.map((year) => (
-              <SelectItem key={year} value={year}>{year}</SelectItem>
-            ))}
-          </SelectContent>
-        </Select>
+        <div className="flex items-center gap-2">
+          <div className="flex bg-background/80 backdrop-blur-sm rounded-lg p-1">
+            <Button
+              variant={adminMode === 'overview' ? 'default' : 'ghost'}
+              size="sm"
+              onClick={() => setAdminMode('overview')}
+              className="text-xs"
+            >
+              <GraduationCap className="w-3.5 h-3.5 mr-1" />
+              Overview
+            </Button>
+            <Button
+              variant={adminMode === 'secretary' ? 'default' : 'ghost'}
+              size="sm"
+              onClick={() => setAdminMode('secretary')}
+              className="text-xs"
+            >
+              <Briefcase className="w-3.5 h-3.5 mr-1" />
+              Secretary Ops
+            </Button>
+          </div>
+          {adminMode === 'overview' && (
+            <Select value={selectedYear} onValueChange={setSelectedYear}>
+              <SelectTrigger className="w-[140px]">
+                <Calendar className="w-4 h-4 mr-2" />
+                <SelectValue />
+              </SelectTrigger>
+              <SelectContent>
+                {academicYears.map((year) => (
+                  <SelectItem key={year} value={year}>{year}</SelectItem>
+                ))}
+              </SelectContent>
+            </Select>
+          )}
+        </div>
       </div>
+
+      {adminMode === 'secretary' ? (
+        <SecretaryDashboard isAdminMode={true} />
+      ) : (
+      <>
+
 
       <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-6">
         <StatCard title="Students" value={studentsCount.toLocaleString()} subtitle="All classes" icon={GraduationCap} variant="primary" bgStyle="silk" />
@@ -788,6 +820,8 @@ export function AdminDashboard() {
           </Button>
         </div>
       </div>
+      </>
+      )}
     </div>
   );
 }
