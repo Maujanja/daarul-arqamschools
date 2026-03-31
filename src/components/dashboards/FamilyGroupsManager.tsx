@@ -304,6 +304,17 @@ export function FamilyGroupsManager({ selectedYear, students, onDataChanged }: P
     }
   };
 
+  const formatDateForInput = (dateStr: string): string => {
+    // Ensure the date is in YYYY-MM-DD format for <input type="date">
+    try {
+      const d = new Date(dateStr + (dateStr.includes('T') ? '' : 'T00:00:00'));
+      if (isNaN(d.getTime())) return dateStr;
+      return `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, '0')}-${String(d.getDate()).padStart(2, '0')}`;
+    } catch {
+      return dateStr;
+    }
+  };
+
   const openInstDialog = (groupId: string) => {
     const [startYearText, endYearText] = selectedYear.split('-');
     const defaultYear = endYearText || startYearText || String(new Date().getFullYear());
@@ -313,7 +324,7 @@ export function FamilyGroupsManager({ selectedYear, students, onDataChanged }: P
     if (existing.length > 0) {
       setInstRows(existing.map(i => ({
         amount: String(i.amount),
-        due_date: i.due_date,
+        due_date: formatDateForInput(i.due_date),
       })));
     } else {
       setInstRows([
