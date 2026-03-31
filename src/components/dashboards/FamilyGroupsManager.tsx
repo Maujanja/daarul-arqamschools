@@ -46,6 +46,12 @@ interface Props {
   onDataChanged: () => void;
 }
 
+interface InstallmentRow {
+  amount: string;
+  due_date: string;
+  last_valid_due_date: string;
+}
+
 // Fuzzy matching: calculate similarity between two strings (0-1)
 function fuzzyScore(input: string, target: string): number {
   const a = input.toLowerCase().trim();
@@ -123,7 +129,7 @@ export function FamilyGroupsManager({ selectedYear, students, onDataChanged }: P
   // Installments dialog
   const [showInstDialog, setShowInstDialog] = useState(false);
   const [instGroupId, setInstGroupId] = useState('');
-  const [instRows, setInstRows] = useState<{ amount: string; due_date: string }[]>([]);
+  const [instRows, setInstRows] = useState<InstallmentRow[]>([]);
 
   const fetchFamilyData = useCallback(async () => {
     if (!selectedYear) return;
@@ -361,6 +367,15 @@ export function FamilyGroupsManager({ selectedYear, students, onDataChanged }: P
     return `${year}-${String(month).padStart(2, '0')}-${String(safeDay).padStart(2, '0')}`;
   };
 
+  const createInstallmentRow = (amount: string, dueDate: string): InstallmentRow => {
+    const normalizedDate = normalizeInstallmentDate(dueDate) ?? formatDateForInput(dueDate);
+    return {
+      amount,
+      due_date: normalizedDate,
+      last_valid_due_date: normalizedDate,
+    };
+  };
+
   const openInstDialog = (groupId: string) => {
     const [startYearText, endYearText] = selectedYear.split('-');
     const defaultYear = endYearText || startYearText || String(new Date().getFullYear());
@@ -368,16 +383,13 @@ export function FamilyGroupsManager({ selectedYear, students, onDataChanged }: P
     setInstGroupId(groupId);
     const existing = getGroupInstallments(groupId);
     if (existing.length > 0) {
-      setInstRows(existing.map(i => ({
-        amount: String(i.amount),
-        due_date: formatDateForInput(i.due_date),
-      })));
+      setInstRows(existing.map(i => createInstallmentRow(String(i.amount), i.due_date)));
     } else {
       setInstRows([
-        { amount: '', due_date: `${defaultYear}-01-01` },
-        { amount: '', due_date: `${defaultYear}-03-30` },
-        { amount: '', due_date: `${defaultYear}-06-30` },
-        { amount: '', due_date: `${defaultYear}-09-15` },
+        createInstallmentRow('', `${defaultYear}-01-01`),
+        createInstallmentRow('', `${defaultYear}-03-30`),
+        createInstallmentRow('', `${defaultYear}-06-30`),
+        createInstallmentRow('', `${defaultYear}-09-15`),
       ]);
     }
     setShowInstDialog(true);
@@ -398,7 +410,7 @@ export function FamilyGroupsManager({ selectedYear, students, onDataChanged }: P
       const amount = Number.parseFloat(row.amount);
       if (!Number.isFinite(amount) || amount <= 0) continue;
 
-      const rawDate = row.due_date?.trim();
+      const rawDate = (row.due_date || row.last_valid_due_date || '').trim();
       if (!rawDate) {
         toast({
           title: "Error",
@@ -684,9 +696,27 @@ export function FamilyGroupsManager({ selectedYear, students, onDataChanged }: P
                     type="date"
                     value={row.due_date}
                     onChange={e => {
-                      const updated = [...instRows];
-                      updated[index].due_date = e.target.value;
-                      setInstRows(updated);
+                      const nextValue = e.target.value;
+                      setInstRows(prevRows => prevRows.map((instRow, rowIndex) => {
+                        if (rowIndex !== index) return instRow;
+                        return {
+                          ...instRow,
+                          due_date: nextValue,
+                          last_valid_due_date: nextValue || instRow.last_valid_due_date,
+                        };
+                      }));
+                    }}
+                    onBlur={() => {
+                      const currentRow = instRows[index];
+                      if (!currentRow || currentRow.due_date || !currentRow.last_valid_due_date) return;
+
+                      setInstRows(prevRows => prevRows.map((instRow, rowIndex) => {
+                        if (rowIndex !== index) return instRow;
+                        return {
+                          ...instRow,
+                          due_date: instRow.last_valid_due_date,
+                        };
+                      }));
                     }}
                   />
                 </div>
@@ -706,7 +736,7 @@ export function FamilyGroupsManager({ selectedYear, students, onDataChanged }: P
               onClick={() => {
                 const [startYearText, endYearText] = selectedYear.split('-');
                 const defaultYear = endYearText || startYearText || String(new Date().getFullYear());
-                setInstRows([...instRows, { amount: '', due_date: `${defaultYear}-01-01` }]);
+                setInstRows([...instRows, createInstallmentRow('', `${defaultYear}-01-01`)]);
               }}
             >
               <Plus className="w-4 h-4 mr-1" /> Add Installment
