@@ -46,6 +46,54 @@ interface Props {
   onDataChanged: () => void;
 }
 
+// Fuzzy matching: calculate similarity between two strings (0-1)
+function fuzzyScore(input: string, target: string): number {
+  const a = input.toLowerCase().trim();
+  const b = target.toLowerCase().trim();
+  if (a === b) return 1;
+  if (b.includes(a) || a.includes(b)) return 0.9;
+  
+  // Levenshtein-based similarity
+  const len = Math.max(a.length, b.length);
+  if (len === 0) return 1;
+  
+  const matrix: number[][] = [];
+  for (let i = 0; i <= a.length; i++) {
+    matrix[i] = [i];
+    for (let j = 1; j <= b.length; j++) {
+      if (i === 0) { matrix[i][j] = j; continue; }
+      matrix[i][j] = Math.min(
+        matrix[i - 1][j] + 1,
+        matrix[i][j - 1] + 1,
+        matrix[i - 1][j - 1] + (a[i - 1] === b[j - 1] ? 0 : 1)
+      );
+    }
+  }
+  return 1 - matrix[a.length][b.length] / len;
+}
+
+function findBestMatch(input: string, students: Student[], threshold = 0.45): Student | null {
+  if (!input.trim()) return null;
+  let best: Student | null = null;
+  let bestScore = 0;
+  for (const s of students) {
+    const score = fuzzyScore(input, s.full_name);
+    if (score > bestScore && score >= threshold) {
+      bestScore = score;
+      best = s;
+    }
+  }
+  return best;
+}
+
+interface MemberEntry {
+  typedName: string;
+  matchedStudentId: string | null;
+  matchedName: string | null;
+  matchedClass: string | null;
+  score: number;
+}
+
 export function FamilyGroupsManager({ selectedYear, students, onDataChanged }: Props) {
   const { toast } = useToast();
   const { fetchTable } = useSecureQuery();
