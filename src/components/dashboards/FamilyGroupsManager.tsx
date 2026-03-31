@@ -307,7 +307,8 @@ export function FamilyGroupsManager({ selectedYear, students, onDataChanged }: P
   };
 
   const handleSaveInstallments = async () => {
-    const year = parseInt(selectedYear.split('-')[0]);
+    const startYear = parseInt(selectedYear.split('-')[0]);
+    const endYear = parseInt(selectedYear.split('-')[1]);
     setIsSubmitting(true);
     try {
       // Remove existing installments
@@ -323,11 +324,13 @@ export function FamilyGroupsManager({ selectedYear, students, onDataChanged }: P
         if (isNaN(amount) || amount <= 0) continue;
         const mm = String(row.due_month).padStart(2, '0');
         const dd = String(row.due_day).padStart(2, '0');
+        const month = parseInt(row.due_month);
+        const dueYear = month >= 1 && month <= 6 ? endYear : startYear;
         await insert('family_group_installments', {
           family_group_id: instGroupId,
           installment_number: i + 1,
           amount,
-          due_date: `${year}-${mm}-${dd}`,
+          due_date: `${dueYear}-${mm}-${dd}`,
           academic_year: selectedYear,
         });
       }
