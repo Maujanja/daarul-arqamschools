@@ -1,4 +1,4 @@
-import { useState, useEffect, useCallback } from 'react';
+import { useState, useEffect, useCallback, useRef } from 'react';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
@@ -7,7 +7,7 @@ import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter } from '
 import { useSecureQuery } from '@/hooks/useSecureQuery';
 import { useSecureData } from '@/hooks/useSecureData';
 import { useToast } from '@/hooks/use-toast';
-import { Plus, Trash2, Users, Edit, ChevronDown, ChevronUp, Loader2, Calendar } from 'lucide-react';
+import { Plus, Trash2, Users, Edit, ChevronDown, ChevronUp, Loader2, Calendar, Search, CheckCircle, XCircle } from 'lucide-react';
 
 interface Student {
   id: string;
@@ -46,6 +46,54 @@ interface Props {
   onDataChanged: () => void;
 }
 
+// Fuzzy matching: calculate similarity between two strings (0-1)
+function fuzzyScore(input: string, target: string): number {
+  const a = input.toLowerCase().trim();
+  const b = target.toLowerCase().trim();
+  if (a === b) return 1;
+  if (b.includes(a) || a.includes(b)) return 0.9;
+  
+  // Levenshtein-based similarity
+  const len = Math.max(a.length, b.length);
+  if (len === 0) return 1;
+  
+  const matrix: number[][] = [];
+  for (let i = 0; i <= a.length; i++) {
+    matrix[i] = [i];
+    for (let j = 1; j <= b.length; j++) {
+      if (i === 0) { matrix[i][j] = j; continue; }
+      matrix[i][j] = Math.min(
+        matrix[i - 1][j] + 1,
+        matrix[i][j - 1] + 1,
+        matrix[i - 1][j - 1] + (a[i - 1] === b[j - 1] ? 0 : 1)
+      );
+    }
+  }
+  return 1 - matrix[a.length][b.length] / len;
+}
+
+function findBestMatch(input: string, students: Student[], threshold = 0.45): Student | null {
+  if (!input.trim()) return null;
+  let best: Student | null = null;
+  let bestScore = 0;
+  for (const s of students) {
+    const score = fuzzyScore(input, s.full_name);
+    if (score > bestScore && score >= threshold) {
+      bestScore = score;
+      best = s;
+    }
+  }
+  return best;
+}
+
+interface MemberEntry {
+  typedName: string;
+  matchedStudentId: string | null;
+  matchedName: string | null;
+  matchedClass: string | null;
+  score: number;
+}
+
 export function FamilyGroupsManager({ selectedYear, students, onDataChanged }: Props) {
   const { toast } = useToast();
   const { fetchTable } = useSecureQuery();
@@ -64,6 +112,7 @@ export function FamilyGroupsManager({ selectedYear, students, onDataChanged }: P
   const [parentName, setParentName] = useState('');
   const [groupNotes, setGroupNotes] = useState('');
   const [selectedMembers, setSelectedMembers] = useState<string[]>([]);
+  const [memberEntries, setMemberEntries] = useState<MemberEntry[]>([]);
 
   // Installments dialog
   const [showInstDialog, setShowInstDialog] = useState(false);
@@ -102,11 +151,41 @@ export function FamilyGroupsManager({ selectedYear, students, onDataChanged }: P
   // Students already in a family group for this year
   const assignedStudentIds = new Set(members.map(m => m.student_id));
 
+  const updateMemberMatch = (index: number, typedName: string) => {
+    const updated = [...memberEntries];
+    const match = findBestMatch(typedName, students.filter(s => 
+      !assignedStudentIds.has(s.id) || 
+      updated.some(e => e.matchedStudentId === s.id) ||
+      selectedMembers.includes(s.id)
+    ));
+    updated[index] = {
+      typedName,
+      matchedStudentId: match?.id || null,
+      matchedName: match?.full_name || null,
+      matchedClass: match?.class || null,
+      score: match ? fuzzyScore(typedName, match.full_name) : 0,
+    };
+    setMemberEntries(updated);
+    // Sync selectedMembers
+    setSelectedMembers(updated.filter(e => e.matchedStudentId).map(e => e.matchedStudentId!));
+  };
+
+  const addMemberEntry = () => {
+    setMemberEntries([...memberEntries, { typedName: '', matchedStudentId: null, matchedName: null, matchedClass: null, score: 0 }]);
+  };
+
+  const removeMemberEntry = (index: number) => {
+    const updated = memberEntries.filter((_, i) => i !== index);
+    setMemberEntries(updated);
+    setSelectedMembers(updated.filter(e => e.matchedStudentId).map(e => e.matchedStudentId!));
+  };
+
   const openCreateDialog = () => {
     setEditingGroup(null);
     setParentName('');
     setGroupNotes('');
     setSelectedMembers([]);
+    setMemberEntries([{ typedName: '', matchedStudentId: null, matchedName: null, matchedClass: null, score: 0 }]);
     setShowDialog(true);
   };
 
@@ -114,7 +193,18 @@ export function FamilyGroupsManager({ selectedYear, students, onDataChanged }: P
     setEditingGroup(group);
     setParentName(group.parent_name);
     setGroupNotes(group.notes || '');
-    setSelectedMembers(getGroupMembers(group.id).map(m => m.student_id));
+    const gMembers = getGroupMembers(group.id);
+    setSelectedMembers(gMembers.map(m => m.student_id));
+    setMemberEntries(gMembers.map(m => {
+      const student = students.find(s => s.id === m.student_id);
+      return {
+        typedName: student?.full_name || '',
+        matchedStudentId: m.student_id,
+        matchedName: student?.full_name || null,
+        matchedClass: student?.class || null,
+        score: 1,
+      };
+    }));
     setShowDialog(true);
   };
 
@@ -256,11 +346,6 @@ export function FamilyGroupsManager({ selectedYear, students, onDataChanged }: P
     });
   };
 
-  const toggleMember = (studentId: string) => {
-    setSelectedMembers(prev =>
-      prev.includes(studentId) ? prev.filter(id => id !== studentId) : [...prev, studentId]
-    );
-  };
 
   if (isLoading) {
     return (
@@ -376,29 +461,59 @@ export function FamilyGroupsManager({ selectedYear, students, onDataChanged }: P
               <Input value={groupNotes} onChange={e => setGroupNotes(e.target.value)} placeholder="Additional notes..." />
             </div>
             <div>
-              <Label>Select Students ({selectedMembers.length} selected)</Label>
-              <div className="mt-2 max-h-60 overflow-y-auto border rounded-lg p-2 space-y-1">
-                {students
-                  .filter(s => !assignedStudentIds.has(s.id) || selectedMembers.includes(s.id))
-                  .sort((a, b) => a.full_name.localeCompare(b.full_name))
-                  .map(student => (
-                    <div
-                      key={student.id}
-                      className={`flex items-center justify-between p-2 rounded cursor-pointer transition-colors ${
-                        selectedMembers.includes(student.id) ? 'bg-primary/10 border border-primary/30' : 'hover:bg-muted/50'
-                      }`}
-                      onClick={() => toggleMember(student.id)}
-                    >
-                      <div>
-                        <p className="text-sm font-medium text-card-foreground">{student.full_name}</p>
-                        <p className="text-xs text-muted-foreground">{student.class} • {student.roll_number}</p>
-                      </div>
-                      {selectedMembers.includes(student.id) && (
-                        <span className="text-xs bg-primary text-primary-foreground px-2 py-0.5 rounded-full">Selected</span>
+              <Label>Students (type name to match)</Label>
+              <p className="text-xs text-muted-foreground mb-2">
+                Type each student's name. The system will automatically match even with minor spelling errors.
+              </p>
+              <div className="space-y-2">
+                {memberEntries.map((entry, index) => (
+                  <div key={index} className="flex items-start gap-2">
+                    <div className="flex-1">
+                      <Input
+                        value={entry.typedName}
+                        onChange={e => updateMemberMatch(index, e.target.value)}
+                        placeholder="Type student name..."
+                        className={entry.matchedStudentId ? 'border-success' : entry.typedName.length > 2 ? 'border-destructive' : ''}
+                      />
+                      {entry.typedName.length > 0 && (
+                        <div className="mt-1 flex items-center gap-1">
+                          {entry.matchedStudentId ? (
+                            <>
+                              <CheckCircle className="w-3 h-3 text-success" />
+                              <span className="text-xs text-success">
+                                Matched: <strong>{entry.matchedName}</strong> ({entry.matchedClass})
+                                {entry.score < 1 && <span className="text-muted-foreground ml-1">({Math.round(entry.score * 100)}% match)</span>}
+                              </span>
+                            </>
+                          ) : entry.typedName.length > 2 ? (
+                            <>
+                              <XCircle className="w-3 h-3 text-destructive" />
+                              <span className="text-xs text-destructive">No matching student found</span>
+                            </>
+                          ) : null}
+                        </div>
                       )}
                     </div>
-                  ))}
+                    <Button
+                      variant="ghost"
+                      size="sm"
+                      className="mt-1"
+                      onClick={() => removeMemberEntry(index)}
+                      disabled={memberEntries.length <= 1}
+                    >
+                      <Trash2 className="w-4 h-4 text-destructive" />
+                    </Button>
+                  </div>
+                ))}
               </div>
+              <Button variant="outline" size="sm" className="mt-2" onClick={addMemberEntry}>
+                <Plus className="w-3 h-3 mr-1" /> Add Another Student
+              </Button>
+              {selectedMembers.length > 0 && (
+                <p className="text-xs text-success mt-2 font-medium">
+                  {selectedMembers.length} student{selectedMembers.length !== 1 ? 's' : ''} matched successfully
+                </p>
+              )}
             </div>
           </div>
           <DialogFooter>
