@@ -224,6 +224,10 @@ export function SecretaryDashboard() {
   const [selectedStudentForInstallment, setSelectedStudentForInstallment] = useState<Student | null>(null);
   const [studentCustomInstallments, setStudentCustomInstallments] = useState<StudentCustomInstallment[]>([]);
   const [customInstallmentRows, setCustomInstallmentRows] = useState<{amount: string; due_date: string; notes: string}[]>([]);
+
+  // Family group data for fee calculations
+  const [familyGroupMembers, setFamilyGroupMembers] = useState<{student_id: string; family_group_id: string}[]>([]);
+  const [familyGroupInstallments, setFamilyGroupInstallments] = useState<{family_group_id: string; amount: number; installment_number: number; due_date: string}[]>([]);
   
   // Student discount management
   const [showDiscountDialog, setShowDiscountDialog] = useState(false);
