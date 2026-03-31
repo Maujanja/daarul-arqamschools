@@ -140,16 +140,26 @@ interface DebtHistory {
 }
 
 // Fixed installment due dates (month-day)
-const INSTALLMENT_DUE_DATES = [
+const ALL_INSTALLMENT_DUE_DATES = [
   { number: 1, month: 0, day: 1, label: 'Installment 1 (Jan 1)' },
   { number: 2, month: 2, day: 30, label: 'Installment 2 (Mar 30)' },
   { number: 3, month: 5, day: 30, label: 'Installment 3 (Jun 30)' },
   { number: 4, month: 8, day: 15, label: 'Installment 4 (Sep 15)' },
 ];
 
+// Classes with only 3 installments (no Sep 15)
+const THREE_INSTALLMENT_CLASSES = ['Primary 4', 'Primary 7', 'Senior 2', 'Senior 4'];
+
+function getInstallmentDueDatesForClass(className: string) {
+  if (THREE_INSTALLMENT_CLASSES.includes(className)) {
+    return ALL_INSTALLMENT_DUE_DATES.filter(i => i.number <= 3);
+  }
+  return ALL_INSTALLMENT_DUE_DATES;
+}
+
 function getInstallmentDueDate(academicYear: string, installmentNumber: number): string {
   const year = parseInt(academicYear.split('-')[0]);
-  const inst = INSTALLMENT_DUE_DATES.find(i => i.number === installmentNumber);
+  const inst = ALL_INSTALLMENT_DUE_DATES.find(i => i.number === installmentNumber);
   if (!inst) return `${year}-01-01`;
   const date = new Date(year, inst.month, inst.day);
   return date.toISOString().split('T')[0];
