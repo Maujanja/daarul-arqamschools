@@ -415,13 +415,23 @@ export function SecretaryDashboard() {
     setPaymentNotes('');
   };
 
-  // Get expected fee for a student based on their class and boarding type OR custom fee
+  // Get expected fee for a student based on: family group > custom fee > class fee structure
   const getStudentExpectedFee = (student: Student) => {
-    // If student has custom fee (discount), use that instead
+    // 1. Check if student is in a family group - use family group installments
+    const membership = familyGroupMembers.find(m => m.student_id === student.id);
+    if (membership) {
+      const groupInsts = familyGroupInstallments.filter(i => i.family_group_id === membership.family_group_id);
+      if (groupInsts.length > 0) {
+        return groupInsts.reduce((sum, i) => sum + Number(i.amount), 0);
+      }
+    }
+    
+    // 2. If student has custom fee (special case/discount), use that
     if (student.custom_fee !== null && student.custom_fee !== undefined) {
       return Number(student.custom_fee);
     }
     
+    // 3. Default: class fee structure
     const boardingType = student.boarding_type || 'day';
     const structure = feeStructure.find(f => 
       f.class === student.class && 
