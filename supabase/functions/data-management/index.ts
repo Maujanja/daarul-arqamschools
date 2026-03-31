@@ -83,6 +83,9 @@ const permissions: Record<string, Record<AllowedTable, AllowedOperation[]>> = {
     admin_credentials: [],
     secretary_credentials: [],
     marks_unlock_requests: ["insert", "update"],
+    family_groups: [],
+    family_group_members: [],
+    family_group_installments: [],
   },
   secretary: {
     students: ["insert", "update", "delete"],
