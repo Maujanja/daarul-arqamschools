@@ -1733,7 +1733,7 @@ export function SecretaryDashboard() {
             </div>
 
             {/* Set Installments Form */}
-            <div className="border-t pt-4 bg-accent/10 -mx-4 sm:-mx-6 px-4 sm:px-6 py-4 rounded-lg">
+            <div id="installment-edit-form" className="border-t pt-4 bg-accent/10 -mx-4 sm:-mx-6 px-4 sm:px-6 py-4 rounded-lg">
               <h4 className="font-medium mb-3 text-sm sm:text-base flex items-center gap-2">
                 <Calendar className="w-4 h-4 text-primary" />
                 {installmentClass ? `Set Installments: ${installmentClass} (${installmentBoardingType})` : 'Set Installments for a Class'}
