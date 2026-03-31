@@ -1412,19 +1412,10 @@ export function SecretaryDashboard() {
                                       size="icon"
                                       variant="outline"
                                       className="h-8 w-8"
-                                      onClick={() => openDiscountDialog(student)}
-                                      title="Discount"
-                                    >
-                                      <Percent className="w-3 h-3" />
-                                    </Button>
-                                    <Button
-                                      size="icon"
-                                      variant="outline"
-                                      className="h-8 w-8"
                                       onClick={() => openCustomInstallmentDialog(student)}
-                                      title="Special Installments"
+                                      title="Special Case (Custom Fee & Installments)"
                                     >
-                                      <Calendar className="w-3 h-3" />
+                                      <Settings className="w-3 h-3" />
                                     </Button>
                                     <Button
                                       size="sm"
