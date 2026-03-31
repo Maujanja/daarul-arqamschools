@@ -63,6 +63,8 @@ const permissions: Record<string, Record<AllowedTable, AllowedOperation[]>> = {
     marks: ["insert", "update", "delete", "upsert"],
     fee_payments: [],
     fee_structure: [],
+    fee_installments: [],
+    student_custom_installments: [],
     student_debt_history: [],
     feedback: ["update"],
     parents: [],
