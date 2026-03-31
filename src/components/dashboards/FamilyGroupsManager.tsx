@@ -346,11 +346,6 @@ export function FamilyGroupsManager({ selectedYear, students, onDataChanged }: P
     });
   };
 
-  const toggleMember = (studentId: string) => {
-    setSelectedMembers(prev =>
-      prev.includes(studentId) ? prev.filter(id => id !== studentId) : [...prev, studentId]
-    );
-  };
 
   if (isLoading) {
     return (
