@@ -414,15 +414,12 @@ export function ParentDashboard() {
         
         sortedInstallments.forEach(inst => {
           const dueDate = new Date(inst.due_date + 'T00:00:00');
-          const isDue = dueDate <= today;
-          console.log(`[Installment Debug] #${inst.installment_number}: amount=${inst.amount}, due_date=${inst.due_date}, parsed=${dueDate.toISOString()}, today=${today.toISOString()}, isDue=${isDue}`);
-          if (isDue) {
+          if (dueDate <= today) {
             cumulativeDue += Number(inst.amount);
           }
         });
         
-        console.log(`[Installment Debug] cumulativeDue=${cumulativeDue}, totalPaid=${totalPaidSoFar}, dueAmount=${Math.max(0, cumulativeDue - totalPaidSoFar)}`);
-        console.log(`[Installment Debug] Total installments found: ${studentInstallments.length}, class=${studentData.class}, boarding=${studentData.boarding_type}, year=${selectedYear}`);
+        
         
         const dueAmount = Math.max(0, cumulativeDue - totalPaidSoFar);
         setDueInstallmentAmount(dueAmount);
