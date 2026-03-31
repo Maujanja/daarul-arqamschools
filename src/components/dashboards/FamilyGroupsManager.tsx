@@ -345,7 +345,7 @@ export function FamilyGroupsManager({ selectedYear, students, onDataChanged }: P
       due_date: string;
       academic_year: string;
     }[] = [];
-    const adjustedRows: number[] = [];
+    
 
     for (let i = 0; i < instRows.length; i++) {
       const row = instRows[i];
