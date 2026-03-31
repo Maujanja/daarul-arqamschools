@@ -658,32 +658,16 @@ export function FamilyGroupsManager({ selectedYear, students, onDataChanged }: P
                     placeholder="Amount"
                   />
                 </div>
-                <div className="w-20">
-                  <Label className="text-xs">Month</Label>
+                <div className="w-44">
+                  <Label className="text-xs">Due Date</Label>
                   <Input
-                    type="number"
-                    min={1} max={12}
-                    value={row.due_month}
+                    type="date"
+                    value={row.due_date}
                     onChange={e => {
                       const updated = [...instRows];
-                      updated[index].due_month = e.target.value;
+                      updated[index].due_date = e.target.value;
                       setInstRows(updated);
                     }}
-                    placeholder="MM"
-                  />
-                </div>
-                <div className="w-20">
-                  <Label className="text-xs">Day</Label>
-                  <Input
-                    type="number"
-                    min={1} max={31}
-                    value={row.due_day}
-                    onChange={e => {
-                      const updated = [...instRows];
-                      updated[index].due_day = e.target.value;
-                      setInstRows(updated);
-                    }}
-                    placeholder="DD"
                   />
                 </div>
                 <Button
