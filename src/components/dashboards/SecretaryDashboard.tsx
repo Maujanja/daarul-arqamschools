@@ -1998,6 +1998,31 @@ export function SecretaryDashboard() {
             </div>
           )}
           <DialogFooter className="flex-col sm:flex-row gap-2 p-4 sm:p-6 pt-2 sm:pt-2 shrink-0 border-t">
+            {selectedStudentForInstallment?.custom_fee !== null && selectedStudentForInstallment?.custom_fee !== undefined && (
+              <Button variant="outline" className="w-full sm:w-auto text-destructive" onClick={async () => {
+                if (!selectedStudentForInstallment) return;
+                setIsSubmitting(true);
+                try {
+                  // Remove custom installments
+                  if (studentCustomInstallments.length > 0) {
+                    for (const ci of studentCustomInstallments) {
+                      await remove('student_custom_installments', { id: ci.id });
+                    }
+                  }
+                  // Remove custom fee
+                  await update('students', { custom_fee: null, discount_notes: null }, { id: selectedStudentForInstallment.id });
+                  toast({ title: "Success", description: "Special case removed" });
+                  setShowCustomInstallmentDialog(false);
+                  fetchData();
+                } catch (error: any) {
+                  toast({ title: "Error", description: error.message, variant: "destructive" });
+                } finally {
+                  setIsSubmitting(false);
+                }
+              }} disabled={isSubmitting}>
+                Remove Special Case
+              </Button>
+            )}
             <Button variant="outline" className="w-full sm:w-auto" onClick={() => setShowCustomInstallmentDialog(false)}>Cancel</Button>
             <Button className="w-full sm:w-auto" onClick={handleSaveCustomInstallments} disabled={isSubmitting}>
               {isSubmitting ? <Loader2 className="w-4 h-4 animate-spin mr-2" /> : null}
