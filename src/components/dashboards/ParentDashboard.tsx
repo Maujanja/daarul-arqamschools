@@ -1308,22 +1308,37 @@ export function ParentDashboard() {
               );
             })()}
             
-            {expectedFee > 0 && (
-              <div className="mb-4">
-                <div className="flex justify-between text-sm mb-2">
-                  <span className="text-muted-foreground">Annual Payment Progress</span>
-                  <span className="font-medium text-card-foreground">
-                    {Math.round((paidAmount / expectedFee) * 100)}%
-                  </span>
+            {installments.length > 0 && (() => {
+              const sortedInsts = [...installments].sort((a, b) => new Date(a.due_date).getTime() - new Date(b.due_date).getTime());
+              let cumAmt = 0;
+              let paidInstallments = 0;
+              for (const inst of sortedInsts) {
+                cumAmt += Number(inst.amount);
+                if (paidAmount >= cumAmt) {
+                  paidInstallments++;
+                } else {
+                  break;
+                }
+              }
+              const progressPercent = Math.round((paidInstallments / sortedInsts.length) * 100);
+              
+              return (
+                <div className="mb-4">
+                  <div className="flex justify-between text-sm mb-2">
+                    <span className="text-muted-foreground">Installment Progress</span>
+                    <span className="font-medium text-card-foreground">
+                      {paidInstallments}/{sortedInsts.length} installments completed
+                    </span>
+                  </div>
+                  <div className="h-3 bg-muted rounded-full overflow-hidden">
+                    <div 
+                      className="h-full bg-gradient-to-r from-primary to-success rounded-full transition-all duration-500"
+                      style={{ width: `${progressPercent}%` }}
+                    />
+                  </div>
                 </div>
-                <div className="h-3 bg-muted rounded-full overflow-hidden">
-                  <div 
-                    className="h-full bg-gradient-to-r from-primary to-success rounded-full transition-all duration-500"
-                    style={{ width: `${Math.min((paidAmount / expectedFee) * 100, 100)}%` }}
-                  />
-                </div>
-              </div>
-            )}
+              );
+            })()}
 
             {feePayments.length > 0 && (
               <div className="mt-6">
