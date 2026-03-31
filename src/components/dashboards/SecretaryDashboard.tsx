@@ -259,7 +259,7 @@ export function SecretaryDashboard() {
     
     try {
       // Fetch data using secure queries
-      const [studentsRes, paymentsRes, structureRes, feedbackRes, debtHistoryRes, parentsRes, installmentsRes] = await Promise.all([
+      const [studentsRes, paymentsRes, structureRes, feedbackRes, debtHistoryRes, parentsRes, installmentsRes, familyMembersRes, familyInstRes] = await Promise.all([
         fetchTable<Student>('students'),
         fetchTable<FeePayment>('fee_payments', { academic_year: selectedYear }),
         fetchTable<FeeStructure>('fee_structure', { academic_year: selectedYear }),
@@ -267,12 +267,16 @@ export function SecretaryDashboard() {
         fetchTable<any>('student_debt_history', { is_cleared: false }),
         fetchTable<any>('parents'),
         fetchTable<FeeInstallment>('fee_installments', { academic_year: selectedYear }),
+        fetchTable<any>('family_group_members', { academic_year: selectedYear }),
+        fetchTable<any>('family_group_installments', { academic_year: selectedYear }),
       ]);
 
       setStudents(studentsRes || []);
       setFeePayments(paymentsRes || []);
       setFeeStructure(structureRes || []);
       setFeeInstallments(installmentsRes || []);
+      setFamilyGroupMembers(familyMembersRes || []);
+      setFamilyGroupInstallments(familyInstRes || []);
       
       // Enrich feedback with parent and student names
       if (feedbackRes) {
