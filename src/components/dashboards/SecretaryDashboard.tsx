@@ -1738,7 +1738,7 @@ export function SecretaryDashboard() {
               {installmentClass && (
                 <>
                   <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4 mb-4">
-                    {INSTALLMENT_DUE_DATES.map(inst => (
+                    {getInstallmentDueDatesForClass(installmentClass).map(inst => (
                       <div key={inst.number} className="space-y-2">
                         <Label className="text-xs">{inst.label}</Label>
                         <Input
