@@ -327,19 +327,6 @@ export function FamilyGroupsManager({ selectedYear, students, onDataChanged }: P
   };
 
   const handleSaveInstallments = async () => {
-    const [startYearText, endYearText] = selectedYear.split('-');
-    const startYear = Number.parseInt(startYearText, 10);
-    const endYear = Number.parseInt(endYearText, 10);
-
-    if (!Number.isInteger(startYear) || !Number.isInteger(endYear)) {
-      toast({
-        title: "Error",
-        description: "Invalid academic year format",
-        variant: "destructive",
-      });
-      return;
-    }
-
     const preparedInstallments: {
       family_group_id: string;
       installment_number: number;
@@ -354,8 +341,38 @@ export function FamilyGroupsManager({ selectedYear, students, onDataChanged }: P
       const amount = Number.parseFloat(row.amount);
       if (!Number.isFinite(amount) || amount <= 0) continue;
 
-      const month = Number.parseInt(row.due_month, 10);
-      const day = Number.parseInt(row.due_day, 10);
+      const rawDate = row.due_date?.trim();
+      if (!rawDate) {
+        toast({
+          title: "Error",
+          description: `Installment #${i + 1} has an invalid date`,
+          variant: "destructive",
+        });
+        return;
+      }
+
+      const match = rawDate.match(/^(\d{4})-(\d{2})-(\d{2})$/);
+      if (!match) {
+        toast({
+          title: "Error",
+          description: `Installment #${i + 1} date format must be YYYY-MM-DD`,
+          variant: "destructive",
+        });
+        return;
+      }
+
+      const year = Number.parseInt(match[1], 10);
+      const month = Number.parseInt(match[2], 10);
+      const day = Number.parseInt(match[3], 10);
+
+      if (!Number.isInteger(year) || year < 1900 || year > 2100) {
+        toast({
+          title: "Error",
+          description: `Installment #${i + 1} has an invalid year`,
+          variant: "destructive",
+        });
+        return;
+      }
 
       if (!Number.isInteger(month) || month < 1 || month > 12) {
         toast({
@@ -375,31 +392,15 @@ export function FamilyGroupsManager({ selectedYear, students, onDataChanged }: P
         return;
       }
 
-      // For family group installments, determine year ensuring chronological order
-      let dueYear = month >= 1 && month <= 6 ? endYear : startYear;
-      
-      // Check if this date would be before the previous installment's date
-      // If so, bump to the next year to maintain chronological order
-      if (preparedInstallments.length > 0) {
-        const prevDate = new Date(preparedInstallments[preparedInstallments.length - 1].due_date + 'T00:00:00');
-        const candidateDate = new Date(dueYear, month - 1, 1);
-        if (candidateDate < prevDate) {
-          dueYear = dueYear + 1;
-        }
-      }
-      
-      const maxDay = new Date(dueYear, month, 0).getDate();
+      const maxDay = new Date(year, month, 0).getDate();
       const normalizedDay = Math.min(day, maxDay);
-
-      if (normalizedDay !== day) {
-        adjustedRows.push(i + 1);
-      }
+      if (normalizedDay !== day) adjustedRows.push(i + 1);
 
       preparedInstallments.push({
         family_group_id: instGroupId,
         installment_number: preparedInstallments.length + 1,
         amount,
-        due_date: `${dueYear}-${String(month).padStart(2, '0')}-${String(normalizedDay).padStart(2, '0')}`,
+        due_date: `${year}-${String(month).padStart(2, '0')}-${String(normalizedDay).padStart(2, '0')}`,
         academic_year: selectedYear,
       });
     }
