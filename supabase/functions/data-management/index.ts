@@ -43,6 +43,8 @@ const permissions: Record<string, Record<AllowedTable, AllowedOperation[]>> = {
     marks: ["insert", "update", "delete", "upsert"],
     fee_payments: ["insert", "update", "delete"],
     fee_structure: ["insert", "update", "delete"],
+    fee_installments: ["insert", "update", "delete"],
+    student_custom_installments: ["insert", "update", "delete"],
     student_debt_history: ["insert", "update", "delete"],
     feedback: ["update", "delete"],
     parents: ["insert", "update", "delete"],
