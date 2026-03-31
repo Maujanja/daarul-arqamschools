@@ -421,10 +421,7 @@ export function FamilyGroupsManager({ selectedYear, students, onDataChanged }: P
 
       toast({
         title: "Success",
-        description:
-          adjustedRows.length > 0
-            ? `Family installments saved (${adjustedRows.length} invalid date${adjustedRows.length > 1 ? 's' : ''} adjusted to month-end)`
-            : "Family installments saved",
+        description: "Family installments saved",
       });
       setShowInstDialog(false);
       fetchFamilyData();
