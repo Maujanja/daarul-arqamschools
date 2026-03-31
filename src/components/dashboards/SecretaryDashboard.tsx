@@ -1536,11 +1536,11 @@ export function SecretaryDashboard() {
 
       {/* Add Payment Dialog */}
       <Dialog open={showAddPaymentDialog} onOpenChange={setShowAddPaymentDialog}>
-        <DialogContent>
+        <DialogContent className="max-h-[90vh] flex flex-col">
           <DialogHeader>
             <DialogTitle>Record Payment</DialogTitle>
           </DialogHeader>
-          <div className="space-y-4 py-4">
+          <div className="space-y-4 py-4 overflow-y-auto flex-1 pr-1">
             <div className="space-y-2">
               <Label>Student</Label>
               <Select value={selectedStudentId} onValueChange={setSelectedStudentId}>
@@ -1556,6 +1556,75 @@ export function SecretaryDashboard() {
                 </SelectContent>
               </Select>
             </div>
+
+            {/* Installment info for selected student */}
+            {selectedStudentId && (() => {
+              const student = students.find(s => s.id === selectedStudentId);
+              if (!student) return null;
+              
+              // Check custom installments first, then class installments
+              const customInsts = studentCustomInstallments.filter(
+                ci => ci.student_id === selectedStudentId && ci.academic_year === selectedYear
+              );
+              const classInsts = feeInstallments.filter(
+                fi => fi.class === student.class && fi.boarding_type === (student.boarding_type || 'day') && fi.academic_year === selectedYear
+              );
+              const insts = customInsts.length > 0 ? customInsts : classInsts;
+              
+              if (insts.length === 0) return null;
+              
+              const sortedInsts = [...insts].sort((a, b) => a.installment_number - b.installment_number);
+              
+              // Calculate paid amount for this student
+              const studentPayments = feePayments.filter(
+                fp => fp.student_id === selectedStudentId && fp.academic_year === selectedYear
+              );
+              const totalPaid = studentPayments.reduce((sum, p) => sum + Number(p.amount), 0);
+              
+              // Find current installment
+              let cumulative = 0;
+              let currentInstNum = -1;
+              let carryOver = 0;
+              for (const inst of sortedInsts) {
+                cumulative += Number(inst.amount);
+                if (cumulative > totalPaid) {
+                  currentInstNum = inst.installment_number;
+                  const prevCum = cumulative - Number(inst.amount);
+                  carryOver = Math.max(0, prevCum - totalPaid);
+                  break;
+                }
+              }
+              
+              return (
+                <div className="p-3 rounded-lg bg-muted/50 border border-border space-y-2">
+                  <p className="text-sm font-medium text-card-foreground">Installment Status</p>
+                  {currentInstNum > 0 ? (
+                    <>
+                      <div className="flex justify-between text-sm">
+                        <span className="text-muted-foreground">Current Installment:</span>
+                        <span className="font-semibold text-primary">#{currentInstNum} of {sortedInsts.length}</span>
+                      </div>
+                      <div className="flex justify-between text-sm">
+                        <span className="text-muted-foreground">Installment Amount:</span>
+                        <span className="font-medium">TZS {Number(sortedInsts.find(i => i.installment_number === currentInstNum)?.amount || 0).toLocaleString()}</span>
+                      </div>
+                      {carryOver > 0 && (
+                        <div className="flex justify-between text-sm text-destructive">
+                          <span className="flex items-center gap-1"><AlertTriangle className="w-3 h-3" /> Unpaid from previous:</span>
+                          <span className="font-medium">TZS {carryOver.toLocaleString()}</span>
+                        </div>
+                      )}
+                      <div className="flex justify-between text-sm border-t border-border pt-1">
+                        <span className="text-muted-foreground">Total Paid:</span>
+                        <span className="font-medium text-success">TZS {totalPaid.toLocaleString()}</span>
+                      </div>
+                    </>
+                  ) : (
+                    <p className="text-sm text-success font-medium">✓ All installments paid</p>
+                  )}
+                </div>
+              );
+            })()}
             
             <div className="space-y-2">
               <Label>Amount (TZS)</Label>
