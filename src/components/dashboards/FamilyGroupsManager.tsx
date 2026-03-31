@@ -543,7 +543,7 @@ export function FamilyGroupsManager({ selectedYear, students, onDataChanged }: P
           <div className="space-y-4 py-4">
             <p className="text-sm text-muted-foreground">
               Set installments for this family group. These replace individual class installments for all members.
-              Year: <strong>{selectedYear.split('-')[0]}</strong>
+              Academic Year: <strong>{selectedYear}</strong>
             </p>
             {instRows.map((row, index) => (
               <div key={index} className="flex items-end gap-2 p-3 border rounded-lg">
