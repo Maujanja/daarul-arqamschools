@@ -123,7 +123,7 @@ export function FamilyGroupsManager({ selectedYear, students, onDataChanged }: P
   // Installments dialog
   const [showInstDialog, setShowInstDialog] = useState(false);
   const [instGroupId, setInstGroupId] = useState('');
-  const [instRows, setInstRows] = useState<{ amount: string; due_month: string; due_day: string }[]>([]);
+  const [instRows, setInstRows] = useState<{ amount: string; due_date: string }[]>([]);
 
   const fetchFamilyData = useCallback(async () => {
     if (!selectedYear) return;
