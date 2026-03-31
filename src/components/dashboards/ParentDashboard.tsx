@@ -1185,7 +1185,6 @@ export function ParentDashboard() {
             {installments.length > 0 && (() => {
               const sortedInsts = [...installments].sort((a, b) => new Date(a.due_date).getTime() - new Date(b.due_date).getTime());
               const isSpecialCase = sortedInsts.length > 4;
-              const [showAllInstallments, setShowAll] = useState(false);
               const visibleInstallments = isSpecialCase && !showAllInstallments 
                 ? sortedInsts.slice(0, 4) 
                 : sortedInsts;
