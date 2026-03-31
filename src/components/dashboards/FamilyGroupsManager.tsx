@@ -305,14 +305,60 @@ export function FamilyGroupsManager({ selectedYear, students, onDataChanged }: P
   };
 
   const formatDateForInput = (dateStr: string): string => {
-    // Ensure the date is in YYYY-MM-DD format for <input type="date">
-    try {
-      const d = new Date(dateStr + (dateStr.includes('T') ? '' : 'T00:00:00'));
-      if (isNaN(d.getTime())) return dateStr;
-      return `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, '0')}-${String(d.getDate()).padStart(2, '0')}`;
-    } catch {
-      return dateStr;
+    const value = dateStr?.trim();
+    if (!value) return '';
+
+    // Keep DB YYYY-MM-DD as-is and strip ISO time if present
+    const isoPrefixMatch = value.match(/^(\d{4}-\d{2}-\d{2})/);
+    if (isoPrefixMatch) return isoPrefixMatch[1];
+
+    const parsed = new Date(value);
+    if (Number.isNaN(parsed.getTime())) return '';
+
+    const year = parsed.getFullYear();
+    const month = String(parsed.getMonth() + 1).padStart(2, '0');
+    const day = String(parsed.getDate()).padStart(2, '0');
+    return `${year}-${month}-${day}`;
+  };
+
+  const normalizeInstallmentDate = (rawDate: string): string | null => {
+    const value = rawDate.trim();
+    if (!value) return null;
+
+    let year: number | null = null;
+    let month: number | null = null;
+    let day: number | null = null;
+
+    const isoMatch = value.match(/^(\d{4})-(\d{1,2})-(\d{1,2})(?:T.*)?$/);
+    const ymdSlashMatch = value.match(/^(\d{4})\/(\d{1,2})\/(\d{1,2})$/);
+    const dmySlashMatch = value.match(/^(\d{1,2})\/(\d{1,2})\/(\d{4})$/);
+
+    if (isoMatch) {
+      year = Number.parseInt(isoMatch[1], 10);
+      month = Number.parseInt(isoMatch[2], 10);
+      day = Number.parseInt(isoMatch[3], 10);
+    } else if (ymdSlashMatch) {
+      year = Number.parseInt(ymdSlashMatch[1], 10);
+      month = Number.parseInt(ymdSlashMatch[2], 10);
+      day = Number.parseInt(ymdSlashMatch[3], 10);
+    } else if (dmySlashMatch) {
+      day = Number.parseInt(dmySlashMatch[1], 10);
+      month = Number.parseInt(dmySlashMatch[2], 10);
+      year = Number.parseInt(dmySlashMatch[3], 10);
+    } else {
+      const parsed = new Date(value);
+      if (Number.isNaN(parsed.getTime())) return null;
+      year = parsed.getFullYear();
+      month = parsed.getMonth() + 1;
+      day = parsed.getDate();
     }
+
+    if (!year || !month || !day || month < 1 || month > 12) return null;
+
+    const maxDay = new Date(year, month, 0).getDate();
+    const safeDay = Math.max(1, Math.min(day, maxDay));
+
+    return `${year}-${String(month).padStart(2, '0')}-${String(safeDay).padStart(2, '0')}`;
   };
 
   const openInstDialog = (groupId: string) => {
@@ -362,20 +408,9 @@ export function FamilyGroupsManager({ selectedYear, students, onDataChanged }: P
         return;
       }
 
-      // Parse the date - accept YYYY-MM-DD or any parseable date format
-      let parsedDate: Date;
-      const strictMatch = rawDate.match(/^(\d{4})-(\d{1,2})-(\d{1,2})$/);
-      if (strictMatch) {
-        parsedDate = new Date(
-          Number.parseInt(strictMatch[1], 10),
-          Number.parseInt(strictMatch[2], 10) - 1,
-          Number.parseInt(strictMatch[3], 10)
-        );
-      } else {
-        parsedDate = new Date(rawDate + 'T00:00:00');
-      }
+      const normalizedDueDate = normalizeInstallmentDate(rawDate);
 
-      if (isNaN(parsedDate.getTime())) {
+      if (!normalizedDueDate) {
         toast({
           title: "Error",
           description: `Installment #${i + 1} has an invalid date`,
@@ -384,15 +419,11 @@ export function FamilyGroupsManager({ selectedYear, students, onDataChanged }: P
         return;
       }
 
-      const year = parsedDate.getFullYear();
-      const month = parsedDate.getMonth() + 1;
-      const day = parsedDate.getDate();
-
       preparedInstallments.push({
         family_group_id: instGroupId,
         installment_number: preparedInstallments.length + 1,
         amount,
-        due_date: `${year}-${String(month).padStart(2, '0')}-${String(day).padStart(2, '0')}`,
+        due_date: normalizedDueDate,
         academic_year: selectedYear,
       });
     }
@@ -524,7 +555,7 @@ export function FamilyGroupsManager({ selectedYear, students, onDataChanged }: P
                           <div className="grid gap-1">
                             {groupInsts.map(inst => (
                               <div key={inst.id} className="flex justify-between text-xs py-1 px-3 rounded bg-background">
-                                <span>#{inst.installment_number} - Due: {new Date(inst.due_date + 'T00:00:00').toLocaleDateString('en-US', { month: 'short', day: 'numeric' })}</span>
+                                <span>#{inst.installment_number} - Due: {new Date(inst.due_date + 'T00:00:00').toLocaleDateString('en-US', { year: 'numeric', month: 'short', day: 'numeric' })}</span>
                                 <span className="font-medium">TZS {Number(inst.amount).toLocaleString()}</span>
                               </div>
                             ))}
