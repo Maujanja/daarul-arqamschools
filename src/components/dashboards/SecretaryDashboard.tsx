@@ -522,7 +522,7 @@ export function SecretaryDashboard() {
       });
 
       // Insert new installments
-      const records = INSTALLMENT_DUE_DATES
+      const records = getInstallmentDueDatesForClass(installmentClass)
         .filter(inst => installmentAmounts[inst.number] && parseFloat(installmentAmounts[inst.number]) > 0)
         .map(inst => ({
           class: installmentClass,
