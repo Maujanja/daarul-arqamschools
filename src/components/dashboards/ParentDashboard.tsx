@@ -1173,12 +1173,48 @@ export function ParentDashboard() {
                 <p className="text-sm text-muted-foreground">Total Paid</p>
                 <p className="text-2xl font-bold text-success">TZS {paidAmount.toLocaleString()}</p>
               </div>
-              <div className={`p-4 rounded-lg ${dueInstallmentAmount > 0 ? 'bg-destructive/10' : 'bg-success/10'}`}>
-                <p className="text-sm text-muted-foreground">Current Due (Installments)</p>
-                <p className={`text-2xl font-bold ${dueInstallmentAmount > 0 ? 'text-destructive' : 'text-success'}`}>
-                  {dueInstallmentAmount > 0 ? `TZS ${dueInstallmentAmount.toLocaleString()}` : 'No dues'}
-                </p>
-              </div>
+              {(() => {
+                const sortedInsts = [...installments].sort((a, b) => new Date(a.due_date).getTime() - new Date(b.due_date).getTime());
+                // Find current installment info
+                let cumulativeAmt = 0;
+                let currentInstIndex = -1;
+                let carryOverDebt = 0;
+                for (let i = 0; i < sortedInsts.length; i++) {
+                  cumulativeAmt += Number(sortedInsts[i].amount);
+                  if (cumulativeAmt > paidAmount) {
+                    currentInstIndex = i;
+                    // carryover = what was due up to previous installments minus what's paid
+                    const prevCumulative = cumulativeAmt - Number(sortedInsts[i].amount);
+                    carryOverDebt = Math.max(0, prevCumulative - paidAmount);
+                    break;
+                  }
+                }
+                const allPaid = currentInstIndex === -1;
+                const currentInst = currentInstIndex >= 0 ? sortedInsts[currentInstIndex] : null;
+                const totalDueNow = currentInst ? Number(currentInst.amount) + carryOverDebt : 0;
+
+                return (
+                  <div className={`p-4 rounded-lg ${allPaid ? 'bg-success/10' : 'bg-destructive/10'}`}>
+                    <p className="text-sm text-muted-foreground">
+                      {allPaid ? 'All Installments Paid' : `Installment ${currentInstIndex + 1} of ${sortedInsts.length}`}
+                    </p>
+                    <p className={`text-2xl font-bold ${allPaid ? 'text-success' : 'text-destructive'}`}>
+                      {allPaid ? '✓ Complete' : `TZS ${totalDueNow.toLocaleString()}`}
+                    </p>
+                    {carryOverDebt > 0 && (
+                      <p className="text-xs text-destructive mt-1 flex items-center gap-1">
+                        <AlertTriangle className="w-3 h-3" />
+                        Includes TZS {carryOverDebt.toLocaleString()} unpaid debt from previous installment(s)
+                      </p>
+                    )}
+                    {currentInst && carryOverDebt === 0 && (
+                      <p className="text-xs text-muted-foreground mt-1">
+                        Due: {new Date(currentInst.due_date + 'T00:00:00').toLocaleDateString('en-US', { month: 'short', day: 'numeric', year: 'numeric' })}
+                      </p>
+                    )}
+                  </div>
+                );
+              })()}
             </div>
 
             {/* Installment breakdown */}
