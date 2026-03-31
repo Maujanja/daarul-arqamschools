@@ -20,7 +20,10 @@ type AllowedTable =
   | "teachers"
   | "admin_credentials"
   | "secretary_credentials"
-  | "marks_unlock_requests";
+  | "marks_unlock_requests"
+  | "family_groups"
+  | "family_group_members"
+  | "family_group_installments";
 
 type AllowedOperation = "insert" | "update" | "delete" | "upsert";
 
