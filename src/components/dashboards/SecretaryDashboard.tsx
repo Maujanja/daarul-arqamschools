@@ -586,6 +586,10 @@ export function SecretaryDashboard() {
     setSelectedStudentForInstallment(student);
     setShowCustomInstallmentDialog(true);
     
+    // Load discount info into same dialog
+    setDiscountAmount(student.custom_fee?.toString() || '');
+    setDiscountNotes(student.discount_notes || '');
+    
     // Fetch existing custom installments for this student
     const existing = await fetchTable<StudentCustomInstallment>('student_custom_installments', {
       student_id: student.id,
@@ -604,7 +608,7 @@ export function SecretaryDashboard() {
       );
     } else {
       // Default rows with standard due dates based on student's class
-      const studentClass = selectedStudentForInstallment?.class || '';
+      const studentClass = student.class || '';
       const classDates = getInstallmentDueDatesForClass(studentClass);
       setCustomInstallmentRows(
         classDates.map(inst => ({
@@ -650,11 +654,13 @@ export function SecretaryDashboard() {
       const totalCustomFee = records.reduce((sum, r) => sum + r.amount, 0);
       await update('students', { 
         custom_fee: totalCustomFee,
-        discount_notes: `Special installments (${records.length} installments)`
+        discount_notes: discountNotes || `Special installments (${records.length} installments)`
       }, { id: selectedStudentForInstallment.id });
 
-      toast({ title: "Success", description: `Custom installments saved for ${selectedStudentForInstallment.full_name}` });
+      toast({ title: "Success", description: `Special case saved for ${selectedStudentForInstallment.full_name}` });
       setShowCustomInstallmentDialog(false);
+      setDiscountAmount('');
+      setDiscountNotes('');
       fetchData();
     } catch (error: any) {
       toast({ title: "Error", description: error.message, variant: "destructive" });
@@ -1406,19 +1412,10 @@ export function SecretaryDashboard() {
                                       size="icon"
                                       variant="outline"
                                       className="h-8 w-8"
-                                      onClick={() => openDiscountDialog(student)}
-                                      title="Discount"
-                                    >
-                                      <Percent className="w-3 h-3" />
-                                    </Button>
-                                    <Button
-                                      size="icon"
-                                      variant="outline"
-                                      className="h-8 w-8"
                                       onClick={() => openCustomInstallmentDialog(student)}
-                                      title="Special Installments"
+                                      title="Special Case (Custom Fee & Installments)"
                                     >
-                                      <Calendar className="w-3 h-3" />
+                                      <Settings className="w-3 h-3" />
                                     </Button>
                                     <Button
                                       size="sm"
@@ -1898,7 +1895,7 @@ export function SecretaryDashboard() {
           <DialogHeader className="p-4 sm:p-6 pb-2 sm:pb-2 shrink-0">
             <DialogTitle className="flex items-center gap-2 text-base sm:text-lg">
               <Settings className="w-5 h-5 text-primary" />
-              Special Case Installments
+              Special Case - Custom Fee & Installments
             </DialogTitle>
           </DialogHeader>
           {selectedStudentForInstallment && (
@@ -1910,8 +1907,21 @@ export function SecretaryDashboard() {
                 </p>
               </div>
 
-              <p className="text-xs sm:text-sm text-muted-foreground">
-                Set custom installment amounts and due dates. You can add more than 4 installments.
+              {/* Discount/Reason Section */}
+              <div className="space-y-2 border border-border rounded-lg p-3">
+                <Label className="text-xs sm:text-sm font-semibold">Reason / Notes</Label>
+                <Input
+                  placeholder="e.g. Staff child, Scholarship, Special arrangement"
+                  value={discountNotes}
+                  onChange={(e) => setDiscountNotes(e.target.value)}
+                />
+                <p className="text-xs text-muted-foreground">
+                  Eleza sababu ya mwanafunzi kuwa special case (mfano: mtoto wa mfanyakazi, scholarship, makubaliano maalum)
+                </p>
+              </div>
+
+              <p className="text-xs sm:text-sm text-muted-foreground font-medium">
+                Weka kiwango cha ada kwa kila installment na tarehe yake ya kulipia. Custom fee itahesabiwa kutoka jumla ya installments zote.
               </p>
 
               <div className="space-y-3">
@@ -1981,91 +1991,48 @@ export function SecretaryDashboard() {
                   <Plus className="w-3 h-3 mr-1" />
                   Add Installment
                 </Button>
-                <p className="text-sm font-medium">
-                  Total: TZS {customInstallmentRows.reduce((sum, r) => sum + (parseFloat(r.amount) || 0), 0).toLocaleString()}
+                <p className="text-sm font-medium text-primary">
+                  Custom Fee (Jumla): TZS {customInstallmentRows.reduce((sum, r) => sum + (parseFloat(r.amount) || 0), 0).toLocaleString()}
                 </p>
               </div>
             </div>
           )}
           <DialogFooter className="flex-col sm:flex-row gap-2 p-4 sm:p-6 pt-2 sm:pt-2 shrink-0 border-t">
+            {selectedStudentForInstallment?.custom_fee !== null && selectedStudentForInstallment?.custom_fee !== undefined && (
+              <Button variant="outline" className="w-full sm:w-auto text-destructive" onClick={async () => {
+                if (!selectedStudentForInstallment) return;
+                setIsSubmitting(true);
+                try {
+                  // Remove custom installments
+                  if (studentCustomInstallments.length > 0) {
+                    for (const ci of studentCustomInstallments) {
+                      await remove('student_custom_installments', { id: ci.id });
+                    }
+                  }
+                  // Remove custom fee
+                  await update('students', { custom_fee: null, discount_notes: null }, { id: selectedStudentForInstallment.id });
+                  toast({ title: "Success", description: "Special case removed" });
+                  setShowCustomInstallmentDialog(false);
+                  fetchData();
+                } catch (error: any) {
+                  toast({ title: "Error", description: error.message, variant: "destructive" });
+                } finally {
+                  setIsSubmitting(false);
+                }
+              }} disabled={isSubmitting}>
+                Remove Special Case
+              </Button>
+            )}
             <Button variant="outline" className="w-full sm:w-auto" onClick={() => setShowCustomInstallmentDialog(false)}>Cancel</Button>
             <Button className="w-full sm:w-auto" onClick={handleSaveCustomInstallments} disabled={isSubmitting}>
               {isSubmitting ? <Loader2 className="w-4 h-4 animate-spin mr-2" /> : null}
-              Save Custom Installments
+              Save Special Case
             </Button>
           </DialogFooter>
         </DialogContent>
       </Dialog>
 
-      {/* Student Discount Dialog */}
-      <Dialog open={showDiscountDialog} onOpenChange={setShowDiscountDialog}>
-        <DialogContent>
-          <DialogHeader>
-            <DialogTitle>
-              <div className="flex items-center gap-2">
-                <Percent className="w-5 h-5 text-success" />
-                Custom Fee / Discount
-              </div>
-            </DialogTitle>
-          </DialogHeader>
-          {selectedStudentForDiscount && (
-            <div className="space-y-4 py-4">
-              <div className="p-3 bg-muted rounded-lg">
-                <p className="font-medium">{selectedStudentForDiscount.full_name}</p>
-                <p className="text-sm text-muted-foreground">{selectedStudentForDiscount.class} • {selectedStudentForDiscount.boarding_type || 'Day'}</p>
-              </div>
-              
-              <div className="space-y-2">
-                <Label>Custom Fee Amount (TZS)</Label>
-                <Input
-                  type="number"
-                  placeholder="Enter fee amount (e.g. 1500000)"
-                  value={discountAmount}
-                  onChange={(e) => setDiscountAmount(e.target.value)}
-                />
-                <p className="text-xs text-muted-foreground">
-                  If this student has a discount, enter the total amount they should pay (e.g. if fee is 2M and discount is 500K, enter 1500000).
-                  This amount will be their expected fee - once paid in full, the system will show them as complete.
-                </p>
-              </div>
-              
-              <div className="space-y-2">
-                <Label>Discount Reason (Optional)</Label>
-                <Input
-                  placeholder="e.g. Staff child, Scholarship"
-                  value={discountNotes}
-                  onChange={(e) => setDiscountNotes(e.target.value)}
-                />
-              </div>
-
-              {selectedStudentForDiscount.custom_fee !== null && selectedStudentForDiscount.custom_fee !== undefined && (
-                <div className="p-3 bg-success/10 rounded-lg">
-                  <p className="text-sm text-success font-medium">
-                    Current Fee: TZS {Number(selectedStudentForDiscount.custom_fee).toLocaleString()}
-                  </p>
-                  {selectedStudentForDiscount.discount_notes && (
-                    <p className="text-xs text-muted-foreground mt-1">{selectedStudentForDiscount.discount_notes}</p>
-                  )}
-                </div>
-              )}
-            </div>
-          )}
-          <DialogFooter className="flex-col sm:flex-row gap-2">
-            {selectedStudentForDiscount?.custom_fee !== null && selectedStudentForDiscount?.custom_fee !== undefined && (
-              <Button variant="outline" className="text-destructive" onClick={handleRemoveDiscount} disabled={isSubmitting}>
-                Remove Discount
-              </Button>
-            )}
-            <Button variant="outline" onClick={() => setShowDiscountDialog(false)}>
-              Cancel
-            </Button>
-            <Button onClick={handleSaveDiscount} disabled={isSubmitting}>
-              {isSubmitting ? <Loader2 className="w-4 h-4 animate-spin mr-2" /> : null}
-              Save
-            </Button>
-          </DialogFooter>
-        </DialogContent>
-      </Dialog>
+      {/* Student Discount Dialog removed - merged into Special Case dialog above */}
 
       {/* Student Photo Management Dialog */}
       <Dialog open={showPhotoDialog} onOpenChange={setShowPhotoDialog}>
