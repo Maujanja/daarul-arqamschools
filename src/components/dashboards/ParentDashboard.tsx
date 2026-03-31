@@ -1263,7 +1263,7 @@ export function ParentDashboard() {
                       variant="ghost" 
                       size="sm" 
                       className="mt-2 w-full text-primary"
-                      onClick={() => setShowAll(false)}
+                      onClick={() => setShowAllInstallments(false)}
                     >
                       Show less
                     </Button>
