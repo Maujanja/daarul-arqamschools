@@ -202,6 +202,18 @@ export function SecretaryDashboard() {
   const [newFeeYear, setNewFeeYear] = useState('');
   const [newTotalFee, setNewTotalFee] = useState('');
   
+  // Installments state
+  const [feeInstallments, setFeeInstallments] = useState<FeeInstallment[]>([]);
+  const [installmentAmounts, setInstallmentAmounts] = useState<Record<number, string>>({1: '', 2: '', 3: '', 4: ''});
+  const [installmentClass, setInstallmentClass] = useState('');
+  const [installmentBoardingType, setInstallmentBoardingType] = useState('day');
+  
+  // Student custom installments
+  const [showCustomInstallmentDialog, setShowCustomInstallmentDialog] = useState(false);
+  const [selectedStudentForInstallment, setSelectedStudentForInstallment] = useState<Student | null>(null);
+  const [studentCustomInstallments, setStudentCustomInstallments] = useState<StudentCustomInstallment[]>([]);
+  const [customInstallmentRows, setCustomInstallmentRows] = useState<{amount: string; due_date: string; notes: string}[]>([]);
+  
   // Student discount management
   const [showDiscountDialog, setShowDiscountDialog] = useState(false);
   const [selectedStudentForDiscount, setSelectedStudentForDiscount] = useState<Student | null>(null);
