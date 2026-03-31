@@ -1833,7 +1833,7 @@ export function SecretaryDashboard() {
             </DialogTitle>
           </DialogHeader>
           {selectedStudentForInstallment && (
-            <div className="space-y-4 py-2 sm:py-4 px-4 sm:px-6 overflow-y-auto flex-1 overscroll-contain touch-pan-y">
+            <div className="space-y-4 py-2 sm:py-4 px-4 sm:px-6 overflow-y-auto flex-1 min-h-0 overscroll-contain" style={{ WebkitOverflowScrolling: 'touch' }}>
               <div className="p-3 bg-muted rounded-lg">
                 <p className="font-medium text-sm sm:text-base">{selectedStudentForInstallment.full_name}</p>
                 <p className="text-xs sm:text-sm text-muted-foreground">
