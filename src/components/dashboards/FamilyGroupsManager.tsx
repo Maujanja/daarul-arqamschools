@@ -123,7 +123,7 @@ export function FamilyGroupsManager({ selectedYear, students, onDataChanged }: P
   // Installments dialog
   const [showInstDialog, setShowInstDialog] = useState(false);
   const [instGroupId, setInstGroupId] = useState('');
-  const [instRows, setInstRows] = useState<{ amount: string; due_month: string; due_day: string }[]>([]);
+  const [instRows, setInstRows] = useState<{ amount: string; due_date: string }[]>([]);
 
   const fetchFamilyData = useCallback(async () => {
     if (!selectedYear) return;
@@ -305,42 +305,28 @@ export function FamilyGroupsManager({ selectedYear, students, onDataChanged }: P
   };
 
   const openInstDialog = (groupId: string) => {
+    const [startYearText, endYearText] = selectedYear.split('-');
+    const defaultYear = endYearText || startYearText || String(new Date().getFullYear());
+
     setInstGroupId(groupId);
     const existing = getGroupInstallments(groupId);
     if (existing.length > 0) {
-      setInstRows(existing.map(i => {
-        const d = new Date(i.due_date + 'T00:00:00');
-        return {
-          amount: String(i.amount),
-          due_month: String(d.getMonth() + 1),
-          due_day: String(d.getDate()),
-        };
-      }));
+      setInstRows(existing.map(i => ({
+        amount: String(i.amount),
+        due_date: i.due_date,
+      })));
     } else {
       setInstRows([
-        { amount: '', due_month: '1', due_day: '1' },
-        { amount: '', due_month: '3', due_day: '30' },
-        { amount: '', due_month: '6', due_day: '30' },
-        { amount: '', due_month: '9', due_day: '15' },
+        { amount: '', due_date: `${defaultYear}-01-01` },
+        { amount: '', due_date: `${defaultYear}-03-30` },
+        { amount: '', due_date: `${defaultYear}-06-30` },
+        { amount: '', due_date: `${defaultYear}-09-15` },
       ]);
     }
     setShowInstDialog(true);
   };
 
   const handleSaveInstallments = async () => {
-    const [startYearText, endYearText] = selectedYear.split('-');
-    const startYear = Number.parseInt(startYearText, 10);
-    const endYear = Number.parseInt(endYearText, 10);
-
-    if (!Number.isInteger(startYear) || !Number.isInteger(endYear)) {
-      toast({
-        title: "Error",
-        description: "Invalid academic year format",
-        variant: "destructive",
-      });
-      return;
-    }
-
     const preparedInstallments: {
       family_group_id: string;
       installment_number: number;
@@ -355,8 +341,38 @@ export function FamilyGroupsManager({ selectedYear, students, onDataChanged }: P
       const amount = Number.parseFloat(row.amount);
       if (!Number.isFinite(amount) || amount <= 0) continue;
 
-      const month = Number.parseInt(row.due_month, 10);
-      const day = Number.parseInt(row.due_day, 10);
+      const rawDate = row.due_date?.trim();
+      if (!rawDate) {
+        toast({
+          title: "Error",
+          description: `Installment #${i + 1} has an invalid date`,
+          variant: "destructive",
+        });
+        return;
+      }
+
+      const match = rawDate.match(/^(\d{4})-(\d{2})-(\d{2})$/);
+      if (!match) {
+        toast({
+          title: "Error",
+          description: `Installment #${i + 1} date format must be YYYY-MM-DD`,
+          variant: "destructive",
+        });
+        return;
+      }
+
+      const year = Number.parseInt(match[1], 10);
+      const month = Number.parseInt(match[2], 10);
+      const day = Number.parseInt(match[3], 10);
+
+      if (!Number.isInteger(year) || year < 1900 || year > 2100) {
+        toast({
+          title: "Error",
+          description: `Installment #${i + 1} has an invalid year`,
+          variant: "destructive",
+        });
+        return;
+      }
 
       if (!Number.isInteger(month) || month < 1 || month > 12) {
         toast({
@@ -376,31 +392,15 @@ export function FamilyGroupsManager({ selectedYear, students, onDataChanged }: P
         return;
       }
 
-      // For family group installments, determine year ensuring chronological order
-      let dueYear = month >= 1 && month <= 6 ? endYear : startYear;
-      
-      // Check if this date would be before the previous installment's date
-      // If so, bump to the next year to maintain chronological order
-      if (preparedInstallments.length > 0) {
-        const prevDate = new Date(preparedInstallments[preparedInstallments.length - 1].due_date + 'T00:00:00');
-        const candidateDate = new Date(dueYear, month - 1, 1);
-        if (candidateDate < prevDate) {
-          dueYear = dueYear + 1;
-        }
-      }
-      
-      const maxDay = new Date(dueYear, month, 0).getDate();
+      const maxDay = new Date(year, month, 0).getDate();
       const normalizedDay = Math.min(day, maxDay);
-
-      if (normalizedDay !== day) {
-        adjustedRows.push(i + 1);
-      }
+      if (normalizedDay !== day) adjustedRows.push(i + 1);
 
       preparedInstallments.push({
         family_group_id: instGroupId,
         installment_number: preparedInstallments.length + 1,
         amount,
-        due_date: `${dueYear}-${String(month).padStart(2, '0')}-${String(normalizedDay).padStart(2, '0')}`,
+        due_date: `${year}-${String(month).padStart(2, '0')}-${String(normalizedDay).padStart(2, '0')}`,
         academic_year: selectedYear,
       });
     }
@@ -658,32 +658,16 @@ export function FamilyGroupsManager({ selectedYear, students, onDataChanged }: P
                     placeholder="Amount"
                   />
                 </div>
-                <div className="w-20">
-                  <Label className="text-xs">Month</Label>
+                <div className="w-44">
+                  <Label className="text-xs">Due Date</Label>
                   <Input
-                    type="number"
-                    min={1} max={12}
-                    value={row.due_month}
+                    type="date"
+                    value={row.due_date}
                     onChange={e => {
                       const updated = [...instRows];
-                      updated[index].due_month = e.target.value;
+                      updated[index].due_date = e.target.value;
                       setInstRows(updated);
                     }}
-                    placeholder="MM"
-                  />
-                </div>
-                <div className="w-20">
-                  <Label className="text-xs">Day</Label>
-                  <Input
-                    type="number"
-                    min={1} max={31}
-                    value={row.due_day}
-                    onChange={e => {
-                      const updated = [...instRows];
-                      updated[index].due_day = e.target.value;
-                      setInstRows(updated);
-                    }}
-                    placeholder="DD"
                   />
                 </div>
                 <Button
@@ -699,7 +683,11 @@ export function FamilyGroupsManager({ selectedYear, students, onDataChanged }: P
             <Button
               variant="outline"
               size="sm"
-              onClick={() => setInstRows([...instRows, { amount: '', due_month: '1', due_day: '1' }])}
+              onClick={() => {
+                const [startYearText, endYearText] = selectedYear.split('-');
+                const defaultYear = endYearText || startYearText || String(new Date().getFullYear());
+                setInstRows([...instRows, { amount: '', due_date: `${defaultYear}-01-01` }]);
+              }}
             >
               <Plus className="w-4 h-4 mr-1" /> Add Installment
             </Button>
