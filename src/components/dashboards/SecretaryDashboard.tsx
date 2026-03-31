@@ -84,6 +84,26 @@ interface FeeStructure {
   boarding_type: string;
 }
 
+interface FeeInstallment {
+  id: string;
+  class: string;
+  academic_year: string;
+  boarding_type: string;
+  installment_number: number;
+  amount: number;
+  due_date: string;
+}
+
+interface StudentCustomInstallment {
+  id: string;
+  student_id: string;
+  academic_year: string;
+  installment_number: number;
+  amount: number;
+  due_date: string;
+  notes: string | null;
+}
+
 interface ChatMessage {
   role: 'user' | 'assistant';
   content: string;
@@ -117,6 +137,22 @@ interface DebtHistory {
   created_at: string;
   studentName?: string;
   studentClass?: string;
+}
+
+// Fixed installment due dates (month-day)
+const INSTALLMENT_DUE_DATES = [
+  { number: 1, month: 0, day: 1, label: 'Installment 1 (Jan 1)' },
+  { number: 2, month: 2, day: 30, label: 'Installment 2 (Mar 30)' },
+  { number: 3, month: 5, day: 30, label: 'Installment 3 (Jun 30)' },
+  { number: 4, month: 8, day: 15, label: 'Installment 4 (Sep 15)' },
+];
+
+function getInstallmentDueDate(academicYear: string, installmentNumber: number): string {
+  const year = parseInt(academicYear.split('-')[0]);
+  const inst = INSTALLMENT_DUE_DATES.find(i => i.number === installmentNumber);
+  if (!inst) return `${year}-01-01`;
+  const date = new Date(year, inst.month, inst.day);
+  return date.toISOString().split('T')[0];
 }
 
 export function SecretaryDashboard() {
