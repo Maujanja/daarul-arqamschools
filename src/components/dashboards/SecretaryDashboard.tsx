@@ -1823,58 +1823,66 @@ export function SecretaryDashboard() {
 
       {/* Student Custom Installments Dialog */}
       <Dialog open={showCustomInstallmentDialog} onOpenChange={setShowCustomInstallmentDialog}>
-        <DialogContent className="max-w-2xl max-h-[85vh] overflow-y-auto">
+        <DialogContent className="max-w-2xl w-[95vw] max-h-[90vh] overflow-y-auto p-4 sm:p-6">
           <DialogHeader>
-            <DialogTitle className="flex items-center gap-2">
+            <DialogTitle className="flex items-center gap-2 text-base sm:text-lg">
               <Settings className="w-5 h-5 text-primary" />
               Special Case Installments
             </DialogTitle>
           </DialogHeader>
           {selectedStudentForInstallment && (
-            <div className="space-y-4 py-4">
+            <div className="space-y-4 py-2 sm:py-4">
               <div className="p-3 bg-muted rounded-lg">
-                <p className="font-medium">{selectedStudentForInstallment.full_name}</p>
-                <p className="text-sm text-muted-foreground">
+                <p className="font-medium text-sm sm:text-base">{selectedStudentForInstallment.full_name}</p>
+                <p className="text-xs sm:text-sm text-muted-foreground">
                   {selectedStudentForInstallment.class} • {selectedStudentForInstallment.boarding_type || 'Day'} • {selectedYear}
                 </p>
               </div>
 
-              <p className="text-sm text-muted-foreground">
-                Set custom installment amounts and due dates for this student. You can add more than 4 installments.
+              <p className="text-xs sm:text-sm text-muted-foreground">
+                Set custom installment amounts and due dates. You can add more than 4 installments.
               </p>
 
               <div className="space-y-3">
                 {customInstallmentRows.map((row, index) => (
-                  <div key={index} className="grid grid-cols-12 gap-2 items-end">
-                    <div className="col-span-1 text-sm font-medium text-muted-foreground pt-6">
-                      #{index + 1}
+                  <div key={index} className="border border-border rounded-lg p-3 space-y-2 sm:space-y-0 sm:flex sm:items-end sm:gap-2">
+                    <div className="flex items-center justify-between sm:hidden">
+                      <span className="text-xs font-semibold text-muted-foreground">Installment #{index + 1}</span>
+                      {customInstallmentRows.length > 1 && (
+                        <Button size="icon" variant="ghost" className="h-6 w-6 text-destructive" onClick={() => removeCustomInstallmentRow(index)}>
+                          <Trash2 className="w-3 h-3" />
+                        </Button>
+                      )}
                     </div>
-                    <div className="col-span-4 space-y-1">
-                      <Label className="text-xs">Amount (TZS)</Label>
-                      <Input
-                        type="number"
-                        placeholder="Amount"
-                        value={row.amount}
-                        onChange={(e) => {
-                          const updated = [...customInstallmentRows];
-                          updated[index].amount = e.target.value;
-                          setCustomInstallmentRows(updated);
-                        }}
-                      />
+                    <span className="hidden sm:block text-sm font-medium text-muted-foreground w-6 pb-2">#{index + 1}</span>
+                    <div className="grid grid-cols-2 gap-2 sm:flex sm:flex-1 sm:gap-2">
+                      <div className="space-y-1 sm:flex-1">
+                        <Label className="text-xs">Amount (TZS)</Label>
+                        <Input
+                          type="number"
+                          placeholder="Amount"
+                          value={row.amount}
+                          onChange={(e) => {
+                            const updated = [...customInstallmentRows];
+                            updated[index].amount = e.target.value;
+                            setCustomInstallmentRows(updated);
+                          }}
+                        />
+                      </div>
+                      <div className="space-y-1 sm:flex-1">
+                        <Label className="text-xs">Due Date</Label>
+                        <Input
+                          type="date"
+                          value={row.due_date}
+                          onChange={(e) => {
+                            const updated = [...customInstallmentRows];
+                            updated[index].due_date = e.target.value;
+                            setCustomInstallmentRows(updated);
+                          }}
+                        />
+                      </div>
                     </div>
-                    <div className="col-span-3 space-y-1">
-                      <Label className="text-xs">Due Date</Label>
-                      <Input
-                        type="date"
-                        value={row.due_date}
-                        onChange={(e) => {
-                          const updated = [...customInstallmentRows];
-                          updated[index].due_date = e.target.value;
-                          setCustomInstallmentRows(updated);
-                        }}
-                      />
-                    </div>
-                    <div className="col-span-3 space-y-1">
+                    <div className="sm:flex-1 space-y-1">
                       <Label className="text-xs">Notes</Label>
                       <Input
                         placeholder="Optional"
@@ -1886,9 +1894,9 @@ export function SecretaryDashboard() {
                         }}
                       />
                     </div>
-                    <div className="col-span-1">
+                    <div className="hidden sm:block">
                       {customInstallmentRows.length > 1 && (
-                        <Button size="sm" variant="ghost" className="text-destructive" onClick={() => removeCustomInstallmentRow(index)}>
+                        <Button size="icon" variant="ghost" className="h-8 w-8 text-destructive" onClick={() => removeCustomInstallmentRow(index)}>
                           <Trash2 className="w-3 h-3" />
                         </Button>
                       )}
@@ -1908,9 +1916,9 @@ export function SecretaryDashboard() {
               </div>
             </div>
           )}
-          <DialogFooter>
-            <Button variant="outline" onClick={() => setShowCustomInstallmentDialog(false)}>Cancel</Button>
-            <Button onClick={handleSaveCustomInstallments} disabled={isSubmitting}>
+          <DialogFooter className="flex-col sm:flex-row gap-2">
+            <Button variant="outline" className="w-full sm:w-auto" onClick={() => setShowCustomInstallmentDialog(false)}>Cancel</Button>
+            <Button className="w-full sm:w-auto" onClick={handleSaveCustomInstallments} disabled={isSubmitting}>
               {isSubmitting ? <Loader2 className="w-4 h-4 animate-spin mr-2" /> : null}
               Save Custom Installments
             </Button>
