@@ -94,6 +94,12 @@ interface MemberEntry {
   score: number;
 }
 
+function getUniqueMatchedStudentIds(entries: MemberEntry[]): string[] {
+  return Array.from(
+    new Set(entries.flatMap((entry) => (entry.matchedStudentId ? [entry.matchedStudentId] : [])))
+  );
+}
+
 export function FamilyGroupsManager({ selectedYear, students, onDataChanged }: Props) {
   const { toast } = useToast();
   const { fetchTable } = useSecureQuery();
@@ -151,13 +157,27 @@ export function FamilyGroupsManager({ selectedYear, students, onDataChanged }: P
   // Students already in a family group for this year
   const assignedStudentIds = new Set(members.map(m => m.student_id));
 
+  const ensureSuccess = <T,>(result: { success: boolean; error?: string; data?: T }) => {
+    if (!result.success) {
+      throw new Error(result.error || 'Operation failed');
+    }
+
+    return result;
+  };
+
   const updateMemberMatch = (index: number, typedName: string) => {
     const updated = [...memberEntries];
+    const otherMatchedStudentIds = new Set(
+      memberEntries
+        .filter((_, entryIndex) => entryIndex !== index)
+        .flatMap((entry) => (entry.matchedStudentId ? [entry.matchedStudentId] : []))
+    );
+
     const match = findBestMatch(typedName, students.filter(s => 
-      !assignedStudentIds.has(s.id) || 
-      updated.some(e => e.matchedStudentId === s.id) ||
-      selectedMembers.includes(s.id)
+      (!assignedStudentIds.has(s.id) || selectedMembers.includes(s.id)) &&
+      !otherMatchedStudentIds.has(s.id)
     ));
+
     updated[index] = {
       typedName,
       matchedStudentId: match?.id || null,
@@ -166,8 +186,7 @@ export function FamilyGroupsManager({ selectedYear, students, onDataChanged }: P
       score: match ? fuzzyScore(typedName, match.full_name) : 0,
     };
     setMemberEntries(updated);
-    // Sync selectedMembers
-    setSelectedMembers(updated.filter(e => e.matchedStudentId).map(e => e.matchedStudentId!));
+    setSelectedMembers(getUniqueMatchedStudentIds(updated));
   };
 
   const addMemberEntry = () => {
@@ -177,7 +196,7 @@ export function FamilyGroupsManager({ selectedYear, students, onDataChanged }: P
   const removeMemberEntry = (index: number) => {
     const updated = memberEntries.filter((_, i) => i !== index);
     setMemberEntries(updated);
-    setSelectedMembers(updated.filter(e => e.matchedStudentId).map(e => e.matchedStudentId!));
+    setSelectedMembers(getUniqueMatchedStudentIds(updated));
   };
 
   const openCreateDialog = () => {
@@ -209,11 +228,13 @@ export function FamilyGroupsManager({ selectedYear, students, onDataChanged }: P
   };
 
   const handleSaveGroup = async () => {
+    const uniqueSelectedMembers = Array.from(new Set(selectedMembers));
+
     if (!parentName.trim()) {
       toast({ title: "Error", description: "Parent name is required", variant: "destructive" });
       return;
     }
-    if (selectedMembers.length === 0) {
+    if (uniqueSelectedMembers.length === 0) {
       toast({ title: "Error", description: "Add at least one student to the family group", variant: "destructive" });
       return;
     }
@@ -224,37 +245,37 @@ export function FamilyGroupsManager({ selectedYear, students, onDataChanged }: P
 
       if (editingGroup) {
         // Update group
-        await update('family_groups', { parent_name: parentName.trim(), notes: groupNotes.trim() || null }, { id: editingGroup.id });
+        ensureSuccess(await update('family_groups', { parent_name: parentName.trim(), notes: groupNotes.trim() || null }, { id: editingGroup.id }));
         groupId = editingGroup.id;
 
         // Remove old members and re-insert
         const oldMembers = getGroupMembers(groupId);
         for (const m of oldMembers) {
-          await remove('family_group_members', { id: m.id });
+          ensureSuccess(await remove('family_group_members', { id: m.id }));
         }
       } else {
         // Create group
-        const result = await insert<{ id: string }>('family_groups', {
+        const result = ensureSuccess(await insert<{ id: string }>('family_groups', {
           parent_name: parentName.trim(),
           academic_year: selectedYear,
           notes: groupNotes.trim() || null,
-        });
-        if (!result.success || !result.data) throw new Error(result.error || 'Failed to create group');
+        }));
+        if (!result.data) throw new Error('Failed to create group');
         groupId = Array.isArray(result.data) ? result.data[0].id : (result.data as any).id;
       }
 
       // Remove any existing memberships for these students in this academic year (one group only rule)
-      for (const studentId of selectedMembers) {
-        await remove('family_group_members', { student_id: studentId, academic_year: selectedYear });
+      for (const studentId of uniqueSelectedMembers) {
+        ensureSuccess(await remove('family_group_members', { student_id: studentId, academic_year: selectedYear }));
       }
 
       // Insert members
-      for (const studentId of selectedMembers) {
-        await insert('family_group_members', {
+      for (const studentId of uniqueSelectedMembers) {
+        ensureSuccess(await insert('family_group_members', {
           family_group_id: groupId,
           student_id: studentId,
           academic_year: selectedYear,
-        });
+        }));
       }
 
       toast({ title: "Success", description: editingGroup ? "Family group updated" : "Family group created" });
