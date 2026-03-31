@@ -166,7 +166,7 @@ function getInstallmentDueDate(academicYear: string, installmentNumber: number):
   return date.toISOString().split('T')[0];
 }
 
-export function SecretaryDashboard() {
+export function SecretaryDashboard({ isAdminMode = false }: { isAdminMode?: boolean } = {}) {
   const { toast } = useToast();
   const navigate = useNavigate();
   const { fetchTable } = useSecureQuery();
