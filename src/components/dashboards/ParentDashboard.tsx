@@ -401,28 +401,27 @@ export function ParentDashboard() {
         
         setInstallments(studentInstallments);
         
-        // Calculate due installment amount based on current date
-        // An installment is "due" from its due_date until paid
-        // Past unpaid installments accumulate into current dues
+        // Calculate due installment amount - show only the NEXT unpaid installment
         const today = new Date();
-        today.setHours(23, 59, 59, 999); // End of today to ensure same-day comparison works
+        today.setHours(23, 59, 59, 999);
         const totalPaidSoFar = payments.reduce((sum: number, p: any) => sum + Number(p.amount), 0);
-        let cumulativeDue = 0;
         
         const sortedInstallments = [...studentInstallments]
           .sort((a, b) => new Date(a.due_date).getTime() - new Date(b.due_date).getTime());
         
-        sortedInstallments.forEach(inst => {
-          const dueDate = new Date(inst.due_date + 'T00:00:00');
-          if (dueDate <= today) {
-            cumulativeDue += Number(inst.amount);
+        // Find the first unpaid installment (cumulative amount > paid)
+        let cumulativeAmount = 0;
+        let nextDueInstallmentAmount = 0;
+        for (const inst of sortedInstallments) {
+          cumulativeAmount += Number(inst.amount);
+          if (cumulativeAmount > totalPaidSoFar) {
+            // This installment is not fully paid - show its amount as "current due"
+            nextDueInstallmentAmount = Number(inst.amount);
+            break;
           }
-        });
+        }
         
-        
-        
-        const dueAmount = Math.max(0, cumulativeDue - totalPaidSoFar);
-        setDueInstallmentAmount(dueAmount);
+        setDueInstallmentAmount(nextDueInstallmentAmount);
         
         // Fetch historical debts using secure query
         const debtsData = await fetchTable<any>('student_debt_history', { 
