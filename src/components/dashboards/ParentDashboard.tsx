@@ -1181,26 +1181,29 @@ export function ParentDashboard() {
             </div>
 
             {/* Installment breakdown */}
-            {installments.length > 0 && (
-              <div className="mb-6">
-                <h4 className="font-medium text-card-foreground mb-3">Installment Schedule</h4>
-                <div className="space-y-2">
-                  {installments
-                    .sort((a, b) => new Date(a.due_date).getTime() - new Date(b.due_date).getTime())
-                    .map((inst, index) => {
+            {installments.length > 0 && (() => {
+              const sortedInsts = [...installments].sort((a, b) => new Date(a.due_date).getTime() - new Date(b.due_date).getTime());
+              const isSpecialCase = sortedInsts.length > 4;
+              const [showAllInstallments, setShowAll] = useState(false);
+              const visibleInstallments = isSpecialCase && !showAllInstallments 
+                ? sortedInsts.slice(0, 4) 
+                : sortedInsts;
+              
+              return (
+                <div className="mb-6">
+                  <h4 className="font-medium text-card-foreground mb-3">Installment Schedule</h4>
+                  <div className="space-y-2">
+                    {visibleInstallments.map((inst, index) => {
                       const today = new Date();
                       today.setHours(23, 59, 59, 999);
                       const dueDate = new Date(inst.due_date + 'T00:00:00');
                       const isDue = dueDate <= today;
-                      const isPast = dueDate < today;
                       
-                      // Calculate cumulative amounts up to this installment
-                      const sortedInsts = [...installments].sort((a, b) => new Date(a.due_date).getTime() - new Date(b.due_date).getTime());
+                      // Use actual index in full sorted list for cumulative calculation
+                      const actualIndex = sortedInsts.findIndex(i => i === inst);
                       const cumulativeDue = sortedInsts
-                        .slice(0, index + 1)
+                        .slice(0, actualIndex + 1)
                         .reduce((sum, i) => sum + Number(i.amount), 0);
-                      const installmentPaid = Math.min(paidAmount, cumulativeDue);
-                      const installmentRemaining = Math.max(0, cumulativeDue - paidAmount);
                       const isFullyPaid = paidAmount >= cumulativeDue;
                       
                       return (
@@ -1211,18 +1214,18 @@ export function ParentDashboard() {
                         }`}>
                           <div className="flex items-center gap-3">
                             <div className={`w-8 h-8 rounded-full flex items-center justify-center text-xs font-bold ${
-                              isFullyPaid ? 'bg-success/20 text-success' :
+                              isFullyPaid ? 'bg-success text-white' :
                               isDue ? 'bg-destructive/20 text-destructive' :
                               'bg-muted text-muted-foreground'
                             }`}>
-                              {index + 1}
+                              {isFullyPaid ? '✓' : actualIndex + 1}
                             </div>
                             <div>
-                              <p className="font-medium text-card-foreground">
+                              <p className={`font-medium ${isFullyPaid ? 'text-success line-through' : 'text-card-foreground'}`}>
                                 TZS {Number(inst.amount).toLocaleString()}
                               </p>
                               <p className="text-xs text-muted-foreground">
-                                Due: {new Date(inst.due_date).toLocaleDateString('en-US', { year: 'numeric', month: 'short', day: 'numeric' })}
+                                Due: {new Date(inst.due_date + 'T00:00:00').toLocaleDateString('en-US', { year: 'numeric', month: 'short', day: 'numeric' })}
                               </p>
                             </div>
                           </div>
@@ -1244,9 +1247,30 @@ export function ParentDashboard() {
                         </div>
                       );
                     })}
+                  </div>
+                  {isSpecialCase && !showAllInstallments && (
+                    <Button 
+                      variant="ghost" 
+                      size="sm" 
+                      className="mt-2 w-full text-primary"
+                      onClick={() => setShowAll(true)}
+                    >
+                      See more installments ({sortedInsts.length - 4} more)
+                    </Button>
+                  )}
+                  {isSpecialCase && showAllInstallments && (
+                    <Button 
+                      variant="ghost" 
+                      size="sm" 
+                      className="mt-2 w-full text-primary"
+                      onClick={() => setShowAll(false)}
+                    >
+                      Show less
+                    </Button>
+                  )}
                 </div>
-              </div>
-            )}
+              );
+            })()}
             
             {expectedFee > 0 && (
               <div className="mb-4">
