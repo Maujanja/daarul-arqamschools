@@ -140,16 +140,26 @@ interface DebtHistory {
 }
 
 // Fixed installment due dates (month-day)
-const INSTALLMENT_DUE_DATES = [
+const ALL_INSTALLMENT_DUE_DATES = [
   { number: 1, month: 0, day: 1, label: 'Installment 1 (Jan 1)' },
   { number: 2, month: 2, day: 30, label: 'Installment 2 (Mar 30)' },
   { number: 3, month: 5, day: 30, label: 'Installment 3 (Jun 30)' },
   { number: 4, month: 8, day: 15, label: 'Installment 4 (Sep 15)' },
 ];
 
+// Classes with only 3 installments (no Sep 15)
+const THREE_INSTALLMENT_CLASSES = ['Primary 4', 'Primary 7', 'Senior 2', 'Senior 4'];
+
+function getInstallmentDueDatesForClass(className: string) {
+  if (THREE_INSTALLMENT_CLASSES.includes(className)) {
+    return ALL_INSTALLMENT_DUE_DATES.filter(i => i.number <= 3);
+  }
+  return ALL_INSTALLMENT_DUE_DATES;
+}
+
 function getInstallmentDueDate(academicYear: string, installmentNumber: number): string {
   const year = parseInt(academicYear.split('-')[0]);
-  const inst = INSTALLMENT_DUE_DATES.find(i => i.number === installmentNumber);
+  const inst = ALL_INSTALLMENT_DUE_DATES.find(i => i.number === installmentNumber);
   if (!inst) return `${year}-01-01`;
   const date = new Date(year, inst.month, inst.day);
   return date.toISOString().split('T')[0];
@@ -512,7 +522,7 @@ export function SecretaryDashboard() {
       });
 
       // Insert new installments
-      const records = INSTALLMENT_DUE_DATES
+      const records = getInstallmentDueDatesForClass(installmentClass)
         .filter(inst => installmentAmounts[inst.number] && parseFloat(installmentAmounts[inst.number]) > 0)
         .map(inst => ({
           class: installmentClass,
@@ -593,10 +603,11 @@ export function SecretaryDashboard() {
         }))
       );
     } else {
-      // Default 4 rows with standard due dates
-      const year = parseInt(selectedYear.split('-')[0]);
+      // Default rows with standard due dates based on student's class
+      const studentClass = selectedStudentForInstallment?.class || '';
+      const classDates = getInstallmentDueDatesForClass(studentClass);
       setCustomInstallmentRows(
-        INSTALLMENT_DUE_DATES.map(inst => ({
+        classDates.map(inst => ({
           amount: '',
           due_date: getInstallmentDueDate(selectedYear, inst.number),
           notes: '',
@@ -1727,7 +1738,7 @@ export function SecretaryDashboard() {
               {installmentClass && (
                 <>
                   <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4 mb-4">
-                    {INSTALLMENT_DUE_DATES.map(inst => (
+                    {getInstallmentDueDatesForClass(installmentClass).map(inst => (
                       <div key={inst.number} className="space-y-2">
                         <Label className="text-xs">{inst.label}</Label>
                         <Input
