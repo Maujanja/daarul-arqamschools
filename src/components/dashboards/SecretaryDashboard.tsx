@@ -1391,27 +1391,30 @@ export function SecretaryDashboard() {
                                     <span className="text-success font-medium">None</span>
                                   )}
                                 </td>
-                                <td className="py-3 px-4 text-right">
-                                  <div className="flex gap-1 justify-end">
+                                <td className="py-3 px-2 sm:px-4 text-right">
+                                  <div className="flex gap-1 justify-end flex-wrap">
                                     <Button
-                                      size="sm"
+                                      size="icon"
                                       variant="outline"
+                                      className="h-8 w-8"
                                       onClick={() => openPhotoDialog(student)}
                                       title="Manage Photo"
                                     >
                                       <Camera className="w-3 h-3" />
                                     </Button>
                                     <Button
-                                      size="sm"
+                                      size="icon"
                                       variant="outline"
+                                      className="h-8 w-8"
                                       onClick={() => openDiscountDialog(student)}
                                       title="Discount"
                                     >
                                       <Percent className="w-3 h-3" />
                                     </Button>
                                     <Button
-                                      size="sm"
+                                      size="icon"
                                       variant="outline"
+                                      className="h-8 w-8"
                                       onClick={() => openCustomInstallmentDialog(student)}
                                       title="Special Installments"
                                     >
@@ -1419,13 +1422,14 @@ export function SecretaryDashboard() {
                                     </Button>
                                     <Button
                                       size="sm"
+                                      className="h-8"
                                       onClick={() => {
                                         setSelectedStudentId(student.id);
                                         setShowAddPaymentDialog(true);
                                       }}
                                     >
-                                      <Receipt className="w-3 h-3 mr-1" />
-                                      Pay
+                                      <Receipt className="w-3 h-3 sm:mr-1" />
+                                      <span className="hidden sm:inline">Pay</span>
                                     </Button>
                                   </div>
                                 </td>
