@@ -488,7 +488,179 @@ export function SecretaryDashboard() {
     }, 100);
   };
 
-  // Student discount functions
+  // Installment management functions
+  const handleSaveInstallments = async () => {
+    const yearToUse = newFeeYear || selectedYear;
+    if (!installmentClass || !yearToUse) {
+      toast({ title: "Error", description: "Please select class and year", variant: "destructive" });
+      return;
+    }
+
+    const hasAnyAmount = Object.values(installmentAmounts).some(v => v && parseFloat(v) > 0);
+    if (!hasAnyAmount) {
+      toast({ title: "Error", description: "Please enter at least one installment amount", variant: "destructive" });
+      return;
+    }
+
+    setIsSubmitting(true);
+    try {
+      // Delete existing installments for this class/year/boarding combo
+      await remove('fee_installments', { 
+        class: installmentClass, 
+        academic_year: yearToUse, 
+        boarding_type: installmentBoardingType 
+      });
+
+      // Insert new installments
+      const records = INSTALLMENT_DUE_DATES
+        .filter(inst => installmentAmounts[inst.number] && parseFloat(installmentAmounts[inst.number]) > 0)
+        .map(inst => ({
+          class: installmentClass,
+          academic_year: yearToUse,
+          boarding_type: installmentBoardingType,
+          installment_number: inst.number,
+          amount: parseFloat(installmentAmounts[inst.number]),
+          due_date: getInstallmentDueDate(yearToUse, inst.number),
+        }));
+
+      if (records.length > 0) {
+        const result = await insert('fee_installments', records);
+        if (!result.success) throw new Error(result.error);
+      }
+
+      // Auto-update total fee in fee_structure
+      const totalFee = records.reduce((sum, r) => sum + r.amount, 0);
+      if (totalFee > 0) {
+        // Check if fee_structure exists
+        const existingStructure = feeStructure.find(
+          fs => fs.class === installmentClass && fs.boarding_type === installmentBoardingType && fs.academic_year === yearToUse
+        );
+        if (existingStructure) {
+          await update('fee_structure', { total_fee: totalFee }, { id: existingStructure.id });
+        } else {
+          await insert('fee_structure', {
+            class: installmentClass,
+            boarding_type: installmentBoardingType,
+            total_fee: totalFee,
+            tuition_fee: totalFee,
+            academic_year: yearToUse,
+            term: 'Annual'
+          });
+        }
+      }
+
+      toast({ title: "Success", description: `Installments saved for ${installmentClass} (${installmentBoardingType})` });
+      setInstallmentAmounts({1: '', 2: '', 3: '', 4: ''});
+      setInstallmentClass('');
+      fetchData();
+    } catch (error: any) {
+      toast({ title: "Error", description: error.message, variant: "destructive" });
+    } finally {
+      setIsSubmitting(false);
+    }
+  };
+
+  const loadInstallmentsForClass = (cls: string, boardingType: string) => {
+    const existing = feeInstallments.filter(
+      fi => fi.class === cls && fi.boarding_type === boardingType
+    );
+    const amounts: Record<number, string> = {1: '', 2: '', 3: '', 4: ''};
+    existing.forEach(fi => {
+      amounts[fi.installment_number] = fi.amount.toString();
+    });
+    setInstallmentAmounts(amounts);
+  };
+
+  // Student custom installment functions
+  const openCustomInstallmentDialog = async (student: Student) => {
+    setSelectedStudentForInstallment(student);
+    setShowCustomInstallmentDialog(true);
+    
+    // Fetch existing custom installments for this student
+    const existing = await fetchTable<StudentCustomInstallment>('student_custom_installments', {
+      student_id: student.id,
+      academic_year: selectedYear,
+    });
+    
+    setStudentCustomInstallments(existing || []);
+    
+    if (existing && existing.length > 0) {
+      setCustomInstallmentRows(
+        existing.sort((a, b) => a.installment_number - b.installment_number).map(ci => ({
+          amount: ci.amount.toString(),
+          due_date: ci.due_date,
+          notes: ci.notes || '',
+        }))
+      );
+    } else {
+      // Default 4 rows with standard due dates
+      const year = parseInt(selectedYear.split('-')[0]);
+      setCustomInstallmentRows(
+        INSTALLMENT_DUE_DATES.map(inst => ({
+          amount: '',
+          due_date: getInstallmentDueDate(selectedYear, inst.number),
+          notes: '',
+        }))
+      );
+    }
+  };
+
+  const handleSaveCustomInstallments = async () => {
+    if (!selectedStudentForInstallment) return;
+    
+    const validRows = customInstallmentRows.filter(r => r.amount && parseFloat(r.amount) > 0);
+    if (validRows.length === 0) {
+      toast({ title: "Error", description: "Please enter at least one installment", variant: "destructive" });
+      return;
+    }
+
+    setIsSubmitting(true);
+    try {
+      // Delete existing custom installments
+      await remove('student_custom_installments', {
+        student_id: selectedStudentForInstallment.id,
+        academic_year: selectedYear,
+      });
+
+      // Insert new
+      const records = validRows.map((row, idx) => ({
+        student_id: selectedStudentForInstallment.id,
+        academic_year: selectedYear,
+        installment_number: idx + 1,
+        amount: parseFloat(row.amount),
+        due_date: row.due_date,
+        notes: row.notes || null,
+      }));
+
+      const result = await insert('student_custom_installments', records);
+      if (!result.success) throw new Error(result.error);
+
+      // Update student custom_fee to total of all custom installments
+      const totalCustomFee = records.reduce((sum, r) => sum + r.amount, 0);
+      await update('students', { 
+        custom_fee: totalCustomFee,
+        discount_notes: `Special installments (${records.length} installments)`
+      }, { id: selectedStudentForInstallment.id });
+
+      toast({ title: "Success", description: `Custom installments saved for ${selectedStudentForInstallment.full_name}` });
+      setShowCustomInstallmentDialog(false);
+      fetchData();
+    } catch (error: any) {
+      toast({ title: "Error", description: error.message, variant: "destructive" });
+    } finally {
+      setIsSubmitting(false);
+    }
+  };
+
+  const addCustomInstallmentRow = () => {
+    const year = parseInt(selectedYear.split('-')[0]);
+    setCustomInstallmentRows(prev => [...prev, { amount: '', due_date: `${year}-01-01`, notes: '' }]);
+  };
+
+  const removeCustomInstallmentRow = (index: number) => {
+    setCustomInstallmentRows(prev => prev.filter((_, i) => i !== index));
+  };
+
   const openDiscountDialog = (student: Student) => {
     setSelectedStudentForDiscount(student);
     setDiscountAmount(student.custom_fee?.toString() || '');
