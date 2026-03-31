@@ -1991,8 +1991,8 @@ export function SecretaryDashboard() {
                   <Plus className="w-3 h-3 mr-1" />
                   Add Installment
                 </Button>
-                <p className="text-sm font-medium">
-                  Total: TZS {customInstallmentRows.reduce((sum, r) => sum + (parseFloat(r.amount) || 0), 0).toLocaleString()}
+                <p className="text-sm font-medium text-primary">
+                  Custom Fee (Jumla): TZS {customInstallmentRows.reduce((sum, r) => sum + (parseFloat(r.amount) || 0), 0).toLocaleString()}
                 </p>
               </div>
             </div>
