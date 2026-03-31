@@ -1825,7 +1825,7 @@ export function SecretaryDashboard() {
 
       {/* Student Custom Installments Dialog */}
       <Dialog open={showCustomInstallmentDialog} onOpenChange={setShowCustomInstallmentDialog}>
-        <DialogContent className="max-w-2xl w-[95vw] max-h-[85vh] flex flex-col p-0 sm:p-0 gap-0">
+        <DialogContent className="left-0 top-0 w-screen h-[100dvh] max-h-[100dvh] translate-x-0 translate-y-0 rounded-none border-0 sm:left-[50%] sm:top-[50%] sm:w-[95vw] sm:h-auto sm:max-h-[85vh] sm:translate-x-[-50%] sm:translate-y-[-50%] sm:rounded-lg sm:border max-w-2xl flex flex-col p-0 sm:p-0 gap-0">
           <DialogHeader className="p-4 sm:p-6 pb-2 sm:pb-2 shrink-0">
             <DialogTitle className="flex items-center gap-2 text-base sm:text-lg">
               <Settings className="w-5 h-5 text-primary" />
