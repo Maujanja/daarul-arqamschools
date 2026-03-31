@@ -243,6 +243,11 @@ export function FamilyGroupsManager({ selectedYear, students, onDataChanged }: P
         groupId = Array.isArray(result.data) ? result.data[0].id : (result.data as any).id;
       }
 
+      // Remove any existing memberships for these students in this academic year (one group only rule)
+      for (const studentId of selectedMembers) {
+        await remove('family_group_members', { student_id: studentId, academic_year: selectedYear });
+      }
+
       // Insert members
       for (const studentId of selectedMembers) {
         await insert('family_group_members', {
