@@ -1826,14 +1826,14 @@ export function SecretaryDashboard() {
       {/* Student Custom Installments Dialog */}
       <Dialog open={showCustomInstallmentDialog} onOpenChange={setShowCustomInstallmentDialog}>
         <DialogContent className="max-w-2xl w-[95vw] max-h-[85vh] flex flex-col p-0 sm:p-0 gap-0">
-          <DialogHeader>
+          <DialogHeader className="p-4 sm:p-6 pb-2 sm:pb-2 shrink-0">
             <DialogTitle className="flex items-center gap-2 text-base sm:text-lg">
               <Settings className="w-5 h-5 text-primary" />
               Special Case Installments
             </DialogTitle>
           </DialogHeader>
           {selectedStudentForInstallment && (
-            <div className="space-y-4 py-2 sm:py-4">
+            <div className="space-y-4 py-2 sm:py-4 px-4 sm:px-6 overflow-y-auto flex-1 overscroll-contain touch-pan-y">
               <div className="p-3 bg-muted rounded-lg">
                 <p className="font-medium text-sm sm:text-base">{selectedStudentForInstallment.full_name}</p>
                 <p className="text-xs sm:text-sm text-muted-foreground">
