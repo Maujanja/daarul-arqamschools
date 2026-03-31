@@ -376,7 +376,19 @@ export function FamilyGroupsManager({ selectedYear, students, onDataChanged }: P
         return;
       }
 
-      const dueYear = month >= 1 && month <= 6 ? endYear : startYear;
+      // For family group installments, determine year ensuring chronological order
+      let dueYear = month >= 1 && month <= 6 ? endYear : startYear;
+      
+      // Check if this date would be before the previous installment's date
+      // If so, bump to the next year to maintain chronological order
+      if (preparedInstallments.length > 0) {
+        const prevDate = new Date(preparedInstallments[preparedInstallments.length - 1].due_date + 'T00:00:00');
+        const candidateDate = new Date(dueYear, month - 1, 1);
+        if (candidateDate < prevDate) {
+          dueYear = dueYear + 1;
+        }
+      }
+      
       const maxDay = new Date(dueYear, month, 0).getDate();
       const normalizedDay = Math.min(day, maxDay);
 
