@@ -151,11 +151,41 @@ export function FamilyGroupsManager({ selectedYear, students, onDataChanged }: P
   // Students already in a family group for this year
   const assignedStudentIds = new Set(members.map(m => m.student_id));
 
+  const updateMemberMatch = (index: number, typedName: string) => {
+    const updated = [...memberEntries];
+    const match = findBestMatch(typedName, students.filter(s => 
+      !assignedStudentIds.has(s.id) || 
+      updated.some(e => e.matchedStudentId === s.id) ||
+      selectedMembers.includes(s.id)
+    ));
+    updated[index] = {
+      typedName,
+      matchedStudentId: match?.id || null,
+      matchedName: match?.full_name || null,
+      matchedClass: match?.class || null,
+      score: match ? fuzzyScore(typedName, match.full_name) : 0,
+    };
+    setMemberEntries(updated);
+    // Sync selectedMembers
+    setSelectedMembers(updated.filter(e => e.matchedStudentId).map(e => e.matchedStudentId!));
+  };
+
+  const addMemberEntry = () => {
+    setMemberEntries([...memberEntries, { typedName: '', matchedStudentId: null, matchedName: null, matchedClass: null, score: 0 }]);
+  };
+
+  const removeMemberEntry = (index: number) => {
+    const updated = memberEntries.filter((_, i) => i !== index);
+    setMemberEntries(updated);
+    setSelectedMembers(updated.filter(e => e.matchedStudentId).map(e => e.matchedStudentId!));
+  };
+
   const openCreateDialog = () => {
     setEditingGroup(null);
     setParentName('');
     setGroupNotes('');
     setSelectedMembers([]);
+    setMemberEntries([{ typedName: '', matchedStudentId: null, matchedName: null, matchedClass: null, score: 0 }]);
     setShowDialog(true);
   };
 
@@ -163,7 +193,18 @@ export function FamilyGroupsManager({ selectedYear, students, onDataChanged }: P
     setEditingGroup(group);
     setParentName(group.parent_name);
     setGroupNotes(group.notes || '');
-    setSelectedMembers(getGroupMembers(group.id).map(m => m.student_id));
+    const gMembers = getGroupMembers(group.id);
+    setSelectedMembers(gMembers.map(m => m.student_id));
+    setMemberEntries(gMembers.map(m => {
+      const student = students.find(s => s.id === m.student_id);
+      return {
+        typedName: student?.full_name || '',
+        matchedStudentId: m.student_id,
+        matchedName: student?.full_name || null,
+        matchedClass: student?.class || null,
+        score: 1,
+      };
+    }));
     setShowDialog(true);
   };
 
