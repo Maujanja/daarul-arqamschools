@@ -328,35 +328,100 @@ export function FamilyGroupsManager({ selectedYear, students, onDataChanged }: P
   };
 
   const handleSaveInstallments = async () => {
-    const startYear = parseInt(selectedYear.split('-')[0]);
-    const endYear = parseInt(selectedYear.split('-')[1]);
+    const [startYearText, endYearText] = selectedYear.split('-');
+    const startYear = Number.parseInt(startYearText, 10);
+    const endYear = Number.parseInt(endYearText, 10);
+
+    if (!Number.isInteger(startYear) || !Number.isInteger(endYear)) {
+      toast({
+        title: "Error",
+        description: "Invalid academic year format",
+        variant: "destructive",
+      });
+      return;
+    }
+
+    const preparedInstallments: {
+      family_group_id: string;
+      installment_number: number;
+      amount: number;
+      due_date: string;
+      academic_year: string;
+    }[] = [];
+    const adjustedRows: number[] = [];
+
+    for (let i = 0; i < instRows.length; i++) {
+      const row = instRows[i];
+      const amount = Number.parseFloat(row.amount);
+      if (!Number.isFinite(amount) || amount <= 0) continue;
+
+      const month = Number.parseInt(row.due_month, 10);
+      const day = Number.parseInt(row.due_day, 10);
+
+      if (!Number.isInteger(month) || month < 1 || month > 12) {
+        toast({
+          title: "Error",
+          description: `Installment #${i + 1} has an invalid month`,
+          variant: "destructive",
+        });
+        return;
+      }
+
+      if (!Number.isInteger(day) || day < 1) {
+        toast({
+          title: "Error",
+          description: `Installment #${i + 1} has an invalid day`,
+          variant: "destructive",
+        });
+        return;
+      }
+
+      const dueYear = month >= 1 && month <= 6 ? endYear : startYear;
+      const maxDay = new Date(dueYear, month, 0).getDate();
+      const normalizedDay = Math.min(day, maxDay);
+
+      if (normalizedDay !== day) {
+        adjustedRows.push(i + 1);
+      }
+
+      preparedInstallments.push({
+        family_group_id: instGroupId,
+        installment_number: i + 1,
+        amount,
+        due_date: `${dueYear}-${String(month).padStart(2, '0')}-${String(normalizedDay).padStart(2, '0')}`,
+        academic_year: selectedYear,
+      });
+    }
+
+    if (preparedInstallments.length === 0) {
+      toast({
+        title: "Error",
+        description: "Enter at least one valid installment amount",
+        variant: "destructive",
+      });
+      return;
+    }
+
     setIsSubmitting(true);
     try {
       // Remove existing installments
       const existing = getGroupInstallments(instGroupId);
       for (const inst of existing) {
-        await remove('family_group_installments', { id: inst.id });
+        ensureSuccess(await remove('family_group_installments', { id: inst.id }));
       }
 
       // Insert new
-      for (let i = 0; i < instRows.length; i++) {
-        const row = instRows[i];
-        const amount = parseFloat(row.amount);
-        if (isNaN(amount) || amount <= 0) continue;
-        const mm = String(row.due_month).padStart(2, '0');
-        const dd = String(row.due_day).padStart(2, '0');
-        const month = parseInt(row.due_month);
-        const dueYear = month >= 1 && month <= 6 ? endYear : startYear;
-        await insert('family_group_installments', {
-          family_group_id: instGroupId,
-          installment_number: i + 1,
-          amount,
-          due_date: `${dueYear}-${mm}-${dd}`,
-          academic_year: selectedYear,
-        });
+      for (const installment of preparedInstallments) {
+        ensureSuccess(await insert('family_group_installments', installment));
       }
 
-      toast({ title: "Success", description: "Family installments saved" });
+      toast({
+        title: "Success",
+        description:
+          adjustedRows.length > 0
+            ? `Family installments saved (${adjustedRows.length} invalid date${adjustedRows.length > 1 ? 's' : ''} adjusted to month-end)`
+            : "Family installments saved",
+      });
       setShowInstDialog(false);
       fetchFamilyData();
       onDataChanged();
