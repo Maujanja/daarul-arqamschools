@@ -224,6 +224,10 @@ export function SecretaryDashboard() {
   const [selectedStudentForInstallment, setSelectedStudentForInstallment] = useState<Student | null>(null);
   const [studentCustomInstallments, setStudentCustomInstallments] = useState<StudentCustomInstallment[]>([]);
   const [customInstallmentRows, setCustomInstallmentRows] = useState<{amount: string; due_date: string; notes: string}[]>([]);
+
+  // Family group data for fee calculations
+  const [familyGroupMembers, setFamilyGroupMembers] = useState<{student_id: string; family_group_id: string}[]>([]);
+  const [familyGroupInstallments, setFamilyGroupInstallments] = useState<{family_group_id: string; amount: number; installment_number: number; due_date: string}[]>([]);
   
   // Student discount management
   const [showDiscountDialog, setShowDiscountDialog] = useState(false);
@@ -255,7 +259,7 @@ export function SecretaryDashboard() {
     
     try {
       // Fetch data using secure queries
-      const [studentsRes, paymentsRes, structureRes, feedbackRes, debtHistoryRes, parentsRes, installmentsRes] = await Promise.all([
+      const [studentsRes, paymentsRes, structureRes, feedbackRes, debtHistoryRes, parentsRes, installmentsRes, familyMembersRes, familyInstRes] = await Promise.all([
         fetchTable<Student>('students'),
         fetchTable<FeePayment>('fee_payments', { academic_year: selectedYear }),
         fetchTable<FeeStructure>('fee_structure', { academic_year: selectedYear }),
@@ -263,12 +267,16 @@ export function SecretaryDashboard() {
         fetchTable<any>('student_debt_history', { is_cleared: false }),
         fetchTable<any>('parents'),
         fetchTable<FeeInstallment>('fee_installments', { academic_year: selectedYear }),
+        fetchTable<any>('family_group_members', { academic_year: selectedYear }),
+        fetchTable<any>('family_group_installments', { academic_year: selectedYear }),
       ]);
 
       setStudents(studentsRes || []);
       setFeePayments(paymentsRes || []);
       setFeeStructure(structureRes || []);
       setFeeInstallments(installmentsRes || []);
+      setFamilyGroupMembers(familyMembersRes || []);
+      setFamilyGroupInstallments(familyInstRes || []);
       
       // Enrich feedback with parent and student names
       if (feedbackRes) {
@@ -407,13 +415,23 @@ export function SecretaryDashboard() {
     setPaymentNotes('');
   };
 
-  // Get expected fee for a student based on their class and boarding type OR custom fee
+  // Get expected fee for a student based on: family group > custom fee > class fee structure
   const getStudentExpectedFee = (student: Student) => {
-    // If student has custom fee (discount), use that instead
+    // 1. Check if student is in a family group - use family group installments
+    const membership = familyGroupMembers.find(m => m.student_id === student.id);
+    if (membership) {
+      const groupInsts = familyGroupInstallments.filter(i => i.family_group_id === membership.family_group_id);
+      if (groupInsts.length > 0) {
+        return groupInsts.reduce((sum, i) => sum + Number(i.amount), 0);
+      }
+    }
+    
+    // 2. If student has custom fee (special case/discount), use that
     if (student.custom_fee !== null && student.custom_fee !== undefined) {
       return Number(student.custom_fee);
     }
     
+    // 3. Default: class fee structure
     const boardingType = student.boarding_type || 'day';
     const structure = feeStructure.find(f => 
       f.class === student.class && 
@@ -1368,6 +1386,7 @@ export function SecretaryDashboard() {
                             const paidAmount = getStudentPaidAmount(student.id);
                             const balance = expectedFee - paidAmount;
                             const hasDiscount = student.custom_fee !== null && student.custom_fee !== undefined;
+                            const isInFamilyGroup = familyGroupMembers.some(m => m.student_id === student.id);
                             
                             return (
                               <tr key={student.id} className="border-b border-border/50 table-row-hover">
@@ -1386,7 +1405,13 @@ export function SecretaryDashboard() {
                                       {student.stream && (
                                         <span className="ml-1 text-xs text-muted-foreground">({student.stream})</span>
                                       )}
-                                      {hasDiscount && (
+                                      {isInFamilyGroup && (
+                                        <span className="ml-2 inline-flex items-center gap-1 px-1.5 py-0.5 rounded text-xs font-medium bg-primary/10 text-primary">
+                                          <Users className="w-3 h-3" />
+                                          Family
+                                        </span>
+                                      )}
+                                      {hasDiscount && !isInFamilyGroup && (
                                         <span className="ml-2 inline-flex items-center gap-1 px-1.5 py-0.5 rounded text-xs font-medium bg-success/10 text-success">
                                           <Percent className="w-3 h-3" />
                                           Discount
@@ -1567,14 +1592,28 @@ export function SecretaryDashboard() {
               const student = students.find(s => s.id === selectedStudentId);
               if (!student) return null;
               
-              // Check custom installments first, then class installments
-              const customInsts = studentCustomInstallments.filter(
-                ci => ci.student_id === selectedStudentId && ci.academic_year === selectedYear
-              );
-              const classInsts = feeInstallments.filter(
-                fi => fi.class === student.class && fi.boarding_type === (student.boarding_type || 'day') && fi.academic_year === selectedYear
-              );
-              const insts = customInsts.length > 0 ? customInsts : classInsts;
+              // Check family group first, then custom installments, then class installments
+              const membership = familyGroupMembers.find(m => m.student_id === selectedStudentId);
+              let insts: {installment_number: number; amount: number; due_date: string}[] = [];
+              let isFamilyGroup = false;
+              
+              if (membership) {
+                const groupInsts = familyGroupInstallments.filter(i => i.family_group_id === membership.family_group_id);
+                if (groupInsts.length > 0) {
+                  insts = groupInsts;
+                  isFamilyGroup = true;
+                }
+              }
+              
+              if (insts.length === 0) {
+                const customInsts = studentCustomInstallments.filter(
+                  ci => ci.student_id === selectedStudentId && ci.academic_year === selectedYear
+                );
+                const classInsts = feeInstallments.filter(
+                  fi => fi.class === student.class && fi.boarding_type === (student.boarding_type || 'day') && fi.academic_year === selectedYear
+                );
+                insts = customInsts.length > 0 ? customInsts : classInsts;
+              }
               
               if (insts.length === 0) return null;
               
@@ -1602,7 +1641,9 @@ export function SecretaryDashboard() {
               
               return (
                 <div className="p-3 rounded-lg bg-muted/50 border border-border space-y-2">
-                  <p className="text-sm font-medium text-card-foreground">Installment Status</p>
+                  <p className="text-sm font-medium text-card-foreground">
+                    Installment Status {isFamilyGroup && <span className="text-xs text-primary ml-1">(Family Group)</span>}
+                  </p>
                   {currentInstNum > 0 ? (
                     <>
                       <div className="flex justify-between text-sm">
