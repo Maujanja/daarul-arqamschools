@@ -305,23 +305,22 @@ export function FamilyGroupsManager({ selectedYear, students, onDataChanged }: P
   };
 
   const openInstDialog = (groupId: string) => {
+    const [startYearText, endYearText] = selectedYear.split('-');
+    const defaultYear = endYearText || startYearText || String(new Date().getFullYear());
+
     setInstGroupId(groupId);
     const existing = getGroupInstallments(groupId);
     if (existing.length > 0) {
-      setInstRows(existing.map(i => {
-        const d = new Date(i.due_date + 'T00:00:00');
-        return {
-          amount: String(i.amount),
-          due_month: String(d.getMonth() + 1),
-          due_day: String(d.getDate()),
-        };
-      }));
+      setInstRows(existing.map(i => ({
+        amount: String(i.amount),
+        due_date: i.due_date,
+      })));
     } else {
       setInstRows([
-        { amount: '', due_month: '1', due_day: '1' },
-        { amount: '', due_month: '3', due_day: '30' },
-        { amount: '', due_month: '6', due_day: '30' },
-        { amount: '', due_month: '9', due_day: '15' },
+        { amount: '', due_date: `${defaultYear}-01-01` },
+        { amount: '', due_date: `${defaultYear}-03-30` },
+        { amount: '', due_date: `${defaultYear}-06-30` },
+        { amount: '', due_date: `${defaultYear}-09-15` },
       ]);
     }
     setShowInstDialog(true);
