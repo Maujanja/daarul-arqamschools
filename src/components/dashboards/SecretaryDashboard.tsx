@@ -15,6 +15,7 @@ import { useToast } from '@/hooks/use-toast';
 import { useAcademicYears } from '@/hooks/useAcademicYears';
 import { StudentAvatarUpload } from '@/components/StudentAvatarUpload';
 import * as XLSX from 'xlsx';
+import { FamilyGroupsManager } from './FamilyGroupsManager';
 
 import { 
   Users, 
@@ -1104,6 +1105,13 @@ export function SecretaryDashboard() {
           </div>
         </div>
       )}
+
+      {/* Family Fee Groups */}
+      <FamilyGroupsManager
+        selectedYear={selectedYear}
+        students={students}
+        onDataChanged={fetchData}
+      />
 
       {/* Stats Grid */}
       <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-6">

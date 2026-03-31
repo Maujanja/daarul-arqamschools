@@ -101,6 +101,110 @@ export type Database = {
         }
         Relationships: []
       }
+      family_group_installments: {
+        Row: {
+          academic_year: string
+          amount: number
+          created_at: string
+          due_date: string
+          family_group_id: string
+          id: string
+          installment_number: number
+        }
+        Insert: {
+          academic_year: string
+          amount?: number
+          created_at?: string
+          due_date: string
+          family_group_id: string
+          id?: string
+          installment_number: number
+        }
+        Update: {
+          academic_year?: string
+          amount?: number
+          created_at?: string
+          due_date?: string
+          family_group_id?: string
+          id?: string
+          installment_number?: number
+        }
+        Relationships: [
+          {
+            foreignKeyName: "family_group_installments_family_group_id_fkey"
+            columns: ["family_group_id"]
+            isOneToOne: false
+            referencedRelation: "family_groups"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      family_group_members: {
+        Row: {
+          academic_year: string
+          created_at: string
+          family_group_id: string
+          id: string
+          student_id: string
+        }
+        Insert: {
+          academic_year?: string
+          created_at?: string
+          family_group_id: string
+          id?: string
+          student_id: string
+        }
+        Update: {
+          academic_year?: string
+          created_at?: string
+          family_group_id?: string
+          id?: string
+          student_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "family_group_members_family_group_id_fkey"
+            columns: ["family_group_id"]
+            isOneToOne: false
+            referencedRelation: "family_groups"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "family_group_members_student_id_fkey"
+            columns: ["student_id"]
+            isOneToOne: false
+            referencedRelation: "students"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      family_groups: {
+        Row: {
+          academic_year: string
+          created_at: string
+          id: string
+          notes: string | null
+          parent_name: string
+          updated_at: string
+        }
+        Insert: {
+          academic_year: string
+          created_at?: string
+          id?: string
+          notes?: string | null
+          parent_name: string
+          updated_at?: string
+        }
+        Update: {
+          academic_year?: string
+          created_at?: string
+          id?: string
+          notes?: string | null
+          parent_name?: string
+          updated_at?: string
+        }
+        Relationships: []
+      }
       fee_installments: {
         Row: {
           academic_year: string

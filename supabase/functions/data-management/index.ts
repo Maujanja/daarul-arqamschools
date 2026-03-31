@@ -24,7 +24,10 @@ type AllowedTable =
   | "teachers"
   | "admin_credentials"
   | "secretary_credentials"
-  | "marks_unlock_requests";
+  | "marks_unlock_requests"
+  | "family_groups"
+  | "family_group_members"
+  | "family_group_installments";
 
 type AllowedOperation = "insert" | "update" | "delete" | "upsert";
 
@@ -57,6 +60,9 @@ const permissions: Record<string, Record<AllowedTable, AllowedOperation[]>> = {
     admin_credentials: ["update"],
     secretary_credentials: ["insert", "update", "delete"],
     marks_unlock_requests: ["insert", "update", "delete"],
+    family_groups: ["insert", "update", "delete"],
+    family_group_members: ["insert", "update", "delete"],
+    family_group_installments: ["insert", "update", "delete"],
   },
   teacher: {
     students: [],
@@ -77,6 +83,9 @@ const permissions: Record<string, Record<AllowedTable, AllowedOperation[]>> = {
     admin_credentials: [],
     secretary_credentials: [],
     marks_unlock_requests: ["insert", "update"],
+    family_groups: [],
+    family_group_members: [],
+    family_group_installments: [],
   },
   secretary: {
     students: ["insert", "update", "delete"],
@@ -97,6 +106,9 @@ const permissions: Record<string, Record<AllowedTable, AllowedOperation[]>> = {
     admin_credentials: [],
     secretary_credentials: [],
     marks_unlock_requests: [],
+    family_groups: ["insert", "update", "delete"],
+    family_group_members: ["insert", "update", "delete"],
+    family_group_installments: ["insert", "update", "delete"],
   },
   parent: {
     students: [],
@@ -117,6 +129,9 @@ const permissions: Record<string, Record<AllowedTable, AllowedOperation[]>> = {
     admin_credentials: [],
     secretary_credentials: [],
     marks_unlock_requests: [],
+    family_groups: [],
+    family_group_members: [],
+    family_group_installments: [],
   },
 };
 
