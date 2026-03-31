@@ -244,18 +244,20 @@ export function SecretaryDashboard() {
     
     try {
       // Fetch data using secure queries
-      const [studentsRes, paymentsRes, structureRes, feedbackRes, debtHistoryRes, parentsRes] = await Promise.all([
+      const [studentsRes, paymentsRes, structureRes, feedbackRes, debtHistoryRes, parentsRes, installmentsRes] = await Promise.all([
         fetchTable<Student>('students'),
         fetchTable<FeePayment>('fee_payments', { academic_year: selectedYear }),
         fetchTable<FeeStructure>('fee_structure', { academic_year: selectedYear }),
         fetchTable<any>('feedback', { recipient_type: 'secretary' }),
         fetchTable<any>('student_debt_history', { is_cleared: false }),
-        fetchTable<any>('parents')
+        fetchTable<any>('parents'),
+        fetchTable<FeeInstallment>('fee_installments', { academic_year: selectedYear }),
       ]);
 
       setStudents(studentsRes || []);
       setFeePayments(paymentsRes || []);
       setFeeStructure(structureRes || []);
+      setFeeInstallments(installmentsRes || []);
       
       // Enrich feedback with parent and student names
       if (feedbackRes) {
