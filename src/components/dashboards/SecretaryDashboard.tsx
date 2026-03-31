@@ -1386,6 +1386,7 @@ export function SecretaryDashboard() {
                             const paidAmount = getStudentPaidAmount(student.id);
                             const balance = expectedFee - paidAmount;
                             const hasDiscount = student.custom_fee !== null && student.custom_fee !== undefined;
+                            const isInFamilyGroup = familyGroupMembers.some(m => m.student_id === student.id);
                             
                             return (
                               <tr key={student.id} className="border-b border-border/50 table-row-hover">
@@ -1404,7 +1405,13 @@ export function SecretaryDashboard() {
                                       {student.stream && (
                                         <span className="ml-1 text-xs text-muted-foreground">({student.stream})</span>
                                       )}
-                                      {hasDiscount && (
+                                      {isInFamilyGroup && (
+                                        <span className="ml-2 inline-flex items-center gap-1 px-1.5 py-0.5 rounded text-xs font-medium bg-primary/10 text-primary">
+                                          <Users className="w-3 h-3" />
+                                          Family
+                                        </span>
+                                      )}
+                                      {hasDiscount && !isInFamilyGroup && (
                                         <span className="ml-2 inline-flex items-center gap-1 px-1.5 py-0.5 rounded text-xs font-medium bg-success/10 text-success">
                                           <Percent className="w-3 h-3" />
                                           Discount
