@@ -1400,6 +1400,14 @@ export function SecretaryDashboard() {
                                     </Button>
                                     <Button
                                       size="sm"
+                                      variant="outline"
+                                      onClick={() => openCustomInstallmentDialog(student)}
+                                      title="Special Installments"
+                                    >
+                                      <Calendar className="w-3 h-3" />
+                                    </Button>
+                                    <Button
+                                      size="sm"
                                       onClick={() => {
                                         setSelectedStudentId(student.id);
                                         setShowAddPaymentDialog(true);
