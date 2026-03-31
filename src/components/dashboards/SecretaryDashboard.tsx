@@ -432,6 +432,10 @@ export function SecretaryDashboard() {
     setNewTotalFee(fs.total_fee.toString());
     setNewFeeYear(fs.academic_year);
     setShowFeeStructureDialog(true);
+    // Scroll edit form into view after state update
+    setTimeout(() => {
+      document.getElementById('fee-edit-form')?.scrollIntoView({ behavior: 'smooth', block: 'center' });
+    }, 100);
   };
 
   // Student discount functions
