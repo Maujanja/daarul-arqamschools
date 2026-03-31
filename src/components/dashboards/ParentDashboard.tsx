@@ -1315,16 +1315,31 @@ export function ParentDashboard() {
                         .reduce((sum, i) => sum + Number(i.amount), 0);
                       const isFullyPaid = paidAmount >= cumulativeDue;
                       
+                      // Determine the first unpaid installment index
+                      let firstUnpaidIndex = -1;
+                      let cumCheck = 0;
+                      for (let fi = 0; fi < sortedInsts.length; fi++) {
+                        cumCheck += Number(sortedInsts[fi].amount);
+                        if (cumCheck > paidAmount) {
+                          firstUnpaidIndex = fi;
+                          break;
+                        }
+                      }
+                      const isCurrentDue = actualIndex === firstUnpaidIndex && isDue;
+                      const isOverdue = !isFullyPaid && isDue && actualIndex < firstUnpaidIndex;
+                      
                       return (
                         <div key={index} className={`flex items-center justify-between p-3 rounded-lg border ${
                           isFullyPaid ? 'bg-success/5 border-success/20' :
-                          isDue ? 'bg-destructive/5 border-destructive/20' :
+                          isCurrentDue ? 'bg-destructive/5 border-destructive/20' :
+                          isDue ? 'bg-amber-500/5 border-amber-500/20' :
                           'bg-muted/30 border-border/50'
                         }`}>
                           <div className="flex items-center gap-3">
                             <div className={`w-8 h-8 rounded-full flex items-center justify-center text-xs font-bold ${
                               isFullyPaid ? 'bg-success text-white' :
-                              isDue ? 'bg-destructive/20 text-destructive' :
+                              isCurrentDue ? 'bg-destructive/20 text-destructive' :
+                              isDue ? 'bg-amber-500/20 text-amber-600' :
                               'bg-muted text-muted-foreground'
                             }`}>
                               {isFullyPaid ? '✓' : actualIndex + 1}
@@ -1343,9 +1358,13 @@ export function ParentDashboard() {
                               <span className="inline-flex items-center gap-1 px-2 py-1 rounded-full text-xs font-medium bg-success/10 text-success">
                                 ✓ Paid
                               </span>
-                            ) : isDue ? (
+                            ) : isCurrentDue ? (
                               <span className="inline-flex items-center gap-1 px-2 py-1 rounded-full text-xs font-medium bg-destructive/10 text-destructive">
                                 Due Now
+                              </span>
+                            ) : isDue ? (
+                              <span className="inline-flex items-center gap-1 px-2 py-1 rounded-full text-xs font-medium bg-amber-500/10 text-amber-600">
+                                Overdue
                               </span>
                             ) : (
                               <span className="inline-flex items-center gap-1 px-2 py-1 rounded-full text-xs font-medium bg-muted text-muted-foreground">
