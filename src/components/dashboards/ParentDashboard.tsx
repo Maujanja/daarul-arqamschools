@@ -1193,7 +1193,8 @@ export function ParentDashboard() {
                     .sort((a, b) => new Date(a.due_date).getTime() - new Date(b.due_date).getTime())
                     .map((inst, index) => {
                       const today = new Date();
-                      const dueDate = new Date(inst.due_date);
+                      today.setHours(23, 59, 59, 999);
+                      const dueDate = new Date(inst.due_date + 'T00:00:00');
                       const isDue = dueDate <= today;
                       const isPast = dueDate < today;
                       
