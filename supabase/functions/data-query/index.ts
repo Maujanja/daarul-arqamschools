@@ -52,7 +52,8 @@ const readPermissions: Record<string, AllowedTable[]> = {
     "feedback", "parents", "teacher_assignments", "teacher_class_students",
     "subjects", "academic_years", "announcements", "teachers", "teachers_public",
     "admin_credentials_public", "secretary_credentials_public", "secretary_credentials",
-    "marks_unlock_requests"
+    "marks_unlock_requests",
+    "family_groups", "family_group_members", "family_group_installments"
   ],
   teacher: [
     "students", "marks", "teacher_assignments", "teacher_class_students",
@@ -63,12 +64,14 @@ const readPermissions: Record<string, AllowedTable[]> = {
     "students", "marks", "fee_payments", "fee_structure", "fee_installments",
     "student_custom_installments", "student_debt_history",
     "parents", "subjects", "academic_years", "announcements", "feedback",
-    "teachers_public", "secretary_credentials_public"
+    "teachers_public", "secretary_credentials_public",
+    "family_groups", "family_group_members", "family_group_installments"
   ],
   parent: [
     "students", "marks", "fee_payments", "fee_structure", "fee_installments",
     "student_custom_installments", "student_debt_history",
-    "subjects", "academic_years", "announcements", "feedback", "parents"
+    "subjects", "academic_years", "announcements", "feedback", "parents",
+    "family_groups", "family_group_members", "family_group_installments"
   ],
 };
 
