@@ -1585,14 +1585,28 @@ export function SecretaryDashboard() {
               const student = students.find(s => s.id === selectedStudentId);
               if (!student) return null;
               
-              // Check custom installments first, then class installments
-              const customInsts = studentCustomInstallments.filter(
-                ci => ci.student_id === selectedStudentId && ci.academic_year === selectedYear
-              );
-              const classInsts = feeInstallments.filter(
-                fi => fi.class === student.class && fi.boarding_type === (student.boarding_type || 'day') && fi.academic_year === selectedYear
-              );
-              const insts = customInsts.length > 0 ? customInsts : classInsts;
+              // Check family group first, then custom installments, then class installments
+              const membership = familyGroupMembers.find(m => m.student_id === selectedStudentId);
+              let insts: {installment_number: number; amount: number; due_date: string}[] = [];
+              let isFamilyGroup = false;
+              
+              if (membership) {
+                const groupInsts = familyGroupInstallments.filter(i => i.family_group_id === membership.family_group_id);
+                if (groupInsts.length > 0) {
+                  insts = groupInsts;
+                  isFamilyGroup = true;
+                }
+              }
+              
+              if (insts.length === 0) {
+                const customInsts = studentCustomInstallments.filter(
+                  ci => ci.student_id === selectedStudentId && ci.academic_year === selectedYear
+                );
+                const classInsts = feeInstallments.filter(
+                  fi => fi.class === student.class && fi.boarding_type === (student.boarding_type || 'day') && fi.academic_year === selectedYear
+                );
+                insts = customInsts.length > 0 ? customInsts : classInsts;
+              }
               
               if (insts.length === 0) return null;
               
