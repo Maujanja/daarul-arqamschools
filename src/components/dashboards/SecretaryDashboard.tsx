@@ -1619,11 +1619,11 @@ export function SecretaryDashboard() {
 
       {/* Fee Structure & Installments Management Dialog */}
       <Dialog open={showFeeStructureDialog} onOpenChange={setShowFeeStructureDialog}>
-        <DialogContent className="max-w-4xl w-[95vw] max-h-[90vh] overflow-y-auto p-4 sm:p-6">
-          <DialogHeader>
+        <DialogContent className="max-w-4xl w-[95vw] max-h-[85vh] flex flex-col p-0 sm:p-0 gap-0">
+          <DialogHeader className="p-4 sm:p-6 pb-2 sm:pb-2 shrink-0">
             <DialogTitle className="text-base sm:text-lg">Manage Fees & Installments - {selectedYear}</DialogTitle>
           </DialogHeader>
-          <div className="space-y-6 py-2 sm:py-4">
+          <div className="space-y-6 py-2 sm:py-4 px-4 sm:px-6 overflow-y-auto flex-1 overscroll-contain touch-pan-y">
             {/* Current Fee Structure - Card layout on mobile, table on desktop */}
             <div>
               <h4 className="font-medium mb-3 text-sm sm:text-base">Current Fee Structure & Installments</h4>
@@ -1669,6 +1669,7 @@ export function SecretaryDashboard() {
                                     setInstallmentBoardingType(fs.boarding_type);
                                     loadInstallmentsForClass(fs.class, fs.boarding_type);
                                     setNewFeeYear(fs.academic_year);
+                                    setTimeout(() => document.getElementById('installment-edit-form')?.scrollIntoView({ behavior: 'smooth', block: 'start' }), 100);
                                   }}>
                                     <Edit className="w-3 h-3" />
                                   </Button>
@@ -1703,6 +1704,7 @@ export function SecretaryDashboard() {
                                 setInstallmentBoardingType(fs.boarding_type);
                                 loadInstallmentsForClass(fs.class, fs.boarding_type);
                                 setNewFeeYear(fs.academic_year);
+                                setTimeout(() => document.getElementById('installment-edit-form')?.scrollIntoView({ behavior: 'smooth', block: 'start' }), 100);
                               }}>
                                 <Edit className="w-3 h-3" />
                               </Button>
@@ -1733,7 +1735,7 @@ export function SecretaryDashboard() {
             </div>
 
             {/* Set Installments Form */}
-            <div className="border-t pt-4 bg-accent/10 -mx-4 sm:-mx-6 px-4 sm:px-6 py-4 rounded-lg">
+            <div id="installment-edit-form" className="border-t pt-4 bg-accent/10 -mx-4 sm:-mx-6 px-4 sm:px-6 py-4 rounded-lg">
               <h4 className="font-medium mb-3 text-sm sm:text-base flex items-center gap-2">
                 <Calendar className="w-4 h-4 text-primary" />
                 {installmentClass ? `Set Installments: ${installmentClass} (${installmentBoardingType})` : 'Set Installments for a Class'}
@@ -1813,7 +1815,7 @@ export function SecretaryDashboard() {
               )}
             </div>
           </div>
-          <DialogFooter>
+          <DialogFooter className="p-4 sm:p-6 pt-2 sm:pt-2 shrink-0 border-t">
             <Button variant="outline" className="w-full sm:w-auto" onClick={() => { setShowFeeStructureDialog(false); setEditingFeeStructure(null); setInstallmentClass(''); }}>
               Close
             </Button>
@@ -1823,15 +1825,15 @@ export function SecretaryDashboard() {
 
       {/* Student Custom Installments Dialog */}
       <Dialog open={showCustomInstallmentDialog} onOpenChange={setShowCustomInstallmentDialog}>
-        <DialogContent className="max-w-2xl w-[95vw] max-h-[90vh] overflow-y-auto p-4 sm:p-6">
-          <DialogHeader>
+        <DialogContent className="max-w-2xl w-[95vw] max-h-[85vh] flex flex-col p-0 sm:p-0 gap-0">
+          <DialogHeader className="p-4 sm:p-6 pb-2 sm:pb-2 shrink-0">
             <DialogTitle className="flex items-center gap-2 text-base sm:text-lg">
               <Settings className="w-5 h-5 text-primary" />
               Special Case Installments
             </DialogTitle>
           </DialogHeader>
           {selectedStudentForInstallment && (
-            <div className="space-y-4 py-2 sm:py-4">
+            <div className="space-y-4 py-2 sm:py-4 px-4 sm:px-6 overflow-y-auto flex-1 overscroll-contain touch-pan-y">
               <div className="p-3 bg-muted rounded-lg">
                 <p className="font-medium text-sm sm:text-base">{selectedStudentForInstallment.full_name}</p>
                 <p className="text-xs sm:text-sm text-muted-foreground">
@@ -1916,7 +1918,7 @@ export function SecretaryDashboard() {
               </div>
             </div>
           )}
-          <DialogFooter className="flex-col sm:flex-row gap-2">
+          <DialogFooter className="flex-col sm:flex-row gap-2 p-4 sm:p-6 pt-2 sm:pt-2 shrink-0 border-t">
             <Button variant="outline" className="w-full sm:w-auto" onClick={() => setShowCustomInstallmentDialog(false)}>Cancel</Button>
             <Button className="w-full sm:w-auto" onClick={handleSaveCustomInstallments} disabled={isSubmitting}>
               {isSubmitting ? <Loader2 className="w-4 h-4 animate-spin mr-2" /> : null}
