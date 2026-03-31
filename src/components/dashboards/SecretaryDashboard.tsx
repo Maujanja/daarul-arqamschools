@@ -1815,7 +1815,7 @@ export function SecretaryDashboard() {
               )}
             </div>
           </div>
-          <DialogFooter>
+          <DialogFooter className="p-4 sm:p-6 pt-2 sm:pt-2 shrink-0 border-t">
             <Button variant="outline" className="w-full sm:w-auto" onClick={() => { setShowFeeStructureDialog(false); setEditingFeeStructure(null); setInstallmentClass(''); }}>
               Close
             </Button>
