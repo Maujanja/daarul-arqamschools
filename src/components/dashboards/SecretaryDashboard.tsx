@@ -1391,27 +1391,30 @@ export function SecretaryDashboard() {
                                     <span className="text-success font-medium">None</span>
                                   )}
                                 </td>
-                                <td className="py-3 px-4 text-right">
-                                  <div className="flex gap-1 justify-end">
+                                <td className="py-3 px-2 sm:px-4 text-right">
+                                  <div className="flex gap-1 justify-end flex-wrap">
                                     <Button
-                                      size="sm"
+                                      size="icon"
                                       variant="outline"
+                                      className="h-8 w-8"
                                       onClick={() => openPhotoDialog(student)}
                                       title="Manage Photo"
                                     >
                                       <Camera className="w-3 h-3" />
                                     </Button>
                                     <Button
-                                      size="sm"
+                                      size="icon"
                                       variant="outline"
+                                      className="h-8 w-8"
                                       onClick={() => openDiscountDialog(student)}
                                       title="Discount"
                                     >
                                       <Percent className="w-3 h-3" />
                                     </Button>
                                     <Button
-                                      size="sm"
+                                      size="icon"
                                       variant="outline"
+                                      className="h-8 w-8"
                                       onClick={() => openCustomInstallmentDialog(student)}
                                       title="Special Installments"
                                     >
@@ -1419,13 +1422,14 @@ export function SecretaryDashboard() {
                                     </Button>
                                     <Button
                                       size="sm"
+                                      className="h-8"
                                       onClick={() => {
                                         setSelectedStudentId(student.id);
                                         setShowAddPaymentDialog(true);
                                       }}
                                     >
-                                      <Receipt className="w-3 h-3 mr-1" />
-                                      Pay
+                                      <Receipt className="w-3 h-3 sm:mr-1" />
+                                      <span className="hidden sm:inline">Pay</span>
                                     </Button>
                                   </div>
                                 </td>
@@ -1615,82 +1619,128 @@ export function SecretaryDashboard() {
 
       {/* Fee Structure & Installments Management Dialog */}
       <Dialog open={showFeeStructureDialog} onOpenChange={setShowFeeStructureDialog}>
-        <DialogContent className="max-w-4xl max-h-[85vh] overflow-y-auto">
+        <DialogContent className="max-w-4xl w-[95vw] max-h-[90vh] overflow-y-auto p-4 sm:p-6">
           <DialogHeader>
-            <DialogTitle>Manage Fees & Installments - {selectedYear}</DialogTitle>
+            <DialogTitle className="text-base sm:text-lg">Manage Fees & Installments - {selectedYear}</DialogTitle>
           </DialogHeader>
-          <div className="space-y-6 py-4">
-            {/* Current Fee Structure with Installments */}
+          <div className="space-y-6 py-2 sm:py-4">
+            {/* Current Fee Structure - Card layout on mobile, table on desktop */}
             <div>
-              <h4 className="font-medium mb-3">Current Fee Structure & Installments</h4>
+              <h4 className="font-medium mb-3 text-sm sm:text-base">Current Fee Structure & Installments</h4>
               {feeStructure.length > 0 ? (
-                <div className="overflow-x-auto">
-                  <table className="w-full text-sm">
-                    <thead>
-                      <tr className="border-b">
-                        <th className="text-left py-2 px-3">Class</th>
-                        <th className="text-left py-2 px-3">Type</th>
-                        <th className="text-right py-2 px-3">Total Fee</th>
-                        <th className="text-right py-2 px-3">Inst. 1 (Jan 1)</th>
-                        <th className="text-right py-2 px-3">Inst. 2 (Mar 30)</th>
-                        <th className="text-right py-2 px-3">Inst. 3 (Jun 30)</th>
-                        <th className="text-right py-2 px-3">Inst. 4 (Sep 15)</th>
-                        <th className="text-right py-2 px-3">Action</th>
-                      </tr>
-                    </thead>
-                    <tbody>
-                      {feeStructure.map((fs) => {
-                        const classInstallments = feeInstallments.filter(
-                          fi => fi.class === fs.class && fi.boarding_type === fs.boarding_type
-                        );
-                        return (
-                          <tr key={fs.id} className="border-b">
-                            <td className="py-2 px-3">{fs.class}</td>
-                            <td className="py-2 px-3 capitalize">{fs.boarding_type}</td>
-                            <td className="py-2 px-3 text-right font-medium">{Number(fs.total_fee).toLocaleString()}</td>
-                            {[1,2,3,4].map(num => {
-                              const inst = classInstallments.find(ci => ci.installment_number === num);
+                <>
+                  {/* Desktop table */}
+                  <div className="hidden md:block overflow-x-auto">
+                    <table className="w-full text-sm">
+                      <thead>
+                        <tr className="border-b">
+                          <th className="text-left py-2 px-3">Class</th>
+                          <th className="text-left py-2 px-3">Type</th>
+                          <th className="text-right py-2 px-3">Total Fee</th>
+                          <th className="text-right py-2 px-3">Inst. 1 (Jan 1)</th>
+                          <th className="text-right py-2 px-3">Inst. 2 (Mar 30)</th>
+                          <th className="text-right py-2 px-3">Inst. 3 (Jun 30)</th>
+                          <th className="text-right py-2 px-3">Inst. 4 (Sep 15)</th>
+                          <th className="text-right py-2 px-3">Action</th>
+                        </tr>
+                      </thead>
+                      <tbody>
+                        {feeStructure.map((fs) => {
+                          const classInstallments = feeInstallments.filter(
+                            fi => fi.class === fs.class && fi.boarding_type === fs.boarding_type
+                          );
+                          return (
+                            <tr key={fs.id} className="border-b">
+                              <td className="py-2 px-3">{fs.class}</td>
+                              <td className="py-2 px-3 capitalize">{fs.boarding_type}</td>
+                              <td className="py-2 px-3 text-right font-medium">{Number(fs.total_fee).toLocaleString()}</td>
+                              {[1,2,3,4].map(num => {
+                                const inst = classInstallments.find(ci => ci.installment_number === num);
+                                return (
+                                  <td key={num} className="py-2 px-3 text-right text-muted-foreground">
+                                    {inst ? `TZS ${Number(inst.amount).toLocaleString()}` : '-'}
+                                  </td>
+                                );
+                              })}
+                              <td className="py-2 px-3 text-right">
+                                <div className="flex gap-1 justify-end">
+                                  <Button size="sm" variant="outline" onClick={() => {
+                                    setInstallmentClass(fs.class);
+                                    setInstallmentBoardingType(fs.boarding_type);
+                                    loadInstallmentsForClass(fs.class, fs.boarding_type);
+                                    setNewFeeYear(fs.academic_year);
+                                  }}>
+                                    <Edit className="w-3 h-3" />
+                                  </Button>
+                                  <Button size="sm" variant="outline" className="text-destructive" onClick={() => handleDeleteFeeStructure(fs.id)}>
+                                    <Trash2 className="w-3 h-3" />
+                                  </Button>
+                                </div>
+                              </td>
+                            </tr>
+                          );
+                        })}
+                      </tbody>
+                    </table>
+                  </div>
+
+                  {/* Mobile card layout */}
+                  <div className="md:hidden space-y-3">
+                    {feeStructure.map((fs) => {
+                      const classInstallments = feeInstallments.filter(
+                        fi => fi.class === fs.class && fi.boarding_type === fs.boarding_type
+                      );
+                      return (
+                        <div key={fs.id} className="border border-border rounded-lg p-3 space-y-2">
+                          <div className="flex items-center justify-between">
+                            <div>
+                              <p className="font-semibold text-sm text-card-foreground">{fs.class}</p>
+                              <p className="text-xs text-muted-foreground capitalize">{fs.boarding_type} • Total: TZS {Number(fs.total_fee).toLocaleString()}</p>
+                            </div>
+                            <div className="flex gap-1">
+                              <Button size="icon" variant="outline" className="h-8 w-8" onClick={() => {
+                                setInstallmentClass(fs.class);
+                                setInstallmentBoardingType(fs.boarding_type);
+                                loadInstallmentsForClass(fs.class, fs.boarding_type);
+                                setNewFeeYear(fs.academic_year);
+                              }}>
+                                <Edit className="w-3 h-3" />
+                              </Button>
+                              <Button size="icon" variant="outline" className="h-8 w-8 text-destructive" onClick={() => handleDeleteFeeStructure(fs.id)}>
+                                <Trash2 className="w-3 h-3" />
+                              </Button>
+                            </div>
+                          </div>
+                          <div className="grid grid-cols-2 gap-1.5 text-xs">
+                            {getInstallmentDueDatesForClass(fs.class).map(instDef => {
+                              const inst = classInstallments.find(ci => ci.installment_number === instDef.number);
                               return (
-                                <td key={num} className="py-2 px-3 text-right text-muted-foreground">
-                                  {inst ? `TZS ${Number(inst.amount).toLocaleString()}` : '-'}
-                                </td>
+                                <div key={instDef.number} className="flex justify-between bg-muted/40 rounded px-2 py-1">
+                                  <span className="text-muted-foreground">Inst. {instDef.number}</span>
+                                  <span className="font-medium">{inst ? `${Number(inst.amount).toLocaleString()}` : '-'}</span>
+                                </div>
                               );
                             })}
-                            <td className="py-2 px-3 text-right">
-                              <div className="flex gap-1 justify-end">
-                                <Button size="sm" variant="outline" onClick={() => {
-                                  setInstallmentClass(fs.class);
-                                  setInstallmentBoardingType(fs.boarding_type);
-                                  loadInstallmentsForClass(fs.class, fs.boarding_type);
-                                  setNewFeeYear(fs.academic_year);
-                                }}>
-                                  <Edit className="w-3 h-3" />
-                                </Button>
-                                <Button size="sm" variant="outline" className="text-destructive" onClick={() => handleDeleteFeeStructure(fs.id)}>
-                                  <Trash2 className="w-3 h-3" />
-                                </Button>
-                              </div>
-                            </td>
-                          </tr>
-                        );
-                      })}
-                    </tbody>
-                  </table>
-                </div>
+                          </div>
+                        </div>
+                      );
+                    })}
+                  </div>
+                </>
               ) : (
                 <p className="text-sm text-muted-foreground">No fee structure set for this year.</p>
               )}
             </div>
 
             {/* Set Installments Form */}
-            <div className="border-t pt-4 bg-accent/10 -mx-6 px-6 py-4 rounded-lg">
-              <h4 className="font-medium mb-3 flex items-center gap-2">
+            <div className="border-t pt-4 bg-accent/10 -mx-4 sm:-mx-6 px-4 sm:px-6 py-4 rounded-lg">
+              <h4 className="font-medium mb-3 text-sm sm:text-base flex items-center gap-2">
                 <Calendar className="w-4 h-4 text-primary" />
                 {installmentClass ? `Set Installments: ${installmentClass} (${installmentBoardingType})` : 'Set Installments for a Class'}
               </h4>
-              <div className="grid grid-cols-1 sm:grid-cols-3 gap-4 mb-4">
+              <div className="grid grid-cols-1 sm:grid-cols-3 gap-3 sm:gap-4 mb-4">
                 <div className="space-y-2">
-                  <Label>Academic Year</Label>
+                  <Label className="text-xs sm:text-sm">Academic Year</Label>
                   <Select value={newFeeYear || selectedYear} onValueChange={setNewFeeYear}>
                     <SelectTrigger>
                       <SelectValue placeholder="Select year" />
@@ -1703,7 +1753,7 @@ export function SecretaryDashboard() {
                   </Select>
                 </div>
                 <div className="space-y-2">
-                  <Label>Class</Label>
+                  <Label className="text-xs sm:text-sm">Class</Label>
                   <Select value={installmentClass} onValueChange={(v) => {
                     setInstallmentClass(v);
                     loadInstallmentsForClass(v, installmentBoardingType);
@@ -1719,7 +1769,7 @@ export function SecretaryDashboard() {
                   </Select>
                 </div>
                 <div className="space-y-2">
-                  <Label>Type</Label>
+                  <Label className="text-xs sm:text-sm">Type</Label>
                   <Select value={installmentBoardingType} onValueChange={(v) => {
                     setInstallmentBoardingType(v);
                     if (installmentClass) loadInstallmentsForClass(installmentClass, v);
@@ -1737,24 +1787,24 @@ export function SecretaryDashboard() {
 
               {installmentClass && (
                 <>
-                  <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4 mb-4">
+                  <div className="grid grid-cols-2 sm:grid-cols-2 lg:grid-cols-4 gap-3 sm:gap-4 mb-4">
                     {getInstallmentDueDatesForClass(installmentClass).map(inst => (
-                      <div key={inst.number} className="space-y-2">
-                        <Label className="text-xs">{inst.label}</Label>
+                      <div key={inst.number} className="space-y-1.5">
+                        <Label className="text-xs leading-tight">{inst.label}</Label>
                         <Input
                           type="number"
-                          placeholder="Amount (TZS)"
+                          placeholder="Amount"
                           value={installmentAmounts[inst.number]}
                           onChange={(e) => setInstallmentAmounts(prev => ({...prev, [inst.number]: e.target.value}))}
                         />
                       </div>
                     ))}
                   </div>
-                  <div className="flex items-center justify-between">
+                  <div className="flex flex-col sm:flex-row items-start sm:items-center justify-between gap-2">
                     <p className="text-sm text-muted-foreground">
                       Total: TZS {Object.values(installmentAmounts).reduce((sum, v) => sum + (parseFloat(v) || 0), 0).toLocaleString()}
                     </p>
-                    <Button onClick={handleSaveInstallments} disabled={isSubmitting}>
+                    <Button onClick={handleSaveInstallments} disabled={isSubmitting} className="w-full sm:w-auto">
                       {isSubmitting ? <Loader2 className="w-4 h-4 animate-spin mr-2" /> : null}
                       Save Installments
                     </Button>
@@ -1764,7 +1814,7 @@ export function SecretaryDashboard() {
             </div>
           </div>
           <DialogFooter>
-            <Button variant="outline" onClick={() => { setShowFeeStructureDialog(false); setEditingFeeStructure(null); setInstallmentClass(''); }}>
+            <Button variant="outline" className="w-full sm:w-auto" onClick={() => { setShowFeeStructureDialog(false); setEditingFeeStructure(null); setInstallmentClass(''); }}>
               Close
             </Button>
           </DialogFooter>
@@ -1773,58 +1823,66 @@ export function SecretaryDashboard() {
 
       {/* Student Custom Installments Dialog */}
       <Dialog open={showCustomInstallmentDialog} onOpenChange={setShowCustomInstallmentDialog}>
-        <DialogContent className="max-w-2xl max-h-[85vh] overflow-y-auto">
+        <DialogContent className="max-w-2xl w-[95vw] max-h-[90vh] overflow-y-auto p-4 sm:p-6">
           <DialogHeader>
-            <DialogTitle className="flex items-center gap-2">
+            <DialogTitle className="flex items-center gap-2 text-base sm:text-lg">
               <Settings className="w-5 h-5 text-primary" />
               Special Case Installments
             </DialogTitle>
           </DialogHeader>
           {selectedStudentForInstallment && (
-            <div className="space-y-4 py-4">
+            <div className="space-y-4 py-2 sm:py-4">
               <div className="p-3 bg-muted rounded-lg">
-                <p className="font-medium">{selectedStudentForInstallment.full_name}</p>
-                <p className="text-sm text-muted-foreground">
+                <p className="font-medium text-sm sm:text-base">{selectedStudentForInstallment.full_name}</p>
+                <p className="text-xs sm:text-sm text-muted-foreground">
                   {selectedStudentForInstallment.class} • {selectedStudentForInstallment.boarding_type || 'Day'} • {selectedYear}
                 </p>
               </div>
 
-              <p className="text-sm text-muted-foreground">
-                Set custom installment amounts and due dates for this student. You can add more than 4 installments.
+              <p className="text-xs sm:text-sm text-muted-foreground">
+                Set custom installment amounts and due dates. You can add more than 4 installments.
               </p>
 
               <div className="space-y-3">
                 {customInstallmentRows.map((row, index) => (
-                  <div key={index} className="grid grid-cols-12 gap-2 items-end">
-                    <div className="col-span-1 text-sm font-medium text-muted-foreground pt-6">
-                      #{index + 1}
+                  <div key={index} className="border border-border rounded-lg p-3 space-y-2 sm:space-y-0 sm:flex sm:items-end sm:gap-2">
+                    <div className="flex items-center justify-between sm:hidden">
+                      <span className="text-xs font-semibold text-muted-foreground">Installment #{index + 1}</span>
+                      {customInstallmentRows.length > 1 && (
+                        <Button size="icon" variant="ghost" className="h-6 w-6 text-destructive" onClick={() => removeCustomInstallmentRow(index)}>
+                          <Trash2 className="w-3 h-3" />
+                        </Button>
+                      )}
                     </div>
-                    <div className="col-span-4 space-y-1">
-                      <Label className="text-xs">Amount (TZS)</Label>
-                      <Input
-                        type="number"
-                        placeholder="Amount"
-                        value={row.amount}
-                        onChange={(e) => {
-                          const updated = [...customInstallmentRows];
-                          updated[index].amount = e.target.value;
-                          setCustomInstallmentRows(updated);
-                        }}
-                      />
+                    <span className="hidden sm:block text-sm font-medium text-muted-foreground w-6 pb-2">#{index + 1}</span>
+                    <div className="grid grid-cols-2 gap-2 sm:flex sm:flex-1 sm:gap-2">
+                      <div className="space-y-1 sm:flex-1">
+                        <Label className="text-xs">Amount (TZS)</Label>
+                        <Input
+                          type="number"
+                          placeholder="Amount"
+                          value={row.amount}
+                          onChange={(e) => {
+                            const updated = [...customInstallmentRows];
+                            updated[index].amount = e.target.value;
+                            setCustomInstallmentRows(updated);
+                          }}
+                        />
+                      </div>
+                      <div className="space-y-1 sm:flex-1">
+                        <Label className="text-xs">Due Date</Label>
+                        <Input
+                          type="date"
+                          value={row.due_date}
+                          onChange={(e) => {
+                            const updated = [...customInstallmentRows];
+                            updated[index].due_date = e.target.value;
+                            setCustomInstallmentRows(updated);
+                          }}
+                        />
+                      </div>
                     </div>
-                    <div className="col-span-3 space-y-1">
-                      <Label className="text-xs">Due Date</Label>
-                      <Input
-                        type="date"
-                        value={row.due_date}
-                        onChange={(e) => {
-                          const updated = [...customInstallmentRows];
-                          updated[index].due_date = e.target.value;
-                          setCustomInstallmentRows(updated);
-                        }}
-                      />
-                    </div>
-                    <div className="col-span-3 space-y-1">
+                    <div className="sm:flex-1 space-y-1">
                       <Label className="text-xs">Notes</Label>
                       <Input
                         placeholder="Optional"
@@ -1836,9 +1894,9 @@ export function SecretaryDashboard() {
                         }}
                       />
                     </div>
-                    <div className="col-span-1">
+                    <div className="hidden sm:block">
                       {customInstallmentRows.length > 1 && (
-                        <Button size="sm" variant="ghost" className="text-destructive" onClick={() => removeCustomInstallmentRow(index)}>
+                        <Button size="icon" variant="ghost" className="h-8 w-8 text-destructive" onClick={() => removeCustomInstallmentRow(index)}>
                           <Trash2 className="w-3 h-3" />
                         </Button>
                       )}
@@ -1858,9 +1916,9 @@ export function SecretaryDashboard() {
               </div>
             </div>
           )}
-          <DialogFooter>
-            <Button variant="outline" onClick={() => setShowCustomInstallmentDialog(false)}>Cancel</Button>
-            <Button onClick={handleSaveCustomInstallments} disabled={isSubmitting}>
+          <DialogFooter className="flex-col sm:flex-row gap-2">
+            <Button variant="outline" className="w-full sm:w-auto" onClick={() => setShowCustomInstallmentDialog(false)}>Cancel</Button>
+            <Button className="w-full sm:w-auto" onClick={handleSaveCustomInstallments} disabled={isSubmitting}>
               {isSubmitting ? <Loader2 className="w-4 h-4 animate-spin mr-2" /> : null}
               Save Custom Installments
             </Button>
