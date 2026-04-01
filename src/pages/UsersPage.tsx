@@ -67,6 +67,21 @@ interface Secretary {
   password_hash: string;
 }
 
+interface Accountant {
+  id: string;
+  username: string;
+  full_name: string;
+  password_hash: string;
+}
+
+interface HeadOfSchool {
+  id: string;
+  username: string;
+  full_name: string;
+  password_hash: string;
+  department: string;
+}
+
 export default function UsersPage() {
   const { user } = useAuth();
   const { fetchTable } = useSecureQuery();
