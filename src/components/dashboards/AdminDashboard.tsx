@@ -536,6 +536,15 @@ export function AdminDashboard() {
               Overview
             </Button>
             <Button
+              variant={adminMode === 'accountant' ? 'default' : 'ghost'}
+              size="sm"
+              onClick={() => setAdminMode('accountant')}
+              className="text-xs"
+            >
+              <Briefcase className="w-3.5 h-3.5 mr-1" />
+              Accountant Ops
+            </Button>
+            <Button
               variant={adminMode === 'secretary' ? 'default' : 'ghost'}
               size="sm"
               onClick={() => setAdminMode('secretary')}
