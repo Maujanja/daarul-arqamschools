@@ -44,8 +44,10 @@ import {
   Edit,
   Camera,
   Upload,
-  FileSpreadsheet
+  FileSpreadsheet,
+  Eye
 } from 'lucide-react';
+import { StudentFeeProfileDialog } from '@/components/dashboard/StudentFeeProfileDialog';
 
 interface Student {
   id: string;
@@ -166,8 +168,10 @@ function getInstallmentDueDate(academicYear: string, installmentNumber: number):
   if (!inst) return `${startYear}-01-01`;
   // Months 0-5 (Jan-Jun) use end year, months 6-11 (Jul-Dec) use start year
   const useYear = inst.month <= 5 ? endYear : startYear;
-  const date = new Date(useYear, inst.month, inst.day);
-  return date.toISOString().split('T')[0];
+  // Use manual string formatting to avoid timezone shifts from toISOString()
+  const mm = String(inst.month + 1).padStart(2, '0');
+  const dd = String(inst.day).padStart(2, '0');
+  return `${useYear}-${mm}-${dd}`;
 }
 
 export function SecretaryDashboard({ isAdminMode = false }: { isAdminMode?: boolean } = {}) {
@@ -242,6 +246,10 @@ export function SecretaryDashboard({ isAdminMode = false }: { isAdminMode?: bool
   // Student photo management
   const [showPhotoDialog, setShowPhotoDialog] = useState(false);
   const [selectedStudentForPhoto, setSelectedStudentForPhoto] = useState<Student | null>(null);
+
+  // Student fee profile
+  const [showFeeProfile, setShowFeeProfile] = useState(false);
+  const [feeProfileStudent, setFeeProfileStudent] = useState<Student | null>(null);
 
   // Set initial year when currentYear loads
   useEffect(() => {
@@ -693,8 +701,9 @@ export function SecretaryDashboard({ isAdminMode = false }: { isAdminMode?: bool
   };
 
   const addCustomInstallmentRow = () => {
-    const year = parseInt(selectedYear.split('-')[0]);
-    setCustomInstallmentRows(prev => [...prev, { amount: '', due_date: `${year}-01-01`, notes: '' }]);
+    const parts = selectedYear.split('-');
+    const endYear = parts.length > 1 ? parts[1] : parts[0];
+    setCustomInstallmentRows(prev => [...prev, { amount: '', due_date: `${endYear}-01-01`, notes: '' }]);
   };
 
   const removeCustomInstallmentRow = (index: number) => {
@@ -1440,6 +1449,15 @@ export function SecretaryDashboard({ isAdminMode = false }: { isAdminMode?: bool
                                 </td>
                                 <td className="py-3 px-2 sm:px-4 text-right">
                                   <div className="flex gap-1 justify-end flex-wrap">
+                                    <Button
+                                      size="icon"
+                                      variant="outline"
+                                      className="h-8 w-8"
+                                      onClick={() => { setFeeProfileStudent(student); setShowFeeProfile(true); }}
+                                      title="View Fee Profile"
+                                    >
+                                      <Eye className="w-3 h-3" />
+                                    </Button>
                                     <Button
                                       size="icon"
                                       variant="outline"
@@ -2202,6 +2220,18 @@ export function SecretaryDashboard({ isAdminMode = false }: { isAdminMode?: bool
           </DialogFooter>
         </DialogContent>
       </Dialog>
+
+      {/* Student Fee Profile Dialog */}
+      <StudentFeeProfileDialog
+        open={showFeeProfile}
+        onOpenChange={setShowFeeProfile}
+        student={feeProfileStudent}
+        selectedYear={selectedYear}
+        feeStructure={feeStructure}
+        feePayments={feePayments}
+        familyGroupMembers={familyGroupMembers}
+        familyGroupInstallments={familyGroupInstallments}
+      />
     </div>
   );
 }

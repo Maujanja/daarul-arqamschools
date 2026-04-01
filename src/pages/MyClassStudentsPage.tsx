@@ -164,7 +164,10 @@ export default function MyClassStudentsPage() {
         ? students.filter(s => s.stream === selectedStream || !s.stream || s.stream === '')
         : students;
       
-      const sortedStudents = filtered.sort((a, b) => a.roll_number.localeCompare(b.roll_number));
+      const sortedStudents = filtered.sort((a, b) => 
+        a.full_name.localeCompare(b.full_name, undefined, { sensitivity: 'base' }) ||
+        a.roll_number.localeCompare(b.roll_number, undefined, { numeric: true, sensitivity: 'base' })
+      );
       setAllStudentsInClass(sortedStudents);
     };
     
