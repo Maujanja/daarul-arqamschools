@@ -565,6 +565,48 @@ export type Database = {
         }
         Relationships: []
       }
+      result_release_statuses: {
+        Row: {
+          academic_year: string
+          approved_at: string | null
+          approved_by: string | null
+          approved_by_admin: boolean
+          class_name: string
+          created_at: string
+          id: string
+          is_complete: boolean
+          notes: string | null
+          term: string
+          updated_at: string
+        }
+        Insert: {
+          academic_year: string
+          approved_at?: string | null
+          approved_by?: string | null
+          approved_by_admin?: boolean
+          class_name: string
+          created_at?: string
+          id?: string
+          is_complete?: boolean
+          notes?: string | null
+          term: string
+          updated_at?: string
+        }
+        Update: {
+          academic_year?: string
+          approved_at?: string | null
+          approved_by?: string | null
+          approved_by_admin?: boolean
+          class_name?: string
+          created_at?: string
+          id?: string
+          is_complete?: boolean
+          notes?: string | null
+          term?: string
+          updated_at?: string
+        }
+        Relationships: []
+      }
       secretary_credentials: {
         Row: {
           created_at: string | null
