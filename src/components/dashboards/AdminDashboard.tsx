@@ -544,22 +544,25 @@ export function AdminDashboard() {
               <Briefcase className="w-3.5 h-3.5 mr-1" />
               Accountant Ops
             </Button>
-            <Button
-              variant={adminMode === 'secretary' ? 'default' : 'ghost'}
-              size="sm"
-              onClick={() => setAdminMode('secretary')}
-              className="text-xs"
-            >
-              <Briefcase className="w-3.5 h-3.5 mr-1" />
-              Secretary Ops
-            </Button>
           </div>
           {adminMode === 'overview' && (
+            <Select value={selectedYear} onValueChange={setSelectedYear}>
+              <SelectTrigger className="w-[140px]">
+                <Calendar className="w-4 h-4 mr-2" />
+                <SelectValue />
+              </SelectTrigger>
+              <SelectContent>
+                {academicYears.map((year) => (
+                  <SelectItem key={year} value={year}>{year}</SelectItem>
+                ))}
+              </SelectContent>
+            </Select>
+          )}
         </div>
       </div>
 
-      {adminMode === 'secretary' ? (
-        <SecretaryDashboard isAdminMode={true} />
+      {adminMode === 'accountant' ? (
+        <AccountantDashboard isAdminMode={true} />
       ) : (
       <>
 
