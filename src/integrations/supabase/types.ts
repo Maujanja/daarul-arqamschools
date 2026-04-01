@@ -41,6 +41,30 @@ export type Database = {
         }
         Relationships: []
       }
+      accountant_credentials: {
+        Row: {
+          created_at: string
+          full_name: string
+          id: string
+          password_hash: string
+          username: string
+        }
+        Insert: {
+          created_at?: string
+          full_name: string
+          id?: string
+          password_hash: string
+          username: string
+        }
+        Update: {
+          created_at?: string
+          full_name?: string
+          id?: string
+          password_hash?: string
+          username?: string
+        }
+        Relationships: []
+      }
       admin_credentials: {
         Row: {
           created_at: string | null
@@ -370,6 +394,33 @@ export type Database = {
             referencedColumns: ["id"]
           },
         ]
+      }
+      head_of_school_credentials: {
+        Row: {
+          created_at: string
+          department: Database["public"]["Enums"]["school_section"]
+          full_name: string
+          id: string
+          password_hash: string
+          username: string
+        }
+        Insert: {
+          created_at?: string
+          department: Database["public"]["Enums"]["school_section"]
+          full_name: string
+          id?: string
+          password_hash: string
+          username: string
+        }
+        Update: {
+          created_at?: string
+          department?: Database["public"]["Enums"]["school_section"]
+          full_name?: string
+          id?: string
+          password_hash?: string
+          username?: string
+        }
+        Relationships: []
       }
       marks: {
         Row: {
@@ -984,6 +1035,27 @@ export type Database = {
       }
     }
     Views: {
+      accountant_credentials_public: {
+        Row: {
+          created_at: string | null
+          full_name: string | null
+          id: string | null
+          username: string | null
+        }
+        Insert: {
+          created_at?: string | null
+          full_name?: string | null
+          id?: string | null
+          username?: string | null
+        }
+        Update: {
+          created_at?: string | null
+          full_name?: string | null
+          id?: string | null
+          username?: string | null
+        }
+        Relationships: []
+      }
       admin_credentials_public: {
         Row: {
           created_at: string | null
@@ -997,6 +1069,30 @@ export type Database = {
         }
         Update: {
           created_at?: string | null
+          id?: string | null
+          username?: string | null
+        }
+        Relationships: []
+      }
+      head_of_school_credentials_public: {
+        Row: {
+          created_at: string | null
+          department: Database["public"]["Enums"]["school_section"] | null
+          full_name: string | null
+          id: string | null
+          username: string | null
+        }
+        Insert: {
+          created_at?: string | null
+          department?: Database["public"]["Enums"]["school_section"] | null
+          full_name?: string | null
+          id?: string | null
+          username?: string | null
+        }
+        Update: {
+          created_at?: string | null
+          department?: Database["public"]["Enums"]["school_section"] | null
+          full_name?: string | null
           id?: string | null
           username?: string | null
         }
@@ -1071,7 +1167,16 @@ export type Database = {
       }
     }
     Enums: {
-      app_role: "admin" | "teacher" | "parent"
+      app_role:
+        | "admin"
+        | "teacher"
+        | "parent"
+        | "secretary"
+        | "accountant"
+        | "head_nursery"
+        | "head_primary"
+        | "head_secondary"
+      school_section: "nursery" | "primary" | "secondary"
     }
     CompositeTypes: {
       [_ in never]: never
@@ -1199,7 +1304,17 @@ export type CompositeTypes<
 export const Constants = {
   public: {
     Enums: {
-      app_role: ["admin", "teacher", "parent"],
+      app_role: [
+        "admin",
+        "teacher",
+        "parent",
+        "secretary",
+        "accountant",
+        "head_nursery",
+        "head_primary",
+        "head_secondary",
+      ],
+      school_section: ["nursery", "primary", "secondary"],
     },
   },
 } as const
