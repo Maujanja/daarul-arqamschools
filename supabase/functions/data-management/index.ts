@@ -24,6 +24,8 @@ type AllowedTable =
   | "teachers"
   | "admin_credentials"
   | "secretary_credentials"
+  | "accountant_credentials"
+  | "head_of_school_credentials"
   | "marks_unlock_requests"
   | "family_groups"
   | "family_group_members"
