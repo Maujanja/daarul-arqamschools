@@ -2,7 +2,7 @@ import { useState, useEffect, useCallback } from 'react';
 import { DashboardLayout } from '@/components/layout/DashboardLayout';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
-import { Search, Plus, MoreHorizontal, UserCog, Loader2, Shield, GraduationCap, Users } from 'lucide-react';
+import { Search, Plus, MoreHorizontal, UserCog, Loader2, Shield, GraduationCap, Users, DollarSign, School } from 'lucide-react';
 import {
   DropdownMenu,
   DropdownMenuContent,
@@ -67,6 +67,21 @@ interface Secretary {
   password_hash: string;
 }
 
+interface Accountant {
+  id: string;
+  username: string;
+  full_name: string;
+  password_hash: string;
+}
+
+interface HeadOfSchool {
+  id: string;
+  username: string;
+  full_name: string;
+  password_hash: string;
+  department: string;
+}
+
 export default function UsersPage() {
   const { user } = useAuth();
   const { fetchTable } = useSecureQuery();
@@ -77,6 +92,8 @@ export default function UsersPage() {
   const [parents, setParents] = useState<Parent[]>([]);
   const [students, setStudents] = useState<Student[]>([]);
   const [secretaries, setSecretaries] = useState<Secretary[]>([]);
+  const [accountants, setAccountants] = useState<Accountant[]>([]);
+  const [headsOfSchool, setHeadsOfSchool] = useState<HeadOfSchool[]>([]);
   const [loading, setLoading] = useState(true);
   const [activeTab, setActiveTab] = useState('teachers');
   
@@ -104,6 +121,20 @@ export default function UsersPage() {
     parent_id: '',
   });
   const [saving, setSaving] = useState(false);
+
+  // Accountant Management
+  const [showAddAccountantDialog, setShowAddAccountantDialog] = useState(false);
+  const [showEditAccountantDialog, setShowEditAccountantDialog] = useState(false);
+  const [selectedAccountant, setSelectedAccountant] = useState<Accountant | null>(null);
+  const [newAccountant, setNewAccountant] = useState({ username: '', full_name: '', password: '' });
+  const [editAccountant, setEditAccountant] = useState({ username: '', full_name: '', password: '' });
+
+  // Head of School Management
+  const [showAddHeadDialog, setShowAddHeadDialog] = useState(false);
+  const [showEditHeadDialog, setShowEditHeadDialog] = useState(false);
+  const [selectedHead, setSelectedHead] = useState<HeadOfSchool | null>(null);
+  const [newHead, setNewHead] = useState({ username: '', full_name: '', password: '', department: 'primary' });
+  const [editHead, setEditHead] = useState({ username: '', full_name: '', password: '', department: 'primary' });
 
   // Add Parent Dialog
   const [showAddParentDialog, setShowAddParentDialog] = useState(false);
@@ -139,17 +170,21 @@ export default function UsersPage() {
     try {
       setLoading(true);
       
-      const [teachersData, parentsData, studentsData, secretariesData] = await Promise.all([
+      const [teachersData, parentsData, studentsData, secretariesData, accountantsData, headsData] = await Promise.all([
         fetchTable<Teacher>('teachers', undefined, { orderBy: { column: 'full_name', ascending: true } }),
         fetchTable<Parent>('parents', undefined, { orderBy: { column: 'full_name', ascending: true } }),
         fetchTable<Student>('students', undefined, { orderBy: { column: 'full_name', ascending: true } }),
         fetchTable<Secretary>('secretary_credentials' as any, undefined, { orderBy: { column: 'full_name', ascending: true } }),
+        fetchTable<Accountant>('accountant_credentials' as any, undefined, { orderBy: { column: 'full_name', ascending: true } }),
+        fetchTable<HeadOfSchool>('head_of_school_credentials' as any, undefined, { orderBy: { column: 'full_name', ascending: true } }),
       ]);
 
       setTeachers(teachersData);
       setParents(parentsData);
       setStudents(studentsData);
       setSecretaries(secretariesData);
+      setAccountants(accountantsData);
+      setHeadsOfSchool(headsData);
     } catch (error) {
       console.error('Error fetching data:', error);
       toast.error('Failed to fetch data');
@@ -450,6 +485,112 @@ export default function UsersPage() {
     }
   };
 
+  // Accountant filter & handlers
+  const filteredAccountants = accountants.filter(a =>
+    a.full_name?.toLowerCase().includes(searchQuery.toLowerCase()) ||
+    a.username?.toLowerCase().includes(searchQuery.toLowerCase())
+  );
+
+  const handleAddAccountant = async () => {
+    if (!newAccountant.username || !newAccountant.full_name || !newAccountant.password) {
+      toast.error('Please fill in all required fields'); return;
+    }
+    try {
+      setSaving(true);
+      const result = await insert('accountant_credentials' as any, { username: newAccountant.username, full_name: newAccountant.full_name, password_hash: newAccountant.password });
+      if (!result.success) throw new Error(result.error);
+      toast.success('Accountant added successfully');
+      setShowAddAccountantDialog(false);
+      setNewAccountant({ username: '', full_name: '', password: '' });
+      fetchData();
+    } catch (error: any) { toast.error(error.message || 'Failed to add accountant'); } finally { setSaving(false); }
+  };
+
+  const handleOpenEditAccountant = (acc: Accountant) => {
+    setSelectedAccountant(acc);
+    setEditAccountant({ username: acc.username, full_name: acc.full_name, password: '' });
+    setShowEditAccountantDialog(true);
+  };
+
+  const handleEditAccountant = async () => {
+    if (!selectedAccountant || !editAccountant.username || !editAccountant.full_name) {
+      toast.error('Please fill in all required fields'); return;
+    }
+    try {
+      setSaving(true);
+      const updateData: Record<string, unknown> = { username: editAccountant.username, full_name: editAccountant.full_name };
+      if (editAccountant.password) updateData.password_hash = editAccountant.password;
+      const result = await update('accountant_credentials' as any, updateData, { id: selectedAccountant.id });
+      if (!result.success) throw new Error(result.error);
+      toast.success('Accountant updated successfully');
+      setShowEditAccountantDialog(false);
+      setSelectedAccountant(null);
+      fetchData();
+    } catch (error: any) { toast.error(error.message || 'Failed to update accountant'); } finally { setSaving(false); }
+  };
+
+  const handleDeleteAccountant = async (id: string) => {
+    try {
+      const result = await remove('accountant_credentials' as any, { id });
+      if (!result.success) throw new Error(result.error);
+      toast.success('Accountant deleted');
+      fetchData();
+    } catch (error: any) { toast.error(error.message || 'Failed to delete accountant'); }
+  };
+
+  // Head of School filter & handlers
+  const filteredHeads = headsOfSchool.filter(h =>
+    h.full_name?.toLowerCase().includes(searchQuery.toLowerCase()) ||
+    h.username?.toLowerCase().includes(searchQuery.toLowerCase())
+  );
+
+  const handleAddHead = async () => {
+    if (!newHead.username || !newHead.full_name || !newHead.password || !newHead.department) {
+      toast.error('Please fill in all required fields'); return;
+    }
+    try {
+      setSaving(true);
+      const result = await insert('head_of_school_credentials' as any, { username: newHead.username, full_name: newHead.full_name, password_hash: newHead.password, department: newHead.department });
+      if (!result.success) throw new Error(result.error);
+      toast.success('Head of School added successfully');
+      setShowAddHeadDialog(false);
+      setNewHead({ username: '', full_name: '', password: '', department: 'primary' });
+      fetchData();
+    } catch (error: any) { toast.error(error.message || 'Failed to add head of school'); } finally { setSaving(false); }
+  };
+
+  const handleOpenEditHead = (head: HeadOfSchool) => {
+    setSelectedHead(head);
+    setEditHead({ username: head.username, full_name: head.full_name, password: '', department: head.department });
+    setShowEditHeadDialog(true);
+  };
+
+  const handleEditHead = async () => {
+    if (!selectedHead || !editHead.username || !editHead.full_name) {
+      toast.error('Please fill in all required fields'); return;
+    }
+    try {
+      setSaving(true);
+      const updateData: Record<string, unknown> = { username: editHead.username, full_name: editHead.full_name, department: editHead.department };
+      if (editHead.password) updateData.password_hash = editHead.password;
+      const result = await update('head_of_school_credentials' as any, updateData, { id: selectedHead.id });
+      if (!result.success) throw new Error(result.error);
+      toast.success('Head of School updated successfully');
+      setShowEditHeadDialog(false);
+      setSelectedHead(null);
+      fetchData();
+    } catch (error: any) { toast.error(error.message || 'Failed to update head of school'); } finally { setSaving(false); }
+  };
+
+  const handleDeleteHead = async (id: string) => {
+    try {
+      const result = await remove('head_of_school_credentials' as any, { id });
+      if (!result.success) throw new Error(result.error);
+      toast.success('Head of School deleted');
+      fetchData();
+    } catch (error: any) { toast.error(error.message || 'Failed to delete head of school'); }
+  };
+
   if (loading) {
     return (
       <DashboardLayout>
@@ -484,21 +625,29 @@ export default function UsersPage() {
 
         {/* Tabs */}
         <Tabs value={activeTab} onValueChange={setActiveTab} className="animate-fade-in">
-          <TabsList className="grid w-full grid-cols-4 mb-6">
-            <TabsTrigger value="teachers" className="flex items-center gap-2">
-              <Shield className="w-4 h-4" />
+          <TabsList className="grid w-full grid-cols-6 mb-6">
+            <TabsTrigger value="teachers" className="flex items-center gap-1 text-xs">
+              <Shield className="w-3.5 h-3.5" />
               Teachers ({filteredTeachers.length})
             </TabsTrigger>
-            <TabsTrigger value="secretaries" className="flex items-center gap-2">
-              <UserCog className="w-4 h-4" />
+            <TabsTrigger value="secretaries" className="flex items-center gap-1 text-xs">
+              <UserCog className="w-3.5 h-3.5" />
               Secretaries ({filteredSecretaries.length})
             </TabsTrigger>
-            <TabsTrigger value="parents" className="flex items-center gap-2">
-              <Users className="w-4 h-4" />
+            <TabsTrigger value="accountants" className="flex items-center gap-1 text-xs">
+              <DollarSign className="w-3.5 h-3.5" />
+              Accountants ({filteredAccountants.length})
+            </TabsTrigger>
+            <TabsTrigger value="heads" className="flex items-center gap-1 text-xs">
+              <School className="w-3.5 h-3.5" />
+              Heads ({filteredHeads.length})
+            </TabsTrigger>
+            <TabsTrigger value="parents" className="flex items-center gap-1 text-xs">
+              <Users className="w-3.5 h-3.5" />
               Parents ({filteredParents.length})
             </TabsTrigger>
-            <TabsTrigger value="students" className="flex items-center gap-2">
-              <GraduationCap className="w-4 h-4" />
+            <TabsTrigger value="students" className="flex items-center gap-1 text-xs">
+              <GraduationCap className="w-3.5 h-3.5" />
               Students ({filteredStudents.length})
             </TabsTrigger>
           </TabsList>
@@ -606,6 +755,71 @@ export default function UsersPage() {
                     <p className="text-xs text-muted-foreground">
                       <span className="font-medium">Password:</span> {secretary.password_hash || 'Not set'}
                     </p>
+                  </div>
+                </div>
+              ))}
+            </div>
+          </TabsContent>
+
+          {/* Accountants Tab */}
+          <TabsContent value="accountants">
+            <div className="flex justify-end mb-4">
+              <Button onClick={() => setShowAddAccountantDialog(true)}><Plus className="w-4 h-4 mr-2" />Add Accountant</Button>
+            </div>
+            <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
+              {filteredAccountants.map((acc) => (
+                <div key={acc.id} className="card-elevated p-4">
+                  <div className="flex items-start justify-between">
+                    <div className="flex items-center gap-3">
+                      <div className="w-10 h-10 rounded-full bg-success/20 flex items-center justify-center"><DollarSign className="w-5 h-5 text-success" /></div>
+                      <div className="flex-1 min-w-0">
+                        <p className="font-medium text-card-foreground truncate">{acc.full_name}</p>
+                        <p className="text-xs text-muted-foreground truncate">@{acc.username}</p>
+                      </div>
+                    </div>
+                    <DropdownMenu>
+                      <DropdownMenuTrigger asChild><Button variant="ghost" size="icon" className="h-8 w-8"><MoreHorizontal className="h-4 w-4" /></Button></DropdownMenuTrigger>
+                      <DropdownMenuContent align="end">
+                        <DropdownMenuItem onClick={() => handleOpenEditAccountant(acc)}>Edit Details</DropdownMenuItem>
+                        <DropdownMenuItem className="text-destructive" onClick={() => handleDeleteAccountant(acc.id)}>Delete</DropdownMenuItem>
+                      </DropdownMenuContent>
+                    </DropdownMenu>
+                  </div>
+                  <div className="mt-3 pt-3 border-t space-y-1">
+                    <p className="text-xs text-muted-foreground"><span className="font-medium">Password:</span> {acc.password_hash || 'Not set'}</p>
+                  </div>
+                </div>
+              ))}
+            </div>
+          </TabsContent>
+
+          {/* Heads of School Tab */}
+          <TabsContent value="heads">
+            <div className="flex justify-end mb-4">
+              <Button onClick={() => setShowAddHeadDialog(true)}><Plus className="w-4 h-4 mr-2" />Add Head of School</Button>
+            </div>
+            <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
+              {filteredHeads.map((head) => (
+                <div key={head.id} className="card-elevated p-4">
+                  <div className="flex items-start justify-between">
+                    <div className="flex items-center gap-3">
+                      <div className="w-10 h-10 rounded-full bg-accent/20 flex items-center justify-center"><School className="w-5 h-5 text-accent" /></div>
+                      <div className="flex-1 min-w-0">
+                        <p className="font-medium text-card-foreground truncate">{head.full_name}</p>
+                        <p className="text-xs text-muted-foreground truncate">@{head.username} • {head.department}</p>
+                      </div>
+                    </div>
+                    <DropdownMenu>
+                      <DropdownMenuTrigger asChild><Button variant="ghost" size="icon" className="h-8 w-8"><MoreHorizontal className="h-4 w-4" /></Button></DropdownMenuTrigger>
+                      <DropdownMenuContent align="end">
+                        <DropdownMenuItem onClick={() => handleOpenEditHead(head)}>Edit Details</DropdownMenuItem>
+                        <DropdownMenuItem className="text-destructive" onClick={() => handleDeleteHead(head.id)}>Delete</DropdownMenuItem>
+                      </DropdownMenuContent>
+                    </DropdownMenu>
+                  </div>
+                  <div className="mt-3 pt-3 border-t space-y-1">
+                    <p className="text-xs text-muted-foreground"><span className="font-medium">Department:</span> {head.department}</p>
+                    <p className="text-xs text-muted-foreground"><span className="font-medium">Password:</span> {head.password_hash || 'Not set'}</p>
                   </div>
                 </div>
               ))}
@@ -1097,6 +1311,92 @@ export default function UsersPage() {
               {saving && <Loader2 className="w-4 h-4 mr-2 animate-spin" />}
               Save Changes
             </Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
+
+      {/* Add Accountant Dialog */}
+      <Dialog open={showAddAccountantDialog} onOpenChange={setShowAddAccountantDialog}>
+        <DialogContent>
+          <DialogHeader><DialogTitle>Add Accountant</DialogTitle><DialogDescription>Fill in the new accountant's information</DialogDescription></DialogHeader>
+          <div className="space-y-4 py-4">
+            <div className="space-y-2"><Label>Username</Label><Input value={newAccountant.username} onChange={(e) => setNewAccountant({ ...newAccountant, username: e.target.value })} placeholder="e.g. accountant1" /></div>
+            <div className="space-y-2"><Label>Full Name</Label><Input value={newAccountant.full_name} onChange={(e) => setNewAccountant({ ...newAccountant, full_name: e.target.value })} placeholder="e.g. Jane Doe" /></div>
+            <div className="space-y-2"><Label>Password</Label><Input type="text" value={newAccountant.password} onChange={(e) => setNewAccountant({ ...newAccountant, password: e.target.value })} placeholder="Login password" /></div>
+          </div>
+          <DialogFooter>
+            <Button variant="outline" onClick={() => setShowAddAccountantDialog(false)}>Cancel</Button>
+            <Button onClick={handleAddAccountant} disabled={saving}>{saving && <Loader2 className="w-4 h-4 mr-2 animate-spin" />}Save</Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
+
+      {/* Edit Accountant Dialog */}
+      <Dialog open={showEditAccountantDialog} onOpenChange={setShowEditAccountantDialog}>
+        <DialogContent>
+          <DialogHeader><DialogTitle>Edit Accountant</DialogTitle><DialogDescription>Update accountant information</DialogDescription></DialogHeader>
+          <div className="space-y-4 py-4">
+            <div className="space-y-2"><Label>Username</Label><Input value={editAccountant.username} onChange={(e) => setEditAccountant({ ...editAccountant, username: e.target.value })} /></div>
+            <div className="space-y-2"><Label>Full Name</Label><Input value={editAccountant.full_name} onChange={(e) => setEditAccountant({ ...editAccountant, full_name: e.target.value })} /></div>
+            <div className="space-y-2"><Label>Password (leave empty to keep current)</Label><Input type="text" value={editAccountant.password} onChange={(e) => setEditAccountant({ ...editAccountant, password: e.target.value })} placeholder="New password" /></div>
+          </div>
+          <DialogFooter>
+            <Button variant="outline" onClick={() => setShowEditAccountantDialog(false)}>Cancel</Button>
+            <Button onClick={handleEditAccountant} disabled={saving}>{saving && <Loader2 className="w-4 h-4 mr-2 animate-spin" />}Save Changes</Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
+
+      {/* Add Head of School Dialog */}
+      <Dialog open={showAddHeadDialog} onOpenChange={setShowAddHeadDialog}>
+        <DialogContent>
+          <DialogHeader><DialogTitle>Add Head of School</DialogTitle><DialogDescription>Fill in the new head of school's information</DialogDescription></DialogHeader>
+          <div className="space-y-4 py-4">
+            <div className="space-y-2"><Label>Username</Label><Input value={newHead.username} onChange={(e) => setNewHead({ ...newHead, username: e.target.value })} placeholder="e.g. head_primary" /></div>
+            <div className="space-y-2"><Label>Full Name</Label><Input value={newHead.full_name} onChange={(e) => setNewHead({ ...newHead, full_name: e.target.value })} placeholder="e.g. John Smith" /></div>
+            <div className="space-y-2"><Label>Password</Label><Input type="text" value={newHead.password} onChange={(e) => setNewHead({ ...newHead, password: e.target.value })} placeholder="Login password" /></div>
+            <div className="space-y-2">
+              <Label>Department</Label>
+              <Select value={newHead.department} onValueChange={(v) => setNewHead({ ...newHead, department: v })}>
+                <SelectTrigger><SelectValue /></SelectTrigger>
+                <SelectContent>
+                  <SelectItem value="nursery">Nursery</SelectItem>
+                  <SelectItem value="primary">Primary</SelectItem>
+                  <SelectItem value="secondary">Secondary</SelectItem>
+                </SelectContent>
+              </Select>
+            </div>
+          </div>
+          <DialogFooter>
+            <Button variant="outline" onClick={() => setShowAddHeadDialog(false)}>Cancel</Button>
+            <Button onClick={handleAddHead} disabled={saving}>{saving && <Loader2 className="w-4 h-4 mr-2 animate-spin" />}Save</Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
+
+      {/* Edit Head of School Dialog */}
+      <Dialog open={showEditHeadDialog} onOpenChange={setShowEditHeadDialog}>
+        <DialogContent>
+          <DialogHeader><DialogTitle>Edit Head of School</DialogTitle><DialogDescription>Update head of school information</DialogDescription></DialogHeader>
+          <div className="space-y-4 py-4">
+            <div className="space-y-2"><Label>Username</Label><Input value={editHead.username} onChange={(e) => setEditHead({ ...editHead, username: e.target.value })} /></div>
+            <div className="space-y-2"><Label>Full Name</Label><Input value={editHead.full_name} onChange={(e) => setEditHead({ ...editHead, full_name: e.target.value })} /></div>
+            <div className="space-y-2"><Label>Password (leave empty to keep current)</Label><Input type="text" value={editHead.password} onChange={(e) => setEditHead({ ...editHead, password: e.target.value })} placeholder="New password" /></div>
+            <div className="space-y-2">
+              <Label>Department</Label>
+              <Select value={editHead.department} onValueChange={(v) => setEditHead({ ...editHead, department: v })}>
+                <SelectTrigger><SelectValue /></SelectTrigger>
+                <SelectContent>
+                  <SelectItem value="nursery">Nursery</SelectItem>
+                  <SelectItem value="primary">Primary</SelectItem>
+                  <SelectItem value="secondary">Secondary</SelectItem>
+                </SelectContent>
+              </Select>
+            </div>
+          </div>
+          <DialogFooter>
+            <Button variant="outline" onClick={() => setShowEditHeadDialog(false)}>Cancel</Button>
+            <Button onClick={handleEditHead} disabled={saving}>{saving && <Loader2 className="w-4 h-4 mr-2 animate-spin" />}Save Changes</Button>
           </DialogFooter>
         </DialogContent>
       </Dialog>

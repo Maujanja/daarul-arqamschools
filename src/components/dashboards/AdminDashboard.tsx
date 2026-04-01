@@ -5,6 +5,7 @@ import { supabase } from '@/integrations/supabase/client';
 import { StatCard } from '@/components/dashboard/StatCard';
 import { SeriesSummaryTable } from '@/components/dashboard/SeriesSummaryTable';
 import { Users, GraduationCap, BookOpen, MessageSquare, FileText, DollarSign, Clock, CheckCircle, User, Calendar, UserCog, Download, Loader2, Eye, Briefcase } from 'lucide-react';
+import { AccountantDashboard } from '@/components/dashboards/AccountantDashboard';
 import { Button } from '@/components/ui/button';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
@@ -17,7 +18,7 @@ import { generateAnnualExamReport } from '@/utils/annualReportGenerator';
 import { generateAnnualExamReportPDF } from '@/utils/annualReportPdfGenerator';
 import { toast } from 'sonner';
 import { AnnualReportPreview } from '@/components/dashboard/AnnualReportPreview';
-import { SecretaryDashboard } from '@/components/dashboards/SecretaryDashboard';
+
 import { ResultApprovalManager } from '@/components/dashboard/ResultApprovalManager';
 
 interface FeedbackItem {
@@ -76,7 +77,7 @@ export function AdminDashboard() {
   const { update } = useSecureData();
   const { academicYears, currentYear, loading: yearsLoading } = useAcademicYears();
   const [selectedYear, setSelectedYear] = useState('');
-  const [adminMode, setAdminMode] = useState<'overview' | 'secretary'>('overview');
+  const [adminMode, setAdminMode] = useState<'overview' | 'accountant'>('overview');
   const [selectedClass, setSelectedClass] = useState(classes[0]);
   const [reportClass, setReportClass] = useState(classes[0]);
   const [reportTerm, setReportTerm] = useState('Series 1');
@@ -535,13 +536,13 @@ export function AdminDashboard() {
               Overview
             </Button>
             <Button
-              variant={adminMode === 'secretary' ? 'default' : 'ghost'}
+              variant={adminMode === 'accountant' ? 'default' : 'ghost'}
               size="sm"
-              onClick={() => setAdminMode('secretary')}
+              onClick={() => setAdminMode('accountant')}
               className="text-xs"
             >
               <Briefcase className="w-3.5 h-3.5 mr-1" />
-              Secretary Ops
+              Accountant Ops
             </Button>
           </div>
           {adminMode === 'overview' && (
@@ -560,8 +561,8 @@ export function AdminDashboard() {
         </div>
       </div>
 
-      {adminMode === 'secretary' ? (
-        <SecretaryDashboard isAdminMode={true} />
+      {adminMode === 'accountant' ? (
+        <AccountantDashboard isAdminMode={true} />
       ) : (
       <>
 

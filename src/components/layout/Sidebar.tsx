@@ -30,16 +30,16 @@ interface NavItem {
 }
 
 const navItems: NavItem[] = [
-  { label: 'Dashboard', icon: LayoutDashboard, href: '/dashboard', roles: ['admin', 'teacher', 'parent', 'secretary'] },
+  { label: 'Dashboard', icon: LayoutDashboard, href: '/dashboard', roles: ['admin', 'teacher', 'parent', 'secretary', 'accountant', 'head_nursery', 'head_primary', 'head_secondary'] },
   { label: 'Students', icon: GraduationCap, href: '/students', roles: ['admin', 'teacher', 'secretary'] },
   { label: 'My Class Students', icon: Users, href: '/my-class-students', roles: ['teacher'] },
   { label: 'Teachers', icon: Users, href: '/teachers', roles: ['admin'] },
-  { label: 'Subjects', icon: BookOpen, href: '/subjects', roles: ['admin'] },
+  { label: 'Subjects', icon: BookOpen, href: '/subjects', roles: ['admin', 'head_nursery', 'head_primary', 'head_secondary'] },
   { label: 'Marks Entry', icon: ClipboardList, href: '/marks-entry', roles: ['teacher'] },
   { label: 'Unlock Requests', icon: Unlock, href: '/unlock-requests', roles: ['admin', 'teacher'] },
-  { label: 'Reports', icon: BarChart3, href: '/reports', roles: ['admin', 'teacher'] },
-  { label: 'Feedback', icon: MessageSquare, href: '/feedback', roles: ['admin', 'parent', 'teacher', 'secretary'] },
-  { label: 'Announcements', icon: FileText, href: '/announcements', roles: ['admin'] },
+  { label: 'Reports', icon: BarChart3, href: '/reports', roles: ['admin', 'teacher', 'head_nursery', 'head_primary', 'head_secondary'] },
+  { label: 'Feedback', icon: MessageSquare, href: '/feedback', roles: ['admin', 'parent', 'teacher', 'secretary', 'accountant', 'head_nursery', 'head_primary', 'head_secondary'] },
+  { label: 'Announcements', icon: FileText, href: '/announcements', roles: ['admin', 'head_nursery', 'head_primary', 'head_secondary'] },
   { label: 'Academic Years', icon: Calendar, href: '/academic-years', roles: ['admin'] },
   { label: 'User Management', icon: UserCog, href: '/users', roles: ['admin'] },
   { label: 'Settings', icon: Settings, href: '/settings', roles: ['admin'] },
@@ -56,9 +56,22 @@ export function Sidebar() {
 
   const toggleSidebar = () => setIsOpen(!isOpen);
 
+  const getRoleDisplay = (role: string) => {
+    const map: Record<string, string> = {
+      admin: 'Admin',
+      teacher: 'Teacher',
+      parent: 'Parent',
+      secretary: 'Secretary',
+      accountant: 'Accountant',
+      head_nursery: 'Head of Nursery',
+      head_primary: 'Head of Primary',
+      head_secondary: 'Head of Secondary',
+    };
+    return map[role] || role;
+  };
+
   return (
     <>
-      {/* Mobile menu button - only shows hamburger, X is inside sidebar */}
       {!isOpen && (
         <Button
           variant="ghost"
@@ -70,7 +83,6 @@ export function Sidebar() {
         </Button>
       )}
 
-      {/* Overlay */}
       <div 
         className={cn(
           "fixed inset-0 bg-black/50 backdrop-blur-sm z-40 lg:hidden transition-opacity duration-300",
@@ -79,15 +91,12 @@ export function Sidebar() {
         onClick={() => setIsOpen(false)}
       />
 
-      {/* Sidebar */}
       <aside 
         className={cn(
           "fixed left-0 top-0 h-full w-72 z-50",
           "bg-gradient-to-b from-[#1e3a5f] via-[#1a3455] to-[#152a45]",
           "shadow-2xl transition-transform duration-300",
-          // Desktop: always visible
           "lg:translate-x-0",
-          // Mobile: slide in/out based on isOpen state
           isOpen ? "translate-x-0" : "-translate-x-full"
         )}
       >
@@ -95,7 +104,6 @@ export function Sidebar() {
           "flex flex-col h-full",
           isOpen && "animate-content-wiggle"
         )}>
-          {/* Close button for mobile */}
           <button 
             onClick={() => setIsOpen(false)}
             className="absolute top-5 right-4 lg:hidden text-white/60 hover:text-white transition-colors duration-200"
@@ -103,7 +111,6 @@ export function Sidebar() {
             <X className="w-5 h-5" />
           </button>
 
-          {/* User Profile Section */}
           <div className="p-6 pb-5">
             <div className="flex items-center gap-4">
               <div className="w-14 h-14 rounded-full bg-white/10 flex items-center justify-center ring-2 ring-white/20 shadow-lg backdrop-blur-sm">
@@ -113,15 +120,13 @@ export function Sidebar() {
                 <h2 className="text-base font-semibold text-white truncate">
                   {user?.name || 'User'}
                 </h2>
-                <p className="text-sm text-white/50 capitalize">{user?.role || 'Guest'}</p>
+                <p className="text-sm text-white/50">{getRoleDisplay(user?.role || 'Guest')}</p>
               </div>
             </div>
           </div>
 
-          {/* Divider */}
           <div className="mx-5 h-px bg-white/10" />
 
-          {/* Navigation */}
           <nav className="flex-1 px-4 py-5 space-y-1 overflow-y-auto">
             {filteredNavItems.map((item, index) => {
               const isActive = location.pathname === item.href;
@@ -136,27 +141,21 @@ export function Sidebar() {
                       ? "bg-white/15 text-white shadow-md" 
                       : "text-white/70 hover:text-white hover:bg-white/5"
                   )}
-                  style={{
-                    animationDelay: isOpen ? `${index * 30}ms` : '0ms'
-                  }}
+                  style={{ animationDelay: isOpen ? `${index * 30}ms` : '0ms' }}
                 >
                   <item.icon className={cn(
                     "w-5 h-5 transition-all duration-200",
                     isActive ? "text-sky-300" : "text-white/50 group-hover:text-white/80"
                   )} />
                   <span className="flex-1 font-medium text-sm">{item.label}</span>
-                  {isActive && (
-                    <div className="w-2 h-2 rounded-full bg-sky-300" />
-                  )}
+                  {isActive && <div className="w-2 h-2 rounded-full bg-sky-300" />}
                 </NavLink>
               );
             })}
           </nav>
 
-          {/* Divider */}
           <div className="mx-5 h-px bg-white/10" />
 
-          {/* Logout section */}
           <div className="p-4">
             <button
               onClick={logout}
@@ -167,7 +166,6 @@ export function Sidebar() {
             </button>
           </div>
 
-          {/* School branding */}
           <div className="p-4 pt-2">
             <div className="px-4 py-3 rounded-xl bg-white/5">
               <p className="text-xs font-semibold text-white/80 tracking-wide">DAARUL-ARQAM</p>
@@ -177,63 +175,13 @@ export function Sidebar() {
         </div>
       </aside>
 
-      {/* Add custom animation styles */}
       <style>{`
-        @keyframes sidebar-in {
-          0% {
-            transform: translateX(-100%);
-            opacity: 0.5;
-          }
-          50% {
-            transform: translateX(3%);
-          }
-          70% {
-            transform: translateX(-1%);
-          }
-          100% {
-            transform: translateX(0);
-            opacity: 1;
-          }
-        }
-        
-        @keyframes sidebar-out {
-          0% {
-            transform: translateX(0);
-            opacity: 1;
-          }
-          100% {
-            transform: translateX(-100%);
-            opacity: 0.5;
-          }
-        }
-        
         @keyframes content-wiggle {
-          0% {
-            transform: translateX(-5px);
-            opacity: 0;
-          }
-          30% {
-            transform: translateX(3px);
-            opacity: 0.7;
-          }
-          60% {
-            transform: translateX(-2px);
-            opacity: 0.9;
-          }
-          100% {
-            transform: translateX(0);
-            opacity: 1;
-          }
+          0% { transform: translateX(-5px); opacity: 0; }
+          30% { transform: translateX(3px); opacity: 0.7; }
+          60% { transform: translateX(-2px); opacity: 0.9; }
+          100% { transform: translateX(0); opacity: 1; }
         }
-        
-        .animate-sidebar-in {
-          animation: sidebar-in 0.4s cubic-bezier(0.34, 1.56, 0.64, 1) forwards;
-        }
-        
-        .animate-sidebar-out {
-          animation: sidebar-out 0.3s ease-out forwards;
-        }
-        
         .animate-content-wiggle {
           animation: content-wiggle 0.5s ease-out forwards;
         }
