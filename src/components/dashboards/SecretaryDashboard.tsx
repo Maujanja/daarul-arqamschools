@@ -247,6 +247,10 @@ export function SecretaryDashboard({ isAdminMode = false }: { isAdminMode?: bool
   const [showPhotoDialog, setShowPhotoDialog] = useState(false);
   const [selectedStudentForPhoto, setSelectedStudentForPhoto] = useState<Student | null>(null);
 
+  // Student fee profile
+  const [showFeeProfile, setShowFeeProfile] = useState(false);
+  const [feeProfileStudent, setFeeProfileStudent] = useState<Student | null>(null);
+
   // Set initial year when currentYear loads
   useEffect(() => {
     if (currentYear) {
