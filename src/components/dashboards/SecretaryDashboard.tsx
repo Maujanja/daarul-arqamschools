@@ -44,8 +44,10 @@ import {
   Edit,
   Camera,
   Upload,
-  FileSpreadsheet
+  FileSpreadsheet,
+  Eye
 } from 'lucide-react';
+import { StudentFeeProfileDialog } from '@/components/dashboard/StudentFeeProfileDialog';
 
 interface Student {
   id: string;
