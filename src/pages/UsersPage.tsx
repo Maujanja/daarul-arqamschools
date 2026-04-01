@@ -122,6 +122,20 @@ export default function UsersPage() {
   });
   const [saving, setSaving] = useState(false);
 
+  // Accountant Management
+  const [showAddAccountantDialog, setShowAddAccountantDialog] = useState(false);
+  const [showEditAccountantDialog, setShowEditAccountantDialog] = useState(false);
+  const [selectedAccountant, setSelectedAccountant] = useState<Accountant | null>(null);
+  const [newAccountant, setNewAccountant] = useState({ username: '', full_name: '', password: '' });
+  const [editAccountant, setEditAccountant] = useState({ username: '', full_name: '', password: '' });
+
+  // Head of School Management
+  const [showAddHeadDialog, setShowAddHeadDialog] = useState(false);
+  const [showEditHeadDialog, setShowEditHeadDialog] = useState(false);
+  const [selectedHead, setSelectedHead] = useState<HeadOfSchool | null>(null);
+  const [newHead, setNewHead] = useState({ username: '', full_name: '', password: '', department: 'primary' });
+  const [editHead, setEditHead] = useState({ username: '', full_name: '', password: '', department: 'primary' });
+
   // Add Parent Dialog
   const [showAddParentDialog, setShowAddParentDialog] = useState(false);
   const [newParent, setNewParent] = useState({
