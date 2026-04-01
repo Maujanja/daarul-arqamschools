@@ -166,8 +166,10 @@ function getInstallmentDueDate(academicYear: string, installmentNumber: number):
   if (!inst) return `${startYear}-01-01`;
   // Months 0-5 (Jan-Jun) use end year, months 6-11 (Jul-Dec) use start year
   const useYear = inst.month <= 5 ? endYear : startYear;
-  const date = new Date(useYear, inst.month, inst.day);
-  return date.toISOString().split('T')[0];
+  // Use manual string formatting to avoid timezone shifts from toISOString()
+  const mm = String(inst.month + 1).padStart(2, '0');
+  const dd = String(inst.day).padStart(2, '0');
+  return `${useYear}-${mm}-${dd}`;
 }
 
 export function SecretaryDashboard({ isAdminMode = false }: { isAdminMode?: boolean } = {}) {
