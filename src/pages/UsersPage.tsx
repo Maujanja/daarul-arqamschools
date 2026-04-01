@@ -92,7 +92,8 @@ export default function UsersPage() {
   const [parents, setParents] = useState<Parent[]>([]);
   const [students, setStudents] = useState<Student[]>([]);
   const [secretaries, setSecretaries] = useState<Secretary[]>([]);
-  const [loading, setLoading] = useState(true);
+  const [accountants, setAccountants] = useState<Accountant[]>([]);
+  const [headsOfSchool, setHeadsOfSchool] = useState<HeadOfSchool[]>([]);
   const [activeTab, setActiveTab] = useState('teachers');
   
   // Secretary Management
