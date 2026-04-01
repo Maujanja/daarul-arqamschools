@@ -1453,6 +1453,15 @@ export function SecretaryDashboard({ isAdminMode = false }: { isAdminMode?: bool
                                       size="icon"
                                       variant="outline"
                                       className="h-8 w-8"
+                                      onClick={() => { setFeeProfileStudent(student); setShowFeeProfile(true); }}
+                                      title="View Fee Profile"
+                                    >
+                                      <Eye className="w-3 h-3" />
+                                    </Button>
+                                    <Button
+                                      size="icon"
+                                      variant="outline"
+                                      className="h-8 w-8"
                                       onClick={() => openPhotoDialog(student)}
                                       title="Manage Photo"
                                     >
