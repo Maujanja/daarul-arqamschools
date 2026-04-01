@@ -763,7 +763,7 @@ export default function MarksEntryPage() {
         exam: typeof mark.exam === 'number' ? mark.exam : 0,
         total: mark.total,
         grade: mark.grade,
-        term: selectedTerm,
+        term: selectedTerm.replace(/^Test\s+/i, 'Series '),
         academic_year: selectedYear,
         teacher_id: isTeacher ? (resolvedTeacherId || user?.id || null) : null,
       }));

@@ -240,6 +240,22 @@ serve(async (req) => {
             { status: 400, headers: { ...corsHeaders, "Content-Type": "application/json" } }
           );
         }
+
+        // Normalize "Test X" → "Series X" for marks to prevent duplicates
+        const normalizeMarksTerm = (record: Record<string, unknown>): Record<string, unknown> => {
+          if (table === "marks" && typeof record.term === "string") {
+            const testMatch = record.term.match(/^Test\s+(\d+)$/i);
+            if (testMatch) {
+              return { ...record, term: `Series ${testMatch[1]}` };
+            }
+          }
+          return record;
+        };
+
+        const normalizedData = Array.isArray(data)
+          ? data.map(normalizeMarksTerm)
+          : normalizeMarksTerm(data as Record<string, unknown>);
+
         // For marks table, specify the unique constraint columns for proper upsert
         const upsertOptions: Record<string, string> = {};
         if (table === "marks") {
@@ -251,7 +267,7 @@ serve(async (req) => {
         }
         const { data: upsertData, error } = await supabase
           .from(table)
-          .upsert(data, upsertOptions)
+          .upsert(normalizedData, upsertOptions)
           .select();
         
         if (error) throw error;
