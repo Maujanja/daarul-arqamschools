@@ -5,6 +5,7 @@ import { supabase } from '@/integrations/supabase/client';
 import { StatCard } from '@/components/dashboard/StatCard';
 import { SeriesSummaryTable } from '@/components/dashboard/SeriesSummaryTable';
 import { Users, GraduationCap, BookOpen, MessageSquare, FileText, DollarSign, Clock, CheckCircle, User, Calendar, UserCog, Download, Loader2, Eye, Briefcase } from 'lucide-react';
+import { AccountantDashboard } from '@/components/dashboards/AccountantDashboard';
 import { Button } from '@/components/ui/button';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
