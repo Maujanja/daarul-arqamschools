@@ -170,17 +170,21 @@ export default function UsersPage() {
     try {
       setLoading(true);
       
-      const [teachersData, parentsData, studentsData, secretariesData] = await Promise.all([
+      const [teachersData, parentsData, studentsData, secretariesData, accountantsData, headsData] = await Promise.all([
         fetchTable<Teacher>('teachers', undefined, { orderBy: { column: 'full_name', ascending: true } }),
         fetchTable<Parent>('parents', undefined, { orderBy: { column: 'full_name', ascending: true } }),
         fetchTable<Student>('students', undefined, { orderBy: { column: 'full_name', ascending: true } }),
         fetchTable<Secretary>('secretary_credentials' as any, undefined, { orderBy: { column: 'full_name', ascending: true } }),
+        fetchTable<Accountant>('accountant_credentials' as any, undefined, { orderBy: { column: 'full_name', ascending: true } }),
+        fetchTable<HeadOfSchool>('head_of_school_credentials' as any, undefined, { orderBy: { column: 'full_name', ascending: true } }),
       ]);
 
       setTeachers(teachersData);
       setParents(parentsData);
       setStudents(studentsData);
       setSecretaries(secretariesData);
+      setAccountants(accountantsData);
+      setHeadsOfSchool(headsData);
     } catch (error) {
       console.error('Error fetching data:', error);
       toast.error('Failed to fetch data');
