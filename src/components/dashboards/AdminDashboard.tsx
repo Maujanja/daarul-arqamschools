@@ -18,7 +18,7 @@ import { generateAnnualExamReport } from '@/utils/annualReportGenerator';
 import { generateAnnualExamReportPDF } from '@/utils/annualReportPdfGenerator';
 import { toast } from 'sonner';
 import { AnnualReportPreview } from '@/components/dashboard/AnnualReportPreview';
-import { SecretaryDashboard } from '@/components/dashboards/SecretaryDashboard';
+
 import { ResultApprovalManager } from '@/components/dashboard/ResultApprovalManager';
 
 interface FeedbackItem {
