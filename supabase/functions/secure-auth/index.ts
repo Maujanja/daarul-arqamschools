@@ -7,13 +7,14 @@ const corsHeaders = {
 };
 
 interface LoginRequest {
-  loginType: "admin" | "teacher" | "parent" | "secretary";
+  loginType: "admin" | "teacher" | "parent" | "secretary" | "accountant" | "head_of_school";
   credentials: {
     username?: string;
     password?: string;
     name?: string;
     studentName?: string;
     rollNumber?: string;
+    department?: string;
   };
 }
 
@@ -23,6 +24,7 @@ interface AuthResponse {
     id: string;
     name: string;
     role: string;
+    department?: string;
   };
   error?: string;
 }
@@ -35,7 +37,6 @@ serve(async (req) => {
   try {
     const { loginType, credentials }: LoginRequest = await req.json();
 
-    // Use service role key to bypass RLS and access password hashes
     const supabaseUrl = Deno.env.get("SUPABASE_URL")!;
     const supabaseServiceKey = Deno.env.get("SUPABASE_SERVICE_ROLE_KEY")!;
     const supabase = createClient(supabaseUrl, supabaseServiceKey);
@@ -61,7 +62,6 @@ serve(async (req) => {
           break;
         }
 
-        // Compare password (in production, use bcrypt)
         if (data.password_hash !== password.trim()) {
           response = { success: false, error: "Invalid username or password" };
           break;
@@ -69,11 +69,7 @@ serve(async (req) => {
 
         response = {
           success: true,
-          user: {
-            id: data.id,
-            name: "Admin",
-            role: "admin",
-          },
+          user: { id: data.id, name: "Admin", role: "admin" },
         };
         break;
       }
@@ -85,7 +81,6 @@ serve(async (req) => {
           break;
         }
 
-        // Fetch all teachers and match with trimmed names to handle trailing spaces in DB
         const { data: allTeachers, error } = await supabase
           .from("teachers")
           .select("id, full_name, email, password_hash");
@@ -106,11 +101,7 @@ serve(async (req) => {
 
         response = {
           success: true,
-          user: {
-            id: data.id,
-            name: data.full_name,
-            role: "teacher",
-          },
+          user: { id: data.id, name: data.full_name, role: "teacher" },
         };
         break;
       }
@@ -122,17 +113,14 @@ serve(async (req) => {
           break;
         }
 
-        // Normalize input: trim, collapse multiple spaces, case-insensitive
         const normalizedName = studentName.trim().replace(/\s+/g, ' ');
         const normalizedRoll = rollNumber.trim().toUpperCase();
 
-        // Fetch students by roll number first (exact match), then match name flexibly
         const { data: rollMatches, error } = await supabase
           .from("students")
           .select("id, full_name, parent_id")
           .eq("roll_number", normalizedRoll);
 
-        // Find student with matching name (case-insensitive, whitespace-normalized)
         const student = rollMatches?.find((s: any) => 
           s.full_name.trim().replace(/\s+/g, ' ').toLowerCase() === normalizedName.toLowerCase()
         ) || null;
@@ -142,7 +130,6 @@ serve(async (req) => {
           break;
         }
 
-        // Get parent info if parent_id exists
         let parentName = `Parent of ${student.full_name}`;
         let parentId = student.id;
 
@@ -161,11 +148,7 @@ serve(async (req) => {
 
         response = {
           success: true,
-          user: {
-            id: parentId,
-            name: parentName,
-            role: "parent",
-          },
+          user: { id: parentId, name: parentName, role: "parent" },
         };
         break;
       }
@@ -195,10 +178,78 @@ serve(async (req) => {
 
         response = {
           success: true,
+          user: { id: data.id, name: data.full_name, role: "secretary" },
+        };
+        break;
+      }
+
+      case "accountant": {
+        const { username, password } = credentials;
+        if (!username || !password) {
+          response = { success: false, error: "Username and password required" };
+          break;
+        }
+
+        const { data, error } = await supabase
+          .from("accountant_credentials")
+          .select("id, username, password_hash, full_name")
+          .eq("username", username.trim())
+          .maybeSingle();
+
+        if (error || !data) {
+          response = { success: false, error: "Invalid username or password" };
+          break;
+        }
+
+        if (data.password_hash !== password.trim()) {
+          response = { success: false, error: "Invalid username or password" };
+          break;
+        }
+
+        response = {
+          success: true,
+          user: { id: data.id, name: data.full_name, role: "accountant" },
+        };
+        break;
+      }
+
+      case "head_of_school": {
+        const { username, password } = credentials;
+        if (!username || !password) {
+          response = { success: false, error: "Username and password required" };
+          break;
+        }
+
+        const { data, error } = await supabase
+          .from("head_of_school_credentials")
+          .select("id, username, password_hash, full_name, department")
+          .eq("username", username.trim())
+          .maybeSingle();
+
+        if (error || !data) {
+          response = { success: false, error: "Invalid username or password" };
+          break;
+        }
+
+        if (data.password_hash !== password.trim()) {
+          response = { success: false, error: "Invalid username or password" };
+          break;
+        }
+
+        // Map department to role: nursery -> head_nursery, primary -> head_primary, secondary -> head_secondary
+        const roleMap: Record<string, string> = {
+          nursery: "head_nursery",
+          primary: "head_primary",
+          secondary: "head_secondary",
+        };
+
+        response = {
+          success: true,
           user: {
             id: data.id,
             name: data.full_name,
-            role: "secretary",
+            role: roleMap[data.department] || "head_primary",
+            department: data.department,
           },
         };
         break;
