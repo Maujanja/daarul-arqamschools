@@ -1314,6 +1314,92 @@ export default function UsersPage() {
           </DialogFooter>
         </DialogContent>
       </Dialog>
+
+      {/* Add Accountant Dialog */}
+      <Dialog open={showAddAccountantDialog} onOpenChange={setShowAddAccountantDialog}>
+        <DialogContent>
+          <DialogHeader><DialogTitle>Add Accountant</DialogTitle><DialogDescription>Fill in the new accountant's information</DialogDescription></DialogHeader>
+          <div className="space-y-4 py-4">
+            <div className="space-y-2"><Label>Username</Label><Input value={newAccountant.username} onChange={(e) => setNewAccountant({ ...newAccountant, username: e.target.value })} placeholder="e.g. accountant1" /></div>
+            <div className="space-y-2"><Label>Full Name</Label><Input value={newAccountant.full_name} onChange={(e) => setNewAccountant({ ...newAccountant, full_name: e.target.value })} placeholder="e.g. Jane Doe" /></div>
+            <div className="space-y-2"><Label>Password</Label><Input type="text" value={newAccountant.password} onChange={(e) => setNewAccountant({ ...newAccountant, password: e.target.value })} placeholder="Login password" /></div>
+          </div>
+          <DialogFooter>
+            <Button variant="outline" onClick={() => setShowAddAccountantDialog(false)}>Cancel</Button>
+            <Button onClick={handleAddAccountant} disabled={saving}>{saving && <Loader2 className="w-4 h-4 mr-2 animate-spin" />}Save</Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
+
+      {/* Edit Accountant Dialog */}
+      <Dialog open={showEditAccountantDialog} onOpenChange={setShowEditAccountantDialog}>
+        <DialogContent>
+          <DialogHeader><DialogTitle>Edit Accountant</DialogTitle><DialogDescription>Update accountant information</DialogDescription></DialogHeader>
+          <div className="space-y-4 py-4">
+            <div className="space-y-2"><Label>Username</Label><Input value={editAccountant.username} onChange={(e) => setEditAccountant({ ...editAccountant, username: e.target.value })} /></div>
+            <div className="space-y-2"><Label>Full Name</Label><Input value={editAccountant.full_name} onChange={(e) => setEditAccountant({ ...editAccountant, full_name: e.target.value })} /></div>
+            <div className="space-y-2"><Label>Password (leave empty to keep current)</Label><Input type="text" value={editAccountant.password} onChange={(e) => setEditAccountant({ ...editAccountant, password: e.target.value })} placeholder="New password" /></div>
+          </div>
+          <DialogFooter>
+            <Button variant="outline" onClick={() => setShowEditAccountantDialog(false)}>Cancel</Button>
+            <Button onClick={handleEditAccountant} disabled={saving}>{saving && <Loader2 className="w-4 h-4 mr-2 animate-spin" />}Save Changes</Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
+
+      {/* Add Head of School Dialog */}
+      <Dialog open={showAddHeadDialog} onOpenChange={setShowAddHeadDialog}>
+        <DialogContent>
+          <DialogHeader><DialogTitle>Add Head of School</DialogTitle><DialogDescription>Fill in the new head of school's information</DialogDescription></DialogHeader>
+          <div className="space-y-4 py-4">
+            <div className="space-y-2"><Label>Username</Label><Input value={newHead.username} onChange={(e) => setNewHead({ ...newHead, username: e.target.value })} placeholder="e.g. head_primary" /></div>
+            <div className="space-y-2"><Label>Full Name</Label><Input value={newHead.full_name} onChange={(e) => setNewHead({ ...newHead, full_name: e.target.value })} placeholder="e.g. John Smith" /></div>
+            <div className="space-y-2"><Label>Password</Label><Input type="text" value={newHead.password} onChange={(e) => setNewHead({ ...newHead, password: e.target.value })} placeholder="Login password" /></div>
+            <div className="space-y-2">
+              <Label>Department</Label>
+              <Select value={newHead.department} onValueChange={(v) => setNewHead({ ...newHead, department: v })}>
+                <SelectTrigger><SelectValue /></SelectTrigger>
+                <SelectContent>
+                  <SelectItem value="nursery">Nursery</SelectItem>
+                  <SelectItem value="primary">Primary</SelectItem>
+                  <SelectItem value="secondary">Secondary</SelectItem>
+                </SelectContent>
+              </Select>
+            </div>
+          </div>
+          <DialogFooter>
+            <Button variant="outline" onClick={() => setShowAddHeadDialog(false)}>Cancel</Button>
+            <Button onClick={handleAddHead} disabled={saving}>{saving && <Loader2 className="w-4 h-4 mr-2 animate-spin" />}Save</Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
+
+      {/* Edit Head of School Dialog */}
+      <Dialog open={showEditHeadDialog} onOpenChange={setShowEditHeadDialog}>
+        <DialogContent>
+          <DialogHeader><DialogTitle>Edit Head of School</DialogTitle><DialogDescription>Update head of school information</DialogDescription></DialogHeader>
+          <div className="space-y-4 py-4">
+            <div className="space-y-2"><Label>Username</Label><Input value={editHead.username} onChange={(e) => setEditHead({ ...editHead, username: e.target.value })} /></div>
+            <div className="space-y-2"><Label>Full Name</Label><Input value={editHead.full_name} onChange={(e) => setEditHead({ ...editHead, full_name: e.target.value })} /></div>
+            <div className="space-y-2"><Label>Password (leave empty to keep current)</Label><Input type="text" value={editHead.password} onChange={(e) => setEditHead({ ...editHead, password: e.target.value })} placeholder="New password" /></div>
+            <div className="space-y-2">
+              <Label>Department</Label>
+              <Select value={editHead.department} onValueChange={(v) => setEditHead({ ...editHead, department: v })}>
+                <SelectTrigger><SelectValue /></SelectTrigger>
+                <SelectContent>
+                  <SelectItem value="nursery">Nursery</SelectItem>
+                  <SelectItem value="primary">Primary</SelectItem>
+                  <SelectItem value="secondary">Secondary</SelectItem>
+                </SelectContent>
+              </Select>
+            </div>
+          </div>
+          <DialogFooter>
+            <Button variant="outline" onClick={() => setShowEditHeadDialog(false)}>Cancel</Button>
+            <Button onClick={handleEditHead} disabled={saving}>{saving && <Loader2 className="w-4 h-4 mr-2 animate-spin" />}Save Changes</Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
     </DashboardLayout>
   );
 }
