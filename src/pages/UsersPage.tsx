@@ -2,7 +2,7 @@ import { useState, useEffect, useCallback } from 'react';
 import { DashboardLayout } from '@/components/layout/DashboardLayout';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
-import { Search, Plus, MoreHorizontal, UserCog, Loader2, Shield, GraduationCap, Users } from 'lucide-react';
+import { Search, Plus, MoreHorizontal, UserCog, Loader2, Shield, GraduationCap, Users, DollarSign, School } from 'lucide-react';
 import {
   DropdownMenu,
   DropdownMenuContent,
