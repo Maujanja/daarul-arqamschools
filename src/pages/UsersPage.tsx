@@ -761,6 +761,71 @@ export default function UsersPage() {
             </div>
           </TabsContent>
 
+          {/* Accountants Tab */}
+          <TabsContent value="accountants">
+            <div className="flex justify-end mb-4">
+              <Button onClick={() => setShowAddAccountantDialog(true)}><Plus className="w-4 h-4 mr-2" />Add Accountant</Button>
+            </div>
+            <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
+              {filteredAccountants.map((acc) => (
+                <div key={acc.id} className="card-elevated p-4">
+                  <div className="flex items-start justify-between">
+                    <div className="flex items-center gap-3">
+                      <div className="w-10 h-10 rounded-full bg-success/20 flex items-center justify-center"><DollarSign className="w-5 h-5 text-success" /></div>
+                      <div className="flex-1 min-w-0">
+                        <p className="font-medium text-card-foreground truncate">{acc.full_name}</p>
+                        <p className="text-xs text-muted-foreground truncate">@{acc.username}</p>
+                      </div>
+                    </div>
+                    <DropdownMenu>
+                      <DropdownMenuTrigger asChild><Button variant="ghost" size="icon" className="h-8 w-8"><MoreHorizontal className="h-4 w-4" /></Button></DropdownMenuTrigger>
+                      <DropdownMenuContent align="end">
+                        <DropdownMenuItem onClick={() => handleOpenEditAccountant(acc)}>Edit Details</DropdownMenuItem>
+                        <DropdownMenuItem className="text-destructive" onClick={() => handleDeleteAccountant(acc.id)}>Delete</DropdownMenuItem>
+                      </DropdownMenuContent>
+                    </DropdownMenu>
+                  </div>
+                  <div className="mt-3 pt-3 border-t space-y-1">
+                    <p className="text-xs text-muted-foreground"><span className="font-medium">Password:</span> {acc.password_hash || 'Not set'}</p>
+                  </div>
+                </div>
+              ))}
+            </div>
+          </TabsContent>
+
+          {/* Heads of School Tab */}
+          <TabsContent value="heads">
+            <div className="flex justify-end mb-4">
+              <Button onClick={() => setShowAddHeadDialog(true)}><Plus className="w-4 h-4 mr-2" />Add Head of School</Button>
+            </div>
+            <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
+              {filteredHeads.map((head) => (
+                <div key={head.id} className="card-elevated p-4">
+                  <div className="flex items-start justify-between">
+                    <div className="flex items-center gap-3">
+                      <div className="w-10 h-10 rounded-full bg-accent/20 flex items-center justify-center"><School className="w-5 h-5 text-accent" /></div>
+                      <div className="flex-1 min-w-0">
+                        <p className="font-medium text-card-foreground truncate">{head.full_name}</p>
+                        <p className="text-xs text-muted-foreground truncate">@{head.username} • {head.department}</p>
+                      </div>
+                    </div>
+                    <DropdownMenu>
+                      <DropdownMenuTrigger asChild><Button variant="ghost" size="icon" className="h-8 w-8"><MoreHorizontal className="h-4 w-4" /></Button></DropdownMenuTrigger>
+                      <DropdownMenuContent align="end">
+                        <DropdownMenuItem onClick={() => handleOpenEditHead(head)}>Edit Details</DropdownMenuItem>
+                        <DropdownMenuItem className="text-destructive" onClick={() => handleDeleteHead(head.id)}>Delete</DropdownMenuItem>
+                      </DropdownMenuContent>
+                    </DropdownMenu>
+                  </div>
+                  <div className="mt-3 pt-3 border-t space-y-1">
+                    <p className="text-xs text-muted-foreground"><span className="font-medium">Department:</span> {head.department}</p>
+                    <p className="text-xs text-muted-foreground"><span className="font-medium">Password:</span> {head.password_hash || 'Not set'}</p>
+                  </div>
+                </div>
+              ))}
+            </div>
+          </TabsContent>
+
           {/* Parents Tab */}
           <TabsContent value="parents">
             <div className="flex justify-end mb-4">
