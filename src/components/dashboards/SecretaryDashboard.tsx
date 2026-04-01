@@ -2220,6 +2220,18 @@ export function SecretaryDashboard({ isAdminMode = false }: { isAdminMode?: bool
           </DialogFooter>
         </DialogContent>
       </Dialog>
+
+      {/* Student Fee Profile Dialog */}
+      <StudentFeeProfileDialog
+        open={showFeeProfile}
+        onOpenChange={setShowFeeProfile}
+        student={feeProfileStudent}
+        selectedYear={selectedYear}
+        feeStructure={feeStructure}
+        feePayments={feePayments}
+        familyGroupMembers={familyGroupMembers}
+        familyGroupInstallments={familyGroupInstallments}
+      />
     </div>
   );
 }
