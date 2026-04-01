@@ -25,7 +25,8 @@ type AllowedTable =
   | "marks_unlock_requests"
   | "family_groups"
   | "family_group_members"
-  | "family_group_installments";
+  | "family_group_installments"
+  | "result_release_statuses";
 
 interface QueryFilters {
   [key: string]: unknown;

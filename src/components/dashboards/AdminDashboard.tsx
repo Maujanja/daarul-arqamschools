@@ -18,6 +18,7 @@ import { generateAnnualExamReportPDF } from '@/utils/annualReportPdfGenerator';
 import { toast } from 'sonner';
 import { AnnualReportPreview } from '@/components/dashboard/AnnualReportPreview';
 import { SecretaryDashboard } from '@/components/dashboards/SecretaryDashboard';
+import { ResultApprovalManager } from '@/components/dashboard/ResultApprovalManager';
 
 interface FeedbackItem {
   id: string;
@@ -637,6 +638,9 @@ export function AdminDashboard() {
           </div>
         )}
       </div>
+
+      {/* Result Approval Section */}
+      <ResultApprovalManager selectedYear={selectedYear} />
 
       {/* Fee Overview */}
       <div className="card-elevated p-6 animate-fade-in">

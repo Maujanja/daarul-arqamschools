@@ -29,7 +29,8 @@ type AllowedTable =
   | "marks_unlock_requests"
   | "family_groups"
   | "family_group_members"
-  | "family_group_installments";
+  | "family_group_installments"
+  | "result_release_statuses";
 
 interface QueryRequest {
   table: AllowedTable;
@@ -58,7 +59,8 @@ const readPermissions: Record<string, AllowedTable[]> = {
   teacher: [
     "students", "marks", "teacher_assignments", "teacher_class_students",
     "subjects", "academic_years", "announcements", "feedback", "teachers_public", "teachers",
-    "marks_unlock_requests"
+    "marks_unlock_requests",
+    "result_release_statuses"
   ],
   secretary: [
     "students", "marks", "fee_payments", "fee_structure", "fee_installments",
@@ -66,12 +68,14 @@ const readPermissions: Record<string, AllowedTable[]> = {
     "parents", "subjects", "academic_years", "announcements", "feedback",
     "teachers_public", "secretary_credentials_public",
     "family_groups", "family_group_members", "family_group_installments"
+    , "result_release_statuses"
   ],
   parent: [
     "students", "marks", "fee_payments", "fee_structure", "fee_installments",
     "student_custom_installments", "student_debt_history",
     "subjects", "academic_years", "announcements", "feedback", "parents",
-    "family_groups", "family_group_members", "family_group_installments"
+    "family_groups", "family_group_members", "family_group_installments",
+    "result_release_statuses"
   ],
 };
 

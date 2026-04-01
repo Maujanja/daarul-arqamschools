@@ -83,6 +83,14 @@ interface DebtHistory {
   is_cleared: boolean;
 }
 
+interface ResultReleaseStatus {
+  id: string;
+  class_name: string;
+  academic_year: string;
+  term: string;
+  approved_by_admin: boolean;
+}
+
 export function ParentDashboard() {
   // Helper: check if a term matches considering aliases (Series X ↔ Test X)
   const termMatches = (markTerm: string, selectedTerm: string): boolean => {
@@ -122,6 +130,7 @@ export function ParentDashboard() {
   const [dueInstallmentAmount, setDueInstallmentAmount] = useState(0);
   const [showAllInstallments, setShowAllInstallments] = useState(false);
   const [familyParentName, setFamilyParentName] = useState<string | null>(null);
+  const [releaseStatuses, setReleaseStatuses] = useState<ResultReleaseStatus[]>([]);
   
   // Chart refs for capturing as images
   const subjectChartRef = useRef<HTMLDivElement>(null);
@@ -338,6 +347,12 @@ export function ParentDashboard() {
         // Calculate class rank and subject rankings
         await calculateRankings(studentData.id, studentData.class, selectedTerm, selectedYear);
         
+        // Fetch result release statuses
+        const statuses = await fetchTable<ResultReleaseStatus>('result_release_statuses', {
+          academic_year: selectedYear,
+        });
+        setReleaseStatuses(statuses || []);
+
         // Check if this student is in a family group
         const familyMemberships = await fetchTable<any>('family_group_members', {
           student_id: studentData.id,
@@ -503,9 +518,15 @@ export function ParentDashboard() {
   // Update filtered marks and rankings when term/year changes
   useEffect(() => {
     if (allMarks.length > 0) {
-      const filtered = allMarks.filter(
-        m => termMatches(m.term, selectedTerm) && m.academic_year === selectedYear
+      // Check if the selected term is approved for this class
+      const isApproved = releaseStatuses.some(
+        s => s.class_name === childClass && (s.term === selectedTerm || termMatches(s.term, selectedTerm)) && s.approved_by_admin
       );
+
+      const filtered = isApproved
+        ? allMarks.filter(m => termMatches(m.term, selectedTerm) && m.academic_year === selectedYear)
+        : [];
+
       setStudentMarks(filtered);
       
       if (filtered.length > 0) {
@@ -520,7 +541,7 @@ export function ParentDashboard() {
     if (studentId && childClass) {
       calculateRankings(studentId, childClass, selectedTerm, selectedYear);
     }
-  }, [selectedTerm, selectedYear, allMarks, studentId, childClass]);
+  }, [selectedTerm, selectedYear, allMarks, studentId, childClass, releaseStatuses]);
 
   const balance = expectedFee - paidAmount;
 
@@ -1187,7 +1208,7 @@ export function ParentDashboard() {
             <BookOpen className="w-12 h-12 mx-auto text-muted-foreground/50 mb-4" />
             <h3 className="font-display font-semibold text-lg text-card-foreground mb-2">No Results Yet</h3>
             <p className="text-muted-foreground max-w-md mx-auto">
-              No marks have been recorded for this series yet. Results will appear here once teachers enter marks.
+              Matokeo bado hayajaandaliwa au hayajaidhinishwa kuonekana kwa series hii. Matokeo yataonekana baada ya walimu kukamilisha na admin kuidhinisha.
             </p>
           </div>
         </div>

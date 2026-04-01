@@ -159,10 +159,14 @@ function getInstallmentDueDatesForClass(className: string) {
 }
 
 function getInstallmentDueDate(academicYear: string, installmentNumber: number): string {
-  const year = parseInt(academicYear.split('-')[0]);
+  const parts = academicYear.split('-');
+  const startYear = parseInt(parts[0]);
+  const endYear = parts.length > 1 ? parseInt(parts[1]) : startYear;
   const inst = ALL_INSTALLMENT_DUE_DATES.find(i => i.number === installmentNumber);
-  if (!inst) return `${year}-01-01`;
-  const date = new Date(year, inst.month, inst.day);
+  if (!inst) return `${startYear}-01-01`;
+  // Months 0-5 (Jan-Jun) use end year, months 6-11 (Jul-Dec) use start year
+  const useYear = inst.month <= 5 ? endYear : startYear;
+  const date = new Date(useYear, inst.month, inst.day);
   return date.toISOString().split('T')[0];
 }
 
