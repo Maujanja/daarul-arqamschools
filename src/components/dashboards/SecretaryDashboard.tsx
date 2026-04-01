@@ -695,8 +695,9 @@ export function SecretaryDashboard({ isAdminMode = false }: { isAdminMode?: bool
   };
 
   const addCustomInstallmentRow = () => {
-    const year = parseInt(selectedYear.split('-')[0]);
-    setCustomInstallmentRows(prev => [...prev, { amount: '', due_date: `${year}-01-01`, notes: '' }]);
+    const parts = selectedYear.split('-');
+    const endYear = parts.length > 1 ? parts[1] : parts[0];
+    setCustomInstallmentRows(prev => [...prev, { amount: '', due_date: `${endYear}-01-01`, notes: '' }]);
   };
 
   const removeCustomInstallmentRow = (index: number) => {
