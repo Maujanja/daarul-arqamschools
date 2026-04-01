@@ -77,7 +77,7 @@ export function AdminDashboard() {
   const { update } = useSecureData();
   const { academicYears, currentYear, loading: yearsLoading } = useAcademicYears();
   const [selectedYear, setSelectedYear] = useState('');
-  const [adminMode, setAdminMode] = useState<'overview' | 'secretary'>('overview');
+  const [adminMode, setAdminMode] = useState<'overview' | 'accountant'>('overview');
   const [selectedClass, setSelectedClass] = useState(classes[0]);
   const [reportClass, setReportClass] = useState(classes[0]);
   const [reportTerm, setReportTerm] = useState('Series 1');
