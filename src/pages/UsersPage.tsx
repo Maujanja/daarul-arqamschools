@@ -485,6 +485,112 @@ export default function UsersPage() {
     }
   };
 
+  // Accountant filter & handlers
+  const filteredAccountants = accountants.filter(a =>
+    a.full_name?.toLowerCase().includes(searchQuery.toLowerCase()) ||
+    a.username?.toLowerCase().includes(searchQuery.toLowerCase())
+  );
+
+  const handleAddAccountant = async () => {
+    if (!newAccountant.username || !newAccountant.full_name || !newAccountant.password) {
+      toast.error('Please fill in all required fields'); return;
+    }
+    try {
+      setSaving(true);
+      const result = await insert('accountant_credentials' as any, { username: newAccountant.username, full_name: newAccountant.full_name, password_hash: newAccountant.password });
+      if (!result.success) throw new Error(result.error);
+      toast.success('Accountant added successfully');
+      setShowAddAccountantDialog(false);
+      setNewAccountant({ username: '', full_name: '', password: '' });
+      fetchData();
+    } catch (error: any) { toast.error(error.message || 'Failed to add accountant'); } finally { setSaving(false); }
+  };
+
+  const handleOpenEditAccountant = (acc: Accountant) => {
+    setSelectedAccountant(acc);
+    setEditAccountant({ username: acc.username, full_name: acc.full_name, password: '' });
+    setShowEditAccountantDialog(true);
+  };
+
+  const handleEditAccountant = async () => {
+    if (!selectedAccountant || !editAccountant.username || !editAccountant.full_name) {
+      toast.error('Please fill in all required fields'); return;
+    }
+    try {
+      setSaving(true);
+      const updateData: Record<string, unknown> = { username: editAccountant.username, full_name: editAccountant.full_name };
+      if (editAccountant.password) updateData.password_hash = editAccountant.password;
+      const result = await update('accountant_credentials' as any, updateData, { id: selectedAccountant.id });
+      if (!result.success) throw new Error(result.error);
+      toast.success('Accountant updated successfully');
+      setShowEditAccountantDialog(false);
+      setSelectedAccountant(null);
+      fetchData();
+    } catch (error: any) { toast.error(error.message || 'Failed to update accountant'); } finally { setSaving(false); }
+  };
+
+  const handleDeleteAccountant = async (id: string) => {
+    try {
+      const result = await remove('accountant_credentials' as any, { id });
+      if (!result.success) throw new Error(result.error);
+      toast.success('Accountant deleted');
+      fetchData();
+    } catch (error: any) { toast.error(error.message || 'Failed to delete accountant'); }
+  };
+
+  // Head of School filter & handlers
+  const filteredHeads = headsOfSchool.filter(h =>
+    h.full_name?.toLowerCase().includes(searchQuery.toLowerCase()) ||
+    h.username?.toLowerCase().includes(searchQuery.toLowerCase())
+  );
+
+  const handleAddHead = async () => {
+    if (!newHead.username || !newHead.full_name || !newHead.password || !newHead.department) {
+      toast.error('Please fill in all required fields'); return;
+    }
+    try {
+      setSaving(true);
+      const result = await insert('head_of_school_credentials' as any, { username: newHead.username, full_name: newHead.full_name, password_hash: newHead.password, department: newHead.department });
+      if (!result.success) throw new Error(result.error);
+      toast.success('Head of School added successfully');
+      setShowAddHeadDialog(false);
+      setNewHead({ username: '', full_name: '', password: '', department: 'primary' });
+      fetchData();
+    } catch (error: any) { toast.error(error.message || 'Failed to add head of school'); } finally { setSaving(false); }
+  };
+
+  const handleOpenEditHead = (head: HeadOfSchool) => {
+    setSelectedHead(head);
+    setEditHead({ username: head.username, full_name: head.full_name, password: '', department: head.department });
+    setShowEditHeadDialog(true);
+  };
+
+  const handleEditHead = async () => {
+    if (!selectedHead || !editHead.username || !editHead.full_name) {
+      toast.error('Please fill in all required fields'); return;
+    }
+    try {
+      setSaving(true);
+      const updateData: Record<string, unknown> = { username: editHead.username, full_name: editHead.full_name, department: editHead.department };
+      if (editHead.password) updateData.password_hash = editHead.password;
+      const result = await update('head_of_school_credentials' as any, updateData, { id: selectedHead.id });
+      if (!result.success) throw new Error(result.error);
+      toast.success('Head of School updated successfully');
+      setShowEditHeadDialog(false);
+      setSelectedHead(null);
+      fetchData();
+    } catch (error: any) { toast.error(error.message || 'Failed to update head of school'); } finally { setSaving(false); }
+  };
+
+  const handleDeleteHead = async (id: string) => {
+    try {
+      const result = await remove('head_of_school_credentials' as any, { id });
+      if (!result.success) throw new Error(result.error);
+      toast.success('Head of School deleted');
+      fetchData();
+    } catch (error: any) { toast.error(error.message || 'Failed to delete head of school'); }
+  };
+
   if (loading) {
     return (
       <DashboardLayout>
