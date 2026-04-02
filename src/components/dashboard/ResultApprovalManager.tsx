@@ -21,9 +21,10 @@ interface ResultReleaseStatus {
 
 interface Props {
   selectedYear: string;
+  filterClasses?: string[];
 }
 
-export function ResultApprovalManager({ selectedYear }: Props) {
+export function ResultApprovalManager({ selectedYear, filterClasses }: Props) {
   const { user } = useAuth();
   const { fetchTable } = useSecureQuery();
   const { insert, update } = useSecureData();
