@@ -397,7 +397,7 @@ export function FeeDashboard({ isAdminMode = false }: { isAdminMode?: boolean } 
       academic_year: selectedYear,
       term: 'Annual',
       notes: paymentNotes || null,
-      recorded_by: 'Secretary'
+      recorded_by: 'Accountant'
     });
 
     if (!result.success) {
