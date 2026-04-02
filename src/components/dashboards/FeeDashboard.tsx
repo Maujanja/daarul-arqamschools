@@ -174,7 +174,7 @@ function getInstallmentDueDate(academicYear: string, installmentNumber: number):
   return `${useYear}-${mm}-${dd}`;
 }
 
-export function SecretaryDashboard({ isAdminMode = false }: { isAdminMode?: boolean } = {}) {
+export function FeeDashboard({ isAdminMode = false }: { isAdminMode?: boolean } = {}) {
   const { toast } = useToast();
   const navigate = useNavigate();
   const { fetchTable } = useSecureQuery();
