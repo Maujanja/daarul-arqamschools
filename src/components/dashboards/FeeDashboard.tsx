@@ -1064,9 +1064,9 @@ export function FeeDashboard({ isAdminMode = false }: { isAdminMode?: boolean } 
               />
             </label>
           </Button>
-          <Button variant="outline" onClick={() => navigate('/students')}>
+          <Button variant="outline" onClick={() => navigate('/announcements')}>
             <GraduationCap className="w-4 h-4 mr-2" />
-            Manage Students
+            Announcements
           </Button>
           <Button className="btn-gradient" onClick={() => setShowAddPaymentDialog(true)}>
             <Plus className="w-4 h-4 mr-2" />
