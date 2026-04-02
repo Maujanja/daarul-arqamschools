@@ -482,7 +482,11 @@ export function HeadOfSchoolDashboard() {
       {showPreview && previewData && (
         <AnnualReportPreview
           open={showPreview}
-          onOpenChange={setShowPreview}
+          onClose={() => setShowPreview(false)}
+          onDownload={(format) => {
+            setReportFormat(format);
+            handleDownloadReport();
+          }}
           className={reportClass}
           term={reportTerm}
           academicYear={selectedYear}
