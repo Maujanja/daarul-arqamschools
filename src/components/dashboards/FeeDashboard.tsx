@@ -334,7 +334,7 @@ export function FeeDashboard({ isAdminMode = false }: { isAdminMode?: boolean } 
       'student_debt_history',
       { 
         is_cleared: true, 
-        cleared_by: 'Secretary',
+        cleared_by: 'Accountant',
         cleared_at: new Date().toISOString()
       },
       { id: debtId }
