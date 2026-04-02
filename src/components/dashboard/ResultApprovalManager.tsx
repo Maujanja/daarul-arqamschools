@@ -21,9 +21,10 @@ interface ResultReleaseStatus {
 
 interface Props {
   selectedYear: string;
+  filterClasses?: string[];
 }
 
-export function ResultApprovalManager({ selectedYear }: Props) {
+export function ResultApprovalManager({ selectedYear, filterClasses }: Props) {
   const { user } = useAuth();
   const { fetchTable } = useSecureQuery();
   const { insert, update } = useSecureData();
@@ -74,7 +75,8 @@ export function ResultApprovalManager({ selectedYear }: Props) {
       percentComplete: number;
     }[] = [];
 
-    for (const className of classes) {
+    const classesToCheck = filterClasses || classes;
+    for (const className of classesToCheck) {
       const classStudents = allStudents.filter(s => s.class === className);
       if (classStudents.length === 0) continue;
 

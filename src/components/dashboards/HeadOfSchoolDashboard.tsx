@@ -4,9 +4,8 @@ import { useQuery } from '@tanstack/react-query';
 import { supabase } from '@/integrations/supabase/client';
 import { StatCard } from '@/components/dashboard/StatCard';
 import { SeriesSummaryTable } from '@/components/dashboard/SeriesSummaryTable';
-import { Users, GraduationCap, BookOpen, MessageSquare, FileText, Download, Loader2, Eye, Calendar } from 'lucide-react';
+import { Users, GraduationCap, BookOpen, MessageSquare, FileText, Download, Loader2, Calendar, KeyRound, ShieldCheck } from 'lucide-react';
 import { Button } from '@/components/ui/button';
-import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { useAcademicYears } from '@/hooks/useAcademicYears';
 import { useAuth } from '@/contexts/AuthContext';
@@ -17,6 +16,7 @@ import { generateAnnualExamReportPDF } from '@/utils/annualReportPdfGenerator';
 import { toast } from 'sonner';
 import { AnnualReportPreview } from '@/components/dashboard/AnnualReportPreview';
 import { ResultApprovalManager } from '@/components/dashboard/ResultApprovalManager';
+import { CLASS_STREAMS, parseClassStream } from '@/utils/classStreams';
 
 // Helper function
 async function secureQuery(table: string, userRole: string, userId: string, options?: any) {
@@ -27,11 +27,11 @@ async function secureQuery(table: string, userRole: string, userId: string, opti
   return data;
 }
 
-// Map role to section classes
-const sectionClasses: Record<string, string[]> = {
-  head_nursery: ['Baby', 'KG 1', 'KG 2', 'Nursery'],
-  head_primary: ['Primary 1', 'Primary 1 A', 'Primary 1 B', 'Primary 2', 'Primary 2 A', 'Primary 2 B', 'Primary 3', 'Primary 3 A', 'Primary 3 B', 'Primary 4', 'Primary 4 A', 'Primary 4 B', 'Primary 5', 'Primary 5 A', 'Primary 5 B', 'Primary 6', 'Primary 6 A', 'Primary 6 B', 'Primary 7', 'Primary 7 A', 'Primary 7 B'],
-  head_secondary: ['Form 1', 'Form 1 A', 'Form 1 B', 'Form 2', 'Form 2 A', 'Form 2 B', 'Form 3', 'Form 3 A', 'Form 3 B', 'Form 4', 'Form 4 A', 'Form 4 B'],
+// Map role to base class names (from CLASS_STREAMS keys)
+const SECTION_BASE_CLASSES: Record<string, string[]> = {
+  head_nursery: ['Baby Class', 'Kindergarten I', 'Kindergarten II'],
+  head_primary: ['Primary 1', 'Primary 2', 'Primary 3', 'Primary 4', 'Primary 5', 'Primary 6', 'Primary 7'],
+  head_secondary: ['Senior 1', 'Senior 2', 'Senior 3', 'Senior 4'],
 };
 
 const sectionLabel: Record<string, string> = {
@@ -39,6 +39,11 @@ const sectionLabel: Record<string, string> = {
   head_primary: 'Primary Section',
   head_secondary: 'Secondary Section',
 };
+
+function isClassInSection(className: string, sectionBaseClasses: string[]): boolean {
+  const { baseClass } = parseClassStream(className);
+  return sectionBaseClasses.includes(baseClass);
+}
 
 interface FeedbackItem {
   id: string;
@@ -69,7 +74,7 @@ export function HeadOfSchoolDashboard() {
   const [selectedClass, setSelectedClass] = useState('');
 
   const role = user?.role || 'head_primary';
-  const myClasses = sectionClasses[role] || [];
+  const myBaseClasses = SECTION_BASE_CLASSES[role] || [];
   const label = sectionLabel[role] || 'My Section';
 
   useEffect(() => {
@@ -77,11 +82,11 @@ export function HeadOfSchoolDashboard() {
   }, [currentYear]);
 
   useEffect(() => {
-    if (myClasses.length > 0 && !reportClass) {
-      setReportClass(myClasses[0]);
-      setSelectedClass(myClasses[0]);
+    if (myBaseClasses.length > 0 && !reportClass) {
+      setReportClass(myBaseClasses[0]);
+      setSelectedClass(myBaseClasses[0]);
     }
-  }, [myClasses]);
+  }, [myBaseClasses]);
 
   // Fetch subjects
   const { data: allSubjects = [] } = useQuery({
@@ -94,7 +99,7 @@ export function HeadOfSchoolDashboard() {
     enabled: !!user,
   });
 
-  // Fetch marks for my section
+  // Fetch marks for my section (paginated)
   const { data: allMarks = [], isLoading: marksLoading } = useQuery({
     queryKey: ['head-marks', selectedYear, user?.role],
     queryFn: async () => {
@@ -119,34 +124,43 @@ export function HeadOfSchoolDashboard() {
         }
       }
       // Filter to only my section classes
-      return allData.filter(m => myClasses.some(c => m.class?.startsWith(c.split(' ')[0]) || m.class === c));
+      return allData.filter(m => isClassInSection(m.class, myBaseClasses));
     },
     enabled: !!selectedYear && !!user,
   });
 
-  // Students count for my section
-  const { data: studentsCount = 0 } = useQuery({
-    queryKey: ['head-students-count', user?.role],
+  // Students for my section
+  const { data: sectionStudents = [] } = useQuery({
+    queryKey: ['head-students', user?.role],
     queryFn: async () => {
-      if (!user) return 0;
+      if (!user) return [];
       const result = await secureQuery('students', user.role, user.id);
-      if (!result?.success) return 0;
-      const filtered = (result.data || []).filter((s: any) => 
-        myClasses.some(c => s.class === c || s.class?.startsWith(c))
-      );
-      return filtered.length;
+      if (!result?.success) return [];
+      return (result.data || []).filter((s: any) => isClassInSection(s.class, myBaseClasses));
     },
     enabled: !!user,
   });
 
-  // Filter marks to section classes
-  const sectionMarks = useMemo(() => {
-    return allMarks;
-  }, [allMarks]);
+  // Unlock requests for my section
+  const { data: unlockRequests = [] } = useQuery({
+    queryKey: ['head-unlock-requests', selectedYear, user?.role],
+    queryFn: async () => {
+      if (!selectedYear || !user) return [];
+      const result = await secureQuery('marks_unlock_requests', user.role, user.id, {
+        filters: { academic_year: selectedYear },
+      });
+      if (!result?.success) return [];
+      return (result.data || []).filter((r: any) => isClassInSection(r.class, myBaseClasses));
+    },
+    enabled: !!selectedYear && !!user,
+  });
+
+  const sectionMarks = allMarks;
 
   const uniqueClasses = useMemo(() => {
-    const classes = [...new Set(sectionMarks.map(m => m.class))];
-    return classes.sort();
+    // Use base classes that have marks data
+    const classesWithData = [...new Set(sectionMarks.map(m => m.class))];
+    return classesWithData.sort();
   }, [sectionMarks]);
 
   const uniqueTerms = useMemo(() => {
@@ -214,15 +228,15 @@ export function HeadOfSchoolDashboard() {
       let totalSum = 0, totalCount = 0;
 
       uniqueTerms.forEach((term) => {
-        const label = getTestDisplayName(term, selectedClass);
+        const termLabel = getTestDisplayName(term, selectedClass);
         const termMarks = classMarksOnly.filter(m => m.subject_id === subject.id && m.term === term);
         if (termMarks.length > 0) {
           const avg = termMarks.reduce((sum, m) => sum + m.total, 0) / termMarks.length;
-          seriesData[label] = Math.round(avg);
+          seriesData[termLabel] = Math.round(avg);
           totalSum += avg;
           totalCount++;
         } else {
-          seriesData[label] = null;
+          seriesData[termLabel] = null;
         }
       });
 
@@ -236,29 +250,29 @@ export function HeadOfSchoolDashboard() {
   const subjectAveragePerSeries = useMemo(() => {
     const result: { [key: string]: number } = {};
     uniqueTerms.forEach((term) => {
-      const label = getTestDisplayName(term, selectedClass);
+      const termLabel = getTestDisplayName(term, selectedClass);
       const termMarks = classMarksOnly.filter(m => m.term === term);
       if (termMarks.length > 0) {
-        result[label] = termMarks.reduce((sum, m) => sum + m.total, 0) / termMarks.length;
+        result[termLabel] = termMarks.reduce((sum, m) => sum + m.total, 0) / termMarks.length;
       }
     });
     return result;
   }, [classMarksOnly, uniqueTerms, selectedClass]);
 
-  // Feedback
+  // Feedback for my section
   const { data: allFeedback = [] } = useQuery({
     queryKey: ['head-feedback', user?.role],
     queryFn: async () => {
       if (!user) return [];
-      const [feedbackResult, parentsResult, studentsResult] = await Promise.all([
+      const [feedbackResult, studentsResult] = await Promise.all([
         secureQuery('feedback', user.role, user.id, { orderBy: { column: 'created_at', ascending: false } }),
-        secureQuery('students', user.role, user.id),
         secureQuery('students', user.role, user.id),
       ]);
       const feedbacks = feedbackResult?.success ? feedbackResult.data : [];
       const students = studentsResult?.success ? studentsResult.data : [];
-      // Filter feedback to my section students
-      const myStudentIds = new Set(students.filter((s: any) => myClasses.some(c => s.class === c || s.class?.startsWith(c))).map((s: any) => s.id));
+      const myStudentIds = new Set(
+        students.filter((s: any) => isClassInSection(s.class, myBaseClasses)).map((s: any) => s.id)
+      );
       return feedbacks.filter((f: any) => myStudentIds.has(f.student_id)).map((f: any) => {
         const student = students.find((s: any) => s.id === f.student_id);
         return { ...f, studentName: student?.full_name || 'Student', studentClass: student?.class || '' };
@@ -298,6 +312,34 @@ export function HeadOfSchoolDashboard() {
     }
   };
 
+  const handlePreviewReport = async () => {
+    if (!user || !selectedYear || !reportClass) return;
+    setLoadingPreview(true);
+    try {
+      const [studentsResult, marksResult, subjectsResult] = await Promise.all([
+        secureQuery('students', user.role, user.id, { filters: { class: reportClass }, select: 'id, full_name, gender, roll_number, class, stream' }),
+        secureQuery('marks', user.role, user.id, { filters: { class: reportClass, term: reportTerm, academic_year: selectedYear }, range: { from: 0, to: 9999 } }),
+        secureQuery('subjects', user.role, user.id),
+      ]);
+      const students = studentsResult?.success ? studentsResult.data : [];
+      const marks = marksResult?.success ? marksResult.data : [];
+      const subjects = subjectsResult?.success ? subjectsResult.data : [];
+      if (!students?.length || !marks?.length) {
+        toast.error('No data found for preview');
+        return;
+      }
+      setPreviewData({ students, marks, subjects });
+      setShowPreview(true);
+    } catch (error) {
+      toast.error('Failed to load preview');
+    } finally {
+      setLoadingPreview(false);
+    }
+  };
+
+  // Pending unlock requests count
+  const pendingUnlocks = unlockRequests.filter((r: any) => r.status === 'pending').length;
+
   return (
     <div className="space-y-8">
       <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4">
@@ -319,10 +361,10 @@ export function HeadOfSchoolDashboard() {
       </div>
 
       <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-6">
-        <StatCard title="Students" value={String(studentsCount)} subtitle={label} icon={GraduationCap} variant="primary" bgStyle="silk" />
+        <StatCard title="Students" value={String(sectionStudents.length)} subtitle={label} icon={GraduationCap} variant="primary" bgStyle="silk" />
         <StatCard title="Classes" value={String(uniqueClasses.length)} subtitle="With marks data" icon={BookOpen} variant="accent" bgStyle="cherries" />
-        <StatCard title="Series" value={String(uniqueTerms.length)} subtitle="This year" icon={FileText} variant="success" bgStyle="silk" />
-        <StatCard title="Feedback" value={String(allFeedback.filter(f => f.status === 'pending').length)} subtitle="Pending" icon={MessageSquare} variant="warning" bgStyle="cherries" />
+        <StatCard title="Unlock Requests" value={String(pendingUnlocks)} subtitle="Pending" icon={KeyRound} variant="warning" bgStyle="silk" />
+        <StatCard title="Feedback" value={String(allFeedback.filter(f => f.status === 'pending').length)} subtitle="Pending" icon={MessageSquare} variant="success" bgStyle="cherries" />
       </div>
 
       {/* Series Summary */}
@@ -351,7 +393,7 @@ export function HeadOfSchoolDashboard() {
               <SelectValue placeholder="Select Class" />
             </SelectTrigger>
             <SelectContent>
-              {uniqueClasses.map((cls) => (
+              {myBaseClasses.map((cls) => (
                 <SelectItem key={cls} value={cls}>{cls}</SelectItem>
               ))}
             </SelectContent>
@@ -379,8 +421,8 @@ export function HeadOfSchoolDashboard() {
         )}
       </div>
 
-      {/* Result Approval */}
-      <ResultApprovalManager selectedYear={selectedYear} />
+      {/* Result Approval - scoped to my classes */}
+      <ResultApprovalManager selectedYear={selectedYear} filterClasses={myBaseClasses} />
 
       {/* Annual Report */}
       <div className="card-elevated p-6 animate-fade-in">
@@ -388,13 +430,13 @@ export function HeadOfSchoolDashboard() {
           <FileText className="w-5 h-5 text-primary" />
           Annual Examination Results
         </h3>
-        <div className="grid grid-cols-1 sm:grid-cols-4 gap-4 mb-4">
+        <div className="grid grid-cols-1 sm:grid-cols-5 gap-4 mb-4">
           <div className="space-y-2">
             <label className="text-sm font-medium text-muted-foreground">Class</label>
             <Select value={reportClass} onValueChange={(v) => { setReportClass(v); setReportTerm(getTestsForClass(v)[0]?.value || 'Series 1'); }}>
               <SelectTrigger><SelectValue /></SelectTrigger>
               <SelectContent>
-                {uniqueClasses.map((cls) => (
+                {myBaseClasses.map((cls) => (
                   <SelectItem key={cls} value={cls}>{cls}</SelectItem>
                 ))}
               </SelectContent>
@@ -422,6 +464,12 @@ export function HeadOfSchoolDashboard() {
             </Select>
           </div>
           <div className="flex items-end">
+            <Button variant="outline" className="w-full" onClick={handlePreviewReport} disabled={loadingPreview}>
+              {loadingPreview ? <Loader2 className="w-4 h-4 mr-2 animate-spin" /> : <FileText className="w-4 h-4 mr-2" />}
+              Preview
+            </Button>
+          </div>
+          <div className="flex items-end">
             <Button className="btn-gradient w-full" onClick={handleDownloadReport} disabled={generatingReport}>
               {generatingReport ? <Loader2 className="w-4 h-4 mr-2 animate-spin" /> : <Download className="w-4 h-4 mr-2" />}
               Download
@@ -429,6 +477,24 @@ export function HeadOfSchoolDashboard() {
           </div>
         </div>
       </div>
+
+      {/* Preview Dialog */}
+      {showPreview && previewData && (
+        <AnnualReportPreview
+          open={showPreview}
+          onClose={() => setShowPreview(false)}
+          onDownload={(format) => {
+            setReportFormat(format);
+            handleDownloadReport();
+          }}
+          className={reportClass}
+          term={reportTerm}
+          academicYear={selectedYear}
+          students={previewData.students}
+          marks={previewData.marks}
+          subjects={previewData.subjects}
+        />
+      )}
 
       {/* Feedback */}
       <div className="card-elevated p-6 animate-fade-in">
@@ -471,7 +537,7 @@ export function HeadOfSchoolDashboard() {
       {/* Quick Actions */}
       <div className="card-elevated p-6 animate-fade-in">
         <h3 className="font-display font-semibold text-lg text-card-foreground mb-4">Quick Actions</h3>
-        <div className="grid grid-cols-1 sm:grid-cols-3 gap-4">
+        <div className="grid grid-cols-1 sm:grid-cols-4 gap-4">
           <Button variant="outline" className="h-auto py-4 flex flex-col gap-2" onClick={() => navigate('/subjects')}>
             <BookOpen className="w-6 h-6" />
             <span>Manage Subjects</span>
@@ -479,6 +545,10 @@ export function HeadOfSchoolDashboard() {
           <Button variant="outline" className="h-auto py-4 flex flex-col gap-2" onClick={() => navigate('/reports')}>
             <FileText className="w-6 h-6" />
             <span>Reports</span>
+          </Button>
+          <Button variant="outline" className="h-auto py-4 flex flex-col gap-2" onClick={() => navigate('/unlock-requests')}>
+            <KeyRound className="w-6 h-6" />
+            <span>Unlock Requests</span>
           </Button>
           <Button variant="outline" className="h-auto py-4 flex flex-col gap-2" onClick={() => navigate('/feedback')}>
             <MessageSquare className="w-6 h-6" />
