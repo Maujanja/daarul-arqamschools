@@ -75,7 +75,8 @@ export function ResultApprovalManager({ selectedYear, filterClasses }: Props) {
       percentComplete: number;
     }[] = [];
 
-    for (const className of classes) {
+    const classesToCheck = filterClasses || classes;
+    for (const className of classesToCheck) {
       const classStudents = allStudents.filter(s => s.class === className);
       if (classStudents.length === 0) continue;
 
