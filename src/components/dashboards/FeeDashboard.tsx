@@ -994,7 +994,7 @@ export function FeeDashboard({ isAdminMode = false }: { isAdminMode?: boolean } 
           notes: row['Notes'] ? String(row['Notes']).trim() : null,
           academic_year: selectedYear,
           term: 'Annual',
-          recorded_by: 'Secretary (Excel Upload)',
+          recorded_by: 'Accountant (Excel Upload)',
         });
       }
 
