@@ -159,10 +159,10 @@ export function ResultApprovalManager({ selectedYear, filterClasses }: Props) {
           approved_at: new Date().toISOString(),
         });
       }
-      toast.success(`${item.className} - ${item.termLabel}: ${item.isApproved ? 'Matokeo yamefungwa' : 'Matokeo yameruhusiwa'}`);
+      toast.success(`${item.className} - ${item.termLabel}: ${item.isApproved ? 'Results hidden' : 'Results released'}`);
       await fetchData();
     } catch (err) {
-      toast.error('Imeshindwa kubadilisha hali ya matokeo');
+      toast.error('Failed to update results status');
     } finally {
       setToggling(null);
     }
@@ -189,13 +189,13 @@ export function ResultApprovalManager({ selectedYear, filterClasses }: Props) {
         <h3 className="font-display font-semibold text-lg text-card-foreground">Result Approval</h3>
       </div>
       <p className="text-sm text-muted-foreground mb-4">
-        Ruhusu matokeo kuonekana kwa wazazi baada ya walimu kukamilisha kuweka marks. Wazazi hawataona matokeo mpaka uidhinishe hapa.
+        Allow parents to see results only after teachers finish entering marks and you approve them here.
       </p>
 
       {completionData.length === 0 ? (
         <div className="text-center py-8 text-muted-foreground">
           <Clock className="w-12 h-12 mx-auto mb-3 opacity-50" />
-          <p>Hakuna marks zilizowekwa kwa mwaka {selectedYear}</p>
+          <p>No marks found for {selectedYear}</p>
         </div>
       ) : (
         <div className="space-y-2 max-h-[500px] overflow-y-auto">
@@ -219,7 +219,7 @@ export function ResultApprovalManager({ selectedYear, filterClasses }: Props) {
                     <span className="text-xs px-2 py-0.5 rounded-full bg-muted text-muted-foreground">{item.termLabel}</span>
                     {item.isComplete ? (
                       <span className="text-xs px-2 py-0.5 rounded-full bg-success/10 text-success flex items-center gap-1">
-                        <CheckCircle className="w-3 h-3" /> Kamili
+                        <CheckCircle className="w-3 h-3" /> Complete
                       </span>
                     ) : (
                       <span className="text-xs px-2 py-0.5 rounded-full bg-warning/10 text-warning flex items-center gap-1">
@@ -228,7 +228,7 @@ export function ResultApprovalManager({ selectedYear, filterClasses }: Props) {
                     )}
                   </div>
                   <div className="text-xs text-muted-foreground mt-1">
-                    {item.studentsWithAllSubjects}/{item.totalStudents} wanafunzi wamekamilika • {item.actualMarks}/{item.totalExpectedMarks} marks
+                     {item.studentsWithAllSubjects}/{item.totalStudents} students complete • {item.actualMarks}/{item.totalExpectedMarks} marks
                   </div>
                   {/* Progress bar */}
                   <div className="h-1.5 bg-muted rounded-full overflow-hidden mt-1.5 max-w-[200px]">
@@ -252,12 +252,12 @@ export function ResultApprovalManager({ selectedYear, filterClasses }: Props) {
                   ) : item.isApproved ? (
                     <>
                       <Unlock className="w-4 h-4 mr-1" />
-                      Imeidhinishwa
+                      Approved
                     </>
                   ) : (
                     <>
                       <Lock className="w-4 h-4 mr-1" />
-                      Idhinisha
+                      Approve
                     </>
                   )}
                 </Button>

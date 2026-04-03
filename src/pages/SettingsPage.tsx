@@ -4,15 +4,21 @@ import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { Switch } from '@/components/ui/switch';
-import { Settings, Bell, Shield, Palette, Sun, Moon, Monitor } from 'lucide-react';
+import { Settings, Bell, Shield, Palette, Sun, Moon, Monitor, Loader2 } from 'lucide-react';
 import { useAuth } from '@/contexts/AuthContext';
+import { useSecureData } from '@/hooks/useSecureData';
 import { toast } from 'sonner';
 
 type Theme = 'light' | 'dark' | 'system';
 
 export default function SettingsPage() {
   const { user } = useAuth();
+  const { update } = useSecureData();
   const [theme, setTheme] = useState<Theme>('system');
+  const [currentPassword, setCurrentPassword] = useState('');
+  const [newPassword, setNewPassword] = useState('');
+  const [confirmPassword, setConfirmPassword] = useState('');
+  const [isSavingPassword, setIsSavingPassword] = useState(false);
   const isAdmin = user?.role === 'admin';
 
   useEffect(() => {
@@ -37,6 +43,75 @@ export default function SettingsPage() {
     }
     
     toast.success(`Theme changed to ${newTheme}`);
+  };
+
+  const resetPasswordFields = () => {
+    setCurrentPassword('');
+    setNewPassword('');
+    setConfirmPassword('');
+  };
+
+  const handleChangePassword = async () => {
+    if (!user || !isAdmin) {
+      toast.error('Only the admin can change the admin password here.');
+      return;
+    }
+
+    const current = currentPassword.trim();
+    const next = newPassword.trim();
+    const confirm = confirmPassword.trim();
+
+    if (!current || !next || !confirm) {
+      toast.error('Fill in all password fields.');
+      return;
+    }
+
+    if (next.length < 4) {
+      toast.error('New password must be at least 4 characters.');
+      return;
+    }
+
+    if (next !== confirm) {
+      toast.error('New password and confirmation do not match.');
+      return;
+    }
+
+    setIsSavingPassword(true);
+
+    try {
+      const result = await update<any[]>('admin_credentials', {
+        password_hash: next,
+      }, {
+        id: user.id,
+        password_hash: current,
+      });
+
+      if (!result.success) {
+        throw new Error(result.error || 'Failed to update password');
+      }
+
+      if (!Array.isArray(result.data) || result.data.length === 0) {
+        toast.error('Current password is incorrect.');
+        return;
+      }
+
+      resetPasswordFields();
+      toast.success('Admin password updated successfully.');
+    } catch (error) {
+      const message = error instanceof Error ? error.message : 'Failed to update password';
+      toast.error(message);
+    } finally {
+      setIsSavingPassword(false);
+    }
+  };
+
+  const handleSaveChanges = async () => {
+    if (currentPassword || newPassword || confirmPassword) {
+      await handleChangePassword();
+      return;
+    }
+
+    toast.success('Theme changes are applied automatically.');
   };
 
   return (
@@ -196,23 +271,45 @@ export default function SettingsPage() {
           <div className="space-y-4">
             <div className="space-y-2">
               <Label htmlFor="current_password">Current Password</Label>
-              <Input id="current_password" type="password" className="input-enhanced" />
+              <Input
+                id="current_password"
+                type="password"
+                className="input-enhanced"
+                value={currentPassword}
+                onChange={(e) => setCurrentPassword(e.target.value)}
+              />
             </div>
             <div className="space-y-2">
               <Label htmlFor="new_password">New Password</Label>
-              <Input id="new_password" type="password" className="input-enhanced" />
+              <Input
+                id="new_password"
+                type="password"
+                className="input-enhanced"
+                value={newPassword}
+                onChange={(e) => setNewPassword(e.target.value)}
+              />
             </div>
             <div className="space-y-2">
               <Label htmlFor="confirm_password">Confirm Password</Label>
-              <Input id="confirm_password" type="password" className="input-enhanced" />
+              <Input
+                id="confirm_password"
+                type="password"
+                className="input-enhanced"
+                value={confirmPassword}
+                onChange={(e) => setConfirmPassword(e.target.value)}
+              />
             </div>
-            <Button variant="outline">Change Password</Button>
+            <Button variant="outline" onClick={handleChangePassword} disabled={isSavingPassword}>
+              {isSavingPassword && <Loader2 className="w-4 h-4 mr-2 animate-spin" />}
+              Change Password
+            </Button>
           </div>
         </div>
 
         {/* Save Button */}
         <div className="flex justify-end">
-          <Button className="btn-gradient">
+          <Button className="btn-gradient" onClick={handleSaveChanges} disabled={isSavingPassword}>
+            {isSavingPassword && <Loader2 className="w-4 h-4 mr-2 animate-spin" />}
             Save Changes
           </Button>
         </div>
