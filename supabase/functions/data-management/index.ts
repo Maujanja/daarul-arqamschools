@@ -288,6 +288,79 @@ serve(async (req) => {
     const supabaseServiceKey = Deno.env.get("SUPABASE_SERVICE_ROLE_KEY")!;
     const supabase = createClient(supabaseUrl, supabaseServiceKey);
 
+    const classesWithStreams = new Set([
+      "Primary 1",
+      "Primary 2",
+      "Primary 3",
+      "Primary 4",
+      "Primary 5",
+      "Primary 6",
+      "Primary 7",
+      "Senior 1",
+      "Senior 2",
+      "Senior 3",
+      "Senior 4",
+    ]);
+
+    const normalizeMarksTerm = (record: Record<string, unknown>): Record<string, unknown> => {
+      if (table === "marks" && typeof record.term === "string") {
+        const testMatch = record.term.match(/^Test\s+(\d+)$/i);
+        if (testMatch) {
+          return { ...record, term: `Series ${testMatch[1]}` };
+        }
+      }
+      return record;
+    };
+
+    const normalizeStudentScopedRecords = async (
+      records: Record<string, unknown>[]
+    ): Promise<Record<string, unknown>[]> => {
+      if (!["marks", "teacher_class_students"].includes(table) || records.length === 0) {
+        return records;
+      }
+
+      const studentIds = Array.from(
+        new Set(
+          records
+            .map((record) => (typeof record.student_id === "string" ? record.student_id : ""))
+            .filter(Boolean)
+        )
+      );
+
+      if (studentIds.length === 0) {
+        return records;
+      }
+
+      const { data: studentRows, error: studentError } = await supabase
+        .from("students")
+        .select("id, class, stream")
+        .in("id", studentIds);
+
+      if (studentError) throw studentError;
+
+      const studentMap = new Map((studentRows || []).map((student) => [student.id, student]));
+
+      return records.map((record) => {
+        const studentId = typeof record.student_id === "string" ? record.student_id : null;
+        const student = studentId ? studentMap.get(studentId) : null;
+
+        if (!student) {
+          return record;
+        }
+
+        const normalizedClass = typeof student.class === "string" ? student.class : record.class;
+        const normalizedStream = typeof normalizedClass === "string" && classesWithStreams.has(normalizedClass)
+          ? (student.stream ?? null)
+          : null;
+
+        return {
+          ...record,
+          class: normalizedClass,
+          stream: normalizedStream,
+        };
+      });
+    };
+
     let result;
 
     switch (operation) {
@@ -298,9 +371,14 @@ serve(async (req) => {
             { status: 400, headers: { ...corsHeaders, "Content-Type": "application/json" } }
           );
         }
+        const normalizedRecords = await normalizeStudentScopedRecords(
+          (Array.isArray(data) ? data : [data]).map((record) => normalizeMarksTerm(record as Record<string, unknown>))
+        );
+        const insertPayload = Array.isArray(data) ? normalizedRecords : normalizedRecords[0];
+
         const { data: insertData, error } = await supabase
           .from(table)
-          .insert(data)
+          .insert(insertPayload)
           .select();
         
         if (error) throw error;
@@ -359,21 +437,10 @@ serve(async (req) => {
             { status: 400, headers: { ...corsHeaders, "Content-Type": "application/json" } }
           );
         }
-
-        // Normalize "Test X" → "Series X" for marks to prevent duplicates
-        const normalizeMarksTerm = (record: Record<string, unknown>): Record<string, unknown> => {
-          if (table === "marks" && typeof record.term === "string") {
-            const testMatch = record.term.match(/^Test\s+(\d+)$/i);
-            if (testMatch) {
-              return { ...record, term: `Series ${testMatch[1]}` };
-            }
-          }
-          return record;
-        };
-
-        const normalizedData = Array.isArray(data)
-          ? data.map(normalizeMarksTerm)
-          : normalizeMarksTerm(data as Record<string, unknown>);
+        const normalizedRecords = await normalizeStudentScopedRecords(
+          (Array.isArray(data) ? data : [data]).map((record) => normalizeMarksTerm(record as Record<string, unknown>))
+        );
+        const normalizedData = Array.isArray(data) ? normalizedRecords : normalizedRecords[0];
 
         // For marks table, specify the unique constraint columns for proper upsert
         const upsertOptions: Record<string, string> = {};

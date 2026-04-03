@@ -190,25 +190,27 @@ export default function MarksEntryPage() {
 
   // Available streams for selected class - for teachers, filter by their assignments
   // If teacher's assignment has null stream, show all streams for that class (backward compat)
-  const teacherHasNullStreamAssignment = isTeacher && teacherAssignments.some(
-    a => a.class === selectedClass && !a.stream
-  );
+  const selectedClassAssignments = isTeacher
+    ? teacherAssignments.filter(a => a.class === selectedClass)
+    : [];
+  const explicitAssignedStreams = [...new Set(selectedClassAssignments.filter(a => a.stream).map(a => a.stream!))];
   const availableStreams = isTeacher
-    ? teacherHasNullStreamAssignment
-      ? getStreamsForClass(selectedClass) // null stream = access to all streams
-      : [...new Set(teacherAssignments
-          .filter(a => a.class === selectedClass && a.stream)
-          .map(a => a.stream!))]
+    ? explicitAssignedStreams.length > 0
+      ? explicitAssignedStreams
+      : getStreamsForClass(selectedClass)
     : getStreamsForClass(selectedClass);
 
   const availableSubjects = isTeacher
-    ? subjects.filter(s => 
-        teacherAssignments.some(a => 
-          a.class === selectedClass && 
-          a.subject_id === s.id && 
-          (!hasStreams(selectedClass) || !a.stream || a.stream === selectedStream)
-        )
-      )
+    ? subjects.filter(subject => {
+        const subjectAssignments = selectedClassAssignments.filter(a => a.subject_id === subject.id);
+        if (subjectAssignments.length === 0) return false;
+        if (!hasStreams(selectedClass) || !selectedStream) return true;
+
+        const explicitSubjectAssignments = subjectAssignments.filter(a => a.stream);
+        return explicitSubjectAssignments.length > 0
+          ? explicitSubjectAssignments.some(a => a.stream === selectedStream)
+          : subjectAssignments.some(a => !a.stream);
+      })
     : subjects;
 
   const selectedSubjectData = subjects.find(s => s.id === selectedSubject);
@@ -309,8 +311,9 @@ export default function MarksEntryPage() {
       
       // Helper: match stream (include records with null stream for backward compatibility)
       const matchesStream = (recordStream: string | null | undefined) => {
-        if (!selectedStream) return true; // No stream filter
-        return recordStream === selectedStream || !recordStream; // Match selected or null/empty
+        if (!selectedStream) return true;
+        if (hasStreams(selectedClass)) return recordStream === selectedStream;
+        return recordStream === selectedStream || !recordStream;
       };
       
       const currentTeacherId = resolvedTeacherId || user?.id;
@@ -334,6 +337,7 @@ export default function MarksEntryPage() {
           const allStudents = await fetchTable<Student & { stream?: string | null }>('students', { class: selectedClass });
           studentsToShow = allStudents
             .filter(s => studentIds.includes(s.id))
+            .filter(s => !hasStreams(selectedClass) || !selectedStream || (s.stream || null) === selectedStream)
             .sort((a, b) =>
               a.full_name.localeCompare(b.full_name, undefined, { sensitivity: 'base' }) ||
               a.roll_number.localeCompare(b.roll_number, undefined, { numeric: true, sensitivity: 'base' })

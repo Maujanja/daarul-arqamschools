@@ -59,7 +59,7 @@ export default function MyClassStudentsPage() {
   const { toast } = useToast();
   const { currentYear } = useAcademicYears();
   const { fetchTable, query } = useSecureQuery();
-  const { insert, remove, upsert } = useSecureData();
+  const { remove, upsert } = useSecureData();
   
   const [isLoading, setIsLoading] = useState(true);
   const [isSaving, setIsSaving] = useState(false);
@@ -161,7 +161,9 @@ export default function MyClassStudentsPage() {
       
       // Include students whose stream matches OR whose stream is null/empty (backward compat)
       const filtered = selectedStream
-        ? students.filter(s => s.stream === selectedStream || !s.stream || s.stream === '')
+        ? hasStreams(selectedClass)
+          ? students.filter(s => s.stream === selectedStream)
+          : students.filter(s => s.stream === selectedStream || !s.stream || s.stream === '')
         : students;
       
       const sortedStudents = filtered.sort((a, b) => 
@@ -194,7 +196,7 @@ export default function MyClassStudentsPage() {
       // Filter by stream client-side (include null stream for backward compat)
       const filtered = selectedStream
         ? (hasStreams(selectedClass)
-            ? selections.filter(s => s.stream === selectedStream || !s.stream)
+            ? selections.filter(s => s.stream === selectedStream || (!s.stream && allStudentsInClass.some(student => student.id === s.student_id)))
             : selections.filter(s => s.stream === selectedStream || !s.stream))
         : selections;
 
@@ -206,7 +208,7 @@ export default function MyClassStudentsPage() {
     };
 
     fetchExistingSelections();
-  }, [resolvedTeacherId, user?.id, selectedClass, selectedSubject, selectedStream, currentYear, fetchTable]);
+  }, [resolvedTeacherId, user?.id, selectedClass, selectedSubject, selectedStream, currentYear, fetchTable, allStudentsInClass]);
 
   const toggleStudent = (studentId: string) => {
     setSelectedStudentIds(prev => {
@@ -282,10 +284,19 @@ export default function MyClassStudentsPage() {
       // Delete only current stream rows first (plus legacy null stream rows when class has streams)
       const hasClassStreams = hasStreams(selectedClass);
       if (hasClassStreams && selectedStream) {
-        await Promise.all([
-          remove('teacher_class_students', { ...contextFilters, stream: selectedStream }),
-          remove('teacher_class_students', { ...contextFilters, stream: null }),
-        ]);
+        await remove('teacher_class_students', { ...contextFilters, stream: selectedStream });
+
+        if (allStudentsInClass.length > 0) {
+          await Promise.all(
+            allStudentsInClass.map((student) =>
+              remove('teacher_class_students', {
+                ...contextFilters,
+                student_id: student.id,
+                stream: null,
+              })
+            )
+          );
+        }
       } else {
         await remove('teacher_class_students', { ...contextFilters, stream: null });
       }
