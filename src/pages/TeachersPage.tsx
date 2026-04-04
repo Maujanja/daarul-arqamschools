@@ -52,18 +52,29 @@ interface TeacherAssignment {
 
 const ALL_CLASSES = ['Baby Class', 'Kindergarten I', 'Kindergarten II', 'Primary 1', 'Primary 2', 'Primary 3', 'Primary 4', 'Primary 5', 'Primary 6', 'Primary 7', 'Senior 1', 'Senior 2', 'Senior 3', 'Senior 4'];
 
+const SECTION_BASE_CLASSES: Record<string, string[]> = {
+  head_nursery: ['Baby Class', 'Kindergarten I', 'Kindergarten II'],
+  head_primary: ['Primary 1', 'Primary 2', 'Primary 3', 'Primary 4', 'Primary 5', 'Primary 6', 'Primary 7'],
+  head_secondary: ['Senior 1', 'Senior 2', 'Senior 3', 'Senior 4'],
+};
+
 // Generate class+stream slots for assignments
-const ALL_CLASS_STREAM_SLOTS: { className: string; stream: string | null; key: string; display: string }[] = [];
-ALL_CLASSES.forEach(cls => {
-  const streams = getStreamsForClass(cls);
-  if (streams.length === 0) {
-    ALL_CLASS_STREAM_SLOTS.push({ className: cls, stream: null, key: cls, display: cls });
-  } else {
-    streams.forEach(stream => {
-      ALL_CLASS_STREAM_SLOTS.push({ className: cls, stream, key: `${cls}|${stream}`, display: `${cls} ${stream}` });
-    });
-  }
-});
+function buildClassStreamSlots(classes: string[]) {
+  const slots: { className: string; stream: string | null; key: string; display: string }[] = [];
+  classes.forEach(cls => {
+    const streams = getStreamsForClass(cls);
+    if (streams.length === 0) {
+      slots.push({ className: cls, stream: null, key: cls, display: cls });
+    } else {
+      streams.forEach(stream => {
+        slots.push({ className: cls, stream, key: `${cls}|${stream}`, display: `${cls} ${stream}` });
+      });
+    }
+  });
+  return slots;
+}
+
+const ALL_CLASS_STREAM_SLOTS = buildClassStreamSlots(ALL_CLASSES);
 
 export default function TeachersPage() {
   const { user } = useAuth();
