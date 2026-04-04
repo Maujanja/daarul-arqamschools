@@ -1165,6 +1165,7 @@ export type Database = {
         }
         Returns: boolean
       }
+      normalize_marks_streams: { Args: never; Returns: undefined }
     }
     Enums: {
       app_role:
