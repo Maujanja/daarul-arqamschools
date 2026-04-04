@@ -260,6 +260,25 @@ export function HeadOfSchoolDashboard() {
   }, [classMarksOnly, uniqueTerms, selectedClass]);
 
   // Feedback for my section
+  // Teachers that have assignments in my section
+  const { data: sectionTeachers = [] } = useQuery({
+    queryKey: ['head-teachers', selectedYear, user?.role],
+    queryFn: async () => {
+      if (!user || !selectedYear) return [];
+      const [teachersResult, assignmentsResult] = await Promise.all([
+        secureQuery('teachers', user.role, user.id),
+        secureQuery('teacher_assignments', user.role, user.id, { filters: { academic_year: selectedYear } }),
+      ]);
+      const teachers = teachersResult?.success ? teachersResult.data : [];
+      const assigns = assignmentsResult?.success ? assignmentsResult.data : [];
+      const teacherIdsInSection = new Set(
+        assigns.filter((a: any) => isClassInSection(a.class, myBaseClasses)).map((a: any) => a.teacher_id)
+      );
+      return teachers.filter((t: any) => teacherIdsInSection.has(t.id));
+    },
+    enabled: !!user && !!selectedYear,
+  });
+
   const { data: allFeedback = [] } = useQuery({
     queryKey: ['head-feedback', user?.role],
     queryFn: async () => {
