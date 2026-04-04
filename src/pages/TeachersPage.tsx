@@ -52,18 +52,29 @@ interface TeacherAssignment {
 
 const ALL_CLASSES = ['Baby Class', 'Kindergarten I', 'Kindergarten II', 'Primary 1', 'Primary 2', 'Primary 3', 'Primary 4', 'Primary 5', 'Primary 6', 'Primary 7', 'Senior 1', 'Senior 2', 'Senior 3', 'Senior 4'];
 
+const SECTION_BASE_CLASSES: Record<string, string[]> = {
+  head_nursery: ['Baby Class', 'Kindergarten I', 'Kindergarten II'],
+  head_primary: ['Primary 1', 'Primary 2', 'Primary 3', 'Primary 4', 'Primary 5', 'Primary 6', 'Primary 7'],
+  head_secondary: ['Senior 1', 'Senior 2', 'Senior 3', 'Senior 4'],
+};
+
 // Generate class+stream slots for assignments
-const ALL_CLASS_STREAM_SLOTS: { className: string; stream: string | null; key: string; display: string }[] = [];
-ALL_CLASSES.forEach(cls => {
-  const streams = getStreamsForClass(cls);
-  if (streams.length === 0) {
-    ALL_CLASS_STREAM_SLOTS.push({ className: cls, stream: null, key: cls, display: cls });
-  } else {
-    streams.forEach(stream => {
-      ALL_CLASS_STREAM_SLOTS.push({ className: cls, stream, key: `${cls}|${stream}`, display: `${cls} ${stream}` });
-    });
-  }
-});
+function buildClassStreamSlots(classes: string[]) {
+  const slots: { className: string; stream: string | null; key: string; display: string }[] = [];
+  classes.forEach(cls => {
+    const streams = getStreamsForClass(cls);
+    if (streams.length === 0) {
+      slots.push({ className: cls, stream: null, key: cls, display: cls });
+    } else {
+      streams.forEach(stream => {
+        slots.push({ className: cls, stream, key: `${cls}|${stream}`, display: `${cls} ${stream}` });
+      });
+    }
+  });
+  return slots;
+}
+
+const ALL_CLASS_STREAM_SLOTS = buildClassStreamSlots(ALL_CLASSES);
 
 export default function TeachersPage() {
   const { user } = useAuth();
@@ -97,6 +108,10 @@ export default function TeachersPage() {
   const [classSubjectAssignments, setClassSubjectAssignments] = useState<Record<string, Set<string>>>({});
 
   const isAdmin = user?.role === 'admin';
+  const isHoS = user?.role?.startsWith('head_');
+  const canManageAssignments = isAdmin || isHoS;
+  const sectionClasses = isHoS ? (SECTION_BASE_CLASSES[user?.role || ''] || []) : ALL_CLASSES;
+  const sectionSlots = isHoS ? buildClassStreamSlots(sectionClasses) : ALL_CLASS_STREAM_SLOTS;
 
   useEffect(() => {
     console.log('TeachersPage: Component mounted, fetching data...');
@@ -242,8 +257,8 @@ export default function TeachersPage() {
       const newAssignments: { teacher_id: string; class: string; subject_id: string; academic_year: string; stream: string | null }[] = [];
       
       Object.entries(classSubjectAssignments).forEach(([slotKey, subjectIds]) => {
-        const slot = ALL_CLASS_STREAM_SLOTS.find(s => s.key === slotKey);
-        const className = slot?.className || slotKey;
+        const slot = ALL_CLASS_STREAM_SLOTS.find(s => s.key === slotKey) || sectionSlots.find(s => s.key === slotKey);
+        const className = slot?.className || slotKey.split('|')[0];
         const stream = slot?.stream || null;
         
         subjectIds.forEach(subjectId => {
@@ -431,12 +446,14 @@ export default function TeachersPage() {
                       <DropdownMenuItem onClick={() => handleViewTeacher(teacher)}>
                         View Details
                       </DropdownMenuItem>
+                      {canManageAssignments && (
+                        <DropdownMenuItem onClick={() => handleOpenAssignDialog(teacher)}>
+                          <Settings className="w-4 h-4 mr-2" />
+                          Manage Assignments
+                        </DropdownMenuItem>
+                      )}
                       {isAdmin && (
                         <>
-                          <DropdownMenuItem onClick={() => handleOpenAssignDialog(teacher)}>
-                            <Settings className="w-4 h-4 mr-2" />
-                            Manage Assignments
-                          </DropdownMenuItem>
                           <DropdownMenuItem onClick={() => handleOpenEditDialog(teacher)}>
                             Edit Details
                           </DropdownMenuItem>
@@ -670,7 +687,7 @@ export default function TeachersPage() {
             </p>
             
             <div className="space-y-4">
-              {ALL_CLASS_STREAM_SLOTS.map(slot => {
+              {sectionSlots.map(slot => {
                 const assignedSubjects = classSubjectAssignments[slot.key] || new Set();
                 const hasAssignmentsForSlot = assignedSubjects.size > 0;
                 

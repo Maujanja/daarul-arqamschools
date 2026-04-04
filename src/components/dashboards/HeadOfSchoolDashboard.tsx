@@ -15,7 +15,7 @@ import { generateAnnualExamReport } from '@/utils/annualReportGenerator';
 import { generateAnnualExamReportPDF } from '@/utils/annualReportPdfGenerator';
 import { toast } from 'sonner';
 import { AnnualReportPreview } from '@/components/dashboard/AnnualReportPreview';
-import { ResultApprovalManager } from '@/components/dashboard/ResultApprovalManager';
+import { HoSResultApproval } from '@/components/dashboard/HoSResultApproval';
 import { CLASS_STREAMS, parseClassStream } from '@/utils/classStreams';
 
 // Helper function
@@ -260,6 +260,25 @@ export function HeadOfSchoolDashboard() {
   }, [classMarksOnly, uniqueTerms, selectedClass]);
 
   // Feedback for my section
+  // Teachers that have assignments in my section
+  const { data: sectionTeachers = [] } = useQuery({
+    queryKey: ['head-teachers', selectedYear, user?.role],
+    queryFn: async () => {
+      if (!user || !selectedYear) return [];
+      const [teachersResult, assignmentsResult] = await Promise.all([
+        secureQuery('teachers', user.role, user.id),
+        secureQuery('teacher_assignments', user.role, user.id, { filters: { academic_year: selectedYear } }),
+      ]);
+      const teachers = teachersResult?.success ? teachersResult.data : [];
+      const assigns = assignmentsResult?.success ? assignmentsResult.data : [];
+      const teacherIdsInSection = new Set(
+        assigns.filter((a: any) => isClassInSection(a.class, myBaseClasses)).map((a: any) => a.teacher_id)
+      );
+      return teachers.filter((t: any) => teacherIdsInSection.has(t.id));
+    },
+    enabled: !!user && !!selectedYear,
+  });
+
   const { data: allFeedback = [] } = useQuery({
     queryKey: ['head-feedback', user?.role],
     queryFn: async () => {
@@ -362,7 +381,7 @@ export function HeadOfSchoolDashboard() {
 
       <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-6">
         <StatCard title="Students" value={String(sectionStudents.length)} subtitle={label} icon={GraduationCap} variant="primary" bgStyle="silk" />
-        <StatCard title="Classes" value={String(uniqueClasses.length)} subtitle="With marks data" icon={BookOpen} variant="accent" bgStyle="cherries" />
+        <StatCard title="Teachers" value={String(sectionTeachers.length)} subtitle={label} icon={Users} variant="accent" bgStyle="cherries" />
         <StatCard title="Unlock Requests" value={String(pendingUnlocks)} subtitle="Pending" icon={KeyRound} variant="warning" bgStyle="silk" />
         <StatCard title="Feedback" value={String(allFeedback.filter(f => f.status === 'pending').length)} subtitle="Pending" icon={MessageSquare} variant="success" bgStyle="cherries" />
       </div>
@@ -421,8 +440,8 @@ export function HeadOfSchoolDashboard() {
         )}
       </div>
 
-      {/* Result Approval - scoped to my classes */}
-      <ResultApprovalManager selectedYear={selectedYear} filterClasses={myBaseClasses} />
+      {/* Result Approval - scoped to my classes with marks preview */}
+      <HoSResultApproval selectedYear={selectedYear} filterClasses={myBaseClasses} />
 
       {/* Annual Report */}
       <div className="card-elevated p-6 animate-fade-in">
@@ -537,7 +556,11 @@ export function HeadOfSchoolDashboard() {
       {/* Quick Actions */}
       <div className="card-elevated p-6 animate-fade-in">
         <h3 className="font-display font-semibold text-lg text-card-foreground mb-4">Quick Actions</h3>
-        <div className="grid grid-cols-1 sm:grid-cols-4 gap-4">
+        <div className="grid grid-cols-1 sm:grid-cols-5 gap-4">
+          <Button variant="outline" className="h-auto py-4 flex flex-col gap-2" onClick={() => navigate('/teachers')}>
+            <Users className="w-6 h-6" />
+            <span>Assign Teachers</span>
+          </Button>
           <Button variant="outline" className="h-auto py-4 flex flex-col gap-2" onClick={() => navigate('/subjects')}>
             <BookOpen className="w-6 h-6" />
             <span>Manage Subjects</span>
