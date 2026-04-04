@@ -257,8 +257,8 @@ export default function TeachersPage() {
       const newAssignments: { teacher_id: string; class: string; subject_id: string; academic_year: string; stream: string | null }[] = [];
       
       Object.entries(classSubjectAssignments).forEach(([slotKey, subjectIds]) => {
-        const slot = ALL_CLASS_STREAM_SLOTS.find(s => s.key === slotKey);
-        const className = slot?.className || slotKey;
+        const slot = ALL_CLASS_STREAM_SLOTS.find(s => s.key === slotKey) || sectionSlots.find(s => s.key === slotKey);
+        const className = slot?.className || slotKey.split('|')[0];
         const stream = slot?.stream || null;
         
         subjectIds.forEach(subjectId => {
