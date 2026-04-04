@@ -556,7 +556,11 @@ export function HeadOfSchoolDashboard() {
       {/* Quick Actions */}
       <div className="card-elevated p-6 animate-fade-in">
         <h3 className="font-display font-semibold text-lg text-card-foreground mb-4">Quick Actions</h3>
-        <div className="grid grid-cols-1 sm:grid-cols-4 gap-4">
+        <div className="grid grid-cols-1 sm:grid-cols-5 gap-4">
+          <Button variant="outline" className="h-auto py-4 flex flex-col gap-2" onClick={() => navigate('/teachers')}>
+            <Users className="w-6 h-6" />
+            <span>Assign Teachers</span>
+          </Button>
           <Button variant="outline" className="h-auto py-4 flex flex-col gap-2" onClick={() => navigate('/subjects')}>
             <BookOpen className="w-6 h-6" />
             <span>Manage Subjects</span>
