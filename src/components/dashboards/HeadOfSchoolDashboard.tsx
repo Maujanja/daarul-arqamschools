@@ -421,8 +421,8 @@ export function HeadOfSchoolDashboard() {
         )}
       </div>
 
-      {/* Result Approval - scoped to my classes */}
-      <ResultApprovalManager selectedYear={selectedYear} filterClasses={myBaseClasses} />
+      {/* Result Approval - scoped to my classes with marks preview */}
+      <HoSResultApproval selectedYear={selectedYear} filterClasses={myBaseClasses} />
 
       {/* Annual Report */}
       <div className="card-elevated p-6 animate-fade-in">
