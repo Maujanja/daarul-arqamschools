@@ -381,7 +381,7 @@ export function HeadOfSchoolDashboard() {
 
       <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-6">
         <StatCard title="Students" value={String(sectionStudents.length)} subtitle={label} icon={GraduationCap} variant="primary" bgStyle="silk" />
-        <StatCard title="Classes" value={String(uniqueClasses.length)} subtitle="With marks data" icon={BookOpen} variant="accent" bgStyle="cherries" />
+        <StatCard title="Teachers" value={String(sectionTeachers.length)} subtitle={label} icon={Users} variant="accent" bgStyle="cherries" />
         <StatCard title="Unlock Requests" value={String(pendingUnlocks)} subtitle="Pending" icon={KeyRound} variant="warning" bgStyle="silk" />
         <StatCard title="Feedback" value={String(allFeedback.filter(f => f.status === 'pending').length)} subtitle="Pending" icon={MessageSquare} variant="success" bgStyle="cherries" />
       </div>
