@@ -108,6 +108,10 @@ export default function TeachersPage() {
   const [classSubjectAssignments, setClassSubjectAssignments] = useState<Record<string, Set<string>>>({});
 
   const isAdmin = user?.role === 'admin';
+  const isHoS = user?.role?.startsWith('head_');
+  const canManageAssignments = isAdmin || isHoS;
+  const sectionClasses = isHoS ? (SECTION_BASE_CLASSES[user?.role || ''] || []) : ALL_CLASSES;
+  const sectionSlots = isHoS ? buildClassStreamSlots(sectionClasses) : ALL_CLASS_STREAM_SLOTS;
 
   useEffect(() => {
     console.log('TeachersPage: Component mounted, fetching data...');
