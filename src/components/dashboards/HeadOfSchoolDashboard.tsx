@@ -15,7 +15,7 @@ import { generateAnnualExamReport } from '@/utils/annualReportGenerator';
 import { generateAnnualExamReportPDF } from '@/utils/annualReportPdfGenerator';
 import { toast } from 'sonner';
 import { AnnualReportPreview } from '@/components/dashboard/AnnualReportPreview';
-import { ResultApprovalManager } from '@/components/dashboard/ResultApprovalManager';
+import { HoSResultApproval } from '@/components/dashboard/HoSResultApproval';
 import { CLASS_STREAMS, parseClassStream } from '@/utils/classStreams';
 
 // Helper function
