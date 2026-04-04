@@ -625,32 +625,41 @@ export default function UsersPage() {
 
         {/* Tabs */}
         <Tabs value={activeTab} onValueChange={setActiveTab} className="animate-fade-in">
-          <TabsList className="grid w-full grid-cols-6 mb-6">
-            <TabsTrigger value="teachers" className="flex items-center gap-1 text-xs">
-              <Shield className="w-3.5 h-3.5" />
-              Teachers ({filteredTeachers.length})
-            </TabsTrigger>
-            <TabsTrigger value="secretaries" className="flex items-center gap-1 text-xs">
-              <UserCog className="w-3.5 h-3.5" />
-              Secretaries ({filteredSecretaries.length})
-            </TabsTrigger>
-            <TabsTrigger value="accountants" className="flex items-center gap-1 text-xs">
-              <DollarSign className="w-3.5 h-3.5" />
-              Accountants ({filteredAccountants.length})
-            </TabsTrigger>
-            <TabsTrigger value="heads" className="flex items-center gap-1 text-xs">
-              <School className="w-3.5 h-3.5" />
-              Heads ({filteredHeads.length})
-            </TabsTrigger>
-            <TabsTrigger value="parents" className="flex items-center gap-1 text-xs">
-              <Users className="w-3.5 h-3.5" />
-              Parents ({filteredParents.length})
-            </TabsTrigger>
-            <TabsTrigger value="students" className="flex items-center gap-1 text-xs">
-              <GraduationCap className="w-3.5 h-3.5" />
-              Students ({filteredStudents.length})
-            </TabsTrigger>
-          </TabsList>
+          {user?.role === 'admin' ? (
+            <TabsList className="grid w-full grid-cols-6 mb-6">
+              <TabsTrigger value="teachers" className="flex items-center gap-1 text-xs">
+                <Shield className="w-3.5 h-3.5" />
+                Teachers ({filteredTeachers.length})
+              </TabsTrigger>
+              <TabsTrigger value="secretaries" className="flex items-center gap-1 text-xs">
+                <UserCog className="w-3.5 h-3.5" />
+                Secretaries ({filteredSecretaries.length})
+              </TabsTrigger>
+              <TabsTrigger value="accountants" className="flex items-center gap-1 text-xs">
+                <DollarSign className="w-3.5 h-3.5" />
+                Accountants ({filteredAccountants.length})
+              </TabsTrigger>
+              <TabsTrigger value="heads" className="flex items-center gap-1 text-xs">
+                <School className="w-3.5 h-3.5" />
+                Heads ({filteredHeads.length})
+              </TabsTrigger>
+              <TabsTrigger value="parents" className="flex items-center gap-1 text-xs">
+                <Users className="w-3.5 h-3.5" />
+                Parents ({filteredParents.length})
+              </TabsTrigger>
+              <TabsTrigger value="students" className="flex items-center gap-1 text-xs">
+                <GraduationCap className="w-3.5 h-3.5" />
+                Students ({filteredStudents.length})
+              </TabsTrigger>
+            </TabsList>
+          ) : (
+            <TabsList className="grid w-full grid-cols-1 mb-6">
+              <TabsTrigger value="teachers" className="flex items-center gap-1 text-xs">
+                <Shield className="w-3.5 h-3.5" />
+                Teachers ({filteredTeachers.length})
+              </TabsTrigger>
+            </TabsList>
+          )}
 
           {/* Teachers Tab */}
           <TabsContent value="teachers">
