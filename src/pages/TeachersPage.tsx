@@ -685,7 +685,7 @@ export default function TeachersPage() {
             </p>
             
             <div className="space-y-4">
-              {ALL_CLASS_STREAM_SLOTS.map(slot => {
+              {sectionSlots.map(slot => {
                 const assignedSubjects = classSubjectAssignments[slot.key] || new Set();
                 const hasAssignmentsForSlot = assignedSubjects.size > 0;
                 
