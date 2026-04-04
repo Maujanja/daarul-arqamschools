@@ -446,7 +446,7 @@ export default function TeachersPage() {
                       <DropdownMenuItem onClick={() => handleViewTeacher(teacher)}>
                         View Details
                       </DropdownMenuItem>
-                      {isAdmin && (
+                      {canManageAssignments && (
                         <>
                           <DropdownMenuItem onClick={() => handleOpenAssignDialog(teacher)}>
                             <Settings className="w-4 h-4 mr-2" />
