@@ -58,7 +58,10 @@ const SECTION_BASE_CLASSES: Record<string, string[]> = {
   head_secondary: ['Senior 1', 'Senior 2', 'Senior 3', 'Senior 4'],
 };
 
-
+interface Student {
+  id: string;
+  full_name: string;
+  class: string;
   roll_number: string;
   parent_id: string | null;
 }
