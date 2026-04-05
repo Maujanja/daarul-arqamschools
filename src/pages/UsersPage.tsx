@@ -389,7 +389,26 @@ export default function UsersPage() {
     }
   };
 
-  const filteredTeachers = teachers.filter(t =>
+  const isHoS = user?.role?.startsWith('head_');
+  const sectionClasses = isHoS ? (SECTION_BASE_CLASSES[user?.role || ''] || []) : [];
+
+  // For HoS: filter teachers by assignments in their section
+  const hosFilteredTeachers = isHoS
+    ? teachers.filter(t => {
+        // Check if teacher has classes that overlap with section
+        return t.classes.some(cls => {
+          const baseClass = cls.replace(/\s+[A-Z]\d?$/i, '').trim();
+          return sectionClasses.includes(baseClass);
+        });
+      })
+    : teachers;
+
+  // For HoS: filter students by section classes
+  const hosFilteredStudents = isHoS
+    ? students.filter(s => sectionClasses.includes(s.class))
+    : students;
+
+  const filteredTeachers = hosFilteredTeachers.filter(t =>
     t.full_name.toLowerCase().includes(searchQuery.toLowerCase())
   );
 
@@ -397,7 +416,7 @@ export default function UsersPage() {
     p.full_name.toLowerCase().includes(searchQuery.toLowerCase())
   );
 
-  const filteredStudents = students.filter(s =>
+  const filteredStudents = hosFilteredStudents.filter(s =>
     s.full_name.toLowerCase().includes(searchQuery.toLowerCase()) ||
     s.roll_number.toLowerCase().includes(searchQuery.toLowerCase())
   );
