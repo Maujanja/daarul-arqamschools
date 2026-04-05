@@ -52,6 +52,12 @@ interface Parent {
   phone: string | null;
 }
 
+const SECTION_BASE_CLASSES: Record<string, string[]> = {
+  head_nursery: ['Baby Class', 'Kindergarten I', 'Kindergarten II'],
+  head_primary: ['Primary 1', 'Primary 2', 'Primary 3', 'Primary 4', 'Primary 5', 'Primary 6', 'Primary 7'],
+  head_secondary: ['Senior 1', 'Senior 2', 'Senior 3', 'Senior 4'],
+};
+
 interface Student {
   id: string;
   full_name: string;
@@ -383,7 +389,26 @@ export default function UsersPage() {
     }
   };
 
-  const filteredTeachers = teachers.filter(t =>
+  const isHoS = user?.role?.startsWith('head_');
+  const sectionClasses = isHoS ? (SECTION_BASE_CLASSES[user?.role || ''] || []) : [];
+
+  // For HoS: filter teachers by assignments in their section
+  const hosFilteredTeachers = isHoS
+    ? teachers.filter(t => {
+        // Check if teacher has classes that overlap with section
+        return t.classes.some(cls => {
+          const baseClass = cls.replace(/\s+[A-Z]\d?$/i, '').trim();
+          return sectionClasses.includes(baseClass);
+        });
+      })
+    : teachers;
+
+  // For HoS: filter students by section classes
+  const hosFilteredStudents = isHoS
+    ? students.filter(s => sectionClasses.includes(s.class))
+    : students;
+
+  const filteredTeachers = hosFilteredTeachers.filter(t =>
     t.full_name.toLowerCase().includes(searchQuery.toLowerCase())
   );
 
@@ -391,7 +416,7 @@ export default function UsersPage() {
     p.full_name.toLowerCase().includes(searchQuery.toLowerCase())
   );
 
-  const filteredStudents = students.filter(s =>
+  const filteredStudents = hosFilteredStudents.filter(s =>
     s.full_name.toLowerCase().includes(searchQuery.toLowerCase()) ||
     s.roll_number.toLowerCase().includes(searchQuery.toLowerCase())
   );
@@ -653,22 +678,28 @@ export default function UsersPage() {
               </TabsTrigger>
             </TabsList>
           ) : (
-            <TabsList className="grid w-full grid-cols-1 mb-6">
+            <TabsList className="grid w-full grid-cols-2 mb-6">
               <TabsTrigger value="teachers" className="flex items-center gap-1 text-xs">
                 <Shield className="w-3.5 h-3.5" />
                 Teachers ({filteredTeachers.length})
+              </TabsTrigger>
+              <TabsTrigger value="students" className="flex items-center gap-1 text-xs">
+                <GraduationCap className="w-3.5 h-3.5" />
+                Students ({filteredStudents.length})
               </TabsTrigger>
             </TabsList>
           )}
 
           {/* Teachers Tab */}
           <TabsContent value="teachers">
-            <div className="flex justify-end mb-4">
-              <Button onClick={() => setShowAddTeacherDialog(true)}>
-                <Plus className="w-4 h-4 mr-2" />
-                Add Teacher
-              </Button>
-            </div>
+            {user?.role === 'admin' && (
+              <div className="flex justify-end mb-4">
+                <Button onClick={() => setShowAddTeacherDialog(true)}>
+                  <Plus className="w-4 h-4 mr-2" />
+                  Add Teacher
+                </Button>
+              </div>
+            )}
             <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
               {filteredTeachers.map((teacher) => (
                 <div key={teacher.id} className="card-elevated p-4">
