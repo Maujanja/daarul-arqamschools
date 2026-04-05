@@ -342,16 +342,24 @@ export function HeadOfSchoolDashboard() {
     if (!user || !selectedYear || !reportClass) return;
     setLoadingPreview(true);
     try {
-      const [studentsResult, marksResult, subjectsResult] = await Promise.all([
-        secureQuery('students', user.role, user.id, { filters: { class: reportClass }, select: 'id, full_name, gender, roll_number, class, stream' }),
+      const [marksResult, subjectsResult] = await Promise.all([
         secureQuery('marks', user.role, user.id, { filters: { class: reportClass, term: reportTerm, academic_year: selectedYear }, range: { from: 0, to: 9999 } }),
         secureQuery('subjects', user.role, user.id),
       ]);
-      const students = studentsResult?.success ? studentsResult.data : [];
       const marks = marksResult?.success ? marksResult.data : [];
       const subjects = subjectsResult?.success ? subjectsResult.data : [];
-      if (!students?.length || !marks?.length) {
-        toast.error('No data found for preview');
+      if (!marks?.length) {
+        toast.error('No marks data found for preview');
+        return;
+      }
+      const studentIdsFromMarks = [...new Set(marks.map((m: any) => m.student_id))];
+      const studentsResult = await secureQuery('students', user.role, user.id, {
+        filters: { id: studentIdsFromMarks },
+        select: 'id, full_name, gender, roll_number, class, stream',
+      });
+      const students = studentsResult?.success ? studentsResult.data : [];
+      if (!students?.length) {
+        toast.error('No students found for preview');
         return;
       }
       setPreviewData({ students, marks, subjects });
