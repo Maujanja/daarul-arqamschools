@@ -441,33 +441,36 @@ export function AdminDashboard() {
     try {
       setGeneratingReport(true);
 
-      // Fetch students for the selected class
+      // Fetch marks first to discover all students who have marks for this class
+      const [marksResult, subjectsResult] = await Promise.all([
+        secureQuery('marks', user.role, user.id, {
+          filters: { class: reportClass, term: reportTerm, academic_year: selectedYear },
+          range: { from: 0, to: 9999 },
+        }),
+        secureQuery('subjects', user.role, user.id),
+      ]);
+      const marks = marksResult?.success ? marksResult.data : [];
+      const subjects = subjectsResult?.success ? subjectsResult.data : [];
+
+      if (!marks || marks.length === 0) {
+        toast.error(`No marks found for ${reportClass} - ${reportTerm}`);
+        return;
+      }
+
+      // Get ALL student IDs from marks (includes promoted students)
+      const studentIdsFromMarks = [...new Set(marks.map((m: any) => m.student_id))];
+      
+      // Fetch students by IDs to include promoted students
       const studentsResult = await secureQuery('students', user.role, user.id, {
-        filters: { class: reportClass },
+        filters: { id: studentIdsFromMarks },
         select: 'id, full_name, gender, roll_number, class, stream',
       });
       const students = studentsResult?.success ? studentsResult.data : [];
 
       if (!students || students.length === 0) {
-        toast.error(`Hakuna wanafunzi kwa ${reportClass}`);
+        toast.error(`No students found for ${reportClass}`);
         return;
       }
-
-      // Fetch marks for the selected class/term/year
-      const marksResult = await secureQuery('marks', user.role, user.id, {
-        filters: { class: reportClass, term: reportTerm, academic_year: selectedYear },
-        range: { from: 0, to: 9999 },
-      });
-      const marks = marksResult?.success ? marksResult.data : [];
-
-      if (!marks || marks.length === 0) {
-        toast.error(`Hakuna marks kwa ${reportClass} - ${reportTerm}`);
-        return;
-      }
-
-      // Fetch subjects
-      const subjectsResult = await secureQuery('subjects', user.role, user.id);
-      const subjects = subjectsResult?.success ? subjectsResult.data : [];
 
       if (reportFormat === 'pdf') {
         await generateAnnualExamReportPDF(reportClass, reportTerm, selectedYear, students, marks, subjects);
