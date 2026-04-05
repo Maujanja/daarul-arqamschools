@@ -348,14 +348,15 @@ serve(async (req) => {
           return record;
         }
 
-        const normalizedClass = typeof student.class === "string" ? student.class : record.class;
-        const normalizedStream = typeof normalizedClass === "string" && classesWithStreams.has(normalizedClass)
+        // Only normalize stream, NOT class - marks should keep the class they were entered for
+        const recordClass = typeof record.class === "string" ? record.class : (typeof student.class === "string" ? student.class : record.class);
+        const normalizedStream = typeof recordClass === "string" && classesWithStreams.has(recordClass)
           ? (student.stream ?? null)
           : null;
 
         return {
           ...record,
-          class: normalizedClass,
+          class: recordClass,
           stream: normalizedStream,
         };
       });
