@@ -678,22 +678,28 @@ export default function UsersPage() {
               </TabsTrigger>
             </TabsList>
           ) : (
-            <TabsList className="grid w-full grid-cols-1 mb-6">
+            <TabsList className="grid w-full grid-cols-2 mb-6">
               <TabsTrigger value="teachers" className="flex items-center gap-1 text-xs">
                 <Shield className="w-3.5 h-3.5" />
                 Teachers ({filteredTeachers.length})
+              </TabsTrigger>
+              <TabsTrigger value="students" className="flex items-center gap-1 text-xs">
+                <GraduationCap className="w-3.5 h-3.5" />
+                Students ({filteredStudents.length})
               </TabsTrigger>
             </TabsList>
           )}
 
           {/* Teachers Tab */}
           <TabsContent value="teachers">
-            <div className="flex justify-end mb-4">
-              <Button onClick={() => setShowAddTeacherDialog(true)}>
-                <Plus className="w-4 h-4 mr-2" />
-                Add Teacher
-              </Button>
-            </div>
+            {user?.role === 'admin' && (
+              <div className="flex justify-end mb-4">
+                <Button onClick={() => setShowAddTeacherDialog(true)}>
+                  <Plus className="w-4 h-4 mr-2" />
+                  Add Teacher
+                </Button>
+              </div>
+            )}
             <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
               {filteredTeachers.map((teacher) => (
                 <div key={teacher.id} className="card-elevated p-4">
