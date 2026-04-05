@@ -52,10 +52,13 @@ interface Parent {
   phone: string | null;
 }
 
-interface Student {
-  id: string;
-  full_name: string;
-  class: string;
+const SECTION_BASE_CLASSES: Record<string, string[]> = {
+  head_nursery: ['Baby Class', 'Kindergarten I', 'Kindergarten II'],
+  head_primary: ['Primary 1', 'Primary 2', 'Primary 3', 'Primary 4', 'Primary 5', 'Primary 6', 'Primary 7'],
+  head_secondary: ['Senior 1', 'Senior 2', 'Senior 3', 'Senior 4'],
+};
+
+
   roll_number: string;
   parent_id: string | null;
 }
