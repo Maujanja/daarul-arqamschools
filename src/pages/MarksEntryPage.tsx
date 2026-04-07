@@ -699,8 +699,7 @@ export default function MarksEntryPage() {
         if (importedRow && importedRow['Exam Marks'] !== undefined && importedRow['Exam Marks'] !== '') {
           const examScore = Math.min(Math.max(0, parseInt(String(importedRow['Exam Marks'])) || 0), maxMarks);
           const total = examScore;
-          const percentage = (total / maxMarks) * 100;
-          const grade = total > 0 ? calculateGradeForClass(percentage, selectedClass) : '-';
+          const grade = total > 0 ? calculateGradeForClass(total, selectedClass) : '-';
           updatedCount++;
           
           return {
