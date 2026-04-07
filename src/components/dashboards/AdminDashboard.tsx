@@ -21,7 +21,6 @@ import { AnnualReportPreview } from '@/components/dashboard/AnnualReportPreview'
 import { resolveSubjectsFromMarks } from '@/utils/subjectResolution';
 
 import { HoSResultApproval } from '@/components/dashboard/HoSResultApproval';
-import { classes } from '@/data/mockData';
 
 interface FeedbackItem {
   id: string;
