@@ -123,15 +123,18 @@ export function SeriesPerformanceChart({
       </div>
       <div className="h-[350px]">
         <ResponsiveContainer width="100%" height="100%">
-          <LineChart data={data} margin={{ top: 10, right: 30, left: 20, bottom: 10 }}>
+          <LineChart data={data} margin={{ top: 10, right: 30, left: 20, bottom: data.length > 10 ? 60 : 30 }}>
             <CartesianGrid strokeDasharray="3 3" stroke="hsl(var(--border))" />
             <XAxis 
               dataKey="name" 
               stroke="hsl(var(--muted-foreground))"
-              fontSize={12}
+              fontSize={data.length > 10 ? 10 : 12}
               tickLine={false}
               axisLine={false}
               padding={{ left: 20, right: 20 }}
+              interval={0}
+              angle={data.length > 6 ? -45 : 0}
+              textAnchor={data.length > 6 ? 'end' : 'middle'}
             />
             <YAxis 
               stroke="hsl(var(--muted-foreground))"
