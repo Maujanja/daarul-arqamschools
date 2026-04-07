@@ -735,6 +735,15 @@ export function ParentDashboard() {
     return result;
   }, [yearFilteredMarks, studentTerms, activeClass]);
 
+  // Build full series chart data (all series including ones without data)
+  const fullSeriesChartData = useMemo(() => {
+    const allTests = getTestsForClass(activeClass);
+    return allTests.map(t => ({
+      name: t.label,
+      Average: studentAveragePerSeries[t.label] != null ? Number(studentAveragePerSeries[t.label].toFixed(1)) : null
+    }));
+  }, [activeClass, studentAveragePerSeries]);
+
 
   // Download Subject Performance PDF with chart image
   const handleDownloadSubjectPerformance = async () => {
@@ -1253,10 +1262,7 @@ export function ParentDashboard() {
       {/* 6. Grade Performance Trend */}
       {Object.keys(studentAveragePerSeries).length > 0 && (
         <SeriesPerformanceChart
-          data={Object.entries(studentAveragePerSeries).map(([series, avg]) => ({
-            name: series,
-            Average: Number(avg.toFixed(1))
-          }))}
+          data={fullSeriesChartData}
           title="Grade Performance Trend"
           seriesKeys={['Average']}
           pdfFileName={`${childName}_series_performance.pdf`}

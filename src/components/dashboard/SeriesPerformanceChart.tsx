@@ -121,17 +121,20 @@ export function SeriesPerformanceChart({
           Download PDF
         </Button>
       </div>
-      <div className="h-[350px]">
+      <div className={data.length >= 6 ? "h-[420px]" : "h-[350px]"}>
         <ResponsiveContainer width="100%" height="100%">
-          <LineChart data={data} margin={{ top: 10, right: 30, left: 20, bottom: 10 }}>
+          <LineChart data={data} margin={{ top: 10, right: 30, left: 20, bottom: data.length >= 6 ? 70 : 10 }}>
             <CartesianGrid strokeDasharray="3 3" stroke="hsl(var(--border))" />
             <XAxis 
               dataKey="name" 
               stroke="hsl(var(--muted-foreground))"
-              fontSize={12}
+              fontSize={data.length > 10 ? 9 : 11}
               tickLine={false}
               axisLine={false}
               padding={{ left: 20, right: 20 }}
+              interval={0}
+              angle={data.length >= 6 ? -35 : 0}
+              textAnchor={data.length >= 6 ? 'end' : 'middle'}
             />
             <YAxis 
               stroke="hsl(var(--muted-foreground))"
@@ -150,7 +153,7 @@ export function SeriesPerformanceChart({
               labelStyle={{ color: 'hsl(var(--card-foreground))', fontWeight: 600 }}
               formatter={(value: number) => [`${Math.round(value)}%`, '']}
             />
-            <Legend wrapperStyle={{ paddingTop: '10px' }} />
+            <Legend wrapperStyle={{ paddingTop: '10px', position: 'relative', bottom: 0 }} verticalAlign="top" />
             {seriesKeys.map((key, index) => (
               <Line
                 key={key}
