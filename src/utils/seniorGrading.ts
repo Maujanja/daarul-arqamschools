@@ -39,11 +39,20 @@ export const calculatePrimaryGrade = (score: number): PrimaryGrade => {
 
 /**
  * Calculate grade based on class level
- * Primary: A(81-100), B(61-80), C(41-60), D(21-40), E(0-20)
+ * Primary (max 100): A(81-100), B(61-80), C(41-60), D(21-40), E(0-20)
+ * Primary 4 & 7 (max 50): Scale proportionally - A(41-50), B(31-40), C(21-30), D(11-20), E(0-10)
  * Senior/Others: A(75-100), B(65-74), C(45-64), D(30-44), F(0-29)
  */
 export const calculateGradeForClass = (score: number, className: string): string => {
   if (isPrimaryClass(className) || isNurseryClass(className)) {
+    if (isMax50Class(className)) {
+      // Primary 4 & 7: max 50 grading
+      if (score >= 41) return 'A';
+      if (score >= 31) return 'B';
+      if (score >= 21) return 'C';
+      if (score >= 11) return 'D';
+      return 'E';
+    }
     return calculatePrimaryGrade(score);
   }
   // Senior / default grading
