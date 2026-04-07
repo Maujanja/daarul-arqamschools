@@ -198,7 +198,7 @@ export function AdminDashboard() {
       });
 
       const average = totalCount > 0 ? totalSum / totalCount : 0;
-      const grade = average >= 75 ? 'A' : average >= 65 ? 'B' : average >= 50 ? 'C' : average >= 40 ? 'D' : 'F';
+      const grade = average >= 75 ? 'A' : average >= 65 ? 'B' : average >= 45 ? 'C' : average >= 30 ? 'D' : 'F';
 
       return {
         sn: index + 1,
@@ -267,7 +267,7 @@ export function AdminDashboard() {
       });
 
       const average = totalCount > 0 ? totalSum / totalCount : 0;
-      const grade = average >= 75 ? 'A' : average >= 65 ? 'B' : average >= 50 ? 'C' : average >= 40 ? 'D' : 'F';
+      const grade = average >= 75 ? 'A' : average >= 65 ? 'B' : average >= 45 ? 'C' : average >= 30 ? 'D' : 'F';
 
       return {
         sn: index + 1,

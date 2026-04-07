@@ -44,6 +44,8 @@ export default function UnlockRequestsPage() {
   const [actionType, setActionType] = useState<'approved' | 'rejected'>('approved');
 
   const isAdmin = user?.role === 'admin';
+  const isHeadOfSchool = user?.role?.startsWith('head_') || false;
+  const canApprove = isAdmin || isHeadOfSchool;
   const isTeacher = user?.role === 'teacher';
 
   useEffect(() => {
@@ -139,10 +141,10 @@ export default function UnlockRequestsPage() {
       <div className="space-y-8">
         <div>
           <h1 className="text-3xl font-display font-bold text-foreground">
-            {isAdmin ? 'Marks Unlock Requests' : 'My Unlock Requests'}
+            {canApprove ? 'Marks Unlock Requests' : 'My Unlock Requests'}
           </h1>
           <p className="text-muted-foreground mt-1">
-            {isAdmin 
+            {canApprove 
               ? 'Manage teacher requests to edit previously submitted marks'
               : 'Track the status of your marks edit requests'
             }
@@ -203,7 +205,7 @@ export default function UnlockRequestsPage() {
                         </p>
                       </div>
                       
-                      {isAdmin && (
+                      {canApprove && (
                         <div className="flex gap-2 shrink-0">
                           <Button 
                             size="sm"
