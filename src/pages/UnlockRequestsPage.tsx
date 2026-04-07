@@ -1,4 +1,4 @@
-import { useState, useEffect } from 'react';
+import { useState, useEffect, useCallback } from 'react';
 import { DashboardLayout } from '@/components/layout/DashboardLayout';
 import { Button } from '@/components/ui/button';
 import { useAuth } from '@/contexts/AuthContext';
@@ -9,6 +9,7 @@ import { Loader2, Unlock, Lock, CheckCircle, XCircle, Bell, Clock } from 'lucide
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import { Textarea } from '@/components/ui/textarea';
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from '@/components/ui/dialog';
+import { useRealtimeSubscription } from '@/hooks/useRealtimeSubscription';
 
 interface UnlockRequest {
   id: string;
@@ -48,9 +49,20 @@ export default function UnlockRequestsPage() {
   const canApprove = isAdmin || isHeadOfSchool;
   const isTeacher = user?.role === 'teacher';
 
+  const loadRequestsCb = useCallback(() => {
+    loadRequests();
+  }, [user]);
+
   useEffect(() => {
     loadRequests();
   }, [user]);
+
+  // Realtime: auto-refresh when unlock requests change
+  useRealtimeSubscription({
+    table: 'marks_unlock_requests',
+    onUpdate: loadRequestsCb,
+    enabled: !!user,
+  });
 
   const loadRequests = async () => {
     if (!user) return;
