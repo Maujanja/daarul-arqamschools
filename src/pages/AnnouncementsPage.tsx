@@ -9,9 +9,10 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@
 import { Megaphone, Plus, Calendar, User, Trash2, Edit, Loader2, Clock } from 'lucide-react';
 import { useAuth } from '@/contexts/AuthContext';
 import { useToast } from '@/hooks/use-toast';
-import { supabase } from '@/integrations/supabase/client';
 import { useAcademicYears } from '@/hooks/useAcademicYears';
 import { useRealtimeSubscription } from '@/hooks/useRealtimeSubscription';
+import { useSecureQuery } from '@/hooks/useSecureQuery';
+import { useSecureData } from '@/hooks/useSecureData';
 
 interface Announcement {
   id: string;
@@ -30,6 +31,8 @@ export default function AnnouncementsPage() {
   const { user } = useAuth();
   const { toast } = useToast();
   const { academicYears, currentYear, loading: yearsLoading } = useAcademicYears();
+  const { fetchTable } = useSecureQuery();
+  const { insert, update, remove } = useSecureData();
   const [announcements, setAnnouncements] = useState<Announcement[]>([]);
   const [loading, setLoading] = useState(true);
   const [submitting, setSubmitting] = useState(false);
@@ -43,45 +46,26 @@ export default function AnnouncementsPage() {
   
   const isAdmin = user?.role === 'admin';
 
-  // Set initial year when academic years load
   useEffect(() => {
     if (currentYear && !selectedYear) {
       setSelectedYear(currentYear);
     }
   }, [currentYear, selectedYear]);
 
-  const refetchAnnouncements = useCallback(() => {
-    if (selectedYear) fetchAnnouncements();
-  }, [selectedYear]);
-
-  useEffect(() => {
-    if (selectedYear) {
-      fetchAnnouncements();
-    }
-  }, [selectedYear]);
-
-  // Realtime: auto-refresh announcements on changes
-  useRealtimeSubscription({
-    table: 'announcements',
-    onUpdate: refetchAnnouncements,
-    enabled: !!selectedYear,
-  });
-
-  const fetchAnnouncements = async () => {
+  const fetchAnnouncements = useCallback(async () => {
+    if (!selectedYear) return;
     try {
       setLoading(true);
+      const data = await fetchTable<Announcement>('announcements', {
+        academic_year: selectedYear,
+      }, {
+        orderBy: { column: 'created_at', ascending: false },
+      });
+      
+      // Filter out expired announcements client-side
       const now = new Date().toISOString();
-      
-      // Fetch announcements filtered by year and not expired
-      const { data, error } = await supabase
-        .from('announcements')
-        .select('*')
-        .eq('academic_year', selectedYear)
-        .or(`expires_at.is.null,expires_at.gt.${now}`)
-        .order('created_at', { ascending: false });
-      
-      if (error) throw error;
-      setAnnouncements(data || []);
+      const filtered = data.filter(a => !a.expires_at || a.expires_at > now);
+      setAnnouncements(filtered);
     } catch (error) {
       console.error('Error fetching announcements:', error);
       toast({
@@ -92,7 +76,19 @@ export default function AnnouncementsPage() {
     } finally {
       setLoading(false);
     }
-  };
+  }, [selectedYear, fetchTable, toast]);
+
+  useEffect(() => {
+    if (selectedYear) {
+      fetchAnnouncements();
+    }
+  }, [selectedYear, fetchAnnouncements]);
+
+  useRealtimeSubscription({
+    table: 'announcements',
+    onUpdate: fetchAnnouncements,
+    enabled: !!selectedYear,
+  });
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -102,38 +98,27 @@ export default function AnnouncementsPage() {
     
     try {
       if (editingAnnouncement) {
-        const { error } = await supabase
-          .from('announcements')
-          .update({
-            title: title.trim(),
-            content: content.trim(),
-            visibility_type: visibilityType
-          })
-          .eq('id', editingAnnouncement.id);
+        const result = await update('announcements', {
+          title: title.trim(),
+          content: content.trim(),
+          visibility_type: visibilityType,
+        }, { id: editingAnnouncement.id });
         
-        if (error) throw error;
+        if (!result.success) throw new Error(result.error);
         
-        toast({
-          title: "Success",
-          description: "Announcement updated successfully"
-        });
+        toast({ title: "Success", description: "Announcement updated successfully" });
       } else {
-        const { error } = await supabase
-          .from('announcements')
-          .insert({
-            title: title.trim(),
-            content: content.trim(),
-            created_by: user?.name || 'Admin',
-            academic_year: selectedYear,
-            visibility_type: visibilityType
-          });
-        
-        if (error) throw error;
-        
-        toast({
-          title: "Success",
-          description: "Announcement created successfully"
+        const result = await insert('announcements', {
+          title: title.trim(),
+          content: content.trim(),
+          created_by: user?.name || 'Admin',
+          academic_year: selectedYear,
+          visibility_type: visibilityType,
         });
+        
+        if (!result.success) throw new Error(result.error);
+        
+        toast({ title: "Success", description: "Announcement created successfully" });
       }
       
       setTitle('');
@@ -142,11 +127,11 @@ export default function AnnouncementsPage() {
       setEditingAnnouncement(null);
       setDialogOpen(false);
       fetchAnnouncements();
-    } catch (error) {
+    } catch (error: any) {
       console.error('Error saving announcement:', error);
       toast({
         title: "Error",
-        description: "Failed to save announcement",
+        description: error?.message || "Failed to save announcement",
         variant: "destructive"
       });
     } finally {
@@ -166,23 +151,16 @@ export default function AnnouncementsPage() {
     if (!confirm('Are you sure you want to delete this announcement?')) return;
     
     try {
-      const { error } = await supabase
-        .from('announcements')
-        .delete()
-        .eq('id', id);
+      const result = await remove('announcements', { id });
+      if (!result.success) throw new Error(result.error);
       
-      if (error) throw error;
-      
-      toast({
-        title: "Success",
-        description: "Announcement deleted successfully"
-      });
+      toast({ title: "Success", description: "Announcement deleted successfully" });
       fetchAnnouncements();
-    } catch (error) {
+    } catch (error: any) {
       console.error('Error deleting announcement:', error);
       toast({
         title: "Error",
-        description: "Failed to delete announcement",
+        description: error?.message || "Failed to delete announcement",
         variant: "destructive"
       });
     }
@@ -227,7 +205,6 @@ export default function AnnouncementsPage() {
           </div>
           
           <div className="flex items-center gap-3">
-            {/* Year Filter */}
             <Select value={selectedYear} onValueChange={setSelectedYear}>
               <SelectTrigger className="w-[140px]">
                 <SelectValue placeholder="Select Year" />
@@ -247,69 +224,69 @@ export default function AnnouncementsPage() {
                 <DialogTrigger asChild>
                   <Button className="btn-gradient">
                     <Plus className="w-4 h-4 mr-2" />
-                  New Announcement
-                </Button>
-              </DialogTrigger>
-              <DialogContent className="sm:max-w-[500px]">
-                <DialogHeader>
-                  <DialogTitle>
-                    {editingAnnouncement ? 'Edit Announcement' : 'Create New Announcement'}
-                  </DialogTitle>
-                </DialogHeader>
-                <form onSubmit={handleSubmit} className="space-y-4 mt-4">
-                  <div className="space-y-2">
-                    <Label htmlFor="title">Title</Label>
-                    <Input
-                      id="title"
-                      value={title}
-                      onChange={(e) => setTitle(e.target.value)}
-                      placeholder="Enter announcement title"
-                      className="input-enhanced"
-                      required
-                    />
-                  </div>
-                  <div className="space-y-2">
-                    <Label htmlFor="visibility">Visibility Duration</Label>
-                    <Select value={visibilityType} onValueChange={setVisibilityType}>
-                      <SelectTrigger className="input-enhanced">
-                        <SelectValue placeholder="Select duration" />
-                      </SelectTrigger>
-                      <SelectContent>
-                        <SelectItem value="weekly">Weekly (7 days)</SelectItem>
-                        <SelectItem value="monthly">Monthly (30 days)</SelectItem>
-                        <SelectItem value="yearly">Yearly (365 days)</SelectItem>
-                      </SelectContent>
-                    </Select>
-                  </div>
-                  <div className="space-y-2">
-                    <Label htmlFor="content">Content</Label>
-                    <Textarea
-                      id="content"
-                      value={content}
-                      onChange={(e) => setContent(e.target.value)}
-                      placeholder="Enter announcement content..."
-                      className="min-h-[150px] input-enhanced"
-                      required
-                    />
-                  </div>
-                  <div className="flex gap-2 justify-end">
-                    <Button type="button" variant="outline" onClick={handleDialogClose}>
-                      Cancel
-                    </Button>
-                    <Button type="submit" className="btn-gradient" disabled={submitting}>
-                      {submitting ? (
-                        <>
-                          <Loader2 className="w-4 h-4 mr-2 animate-spin" />
-                          Saving...
-                        </>
-                      ) : (
-                        editingAnnouncement ? 'Update' : 'Create'
-                      )}
-                    </Button>
-                  </div>
-                </form>
-              </DialogContent>
-            </Dialog>
+                    New Announcement
+                  </Button>
+                </DialogTrigger>
+                <DialogContent className="sm:max-w-[500px]">
+                  <DialogHeader>
+                    <DialogTitle>
+                      {editingAnnouncement ? 'Edit Announcement' : 'Create New Announcement'}
+                    </DialogTitle>
+                  </DialogHeader>
+                  <form onSubmit={handleSubmit} className="space-y-4 mt-4">
+                    <div className="space-y-2">
+                      <Label htmlFor="title">Title</Label>
+                      <Input
+                        id="title"
+                        value={title}
+                        onChange={(e) => setTitle(e.target.value)}
+                        placeholder="Enter announcement title"
+                        className="input-enhanced"
+                        required
+                      />
+                    </div>
+                    <div className="space-y-2">
+                      <Label htmlFor="visibility">Visibility Duration</Label>
+                      <Select value={visibilityType} onValueChange={setVisibilityType}>
+                        <SelectTrigger className="input-enhanced">
+                          <SelectValue placeholder="Select duration" />
+                        </SelectTrigger>
+                        <SelectContent>
+                          <SelectItem value="weekly">Weekly (7 days)</SelectItem>
+                          <SelectItem value="monthly">Monthly (30 days)</SelectItem>
+                          <SelectItem value="yearly">Yearly (365 days)</SelectItem>
+                        </SelectContent>
+                      </Select>
+                    </div>
+                    <div className="space-y-2">
+                      <Label htmlFor="content">Content</Label>
+                      <Textarea
+                        id="content"
+                        value={content}
+                        onChange={(e) => setContent(e.target.value)}
+                        placeholder="Enter announcement content..."
+                        className="min-h-[150px] input-enhanced"
+                        required
+                      />
+                    </div>
+                    <div className="flex gap-2 justify-end">
+                      <Button type="button" variant="outline" onClick={handleDialogClose}>
+                        Cancel
+                      </Button>
+                      <Button type="submit" className="btn-gradient" disabled={submitting}>
+                        {submitting ? (
+                          <>
+                            <Loader2 className="w-4 h-4 mr-2 animate-spin" />
+                            Saving...
+                          </>
+                        ) : (
+                          editingAnnouncement ? 'Update' : 'Create'
+                        )}
+                      </Button>
+                    </div>
+                  </form>
+                </DialogContent>
+              </Dialog>
             )}
           </div>
         </div>
