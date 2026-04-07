@@ -226,7 +226,7 @@ export const getTestsForClass = (className: string): { value: string; label: str
  * Others: S1, S2, ... S11
  */
 export const getSeriesLabel = (testName: string, className: string): string => {
-  if (isSenior1or3(className) || isNurseryClass(className)) {
+  if (usesCATSeries(className)) {
     return CAT_SERIES_NAMES[testName] || testName;
   }
   
@@ -239,11 +239,11 @@ export const getSeriesLabel = (testName: string, className: string): string => {
 
 /**
  * Get the filter label for dropdowns
- * Senior classes: "CAT/Exam" label
+ * CAT-based classes: "CAT/Exam" label
  * Others: "Series" label  
  */
 export const getFilterLabel = (className: string): string => {
-  if (isSenior1or3(className) || isNurseryClass(className)) {
+  if (usesCATSeries(className)) {
     return 'CAT/Exam';
   }
   return 'Series';
