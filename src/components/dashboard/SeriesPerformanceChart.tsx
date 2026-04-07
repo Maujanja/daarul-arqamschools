@@ -121,7 +121,7 @@ export function SeriesPerformanceChart({
           Download PDF
         </Button>
       </div>
-      <div className="h-[350px]">
+      <div className={data.length >= 6 ? "h-[420px]" : "h-[350px]"}>
         <ResponsiveContainer width="100%" height="100%">
           <LineChart data={data} margin={{ top: 10, right: 30, left: 20, bottom: data.length >= 6 ? 70 : 10 }}>
             <CartesianGrid strokeDasharray="3 3" stroke="hsl(var(--border))" />
