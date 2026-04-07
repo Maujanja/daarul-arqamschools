@@ -592,10 +592,8 @@ export function ParentDashboard() {
 
   // Realtime subscriptions for live updates
   const triggerRefresh = useCallback(() => {
-    // Force re-fetch by toggling a dummy state - the main useEffect depends on selectedYear
-    setIsLoading(true);
-    setTimeout(() => setIsLoading(false), 100);
-  }, []);
+    fetchChildData();
+  }, [fetchChildData]);
 
   useRealtimeSubscription({
     table: 'result_release_statuses',
