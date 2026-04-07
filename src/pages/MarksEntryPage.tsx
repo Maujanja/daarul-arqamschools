@@ -6,7 +6,7 @@ import { Input } from '@/components/ui/input';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import { calculateGrade } from '@/types';
-import { calculateGradeForClass, isPrimaryClass, isNurseryClass } from '@/utils/seniorGrading';
+import { calculateGradeForClass, isPrimaryClass, isNurseryClass, getMaxMarksForClass } from '@/utils/seniorGrading';
 import { Save, Loader2, Upload, Download, FileSpreadsheet, Edit3, Lock, ShieldAlert, Unlock, CheckCircle, Plus, Trash2 } from 'lucide-react';
 import { useToast } from '@/hooks/use-toast';
 import { useAuth } from '@/contexts/AuthContext';
@@ -214,7 +214,8 @@ export default function MarksEntryPage() {
     : subjects;
 
   const selectedSubjectData = subjects.find(s => s.id === selectedSubject);
-  const maxMarks = selectedSubjectData?.max_marks || 100;
+  const classMaxMarks = getMaxMarksForClass(selectedClass);
+  const maxMarks = Math.min(selectedSubjectData?.max_marks || 100, classMaxMarks);
 
   useEffect(() => {
     if (currentYear && !selectedYear) {
