@@ -10,7 +10,7 @@ import { terms } from '@/data/mockData';
 import { useAcademicYears } from '@/hooks/useAcademicYears';
 import { SeriesSummaryTable } from '@/components/dashboard/SeriesSummaryTable';
 import { SeriesPerformanceChart } from '@/components/dashboard/SeriesPerformanceChart';
-import { getTestDisplayName, getTestsForClass, getFilterLabel, calculateGradeForClass, isPrimaryClass } from '@/utils/seniorGrading';
+import { getTestDisplayName, getTestsForClass, getFilterLabel, calculateGradeForClass, isPrimaryClass, getSeriesCountForClass, usesCATSeries, getSeriesLabel } from '@/utils/seniorGrading';
 import { extractUniqueBaseClasses } from '@/utils/classStreams';
 
 interface TeacherInfo {
@@ -173,8 +173,7 @@ export function TeacherDashboard() {
 
           setStudentsNeedingSupport(needingSupport);
 
-          // Calculate series summary for all classes using all 11 series
-          const allSeriesLabels = ['Series 1', 'Series 2', 'Series 3', 'Series 4', 'Series 5', 'Series 6', 'Series 7', 'Series 8', 'Series 9', 'Series 10', 'Series 11'];
+          // Calculate series summary for all classes using class-specific series counts
           const classSummary: any[] = [];
           
           console.log('TeacherDashboard: Processing marks for series summary', { marksCount: marksData.length, classes: baseClasses });
@@ -182,16 +181,19 @@ export function TeacherDashboard() {
           baseClasses.forEach((cls: string) => {
             const classMarks = marksData.filter((m: any) => m.class === cls);
             const seriesAverages: Record<string, number | null> = {};
+            const seriesCount = getSeriesCountForClass(cls);
+            const classSeriesLabels = Array.from({ length: seriesCount }, (_, i) => `Series ${i + 1}`);
             
-            console.log(`TeacherDashboard: Class ${cls} marks count:`, classMarks.length);
+            console.log(`TeacherDashboard: Class ${cls} marks count:`, classMarks.length, 'series count:', seriesCount);
             
-            allSeriesLabels.forEach((term, idx) => {
+            classSeriesLabels.forEach((term) => {
+              const chartLabel = getSeriesLabel(term, cls);
               const termMarks = classMarks.filter((m: any) => m.term === term);
               if (termMarks.length > 0) {
                 const avg = termMarks.reduce((sum: number, m: any) => sum + m.total, 0) / termMarks.length;
-                seriesAverages[`S${idx + 1}`] = Math.round(avg * 10) / 10;
+                seriesAverages[chartLabel] = Math.round(avg * 10) / 10;
               } else {
-                seriesAverages[`S${idx + 1}`] = null;
+                seriesAverages[chartLabel] = null;
               }
             });
             
@@ -210,15 +212,19 @@ export function TeacherDashboard() {
           });
 
           setSeriesSummaryData(classSummary);
-          setSeriesLabels(['S1', 'S2', 'S3', 'S4', 'S5', 'S6', 'S7', 'S8', 'S9', 'S10', 'S11']);
+          // Use first class's series labels for the summary table (they may differ per class)
+          const firstClass = baseClasses[0] || '';
+          const firstCount = getSeriesCountForClass(firstClass);
+          const summaryLabels = Array.from({ length: firstCount }, (_, i) => getSeriesLabel(`Series ${i + 1}`, firstClass));
+          setSeriesLabels(summaryLabels);
 
           // Build performance trend chart data from the classSummary data
-          const seriesLabelsForChart = ['S1', 'S2', 'S3', 'S4', 'S5', 'S6', 'S7', 'S8', 'S9', 'S10', 'S11'];
           const classChartData: ClassSeriesData[] = classSummary.map((classItem: any) => {
-            const chartData: SeriesData[] = seriesLabelsForChart.map(series => {
-              const value = classItem.seriesData[series];
+            const chartLabels = Object.keys(classItem.seriesData);
+            const chartData: SeriesData[] = chartLabels.map(label => {
+              const value = classItem.seriesData[label];
               return {
-                name: series,
+                name: label,
                 Average: typeof value === 'number' ? value : null
               };
             });

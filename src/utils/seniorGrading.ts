@@ -147,20 +147,41 @@ export const calculateDivision = (subjectScores: number[]): { division: string; 
 
 /**
  * Series naming mapping
- * Senior 1 & 3: CAT 1, CAT 2, TERMINAL, CAT 3, CAT 4, ANNUAL (6 tests)
- * Nursery (Baby Class, KG I, KG II): CAT 1, CAT 2, TERMINAL, CAT 3, CAT 4, ANNUAL (6 tests)
- * Senior 2 & 4: Series 1-11
- * Primary: Series 1-11
+ * Senior 1 & 3: 6 tests - CAT 1 (28 FEB), CAT 2 (30 MARCH), TERMINAL (30 MAY), CAT 3 (30 JULY), CAT 4 (30 AUGUST), ANNUAL (30 NOV)
+ * Primary 1, 2, 3, 5, 6: 6 tests - same CAT names as Senior 1&3
+ * Nursery (Baby Class, KG I, KG II): 6 tests - same CAT names
+ * Primary 4 & 7: 50 series (Series 1-50)
+ * Senior 2 & 4: 20 series (Series 1-20)
  */
 
-// CAT-based series name mapping (Senior 1&3 + Nursery, Series 1-6 only)
+// CAT-based series name mapping (6 tests)
 const CAT_SERIES_NAMES: Record<string, string> = {
-  'Series 1': 'CAT 1',
-  'Series 2': 'CAT 2',
-  'Series 3': 'TERMINAL',
-  'Series 4': 'CAT 3',
-  'Series 5': 'CAT 4',
-  'Series 6': 'ANNUAL',
+  'Series 1': 'CAT 1 (28 FEB)',
+  'Series 2': 'CAT 2 (30 MARCH)',
+  'Series 3': 'TERMINAL (30 MAY)',
+  'Series 4': 'CAT 3 (30 JULY)',
+  'Series 5': 'CAT 4 (30 AUGUST)',
+  'Series 6': 'ANNUAL (30 NOV)',
+};
+
+// Check if a class uses 6 CAT-based series
+export const usesCATSeries = (className: string): boolean => {
+  return isSenior1or3(className) || isNurseryClass(className) || isPrimaryCATClass(className);
+};
+
+// Primary classes that use CAT series (Primary 1, 2, 3, 5, 6 - NOT 4 and 7)
+export const isPrimaryCATClass = (className: string): boolean => {
+  return /^Primary\s+[12356]$/i.test(className.trim());
+};
+
+/**
+ * Get the number of series for a class
+ */
+export const getSeriesCountForClass = (className: string): number => {
+  if (usesCATSeries(className)) return 6;
+  if (isMax50Class(className)) return 50; // Primary 4 & 7
+  if (isSenior2or4(className)) return 20;
+  return 6; // fallback
 };
 
 /**
@@ -170,7 +191,7 @@ const CAT_SERIES_NAMES: Record<string, string> = {
  * @returns Display name for the test
  */
 export const getTestDisplayName = (testName: string, className: string): string => {
-  if (isSenior1or3(className) || isNurseryClass(className)) {
+  if (usesCATSeries(className)) {
     return CAT_SERIES_NAMES[testName] || testName;
   }
   
@@ -180,19 +201,20 @@ export const getTestDisplayName = (testName: string, className: string): string 
 
 /**
  * Get all available tests for a class
- * Senior 1 & 3: 6 tests (CAT 1 to ANNUAL)
- * Others: 11 tests (Series 1 to Series 11)
+ * Senior 1 & 3 + Primary 1,2,3,5,6 + Nursery: 6 tests (CAT-based)
+ * Primary 4 & 7: 50 series
+ * Senior 2 & 4: 20 series
  */
 export const getTestsForClass = (className: string): { value: string; label: string }[] => {
-  if (isSenior1or3(className) || isNurseryClass(className)) {
+  if (usesCATSeries(className)) {
     return Object.entries(CAT_SERIES_NAMES).map(([value, label]) => ({
       value,
       label,
     }));
   }
   
-  // For all other classes: 11 series
-  return Array.from({ length: 11 }, (_, i) => ({
+  const count = getSeriesCountForClass(className);
+  return Array.from({ length: count }, (_, i) => ({
     value: `Series ${i + 1}`,
     label: `Series ${i + 1}`,
   }));
@@ -204,7 +226,7 @@ export const getTestsForClass = (className: string): { value: string; label: str
  * Others: S1, S2, ... S11
  */
 export const getSeriesLabel = (testName: string, className: string): string => {
-  if (isSenior1or3(className) || isNurseryClass(className)) {
+  if (usesCATSeries(className)) {
     return CAT_SERIES_NAMES[testName] || testName;
   }
   
@@ -217,11 +239,11 @@ export const getSeriesLabel = (testName: string, className: string): string => {
 
 /**
  * Get the filter label for dropdowns
- * Senior classes: "CAT/Exam" label
+ * CAT-based classes: "CAT/Exam" label
  * Others: "Series" label  
  */
 export const getFilterLabel = (className: string): string => {
-  if (isSenior1or3(className) || isNurseryClass(className)) {
+  if (usesCATSeries(className)) {
     return 'CAT/Exam';
   }
   return 'Series';
