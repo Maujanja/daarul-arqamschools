@@ -194,7 +194,7 @@ export function HeadOfSchoolDashboard() {
       });
 
       const average = totalCount > 0 ? totalSum / totalCount : 0;
-      const grade = average >= 75 ? 'A' : average >= 65 ? 'B' : average >= 50 ? 'C' : average >= 40 ? 'D' : 'F';
+      const grade = average >= 75 ? 'A' : average >= 65 ? 'B' : average >= 45 ? 'C' : average >= 30 ? 'D' : 'F';
 
       return { sn: index + 1, name: className, seriesData, average, grade };
     }).sort((a, b) => b.average - a.average)
@@ -241,7 +241,7 @@ export function HeadOfSchoolDashboard() {
       });
 
       const average = totalCount > 0 ? totalSum / totalCount : 0;
-      const grade = average >= 75 ? 'A' : average >= 65 ? 'B' : average >= 50 ? 'C' : average >= 40 ? 'D' : 'F';
+      const grade = average >= 75 ? 'A' : average >= 65 ? 'B' : average >= 45 ? 'C' : average >= 30 ? 'D' : 'F';
       return { sn: index + 1, name: subject.name, seriesData, average, grade };
     }).sort((a, b) => b.average - a.average)
       .map((item, index) => ({ ...item, position: index + 1, sn: index + 1 }));
