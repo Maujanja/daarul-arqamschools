@@ -94,14 +94,28 @@ export function HoSResultApproval({ selectedYear, filterClasses }: Props) {
 
   const streams = useMemo(() => getStreamsForClass(selectedClass), [selectedClass]);
 
-  // Filter students for selected class + stream
+  // Filter students: use students currently in class + students who have marks for this class/term (promoted students)
   const filteredStudents = useMemo(() => {
+    // Students currently registered in this class
     let students = allStudents.filter(s => s.class === selectedClass);
     if (selectedStream !== 'all' && streams.length > 0) {
       students = students.filter(s => s.stream === selectedStream);
     }
+    
+    // Also include students who have marks for this class but are no longer in it (promoted)
+    const marksForClass = allMarks.filter(m => m.class === selectedClass);
+    const studentIdsFromMarks = new Set(marksForClass.map(m => m.student_id));
+    const currentStudentIds = new Set(students.map(s => s.id));
+    
+    // Add promoted students from marks
+    const promotedStudentIds = [...studentIdsFromMarks].filter(id => !currentStudentIds.has(id));
+    if (promotedStudentIds.length > 0) {
+      const promotedStudents = allStudents.filter(s => promotedStudentIds.includes(s.id));
+      students = [...students, ...promotedStudents];
+    }
+    
     return students;
-  }, [allStudents, selectedClass, selectedStream, streams]);
+  }, [allStudents, allMarks, selectedClass, selectedStream, streams]);
 
   // Class assignments (teachers + subjects for this class)
   const classAssignments = useMemo(() => {

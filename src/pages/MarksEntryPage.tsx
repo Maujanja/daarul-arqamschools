@@ -6,7 +6,7 @@ import { Input } from '@/components/ui/input';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import { calculateGrade } from '@/types';
-import { calculateGradeForClass, isPrimaryClass, isNurseryClass } from '@/utils/seniorGrading';
+import { calculateGradeForClass, isPrimaryClass, isNurseryClass, getMaxMarksForClass } from '@/utils/seniorGrading';
 import { Save, Loader2, Upload, Download, FileSpreadsheet, Edit3, Lock, ShieldAlert, Unlock, CheckCircle, Plus, Trash2 } from 'lucide-react';
 import { useToast } from '@/hooks/use-toast';
 import { useAuth } from '@/contexts/AuthContext';
@@ -214,7 +214,8 @@ export default function MarksEntryPage() {
     : subjects;
 
   const selectedSubjectData = subjects.find(s => s.id === selectedSubject);
-  const maxMarks = selectedSubjectData?.max_marks || 100;
+  const classMaxMarks = getMaxMarksForClass(selectedClass);
+  const maxMarks = Math.min(selectedSubjectData?.max_marks || 100, classMaxMarks);
 
   useEffect(() => {
     if (currentYear && !selectedYear) {
@@ -434,8 +435,7 @@ export default function MarksEntryPage() {
         setMarks(prev => prev.map(mark => {
           const existingMark = result.data!.find(m => m.student_id === mark.studentId);
           if (existingMark) {
-            const percentage = (existingMark.total / maxMarks) * 100;
-            const recalcGrade = existingMark.total > 0 ? calculateGradeForClass(percentage, selectedClass) : '-';
+            const recalcGrade = existingMark.total > 0 ? calculateGradeForClass(existingMark.total, selectedClass) : '-';
             return {
               ...mark,
               exam: existingMark.exam,
@@ -628,8 +628,7 @@ export default function MarksEntryPage() {
       
       const examScore = typeof numValue === 'number' ? numValue : 0;
       const total = examScore;
-      const percentage = (total / maxMarks) * 100;
-      const grade = total > 0 ? calculateGradeForClass(percentage, selectedClass) : '-';
+      const grade = total > 0 ? calculateGradeForClass(total, selectedClass) : '-';
       
       return {
         ...mark,
@@ -700,8 +699,7 @@ export default function MarksEntryPage() {
         if (importedRow && importedRow['Exam Marks'] !== undefined && importedRow['Exam Marks'] !== '') {
           const examScore = Math.min(Math.max(0, parseInt(String(importedRow['Exam Marks'])) || 0), maxMarks);
           const total = examScore;
-          const percentage = (total / maxMarks) * 100;
-          const grade = total > 0 ? calculateGradeForClass(percentage, selectedClass) : '-';
+          const grade = total > 0 ? calculateGradeForClass(total, selectedClass) : '-';
           updatedCount++;
           
           return {
