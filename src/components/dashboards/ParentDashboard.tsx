@@ -297,9 +297,9 @@ export function ParentDashboard() {
     }
   }, [currentYear]);
 
-  useEffect(() => {
-    const fetchChildData = async () => {
+  const fetchChildData = useCallback(async () => {
       if (!user || !selectedYear) return;
+
       
       setIsLoading(true);
       
@@ -556,10 +556,11 @@ export function ParentDashboard() {
       } finally {
         setIsLoading(false);
       }
-    };
-    
-    fetchChildData();
   }, [user, selectedTerm, selectedYear, fetchTable, calculateRankings, getActiveResultsClass]);
+
+  useEffect(() => {
+    fetchChildData();
+  }, [fetchChildData]);
 
   // Update filtered marks and rankings when term/year changes
   useEffect(() => {
@@ -591,10 +592,8 @@ export function ParentDashboard() {
 
   // Realtime subscriptions for live updates
   const triggerRefresh = useCallback(() => {
-    // Force re-fetch by toggling a dummy state - the main useEffect depends on selectedYear
-    setIsLoading(true);
-    setTimeout(() => setIsLoading(false), 100);
-  }, []);
+    fetchChildData();
+  }, [fetchChildData]);
 
   useRealtimeSubscription({
     table: 'result_release_statuses',

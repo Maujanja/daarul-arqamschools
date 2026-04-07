@@ -499,6 +499,19 @@ serve(async (req) => {
       }
     }
 
+    // Broadcast mutation event so all connected clients refresh
+    try {
+      const broadcastChannel = supabase.channel(`table-changes-${table}`);
+      await broadcastChannel.send({
+        type: 'broadcast',
+        event: 'mutation',
+        payload: { table, operation },
+      });
+      await supabase.removeChannel(broadcastChannel);
+    } catch (broadcastErr) {
+      console.warn('Broadcast failed (non-fatal):', broadcastErr);
+    }
+
     return new Response(
       JSON.stringify({ success: true, data: result }),
       { headers: { ...corsHeaders, "Content-Type": "application/json" } }
