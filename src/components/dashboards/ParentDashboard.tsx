@@ -556,10 +556,11 @@ export function ParentDashboard() {
       } finally {
         setIsLoading(false);
       }
-    };
-    
-    fetchChildData();
   }, [user, selectedTerm, selectedYear, fetchTable, calculateRankings, getActiveResultsClass]);
+
+  useEffect(() => {
+    fetchChildData();
+  }, [fetchChildData]);
 
   // Update filtered marks and rankings when term/year changes
   useEffect(() => {
