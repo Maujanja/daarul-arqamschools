@@ -297,9 +297,9 @@ export function ParentDashboard() {
     }
   }, [currentYear]);
 
-  useEffect(() => {
-    const fetchChildData = async () => {
+  const fetchChildData = useCallback(async () => {
       if (!user || !selectedYear) return;
+
       
       setIsLoading(true);
       
