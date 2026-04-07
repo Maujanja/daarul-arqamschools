@@ -435,8 +435,7 @@ export default function MarksEntryPage() {
         setMarks(prev => prev.map(mark => {
           const existingMark = result.data!.find(m => m.student_id === mark.studentId);
           if (existingMark) {
-            const percentage = (existingMark.total / maxMarks) * 100;
-            const recalcGrade = existingMark.total > 0 ? calculateGradeForClass(percentage, selectedClass) : '-';
+            const recalcGrade = existingMark.total > 0 ? calculateGradeForClass(existingMark.total, selectedClass) : '-';
             return {
               ...mark,
               exam: existingMark.exam,
@@ -629,8 +628,7 @@ export default function MarksEntryPage() {
       
       const examScore = typeof numValue === 'number' ? numValue : 0;
       const total = examScore;
-      const percentage = (total / maxMarks) * 100;
-      const grade = total > 0 ? calculateGradeForClass(percentage, selectedClass) : '-';
+      const grade = total > 0 ? calculateGradeForClass(total, selectedClass) : '-';
       
       return {
         ...mark,
