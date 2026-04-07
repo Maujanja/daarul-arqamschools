@@ -4,6 +4,7 @@ import { Dialog, DialogContent, DialogHeader, DialogTitle } from '@/components/u
 import { Button } from '@/components/ui/button';
 import { Download, X } from 'lucide-react';
 import { ScrollArea } from '@/components/ui/scroll-area';
+import { resolveSubjectsFromMarks } from '@/utils/subjectResolution';
 
 interface StudentData {
   id: string;
@@ -17,6 +18,7 @@ interface StudentData {
 interface MarkData {
   student_id: string;
   subject_id: string;
+  subject_name?: string | null;
   total: number;
   grade: string;
 }
@@ -50,10 +52,7 @@ export function AnnualReportPreview({
   const gradeScale = isSenior ? ['A', 'B', 'C', 'D', 'F'] : ['A', 'B', 'C', 'D', 'E'];
 
   const { activeSubjects, studentRows, subjectAverages, subjectRanks } = useMemo(() => {
-    const subjectIdsWithMarks = [...new Set(marks.map(m => m.subject_id))];
-    const activeSubjects = subjects
-      .filter(s => subjectIdsWithMarks.includes(s.id))
-      .sort((a, b) => a.name.localeCompare(b.name));
+    const activeSubjects = resolveSubjectsFromMarks(marks, subjects);
 
     const studentRows = students.map(student => {
       const studentMarks = marks.filter(m => m.student_id === student.id);

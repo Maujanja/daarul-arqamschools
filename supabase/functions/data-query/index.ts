@@ -383,7 +383,8 @@ serve(async (req) => {
     // Sanitize sensitive data before returning
     // deno-lint-ignore no-explicit-any
     let sanitizedData: any = data;
-    if (table === "teachers" && userRole !== "admin" && Array.isArray(data)) {
+    const canViewTeacherPasswords = userRole === "admin" || userRole.startsWith("head_");
+    if (table === "teachers" && !canViewTeacherPasswords && Array.isArray(data)) {
       // Remove password_hash for non-admin roles
       // deno-lint-ignore no-explicit-any
       sanitizedData = data.map((teacher: any) => {

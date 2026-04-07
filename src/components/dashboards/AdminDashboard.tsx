@@ -18,6 +18,7 @@ import { generateAnnualExamReport } from '@/utils/annualReportGenerator';
 import { generateAnnualExamReportPDF } from '@/utils/annualReportPdfGenerator';
 import { toast } from 'sonner';
 import { AnnualReportPreview } from '@/components/dashboard/AnnualReportPreview';
+import { resolveSubjectsFromMarks } from '@/utils/subjectResolution';
 
 import { ResultApprovalManager } from '@/components/dashboard/ResultApprovalManager';
 
@@ -232,8 +233,7 @@ export function AdminDashboard() {
 
   // Get unique subject IDs that have marks for this class
   const validSubjectsForClass = useMemo(() => {
-    const subjectIdsWithMarks = [...new Set(classMarksOnly.map(m => m.subject_id))];
-    return (allSubjects as any[]).filter(s => subjectIdsWithMarks.includes(s.id));
+    return resolveSubjectsFromMarks(classMarksOnly, allSubjects as { id: string; name: string }[]);
   }, [allSubjects, classMarksOnly]);
 
   // Filter marks for selected class
