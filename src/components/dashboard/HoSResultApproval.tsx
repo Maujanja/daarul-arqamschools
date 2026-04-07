@@ -149,8 +149,18 @@ export function HoSResultApproval({ selectedYear, filterClasses }: Props) {
   }, [classAssignments, allTeachers, allSubjects]);
 
   // Marks for selected class/term/stream
+  // Helper: match term with aliases (Series X ↔ Test X)
+  const termMatchesFn = (markTerm: string, selected: string): boolean => {
+    if (markTerm === selected) return true;
+    const seriesMatch = selected.match(/^Series\s+(\d+)$/i);
+    if (seriesMatch) return markTerm === `Test ${seriesMatch[1]}`;
+    const testMatch = selected.match(/^Test\s+(\d+)$/i);
+    if (testMatch) return markTerm === `Series ${testMatch[1]}`;
+    return false;
+  };
+
   const termMarks = useMemo(() => {
-    let marks = allMarks.filter(m => m.class === selectedClass && m.term === selectedTerm);
+    let marks = allMarks.filter(m => m.class === selectedClass && termMatchesFn(m.term, selectedTerm));
     if (selectedStream !== 'all' && streams.length > 0) {
       marks = marks.filter(m => m.stream === selectedStream);
     }

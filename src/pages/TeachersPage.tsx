@@ -359,7 +359,15 @@ export default function TeachersPage() {
     return classSubjectMap;
   };
 
-  const filteredTeachers = teachers.filter(teacher =>
+  // For HoS, filter teachers to only those with assignments in their section
+  const visibleTeachers = isHoS
+    ? teachers.filter(t => {
+        const teacherAssigns = assignments.filter(a => a.teacher_id === t.id);
+        return teacherAssigns.some(a => sectionClasses.includes(a.class));
+      })
+    : teachers;
+
+  const filteredTeachers = visibleTeachers.filter(teacher =>
     teacher.full_name.toLowerCase().includes(searchQuery.toLowerCase()) ||
     teacher.email.toLowerCase().includes(searchQuery.toLowerCase())
   );
