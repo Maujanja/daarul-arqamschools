@@ -1,5 +1,6 @@
 import * as XLSX from 'xlsx';
 import { isSeniorClass, isNurseryClass, scoreToPoints, calculateDivision, calculateGradeForClass, getTestDisplayName } from './seniorGrading';
+import { resolveSubjectsFromMarks } from './subjectResolution';
 
 interface StudentData {
   id: string;
@@ -13,6 +14,7 @@ interface StudentData {
 interface MarkData {
   student_id: string;
   subject_id: string;
+  subject_name?: string | null;
   total: number;
   grade: string;
 }
@@ -52,10 +54,7 @@ export function generateAnnualExamReport(
   const leadingColumns = isSenior ? 7 : 5;
 
   // Discover subjects that have marks for this class
-  const subjectIdsWithMarks = [...new Set(marks.map(m => m.subject_id))];
-  const activeSubjects = subjects
-    .filter(s => subjectIdsWithMarks.includes(s.id))
-    .sort((a, b) => a.name.localeCompare(b.name));
+  const activeSubjects = resolveSubjectsFromMarks(marks, subjects);
 
   // Build student rows with calculated data
   const studentRows = students.map(student => {

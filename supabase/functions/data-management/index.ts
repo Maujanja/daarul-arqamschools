@@ -416,6 +416,42 @@ serve(async (req) => {
             { status: 400, headers: { ...corsHeaders, "Content-Type": "application/json" } }
           );
         }
+
+        if (table === "subjects") {
+          const subjectId = typeof match.id === "string" ? match.id : null;
+
+          if (!subjectId) {
+            return new Response(
+              JSON.stringify({ success: false, error: "Subject id is required for delete" }),
+              { status: 400, headers: { ...corsHeaders, "Content-Type": "application/json" } }
+            );
+          }
+
+          const [marksUsage, assignmentsUsage, classStudentsUsage, unlockUsage] = await Promise.all([
+            supabase.from("marks").select("id", { count: "exact", head: true }).eq("subject_id", subjectId),
+            supabase.from("teacher_assignments").select("id", { count: "exact", head: true }).eq("subject_id", subjectId),
+            supabase.from("teacher_class_students").select("id", { count: "exact", head: true }).eq("subject_id", subjectId),
+            supabase.from("marks_unlock_requests").select("id", { count: "exact", head: true }).eq("subject_id", subjectId),
+          ]);
+
+          const usageErrors = [marksUsage.error, assignmentsUsage.error, classStudentsUsage.error, unlockUsage.error].filter(Boolean);
+          if (usageErrors.length > 0) {
+            throw usageErrors[0];
+          }
+
+          const hasHistory = [marksUsage.count, assignmentsUsage.count, classStudentsUsage.count, unlockUsage.count]
+            .some((count) => (count ?? 0) > 0);
+
+          if (hasHistory) {
+            return new Response(
+              JSON.stringify({
+                success: false,
+                error: "Subject cannot be deleted because it already has historical marks or class assignments. Edit the subject instead so old records remain visible.",
+              }),
+              { status: 400, headers: { ...corsHeaders, "Content-Type": "application/json" } }
+            );
+          }
+        }
         
         let query = supabase.from(table).delete();
         

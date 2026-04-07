@@ -1,6 +1,7 @@
 import jsPDF from 'jspdf';
 import autoTable from 'jspdf-autotable';
 import { isSeniorClass, isNurseryClass, scoreToPoints, calculateDivision, calculateGradeForClass, getTestDisplayName } from './seniorGrading';
+import { resolveSubjectsFromMarks } from './subjectResolution';
 
 interface StudentData {
   id: string;
@@ -14,6 +15,7 @@ interface StudentData {
 interface MarkData {
   student_id: string;
   subject_id: string;
+  subject_name?: string | null;
   total: number;
   grade: string;
 }
@@ -72,10 +74,7 @@ export async function generateAnnualExamReportPDF(
   const logoBase64 = await loadLogoAsBase64();
 
   // Discover subjects with marks
-  const subjectIdsWithMarks = [...new Set(marks.map(m => m.subject_id))];
-  const activeSubjects = subjects
-    .filter(s => subjectIdsWithMarks.includes(s.id))
-    .sort((a, b) => a.name.localeCompare(b.name));
+  const activeSubjects = resolveSubjectsFromMarks(marks, subjects);
 
   // Build student rows
   const studentRows = students.map(student => {

@@ -17,6 +17,7 @@ import { toast } from 'sonner';
 import { AnnualReportPreview } from '@/components/dashboard/AnnualReportPreview';
 import { HoSResultApproval } from '@/components/dashboard/HoSResultApproval';
 import { CLASS_STREAMS, parseClassStream } from '@/utils/classStreams';
+import { resolveSubjectsFromMarks } from '@/utils/subjectResolution';
 
 // Helper function
 async function secureQuery(table: string, userRole: string, userId: string, options?: any) {
@@ -215,8 +216,7 @@ export function HeadOfSchoolDashboard() {
   const classMarksOnly = useMemo(() => sectionMarks.filter(m => m.class === selectedClass), [sectionMarks, selectedClass]);
   
   const validSubjectsForClass = useMemo(() => {
-    const subjectIdsWithMarks = [...new Set(classMarksOnly.map(m => m.subject_id))];
-    return (allSubjects as any[]).filter(s => subjectIdsWithMarks.includes(s.id));
+    return resolveSubjectsFromMarks(classMarksOnly, allSubjects as { id: string; name: string }[]);
   }, [allSubjects, classMarksOnly]);
 
   const classSeriesLabels = useMemo(() => uniqueTerms.map(term => getTestDisplayName(term, selectedClass)), [uniqueTerms, selectedClass]);

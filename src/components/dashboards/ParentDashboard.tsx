@@ -17,6 +17,7 @@ import { BarChart, Bar, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContaine
 import jsPDF from 'jspdf';
 import autoTable from 'jspdf-autotable';
 import html2canvas from 'html2canvas';
+import { createSubjectNameLookup, resolveSubjectName } from '@/utils/subjectResolution';
 
 interface StudentMark {
   subject: string;
@@ -26,6 +27,7 @@ interface StudentMark {
   exam: number;
   total: number;
   grade: string;
+  class_name: string;
 }
 
 interface FeePayment {
@@ -131,6 +133,33 @@ export function ParentDashboard() {
   const [showAllInstallments, setShowAllInstallments] = useState(false);
   const [familyParentName, setFamilyParentName] = useState<string | null>(null);
   const [releaseStatuses, setReleaseStatuses] = useState<ResultReleaseStatus[]>([]);
+
+  const getActiveResultsClass = useCallback((marks: StudentMark[], term: string, year: string, fallbackClass: string) => {
+    const marksForSelection = marks.filter(
+      (mark) => mark.academic_year === year && termMatches(mark.term, term)
+    );
+
+    if (marksForSelection.length === 0) {
+      return fallbackClass;
+    }
+
+    const classCounts = marksForSelection.reduce<Record<string, number>>((acc, mark) => {
+      const className = mark.class_name || fallbackClass;
+      if (className) {
+        acc[className] = (acc[className] || 0) + 1;
+      }
+      return acc;
+    }, {});
+
+    return Object.entries(classCounts).sort((a, b) => b[1] - a[1])[0]?.[0] || fallbackClass;
+  }, []);
+
+  const resultsClass = useMemo(
+    () => getActiveResultsClass(allMarks, selectedTerm, selectedYear, childClass),
+    [allMarks, selectedTerm, selectedYear, childClass, getActiveResultsClass]
+  );
+
+  const activeClass = resultsClass || childClass;
   
   // Chart refs for capturing as images
   const subjectChartRef = useRef<HTMLDivElement>(null);
@@ -172,7 +201,7 @@ export function ParentDashboard() {
       return;
     }
 
-    const subjectMap = new Map(subjects?.map((s: any) => [s.id, s.name]) || []);
+    const subjectLookup = createSubjectNameLookup(subjects || []);
 
     // Calculate average for each student
     const studentAverages: Record<string, { total: number; count: number }> = {};
@@ -222,14 +251,14 @@ export function ParentDashboard() {
         subjectScores[subjectId] = [];
       }
       // Recalculate grade using class-appropriate scale instead of stored grade
-      const recalculatedGrade = mark.total > 0 
-        ? calculateGradeForClass((mark.total / 100) * 100, studentClass) 
+        const recalculatedGrade = mark.total > 0 
+          ? calculateGradeForClass((mark.total / 100) * 100, studentClass) 
         : '-';
       subjectScores[subjectId].push({
         studentId: mark.student_id,
         score: mark.total,
         grade: recalculatedGrade,
-        subjectName: subjectMap.get(mark.subject_id) || 'Unknown'
+          subjectName: resolveSubjectName(mark, subjectLookup)
       });
     });
 
@@ -314,25 +343,32 @@ export function ParentDashboard() {
         // Get subjects for name lookup
         const subjectsData = await fetchTable<any>('subjects');
       
-        // Build subject name lookup
-        const subjectMap = new Map(subjectsData?.map((s: any) => [s.id, s.name]) || []);
+        const subjectLookup = createSubjectNameLookup(subjectsData || []);
         
         if (marksData) {
           const formattedMarks = marksData.map((m: any) => ({
-            subject: subjectMap.get(m.subject_id) || 'Unknown',
+            subject: resolveSubjectName(m, subjectLookup),
             subject_id: m.subject_id,
             term: m.term,
             academic_year: m.academic_year,
             exam: m.exam,
             total: m.total,
+            class_name: m.class || studentData.class,
             // Recalculate grade using class-appropriate scale
-            grade: m.total > 0 ? calculateGradeForClass(m.total, studentData.class) : '-',
+            grade: m.total > 0 ? calculateGradeForClass(m.total, m.class || studentData.class) : '-',
           }));
           setAllMarks(formattedMarks);
+
+          const initialResultsClass = getActiveResultsClass(
+            formattedMarks,
+            selectedTerm,
+            selectedYear,
+            studentData.class
+          );
           
           // Filter by selected term and year (with term aliasing)
           const filtered = formattedMarks.filter(
-            (m: any) => termMatches(m.term, selectedTerm) && m.academic_year === selectedYear
+            (m: any) => termMatches(m.term, selectedTerm) && m.academic_year === selectedYear && m.class_name === initialResultsClass
           );
           setStudentMarks(filtered);
           
@@ -345,7 +381,16 @@ export function ParentDashboard() {
         }
 
         // Calculate class rank and subject rankings
-        await calculateRankings(studentData.id, studentData.class, selectedTerm, selectedYear);
+        await calculateRankings(studentData.id, getActiveResultsClass(marksData ? marksData.map((m: any) => ({
+          subject: '',
+          subject_id: m.subject_id,
+          term: m.term,
+          academic_year: m.academic_year,
+          exam: m.exam,
+          total: m.total,
+          grade: '-',
+          class_name: m.class || studentData.class,
+        })) : [], selectedTerm, selectedYear, studentData.class), selectedTerm, selectedYear);
         
         // Fetch result release statuses
         const statuses = await fetchTable<ResultReleaseStatus>('result_release_statuses', {
@@ -513,18 +558,18 @@ export function ParentDashboard() {
     };
     
     fetchChildData();
-  }, [user, selectedTerm, selectedYear, fetchTable, calculateRankings]);
+  }, [user, selectedTerm, selectedYear, fetchTable, calculateRankings, getActiveResultsClass]);
 
   // Update filtered marks and rankings when term/year changes
   useEffect(() => {
     if (allMarks.length > 0) {
       // Check if the selected term is approved for this class
       const isApproved = releaseStatuses.some(
-        s => s.class_name === childClass && (s.term === selectedTerm || termMatches(s.term, selectedTerm)) && s.approved_by_admin
+        s => s.class_name === activeClass && (s.term === selectedTerm || termMatches(s.term, selectedTerm)) && s.approved_by_admin
       );
 
       const filtered = isApproved
-        ? allMarks.filter(m => termMatches(m.term, selectedTerm) && m.academic_year === selectedYear)
+        ? allMarks.filter(m => termMatches(m.term, selectedTerm) && m.academic_year === selectedYear && m.class_name === activeClass)
         : [];
 
       setStudentMarks(filtered);
@@ -538,10 +583,10 @@ export function ParentDashboard() {
     }
     
     // Recalculate rankings when term/year changes
-    if (studentId && childClass) {
-      calculateRankings(studentId, childClass, selectedTerm, selectedYear);
+    if (studentId && activeClass) {
+      calculateRankings(studentId, activeClass, selectedTerm, selectedYear);
     }
-  }, [selectedTerm, selectedYear, allMarks, studentId, childClass, releaseStatuses]);
+  }, [selectedTerm, selectedYear, allMarks, studentId, activeClass, releaseStatuses, calculateRankings]);
 
   const balance = expectedFee - paidAmount;
 
@@ -570,7 +615,7 @@ export function ParentDashboard() {
 
   // Grade distribution for pie chart
   const gradeDistribution = subjectAverages.reduce((acc, s) => {
-    const grade = calculateGradeForClass(s.average, childClass);
+    const grade = calculateGradeForClass(s.average, activeClass);
     acc[grade] = (acc[grade] || 0) + 1;
     return acc;
   }, {} as Record<string, number>);
@@ -592,8 +637,8 @@ export function ParentDashboard() {
 
   // Filter marks by selected year for series summary
   const yearFilteredMarks = useMemo(() => {
-    return allMarks.filter(m => m.academic_year === selectedYear);
-  }, [allMarks, selectedYear]);
+    return allMarks.filter(m => m.academic_year === selectedYear && (!activeClass || m.class_name === activeClass));
+  }, [allMarks, selectedYear, activeClass]);
 
   // Series Summary for Student - All subjects across all terms for selected year
   const studentTerms = useMemo(() => {
@@ -606,8 +651,8 @@ export function ParentDashboard() {
   }, [yearFilteredMarks]);
 
   const studentSeriesLabels = useMemo(() => {
-    return studentTerms.map((term) => getTestDisplayName(term, childClass));
-  }, [studentTerms, childClass]);
+    return studentTerms.map((term) => getTestDisplayName(term, activeClass));
+  }, [studentTerms, activeClass]);
 
   // Series summary for student's subjects
   const studentSubjectSummary = useMemo(() => {
@@ -626,7 +671,7 @@ export function ParentDashboard() {
       let totalCount = 0;
 
       studentTerms.forEach((term, termIndex) => {
-        const label = getTestDisplayName(term, childClass);
+        const label = getTestDisplayName(term, activeClass);
         const mark = data.marks.find(m => m.term === term);
         if (mark) {
           seriesData[label] = mark.total;
@@ -638,7 +683,7 @@ export function ParentDashboard() {
       });
 
       const average = totalCount > 0 ? totalSum / totalCount : 0;
-      const grade = average > 0 ? calculateGradeForClass(average, childClass) : '-';
+      const grade = average > 0 ? calculateGradeForClass(average, activeClass) : '-';
 
       return {
         sn: index + 1,
@@ -649,14 +694,14 @@ export function ParentDashboard() {
       };
     }).sort((a, b) => b.average - a.average)
       .map((item, index) => ({ ...item, position: index + 1, sn: index + 1 }));
-  }, [yearFilteredMarks, studentTerms]);
+  }, [yearFilteredMarks, studentTerms, activeClass]);
 
   // Average per series for student
   const studentAveragePerSeries = useMemo(() => {
     const result: { [key: string]: number } = {};
     
     studentTerms.forEach((term, termIndex) => {
-      const label = getTestDisplayName(term, childClass);
+      const label = getTestDisplayName(term, activeClass);
       const termMarks = yearFilteredMarks.filter(m => m.term === term);
       if (termMarks.length > 0) {
         const avg = termMarks.reduce((sum, m) => sum + m.total, 0) / termMarks.length;
@@ -665,7 +710,7 @@ export function ParentDashboard() {
     });
 
     return result;
-  }, [yearFilteredMarks, studentTerms, childClass]);
+  }, [yearFilteredMarks, studentTerms, activeClass]);
 
 
   // Download Subject Performance PDF with chart image
@@ -697,7 +742,7 @@ export function ParentDashboard() {
     
     // Subject table below chart
     const tableData = subjectAverages.map(s => {
-      const grade = calculateGradeForClass(s.average, childClass);
+      const grade = calculateGradeForClass(s.average, activeClass);
       return [s.subject, `${s.average}%`, grade];
     });
     
@@ -722,7 +767,7 @@ export function ParentDashboard() {
     
     doc.setFontSize(12);
     doc.text(`Student: ${childName}`, 20, 35);
-    doc.text(`Class: ${childClass}`, 20, 43);
+    doc.text(`Class: ${activeClass}`, 20, 43);
     doc.text(`Term: ${selectedTerm} - ${selectedYear}`, 20, 51);
     doc.text(`Overall Average: ${overallAverage.toFixed(1)}%`, 20, 59);
     doc.text(`Date: ${new Date().toLocaleDateString()}`, 20, 67);
@@ -742,7 +787,7 @@ export function ParentDashboard() {
     }
     
     // Grade distribution table below chart
-    const gradeLabels = isPrimaryClass(childClass) 
+    const gradeLabels = isPrimaryClass(activeClass) 
       ? ['A (81-100%)', 'B (61-80%)', 'C (41-60%)', 'D (21-40%)', 'E (0-20%)']
       : ['A (75-100%)', 'B (65-74%)', 'C (45-64%)', 'D (30-44%)', 'F (0-29%)'];
     const tableData = Object.entries(gradeDistribution).map(([grade, count]) => {
@@ -771,15 +816,15 @@ export function ParentDashboard() {
     
     doc.setFontSize(12);
     doc.text(`Student: ${childName}`, 20, 40);
-    doc.text(`Class: ${childClass}`, 20, 50);
-    doc.text(`Academic Year: 2024-2025`, 20, 60);
+    doc.text(`Class: ${activeClass}`, 20, 50);
+    doc.text(`Academic Year: ${selectedYear}`, 20, 60);
     
     // Subject Performance Table
     doc.setFontSize(14);
     doc.text('Subject Performance', 20, 80);
     
     const tableData = subjectAverages.map(s => {
-      const grade = calculateGradeForClass(s.average, childClass);
+      const grade = calculateGradeForClass(s.average, activeClass);
       return [s.subject, `${s.average}%`, grade];
     });
     
@@ -847,7 +892,7 @@ export function ParentDashboard() {
               <div className="text-center">
                 <p className="text-sm text-muted-foreground">Overall Average</p>
                 <p className="text-4xl font-bold font-display gradient-text">{overallAverage.toFixed(1)}%</p>
-                <GradeBadge grade={calculateGradeForClass(overallAverage, childClass)} size="lg" />
+                <GradeBadge grade={calculateGradeForClass(overallAverage, activeClass)} size="lg" />
               </div>
               {classRank && (
                 <div className="text-center border-l border-border pl-4">
@@ -856,7 +901,7 @@ export function ParentDashboard() {
                   {classRank === 1 && <span className="text-xs text-success font-medium">🏆 Top of Class!</span>}
                 </div>
               )}
-              {isSeniorClass(childClass) && studentMarks.length >= 7 && (() => {
+              {isSeniorClass(activeClass) && studentMarks.length >= 7 && (() => {
                 const scores = studentMarks.map(m => m.total);
                 const { division, totalPoints } = calculateDivision(scores);
                 return (
@@ -899,13 +944,13 @@ export function ParentDashboard() {
         <h3 className="font-display font-semibold text-lg mb-4 text-card-foreground">Filter Results</h3>
         <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
           <div className="space-y-2">
-            <label className="text-sm font-medium text-muted-foreground">{childClass ? getFilterLabel(childClass) : 'Series'}</label>
+            <label className="text-sm font-medium text-muted-foreground">{activeClass ? getFilterLabel(activeClass) : 'Series'}</label>
             <Select value={selectedTerm} onValueChange={setSelectedTerm}>
               <SelectTrigger>
                 <SelectValue placeholder="Select series" />
               </SelectTrigger>
               <SelectContent>
-                {childClass ? getTestsForClass(childClass).map((t) => (
+                {activeClass ? getTestsForClass(activeClass).map((t) => (
                   <SelectItem key={t.value} value={t.value}>{t.label}</SelectItem>
                 )) : terms.map((term) => (
                   <SelectItem key={term} value={term}>{term}</SelectItem>
@@ -953,7 +998,7 @@ export function ParentDashboard() {
                 {subjectRankings.map((item, index) => {
                   const isTop = index === 0;
                   const isFirst = item.rank === 1;
-                   const supportThreshold = isPrimaryClass(childClass) ? 41 : 45;
+                   const supportThreshold = isPrimaryClass(activeClass) ? 41 : 45;
                    const needsSupport = index === subjectRankings.length - 1 && item.score < supportThreshold;
                   
                   return (
