@@ -29,6 +29,7 @@ import { useSecureQuery } from '@/hooks/useSecureQuery';
 import { useSecureData } from '@/hooks/useSecureData';
 import { getStreamsForClass, hasStreams } from '@/utils/classStreams';
 import { getTestsForClass, getFilterLabel, getTestDisplayName } from '@/utils/seniorGrading';
+import { useRealtimeSubscription } from '@/hooks/useRealtimeSubscription';
 
 interface Student {
   id: string;
