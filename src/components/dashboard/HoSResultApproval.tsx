@@ -2,6 +2,7 @@ import { useState, useEffect, useCallback, useMemo } from 'react';
 import { useSecureQuery } from '@/hooks/useSecureQuery';
 import { useSecureData } from '@/hooks/useSecureData';
 import { useAuth } from '@/contexts/AuthContext';
+import { useRealtimeSubscription } from '@/hooks/useRealtimeSubscription';
 import { Button } from '@/components/ui/button';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { CheckCircle, Clock, Lock, Unlock, Loader2, ShieldCheck, AlertTriangle, Eye, ChevronDown, ChevronUp, Users } from 'lucide-react';
@@ -91,6 +92,18 @@ export function HoSResultApproval({ selectedYear, filterClasses }: Props) {
   }, [selectedYear, user, fetchTable, fetchAllPaginated]);
 
   useEffect(() => { fetchData(); }, [fetchData]);
+
+  // Realtime: auto-refresh when result statuses or marks change
+  useRealtimeSubscription({
+    table: 'result_release_statuses',
+    onUpdate: fetchData,
+    enabled: !!selectedYear && !!user,
+  });
+  useRealtimeSubscription({
+    table: 'marks',
+    onUpdate: fetchData,
+    enabled: !!selectedYear && !!user,
+  });
 
   const streams = useMemo(() => getStreamsForClass(selectedClass), [selectedClass]);
 
