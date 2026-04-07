@@ -1178,7 +1178,7 @@ export function ParentDashboard() {
       </div>
 
       {/* 4. Stats Cards */}
-      <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-5 gap-6">
+      <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-6">
           <StatCard
             title="Class Rank"
             value={classRank ? `${classRank}/${totalClassStudents}` : '-'}
@@ -1210,14 +1210,6 @@ export function ParentDashboard() {
           icon={TrendingDown}
           variant="warning"
           bgStyle="cherries"
-        />
-        <StatCard
-          title="Installment Due"
-          value={dueInstallmentAmount > 0 ? `TZS ${(dueInstallmentAmount / 1000000).toFixed(1)}M` : 'None'}
-          subtitle={dueInstallmentAmount > 0 ? 'Current dues' : 'No dues now'}
-          icon={DollarSign}
-          variant={dueInstallmentAmount > 0 ? 'warning' : 'success'}
-          bgStyle="silk"
         />
       </div>
 
