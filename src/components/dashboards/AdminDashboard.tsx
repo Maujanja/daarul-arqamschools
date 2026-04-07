@@ -20,7 +20,8 @@ import { toast } from 'sonner';
 import { AnnualReportPreview } from '@/components/dashboard/AnnualReportPreview';
 import { resolveSubjectsFromMarks } from '@/utils/subjectResolution';
 
-import { ResultApprovalManager } from '@/components/dashboard/ResultApprovalManager';
+import { HoSResultApproval } from '@/components/dashboard/HoSResultApproval';
+import { classes } from '@/data/mockData';
 
 interface FeedbackItem {
   id: string;
@@ -649,7 +650,7 @@ export function AdminDashboard() {
       </div>
 
       {/* Result Approval Section */}
-      <ResultApprovalManager selectedYear={selectedYear} />
+      <HoSResultApproval selectedYear={selectedYear} filterClasses={classes} />
 
       {/* Fee Overview */}
       <div className="card-elevated p-6 animate-fade-in">
