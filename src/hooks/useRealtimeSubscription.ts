@@ -1,24 +1,18 @@
 import { useEffect, useRef } from 'react';
 import { supabase } from '@/integrations/supabase/client';
 
-type RealtimeEvent = 'INSERT' | 'UPDATE' | 'DELETE' | '*';
-
 interface UseRealtimeOptions {
   table: string;
-  event?: RealtimeEvent;
-  filter?: string;
   onUpdate: () => void;
   enabled?: boolean;
 }
 
 /**
- * Subscribe to realtime changes on a Supabase table.
- * Calls `onUpdate` whenever a matching change is detected.
+ * Subscribe to realtime Broadcast events for a given table.
+ * The data-management edge function broadcasts after each mutation.
  */
 export function useRealtimeSubscription({
   table,
-  event = '*',
-  filter,
   onUpdate,
   enabled = true,
 }: UseRealtimeOptions) {
@@ -28,21 +22,11 @@ export function useRealtimeSubscription({
   useEffect(() => {
     if (!enabled) return;
 
-    const channelName = `rt-${table}-${event}-${filter || 'all'}-${Date.now()}`;
-
-    const subscribeConfig: any = {
-      event,
-      schema: 'public',
-      table,
-    };
-
-    if (filter) {
-      subscribeConfig.filter = filter;
-    }
+    const channelName = `table-changes-${table}`;
 
     const channel = supabase
       .channel(channelName)
-      .on('postgres_changes', subscribeConfig, () => {
+      .on('broadcast', { event: 'mutation' }, () => {
         callbackRef.current();
       })
       .subscribe();
@@ -50,5 +34,5 @@ export function useRealtimeSubscription({
     return () => {
       supabase.removeChannel(channel);
     };
-  }, [table, event, filter, enabled]);
+  }, [table, enabled]);
 }
