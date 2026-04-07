@@ -191,7 +191,7 @@ export const getSeriesCountForClass = (className: string): number => {
  * @returns Display name for the test
  */
 export const getTestDisplayName = (testName: string, className: string): string => {
-  if (isSenior1or3(className) || isNurseryClass(className)) {
+  if (usesCATSeries(className)) {
     return CAT_SERIES_NAMES[testName] || testName;
   }
   
@@ -201,19 +201,20 @@ export const getTestDisplayName = (testName: string, className: string): string 
 
 /**
  * Get all available tests for a class
- * Senior 1 & 3: 6 tests (CAT 1 to ANNUAL)
- * Others: 11 tests (Series 1 to Series 11)
+ * Senior 1 & 3 + Primary 1,2,3,5,6 + Nursery: 6 tests (CAT-based)
+ * Primary 4 & 7: 50 series
+ * Senior 2 & 4: 20 series
  */
 export const getTestsForClass = (className: string): { value: string; label: string }[] => {
-  if (isSenior1or3(className) || isNurseryClass(className)) {
+  if (usesCATSeries(className)) {
     return Object.entries(CAT_SERIES_NAMES).map(([value, label]) => ({
       value,
       label,
     }));
   }
   
-  // For all other classes: 11 series
-  return Array.from({ length: 11 }, (_, i) => ({
+  const count = getSeriesCountForClass(className);
+  return Array.from({ length: count }, (_, i) => ({
     value: `Series ${i + 1}`,
     label: `Series ${i + 1}`,
   }));
