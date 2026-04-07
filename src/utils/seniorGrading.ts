@@ -13,6 +13,16 @@ export const isPrimaryClass = (className: string): boolean => {
   return /^Primary\s+[1-7]/i.test(className.trim());
 };
 
+// Check if a class uses max 50 marks (Primary 4 and Primary 7)
+export const isMax50Class = (className: string): boolean => {
+  return /^Primary\s+(4|7)/i.test(className.trim());
+};
+
+// Get the maximum marks for a class
+export const getMaxMarksForClass = (className: string): number => {
+  return isMax50Class(className) ? 50 : 100;
+};
+
 /**
  * Primary Grading System
  * A (81-100), B (61-80), C (41-60), D (21-40), E (0-20)
