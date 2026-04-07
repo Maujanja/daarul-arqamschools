@@ -735,6 +735,15 @@ export function ParentDashboard() {
     return result;
   }, [yearFilteredMarks, studentTerms, activeClass]);
 
+  // Build full series chart data (all series including ones without data)
+  const fullSeriesChartData = useMemo(() => {
+    const allTests = getTestsForClass(activeClass);
+    return allTests.map(t => ({
+      name: t.label,
+      Average: studentAveragePerSeries[t.label] != null ? Number(studentAveragePerSeries[t.label].toFixed(1)) : null
+    }));
+  }, [activeClass, studentAveragePerSeries]);
+
 
   // Download Subject Performance PDF with chart image
   const handleDownloadSubjectPerformance = async () => {
