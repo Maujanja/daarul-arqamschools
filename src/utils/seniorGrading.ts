@@ -147,20 +147,41 @@ export const calculateDivision = (subjectScores: number[]): { division: string; 
 
 /**
  * Series naming mapping
- * Senior 1 & 3: CAT 1, CAT 2, TERMINAL, CAT 3, CAT 4, ANNUAL (6 tests)
- * Nursery (Baby Class, KG I, KG II): CAT 1, CAT 2, TERMINAL, CAT 3, CAT 4, ANNUAL (6 tests)
- * Senior 2 & 4: Series 1-11
- * Primary: Series 1-11
+ * Senior 1 & 3: 6 tests - CAT 1 (28 FEB), CAT 2 (30 MARCH), TERMINAL (30 MAY), CAT 3 (30 JULY), CAT 4 (30 AUGUST), ANNUAL (30 NOV)
+ * Primary 1, 2, 3, 5, 6: 6 tests - same CAT names as Senior 1&3
+ * Nursery (Baby Class, KG I, KG II): 6 tests - same CAT names
+ * Primary 4 & 7: 50 series (Series 1-50)
+ * Senior 2 & 4: 20 series (Series 1-20)
  */
 
-// CAT-based series name mapping (Senior 1&3 + Nursery, Series 1-6 only)
+// CAT-based series name mapping (6 tests)
 const CAT_SERIES_NAMES: Record<string, string> = {
-  'Series 1': 'CAT 1',
-  'Series 2': 'CAT 2',
-  'Series 3': 'TERMINAL',
-  'Series 4': 'CAT 3',
-  'Series 5': 'CAT 4',
-  'Series 6': 'ANNUAL',
+  'Series 1': 'CAT 1 (28 FEB)',
+  'Series 2': 'CAT 2 (30 MARCH)',
+  'Series 3': 'TERMINAL (30 MAY)',
+  'Series 4': 'CAT 3 (30 JULY)',
+  'Series 5': 'CAT 4 (30 AUGUST)',
+  'Series 6': 'ANNUAL (30 NOV)',
+};
+
+// Check if a class uses 6 CAT-based series
+export const usesCATSeries = (className: string): boolean => {
+  return isSenior1or3(className) || isNurseryClass(className) || isPrimaryCATClass(className);
+};
+
+// Primary classes that use CAT series (Primary 1, 2, 3, 5, 6 - NOT 4 and 7)
+export const isPrimaryCATClass = (className: string): boolean => {
+  return /^Primary\s+[12356]$/i.test(className.trim());
+};
+
+/**
+ * Get the number of series for a class
+ */
+export const getSeriesCountForClass = (className: string): number => {
+  if (usesCATSeries(className)) return 6;
+  if (isMax50Class(className)) return 50; // Primary 4 & 7
+  if (isSenior2or4(className)) return 20;
+  return 6; // fallback
 };
 
 /**
