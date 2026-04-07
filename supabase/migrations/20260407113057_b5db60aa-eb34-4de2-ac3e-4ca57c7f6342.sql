@@ -1,0 +1,1 @@
+UPDATE students SET stream = 'A' WHERE class IN ('Primary 4','Primary 5','Primary 6','Primary 7') AND (stream IS NULL OR stream = '');
