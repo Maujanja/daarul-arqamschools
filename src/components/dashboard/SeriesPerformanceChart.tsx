@@ -153,7 +153,7 @@ export function SeriesPerformanceChart({
               labelStyle={{ color: 'hsl(var(--card-foreground))', fontWeight: 600 }}
               formatter={(value: number) => [`${Math.round(value)}%`, '']}
             />
-            <Legend wrapperStyle={{ paddingTop: '10px' }} />
+            <Legend wrapperStyle={{ paddingTop: '10px', position: 'relative', bottom: 0 }} verticalAlign="top" />
             {seriesKeys.map((key, index) => (
               <Line
                 key={key}
