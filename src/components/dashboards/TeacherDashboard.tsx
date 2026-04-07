@@ -10,7 +10,7 @@ import { terms } from '@/data/mockData';
 import { useAcademicYears } from '@/hooks/useAcademicYears';
 import { SeriesSummaryTable } from '@/components/dashboard/SeriesSummaryTable';
 import { SeriesPerformanceChart } from '@/components/dashboard/SeriesPerformanceChart';
-import { getTestDisplayName, getTestsForClass, getFilterLabel, calculateGradeForClass, isPrimaryClass } from '@/utils/seniorGrading';
+import { getTestDisplayName, getTestsForClass, getFilterLabel, calculateGradeForClass, isPrimaryClass, getSeriesCountForClass, usesCATSeries, getSeriesLabel } from '@/utils/seniorGrading';
 import { extractUniqueBaseClasses } from '@/utils/classStreams';
 
 interface TeacherInfo {
