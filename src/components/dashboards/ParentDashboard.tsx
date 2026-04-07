@@ -589,6 +589,29 @@ export function ParentDashboard() {
     }
   }, [selectedTerm, selectedYear, allMarks, studentId, activeClass, releaseStatuses, calculateRankings]);
 
+  // Realtime subscriptions for live updates
+  const triggerRefresh = useCallback(() => {
+    // Force re-fetch by toggling a dummy state - the main useEffect depends on selectedYear
+    setIsLoading(true);
+    setTimeout(() => setIsLoading(false), 100);
+  }, []);
+
+  useRealtimeSubscription({
+    table: 'result_release_statuses',
+    onUpdate: triggerRefresh,
+    enabled: !!studentId,
+  });
+  useRealtimeSubscription({
+    table: 'announcements',
+    onUpdate: triggerRefresh,
+    enabled: !!studentId,
+  });
+  useRealtimeSubscription({
+    table: 'feedback',
+    onUpdate: triggerRefresh,
+    enabled: !!studentId,
+  });
+
   const balance = expectedFee - paidAmount;
 
   // Get unique subjects
