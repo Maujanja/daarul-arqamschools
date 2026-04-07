@@ -1,4 +1,5 @@
 import { useState, useEffect, useRef, useMemo, useCallback } from 'react';
+import { useRealtimeSubscription } from '@/hooks/useRealtimeSubscription';
 import { StatCard } from '@/components/dashboard/StatCard';
 import { GradeBadge } from '@/components/dashboard/GradeBadge';
 import { SeriesSummaryTable } from '@/components/dashboard/SeriesSummaryTable';
@@ -587,6 +588,29 @@ export function ParentDashboard() {
       calculateRankings(studentId, activeClass, selectedTerm, selectedYear);
     }
   }, [selectedTerm, selectedYear, allMarks, studentId, activeClass, releaseStatuses, calculateRankings]);
+
+  // Realtime subscriptions for live updates
+  const triggerRefresh = useCallback(() => {
+    // Force re-fetch by toggling a dummy state - the main useEffect depends on selectedYear
+    setIsLoading(true);
+    setTimeout(() => setIsLoading(false), 100);
+  }, []);
+
+  useRealtimeSubscription({
+    table: 'result_release_statuses',
+    onUpdate: triggerRefresh,
+    enabled: !!studentId,
+  });
+  useRealtimeSubscription({
+    table: 'announcements',
+    onUpdate: triggerRefresh,
+    enabled: !!studentId,
+  });
+  useRealtimeSubscription({
+    table: 'feedback',
+    onUpdate: triggerRefresh,
+    enabled: !!studentId,
+  });
 
   const balance = expectedFee - paidAmount;
 

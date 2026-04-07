@@ -1,4 +1,4 @@
-import { useState, useEffect } from 'react';
+import { useState, useEffect, useCallback } from 'react';
 import { DashboardLayout } from '@/components/layout/DashboardLayout';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
@@ -11,6 +11,7 @@ import { useAuth } from '@/contexts/AuthContext';
 import { useToast } from '@/hooks/use-toast';
 import { supabase } from '@/integrations/supabase/client';
 import { useAcademicYears } from '@/hooks/useAcademicYears';
+import { useRealtimeSubscription } from '@/hooks/useRealtimeSubscription';
 
 interface Announcement {
   id: string;
@@ -49,11 +50,22 @@ export default function AnnouncementsPage() {
     }
   }, [currentYear, selectedYear]);
 
+  const refetchAnnouncements = useCallback(() => {
+    if (selectedYear) fetchAnnouncements();
+  }, [selectedYear]);
+
   useEffect(() => {
     if (selectedYear) {
       fetchAnnouncements();
     }
   }, [selectedYear]);
+
+  // Realtime: auto-refresh announcements on changes
+  useRealtimeSubscription({
+    table: 'announcements',
+    onUpdate: refetchAnnouncements,
+    enabled: !!selectedYear,
+  });
 
   const fetchAnnouncements = async () => {
     try {

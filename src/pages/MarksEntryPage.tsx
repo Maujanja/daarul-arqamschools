@@ -29,6 +29,7 @@ import { useSecureQuery } from '@/hooks/useSecureQuery';
 import { useSecureData } from '@/hooks/useSecureData';
 import { getStreamsForClass, hasStreams } from '@/utils/classStreams';
 import { getTestsForClass, getFilterLabel, getTestDisplayName } from '@/utils/seniorGrading';
+import { useRealtimeSubscription } from '@/hooks/useRealtimeSubscription';
 
 interface Student {
   id: string;
@@ -495,6 +496,38 @@ export default function MarksEntryPage() {
       }
     };
   }, [selectedSubject, selectedTerm, selectedYear, students, selectedClass, user, query, isTeacher]);
+
+  // Realtime: auto-refresh when unlock requests change (teacher sees approval instantly)
+  const reloadUnlockRequests = useCallback(() => {
+    if (!isTeacher || !selectedSubject || !selectedClass || !selectedTerm || !selectedYear) return;
+    const currentTeacherId = resolvedTeacherId || user?.id;
+    if (!currentTeacherId) return;
+
+    query<UnlockRequest>('marks_unlock_requests', {
+      filters: {
+        teacher_id: currentTeacherId,
+        class: selectedClass,
+        subject_id: selectedSubject,
+        term: selectedTerm,
+        academic_year: selectedYear
+      }
+    }).then(result => {
+      if (result.success && result.data) {
+        setUnlockRequests(result.data);
+        const approved = new Set<string>();
+        result.data.forEach(r => {
+          if (r.status === 'approved' && r.student_id) approved.add(r.student_id);
+        });
+        setApprovedStudentIds(approved);
+      }
+    });
+  }, [isTeacher, selectedSubject, selectedClass, selectedTerm, selectedYear, resolvedTeacherId, user?.id, query]);
+
+  useRealtimeSubscription({
+    table: 'marks_unlock_requests',
+    onUpdate: reloadUnlockRequests,
+    enabled: isTeacher && !!selectedSubject,
+  });
 
   // Get unlock request for a specific student
   const getStudentUnlockRequest = (studentId: string): UnlockRequest | undefined => {

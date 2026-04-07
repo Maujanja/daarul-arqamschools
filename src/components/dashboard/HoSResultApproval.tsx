@@ -2,6 +2,7 @@ import { useState, useEffect, useCallback, useMemo } from 'react';
 import { useSecureQuery } from '@/hooks/useSecureQuery';
 import { useSecureData } from '@/hooks/useSecureData';
 import { useAuth } from '@/contexts/AuthContext';
+import { useRealtimeSubscription } from '@/hooks/useRealtimeSubscription';
 import { Button } from '@/components/ui/button';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { CheckCircle, Clock, Lock, Unlock, Loader2, ShieldCheck, AlertTriangle, Eye, ChevronDown, ChevronUp, Users } from 'lucide-react';
@@ -92,6 +93,18 @@ export function HoSResultApproval({ selectedYear, filterClasses }: Props) {
 
   useEffect(() => { fetchData(); }, [fetchData]);
 
+  // Realtime: auto-refresh when result statuses or marks change
+  useRealtimeSubscription({
+    table: 'result_release_statuses',
+    onUpdate: fetchData,
+    enabled: !!selectedYear && !!user,
+  });
+  useRealtimeSubscription({
+    table: 'marks',
+    onUpdate: fetchData,
+    enabled: !!selectedYear && !!user,
+  });
+
   const streams = useMemo(() => getStreamsForClass(selectedClass), [selectedClass]);
 
   // Filter students: use students currently in class + students who have marks for this class/term (promoted students)
@@ -149,8 +162,18 @@ export function HoSResultApproval({ selectedYear, filterClasses }: Props) {
   }, [classAssignments, allTeachers, allSubjects]);
 
   // Marks for selected class/term/stream
+  // Helper: match term with aliases (Series X ↔ Test X)
+  const termMatchesFn = (markTerm: string, selected: string): boolean => {
+    if (markTerm === selected) return true;
+    const seriesMatch = selected.match(/^Series\s+(\d+)$/i);
+    if (seriesMatch) return markTerm === `Test ${seriesMatch[1]}`;
+    const testMatch = selected.match(/^Test\s+(\d+)$/i);
+    if (testMatch) return markTerm === `Series ${testMatch[1]}`;
+    return false;
+  };
+
   const termMarks = useMemo(() => {
-    let marks = allMarks.filter(m => m.class === selectedClass && m.term === selectedTerm);
+    let marks = allMarks.filter(m => m.class === selectedClass && termMatchesFn(m.term, selectedTerm));
     if (selectedStream !== 'all' && streams.length > 0) {
       marks = marks.filter(m => m.stream === selectedStream);
     }

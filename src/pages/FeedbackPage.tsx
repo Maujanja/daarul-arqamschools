@@ -1,4 +1,4 @@
-import { useState, useEffect } from 'react';
+import { useState, useEffect, useCallback } from 'react';
 import { DashboardLayout } from '@/components/layout/DashboardLayout';
 import { Button } from '@/components/ui/button';
 import { Textarea } from '@/components/ui/textarea';
@@ -9,6 +9,7 @@ import { MessageSquare, Send, Clock, CheckCircle, User, Calendar, Loader2 } from
 import { useAuth } from '@/contexts/AuthContext';
 import { useToast } from '@/hooks/use-toast';
 import { supabase } from '@/integrations/supabase/client';
+import { useRealtimeSubscription } from '@/hooks/useRealtimeSubscription';
 
 interface FeedbackItem {
   id: string;
@@ -40,12 +41,21 @@ export default function FeedbackPage() {
   const isTeacher = user?.role === 'teacher';
   const isSecretary = user?.role === 'secretary';
 
+  const refetchFeedback = useCallback(() => { fetchFeedback(); }, []);
+
   useEffect(() => {
     if (isParent) {
       fetchStudentData();
     }
     fetchFeedback();
   }, [user]);
+
+  // Realtime: auto-refresh feedback on changes
+  useRealtimeSubscription({
+    table: 'feedback',
+    onUpdate: refetchFeedback,
+    enabled: !!user,
+  });
 
   const fetchStudentData = async () => {
     if (!user) return;
