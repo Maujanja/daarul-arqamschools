@@ -348,7 +348,6 @@ serve(async (req) => {
           return record;
         }
 
-        // Only normalize stream, NOT class - marks should keep the class they were entered for
         const recordClass = typeof record.class === "string" ? record.class : (typeof student.class === "string" ? student.class : record.class);
         const normalizedStream = typeof recordClass === "string" && classesWithStreams.has(recordClass)
           ? (student.stream ?? null)
@@ -360,6 +359,23 @@ serve(async (req) => {
           stream: normalizedStream,
         };
       });
+    };
+
+    const applyMatchFilters = (queryBuilder: any, filters: Record<string, unknown>) => {
+      let scopedQuery = queryBuilder;
+
+      for (const [key, value] of Object.entries(filters)) {
+        if (Array.isArray(value)) {
+          if (value.length === 0) continue;
+          scopedQuery = scopedQuery.in(key, value);
+        } else if (value === null) {
+          scopedQuery = scopedQuery.is(key, null);
+        } else {
+          scopedQuery = scopedQuery.eq(key, value);
+        }
+      }
+
+      return scopedQuery;
     };
 
     let result;
@@ -381,7 +397,7 @@ serve(async (req) => {
           .from(table)
           .insert(insertPayload)
           .select();
-        
+
         if (error) throw error;
         result = insertData;
         break;
@@ -394,16 +410,14 @@ serve(async (req) => {
             { status: 400, headers: { ...corsHeaders, "Content-Type": "application/json" } }
           );
         }
-        
-        let query = supabase.from(table).update(data as Record<string, unknown>);
-        
-        // Apply match conditions
-        for (const [key, value] of Object.entries(match)) {
-          query = query.eq(key, value);
-        }
-        
-        const { data: updateData, error } = await query.select();
-        
+
+        const updateQuery = applyMatchFilters(
+          supabase.from(table).update(data as Record<string, unknown>),
+          match
+        );
+
+        const { data: updateData, error } = await updateQuery.select();
+
         if (error) throw error;
         result = updateData;
         break;
@@ -452,16 +466,10 @@ serve(async (req) => {
             );
           }
         }
-        
-        let query = supabase.from(table).delete();
-        
-        // Apply match conditions
-        for (const [key, value] of Object.entries(match)) {
-          query = query.eq(key, value);
-        }
-        
-        const { data: deleteData, error } = await query.select();
-        
+
+        const deleteQuery = applyMatchFilters(supabase.from(table).delete(), match);
+        const { data: deleteData, error } = await deleteQuery.select();
+
         if (error) throw error;
         result = deleteData;
         break;
@@ -479,7 +487,6 @@ serve(async (req) => {
         );
         const normalizedData = Array.isArray(data) ? normalizedRecords : normalizedRecords[0];
 
-        // For marks table, specify the unique constraint columns for proper upsert
         const upsertOptions: Record<string, string> = {};
         if (table === "marks") {
           upsertOptions.onConflict = "student_id,subject_id,term,academic_year";
@@ -492,7 +499,7 @@ serve(async (req) => {
           .from(table)
           .upsert(normalizedData, upsertOptions)
           .select();
-        
+
         if (error) throw error;
         result = upsertData;
         break;
