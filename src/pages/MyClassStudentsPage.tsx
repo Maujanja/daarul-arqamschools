@@ -72,6 +72,7 @@ export default function MyClassStudentsPage() {
   const [teacherClasses, setTeacherClasses] = useState<string[]>([]);
   const [teacherSubjects, setTeacherSubjects] = useState<Subject[]>([]);
   const [allStudentsInClass, setAllStudentsInClass] = useState<Student[]>([]);
+  const [allClassStudentsMap, setAllClassStudentsMap] = useState<Map<string, string>>(new Map());
   const [selectedStudentIds, setSelectedStudentIds] = useState<Set<string>>(new Set());
   const [existingSelections, setExistingSelections] = useState<TeacherClassStudent[]>([]);
   const [resolvedTeacherId, setResolvedTeacherId] = useState('');
@@ -156,14 +157,16 @@ export default function MyClassStudentsPage() {
       if (!selectedClass || !user) return;
       
       // Fetch ALL students in the class, then filter client-side
-      // This ensures students with null stream are included (backward compatibility)
       const students = await fetchTable<Student>('students', { class: selectedClass });
+      
+      // Build a full name map for all students in the class (for removal dialog name lookup)
+      const nameMap = new Map<string, string>();
+      students.forEach(s => nameMap.set(s.id, s.full_name));
+      setAllClassStudentsMap(nameMap);
       
       // Include students whose stream matches OR whose stream is null/empty (backward compat)
       const filtered = selectedStream
-        ? hasStreams(selectedClass)
-          ? students.filter(s => s.stream === selectedStream)
-          : students.filter(s => s.stream === selectedStream || !s.stream || s.stream === '')
+        ? students.filter(s => s.stream === selectedStream || !s.stream || s.stream === '')
         : students;
       
       const sortedStudents = filtered.sort((a, b) => 
@@ -242,8 +245,9 @@ export default function MyClassStudentsPage() {
     // If there are removals, show confirmation dialog first
     if (removedStudentIds.length > 0) {
       const removedNames = removedStudentIds.map(id => {
+        // Check filtered list first, then full class map
         const student = allStudentsInClass.find(s => s.id === id);
-        return student ? student.full_name : 'Unknown';
+        return student?.full_name || allClassStudentsMap.get(id) || 'Unknown';
       });
       setPendingRemovedNames(removedNames);
       setShowRemovalConfirm(true);
