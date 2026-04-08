@@ -161,9 +161,7 @@ export default function MyClassStudentsPage() {
       
       // Include students whose stream matches OR whose stream is null/empty (backward compat)
       const filtered = selectedStream
-        ? hasStreams(selectedClass)
-          ? students.filter(s => s.stream === selectedStream)
-          : students.filter(s => s.stream === selectedStream || !s.stream || s.stream === '')
+        ? students.filter(s => s.stream === selectedStream || !s.stream || s.stream === '')
         : students;
       
       const sortedStudents = filtered.sort((a, b) => 
