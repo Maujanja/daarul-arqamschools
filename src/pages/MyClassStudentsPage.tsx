@@ -245,8 +245,9 @@ export default function MyClassStudentsPage() {
     // If there are removals, show confirmation dialog first
     if (removedStudentIds.length > 0) {
       const removedNames = removedStudentIds.map(id => {
+        // Check filtered list first, then full class map
         const student = allStudentsInClass.find(s => s.id === id);
-        return student ? student.full_name : 'Unknown';
+        return student?.full_name || allClassStudentsMap.get(id) || 'Unknown';
       });
       setPendingRemovedNames(removedNames);
       setShowRemovalConfirm(true);
