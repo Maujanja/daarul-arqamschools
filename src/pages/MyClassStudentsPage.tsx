@@ -157,8 +157,12 @@ export default function MyClassStudentsPage() {
       if (!selectedClass || !user) return;
       
       // Fetch ALL students in the class, then filter client-side
-      // This ensures students with null stream are included (backward compatibility)
       const students = await fetchTable<Student>('students', { class: selectedClass });
+      
+      // Build a full name map for all students in the class (for removal dialog name lookup)
+      const nameMap = new Map<string, string>();
+      students.forEach(s => nameMap.set(s.id, s.full_name));
+      setAllClassStudentsMap(nameMap);
       
       // Include students whose stream matches OR whose stream is null/empty (backward compat)
       const filtered = selectedStream
