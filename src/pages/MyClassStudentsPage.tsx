@@ -72,6 +72,7 @@ export default function MyClassStudentsPage() {
   const [teacherClasses, setTeacherClasses] = useState<string[]>([]);
   const [teacherSubjects, setTeacherSubjects] = useState<Subject[]>([]);
   const [allStudentsInClass, setAllStudentsInClass] = useState<Student[]>([]);
+  const [allClassStudentsMap, setAllClassStudentsMap] = useState<Map<string, string>>(new Map());
   const [selectedStudentIds, setSelectedStudentIds] = useState<Set<string>>(new Set());
   const [existingSelections, setExistingSelections] = useState<TeacherClassStudent[]>([]);
   const [resolvedTeacherId, setResolvedTeacherId] = useState('');
