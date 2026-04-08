@@ -286,40 +286,28 @@ export default function MyClassStudentsPage() {
         academic_year: currentYear,
       };
 
-      // Delete marks for removed students (this subject, all terms in this academic year)
       if (removedStudentIds.length > 0) {
-        const deletePromises = removedStudentIds.map(studentId =>
-          remove('marks', {
-            student_id: studentId,
-            subject_id: selectedSubject,
-            class: selectedClass,
-            academic_year: currentYear,
-          })
-        );
-        await Promise.all(deletePromises);
-      }
+        const marksDeleteResult = await remove('marks', {
+          student_id: removedStudentIds,
+          subject_id: selectedSubject,
+          class: selectedClass,
+          academic_year: currentYear,
+        });
 
-      // Delete only current stream rows first (plus legacy null stream rows when class has streams)
-      const hasClassStreams = hasStreams(selectedClass);
-      if (hasClassStreams && selectedStream) {
-        await remove('teacher_class_students', { ...contextFilters, stream: selectedStream });
-
-        if (allStudentsInClass.length > 0) {
-          await Promise.all(
-            allStudentsInClass.map((student) =>
-              remove('teacher_class_students', {
-                ...contextFilters,
-                student_id: student.id,
-                stream: null,
-              })
-            )
-          );
+        if (!marksDeleteResult.success) {
+          throw new Error(marksDeleteResult.error || 'Failed to remove marks for deselected students');
         }
-      } else {
-        await remove('teacher_class_students', { ...contextFilters, stream: null });
+
+        const studentsDeleteResult = await remove('teacher_class_students', {
+          ...contextFilters,
+          student_id: removedStudentIds,
+        });
+
+        if (!studentsDeleteResult.success) {
+          throw new Error(studentsDeleteResult.error || 'Failed to remove deselected students');
+        }
       }
 
-      // Upsert new selections in batches to avoid duplicate-key save failures
       if (selectedStudentIds.size > 0) {
         const allInsertData = Array.from(selectedStudentIds).map(studentId => ({
           teacher_id: currentTeacherId,
@@ -329,12 +317,12 @@ export default function MyClassStudentsPage() {
           academic_year: currentYear,
           stream: selectedStream || null,
         }));
-        
+
         const batchSize = 50;
         for (let i = 0; i < allInsertData.length; i += batchSize) {
           const batch = allInsertData.slice(i, i + batchSize);
           const result = await upsert('teacher_class_students', batch);
-          
+
           if (!result.success) {
             throw new Error(result.error || 'Failed to save students');
           }
@@ -346,8 +334,7 @@ export default function MyClassStudentsPage() {
         title: "Students Saved!",
         description: `Selected ${selectedStudentIds.size} students for ${selectedClass} - ${teacherSubjects.find(s => s.id === selectedSubject)?.name}${removedCount > 0 ? `. Removed ${removedCount} student(s) and their marks.` : ''}`,
       });
-      
-      // Refresh existing selections
+
       const selections = await fetchTable<TeacherClassStudent>('teacher_class_students', contextFilters);
       const refreshedFiltered = selectedStream
         ? (hasStreams(selectedClass)
@@ -355,7 +342,7 @@ export default function MyClassStudentsPage() {
             : selections.filter(s => s.stream === selectedStream || !s.stream))
         : selections;
       setExistingSelections(refreshedFiltered);
-      
+
     } catch (error: any) {
       console.error('Error saving students:', error);
       toast({
