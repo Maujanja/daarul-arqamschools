@@ -75,11 +75,18 @@ export default function MyClassStudentsPage() {
   const [allClassStudentsMap, setAllClassStudentsMap] = useState<Map<string, string>>(new Map());
   const [selectedStudentIds, setSelectedStudentIds] = useState<Set<string>>(new Set());
   const [existingSelections, setExistingSelections] = useState<TeacherClassStudent[]>([]);
+  const [staleSelectionIds, setStaleSelectionIds] = useState<Set<string>>(new Set());
   const [resolvedTeacherId, setResolvedTeacherId] = useState('');
   const [showRemovalConfirm, setShowRemovalConfirm] = useState(false);
   const [pendingRemovedNames, setPendingRemovedNames] = useState<string[]>([]);
   // Available streams for selected class
   const availableStreams = selectedClass ? getStreamsForClass(selectedClass) : [];
+
+  const isStudentInCurrentView = (student?: Student) => {
+    if (!student || student.class !== selectedClass) return false;
+    if (!hasStreams(selectedClass) || !selectedStream) return true;
+    return student.stream === selectedStream || !student.stream || student.stream === '';
+  };
 
   // Fetch teacher's assigned classes and subjects via secure query
   useEffect(() => {
@@ -196,36 +203,28 @@ export default function MyClassStudentsPage() {
 
       const selections = await fetchTable<TeacherClassStudent>('teacher_class_students', filters);
 
-      // Filter by stream client-side (include null stream for backward compat)
-      const filtered = selectedStream
-        ? (hasStreams(selectedClass)
-            ? selections.filter(s => s.stream === selectedStream || (!s.stream && allStudentsInClass.some(student => student.id === s.student_id)))
-            : selections.filter(s => s.stream === selectedStream || !s.stream))
-        : selections;
+      const linkedStudentIds = Array.from(new Set(selections.map(selection => selection.student_id)));
+      const linkedStudents = linkedStudentIds.length > 0
+        ? await fetchTable<Student>('students', { id: linkedStudentIds })
+        : [];
+      const linkedStudentMap = new Map(linkedStudents.map(student => [student.id, student]));
 
-      setExistingSelections(filtered);
+      const currentViewSelections = selections.filter(selection =>
+        isStudentInCurrentView(linkedStudentMap.get(selection.student_id))
+      );
 
-      // Set selected student IDs from existing selections
-      const selectedIds = new Set(filtered.map(s => s.student_id));
-      setSelectedStudentIds(selectedIds);
+      const staleSelections = selections.filter(selection => {
+        const student = linkedStudentMap.get(selection.student_id);
+        return !student || student.class !== selectedClass;
+      });
 
-      // Fetch names for any selected student IDs not already in allClassStudentsMap
-      // (these may be legacy records where students have since moved to a different class)
-      const missingIds = [...selectedIds].filter(id => !allClassStudentsMap.has(id));
-      if (missingIds.length > 0) {
-        const missingStudents = await fetchTable<Student>('students');
-        const newMap = new Map(allClassStudentsMap);
-        missingStudents.forEach(s => {
-          if (missingIds.includes(s.id)) {
-            newMap.set(s.id, s.full_name);
-          }
-        });
-        setAllClassStudentsMap(newMap);
-      }
+      setExistingSelections(currentViewSelections);
+      setSelectedStudentIds(new Set(currentViewSelections.map(selection => selection.student_id)));
+      setStaleSelectionIds(new Set(staleSelections.map(selection => selection.student_id)));
     };
 
     fetchExistingSelections();
-  }, [resolvedTeacherId, user?.id, selectedClass, selectedSubject, selectedStream, currentYear, fetchTable, allStudentsInClass]);
+  }, [resolvedTeacherId, user?.id, selectedClass, selectedSubject, selectedStream, currentYear, fetchTable]);
 
   const toggleStudent = (studentId: string) => {
     setSelectedStudentIds(prev => {
@@ -254,11 +253,15 @@ export default function MyClassStudentsPage() {
 
     // Detect students that were previously selected but are now removed
     const previousStudentIds = new Set(existingSelections.map(s => s.student_id));
-    const removedStudentIds = [...previousStudentIds].filter(id => !selectedStudentIds.has(id));
+    const manuallyRemovedStudentIds = [...previousStudentIds].filter(id => !selectedStudentIds.has(id));
+    const removedStudentIds = Array.from(new Set([
+      ...manuallyRemovedStudentIds,
+      ...Array.from(staleSelectionIds),
+    ]));
 
     // If there are removals, show confirmation dialog first
-    if (removedStudentIds.length > 0) {
-      const removedNames = removedStudentIds.map(id => {
+    if (manuallyRemovedStudentIds.length > 0) {
+      const removedNames = manuallyRemovedStudentIds.map(id => {
         // Check filtered list first, then full class map
         const student = allStudentsInClass.find(s => s.id === id);
         return student?.full_name || allClassStudentsMap.get(id) || 'Unknown';
@@ -358,7 +361,10 @@ export default function MyClassStudentsPage() {
   const handleConfirmRemoval = async () => {
     setShowRemovalConfirm(false);
     const previousStudentIds = new Set(existingSelections.map(s => s.student_id));
-    const removedStudentIds = [...previousStudentIds].filter(id => !selectedStudentIds.has(id));
+    const removedStudentIds = Array.from(new Set([
+      ...[...previousStudentIds].filter(id => !selectedStudentIds.has(id)),
+      ...Array.from(staleSelectionIds),
+    ]));
     await executeSave(removedStudentIds);
   };
 
