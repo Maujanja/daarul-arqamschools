@@ -208,6 +208,20 @@ export default function MyClassStudentsPage() {
       // Set selected student IDs from existing selections
       const selectedIds = new Set(filtered.map(s => s.student_id));
       setSelectedStudentIds(selectedIds);
+
+      // Fetch names for any selected student IDs not already in allClassStudentsMap
+      // (these may be legacy records where students have since moved to a different class)
+      const missingIds = [...selectedIds].filter(id => !allClassStudentsMap.has(id));
+      if (missingIds.length > 0) {
+        const missingStudents = await fetchTable<Student>('students');
+        const newMap = new Map(allClassStudentsMap);
+        missingStudents.forEach(s => {
+          if (missingIds.includes(s.id)) {
+            newMap.set(s.id, s.full_name);
+          }
+        });
+        setAllClassStudentsMap(newMap);
+      }
     };
 
     fetchExistingSelections();
