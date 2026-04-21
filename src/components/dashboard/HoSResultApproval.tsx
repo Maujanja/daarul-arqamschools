@@ -284,11 +284,11 @@ export function HoSResultApproval({ selectedYear, filterClasses }: Props) {
           <ChevronDown className={`w-5 h-5 text-muted-foreground transition-transform ${expanded ? 'rotate-180' : ''}`} />
         </div>
       </button>
-      <p className="text-sm text-muted-foreground mb-4">
-        {expanded
-          ? 'Review marks entered by teachers before releasing results to parents.'
-          : 'Click to load and manage result approvals (loaded only when needed for faster dashboard).'}
-      </p>
+      {expanded && (
+        <p className="text-sm text-muted-foreground mb-4">
+          Review marks entered by teachers before releasing results to parents.
+        </p>
+      )}
 
       {!expanded ? null : loading && !loaded ? (
         <div className="flex items-center justify-center py-8">

@@ -194,9 +194,7 @@ export function ResultApprovalManager({ selectedYear, filterClasses }: Props) {
         </div>
       </button>
       <p className="text-sm text-muted-foreground mb-4">
-        {expanded
-          ? 'Allow parents to see results only after teachers finish entering marks and you approve them here.'
-          : 'Click to load and manage result approvals (loaded only when needed for faster dashboard).'}
+        {expanded ? 'Allow parents to see results only after teachers finish entering marks and you approve them here.' : ''}
       </p>
 
       {!expanded ? null : loading && !loaded ? (
