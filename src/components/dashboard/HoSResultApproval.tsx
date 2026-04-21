@@ -251,29 +251,34 @@ export function HoSResultApproval({ selectedYear, filterClasses }: Props) {
     }
   };
 
-  if (loading) {
-    return (
-      <div className="card-elevated p-6 animate-fade-in">
-        <div className="flex items-center gap-3 mb-4">
+  return (
+    <div className="card-elevated p-6 animate-fade-in">
+      <button
+        type="button"
+        onClick={() => setExpanded(!expanded)}
+        className="w-full flex items-center justify-between gap-3 mb-2 text-left"
+      >
+        <div className="flex items-center gap-3">
           <ShieldCheck className="w-5 h-5 text-primary" />
           <h3 className="font-display font-semibold text-lg text-card-foreground">Result Approval</h3>
         </div>
+        <div className="flex items-center gap-2">
+          {loading && <Loader2 className="w-4 h-4 animate-spin text-muted-foreground" />}
+          <ChevronDown className={`w-5 h-5 text-muted-foreground transition-transform ${expanded ? 'rotate-180' : ''}`} />
+        </div>
+      </button>
+      <p className="text-sm text-muted-foreground mb-4">
+        {expanded
+          ? 'Review marks entered by teachers before releasing results to parents.'
+          : 'Click to load and manage result approvals (loaded only when needed for faster dashboard).'}
+      </p>
+
+      {!expanded ? null : loading && !loaded ? (
         <div className="flex items-center justify-center py-8">
           <Loader2 className="w-6 h-6 animate-spin text-muted-foreground" />
         </div>
-      </div>
-    );
-  }
-
-  return (
-    <div className="card-elevated p-6 animate-fade-in">
-      <div className="flex items-center gap-3 mb-2">
-        <ShieldCheck className="w-5 h-5 text-primary" />
-        <h3 className="font-display font-semibold text-lg text-card-foreground">Result Approval</h3>
-      </div>
-      <p className="text-sm text-muted-foreground mb-4">
-        Review marks entered by teachers before releasing results to parents.
-      </p>
+      ) : (
+        <>
 
       {/* Filters */}
       <div className="grid grid-cols-2 sm:grid-cols-4 gap-3 mb-6">
