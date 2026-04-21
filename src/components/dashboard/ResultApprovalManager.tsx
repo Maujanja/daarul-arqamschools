@@ -1,9 +1,9 @@
-import { useState, useEffect, useCallback, useMemo } from 'react';
+import { useState, useCallback, useMemo } from 'react';
 import { useSecureQuery } from '@/hooks/useSecureQuery';
 import { useSecureData } from '@/hooks/useSecureData';
 import { useAuth } from '@/contexts/AuthContext';
 import { Button } from '@/components/ui/button';
-import { CheckCircle, Clock, Lock, Unlock, Loader2, ShieldCheck, AlertTriangle } from 'lucide-react';
+import { CheckCircle, Clock, Lock, Unlock, Loader2, ShieldCheck, AlertTriangle, ChevronDown } from 'lucide-react';
 import { toast } from 'sonner';
 import { classes } from '@/data/mockData';
 import { getTestsForClass, getTestDisplayName } from '@/utils/seniorGrading';
@@ -32,7 +32,9 @@ export function ResultApprovalManager({ selectedYear, filterClasses }: Props) {
   const [allMarks, setAllMarks] = useState<any[]>([]);
   const [allStudents, setAllStudents] = useState<any[]>([]);
   const [allAssignments, setAllAssignments] = useState<any[]>([]);
-  const [loading, setLoading] = useState(true);
+  const [loading, setLoading] = useState(false);
+  const [loaded, setLoaded] = useState(false);
+  const [expanded, setExpanded] = useState(false);
   const [toggling, setToggling] = useState<string | null>(null);
 
   const fetchData = useCallback(async () => {
@@ -49,6 +51,7 @@ export function ResultApprovalManager({ selectedYear, filterClasses }: Props) {
       setAllMarks(marks || []);
       setAllStudents(students || []);
       setAllAssignments(assignments || []);
+      setLoaded(true);
     } catch (err) {
       console.error('Error fetching result approval data:', err);
     } finally {
@@ -56,7 +59,13 @@ export function ResultApprovalManager({ selectedYear, filterClasses }: Props) {
     }
   }, [selectedYear, user, fetchTable]);
 
-  useEffect(() => { fetchData(); }, [fetchData]);
+  const handleExpand = () => {
+    const next = !expanded;
+    setExpanded(next);
+    if (next && !loaded && !loading) {
+      fetchData();
+    }
+  };
 
   // Calculate completion status per class/term
   const completionData = useMemo(() => {
@@ -168,31 +177,33 @@ export function ResultApprovalManager({ selectedYear, filterClasses }: Props) {
     }
   };
 
-  if (loading) {
-    return (
-      <div className="card-elevated p-6 animate-fade-in">
-        <div className="flex items-center gap-3 mb-4">
+  return (
+    <div className="card-elevated p-6 animate-fade-in">
+      <button
+        type="button"
+        onClick={handleExpand}
+        className="w-full flex items-center justify-between gap-3 mb-2 text-left"
+      >
+        <div className="flex items-center gap-3">
           <ShieldCheck className="w-5 h-5 text-primary" />
           <h3 className="font-display font-semibold text-lg text-card-foreground">Result Approval</h3>
         </div>
+        <div className="flex items-center gap-2">
+          {loading && <Loader2 className="w-4 h-4 animate-spin text-muted-foreground" />}
+          <ChevronDown className={`w-5 h-5 text-muted-foreground transition-transform ${expanded ? 'rotate-180' : ''}`} />
+        </div>
+      </button>
+      <p className="text-sm text-muted-foreground mb-4">
+        {expanded
+          ? 'Allow parents to see results only after teachers finish entering marks and you approve them here.'
+          : 'Click to load and manage result approvals (loaded only when needed for faster dashboard).'}
+      </p>
+
+      {!expanded ? null : loading && !loaded ? (
         <div className="flex items-center justify-center py-8">
           <Loader2 className="w-6 h-6 animate-spin text-muted-foreground" />
         </div>
-      </div>
-    );
-  }
-
-  return (
-    <div className="card-elevated p-6 animate-fade-in">
-      <div className="flex items-center gap-3 mb-2">
-        <ShieldCheck className="w-5 h-5 text-primary" />
-        <h3 className="font-display font-semibold text-lg text-card-foreground">Result Approval</h3>
-      </div>
-      <p className="text-sm text-muted-foreground mb-4">
-        Allow parents to see results only after teachers finish entering marks and you approve them here.
-      </p>
-
-      {completionData.length === 0 ? (
+      ) : completionData.length === 0 ? (
         <div className="text-center py-8 text-muted-foreground">
           <Clock className="w-12 h-12 mx-auto mb-3 opacity-50" />
           <p>No marks found for {selectedYear}</p>
