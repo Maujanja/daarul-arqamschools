@@ -503,6 +503,8 @@ export function HoSResultApproval({ selectedYear, filterClasses }: Props) {
           )}
         </div>
       )}
+        </>
+      )}
     </div>
   );
 }
