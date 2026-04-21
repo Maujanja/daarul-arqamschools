@@ -1,9 +1,9 @@
-import { useState, useEffect, useCallback, useMemo } from 'react';
+import { useState, useCallback, useMemo } from 'react';
 import { useSecureQuery } from '@/hooks/useSecureQuery';
 import { useSecureData } from '@/hooks/useSecureData';
 import { useAuth } from '@/contexts/AuthContext';
 import { Button } from '@/components/ui/button';
-import { CheckCircle, Clock, Lock, Unlock, Loader2, ShieldCheck, AlertTriangle } from 'lucide-react';
+import { CheckCircle, Clock, Lock, Unlock, Loader2, ShieldCheck, AlertTriangle, ChevronDown } from 'lucide-react';
 import { toast } from 'sonner';
 import { classes } from '@/data/mockData';
 import { getTestsForClass, getTestDisplayName } from '@/utils/seniorGrading';
@@ -32,7 +32,9 @@ export function ResultApprovalManager({ selectedYear, filterClasses }: Props) {
   const [allMarks, setAllMarks] = useState<any[]>([]);
   const [allStudents, setAllStudents] = useState<any[]>([]);
   const [allAssignments, setAllAssignments] = useState<any[]>([]);
-  const [loading, setLoading] = useState(true);
+  const [loading, setLoading] = useState(false);
+  const [loaded, setLoaded] = useState(false);
+  const [expanded, setExpanded] = useState(false);
   const [toggling, setToggling] = useState<string | null>(null);
 
   const fetchData = useCallback(async () => {
@@ -49,6 +51,7 @@ export function ResultApprovalManager({ selectedYear, filterClasses }: Props) {
       setAllMarks(marks || []);
       setAllStudents(students || []);
       setAllAssignments(assignments || []);
+      setLoaded(true);
     } catch (err) {
       console.error('Error fetching result approval data:', err);
     } finally {
@@ -56,7 +59,13 @@ export function ResultApprovalManager({ selectedYear, filterClasses }: Props) {
     }
   }, [selectedYear, user, fetchTable]);
 
-  useEffect(() => { fetchData(); }, [fetchData]);
+  const handleExpand = () => {
+    const next = !expanded;
+    setExpanded(next);
+    if (next && !loaded && !loading) {
+      fetchData();
+    }
+  };
 
   // Calculate completion status per class/term
   const completionData = useMemo(() => {
