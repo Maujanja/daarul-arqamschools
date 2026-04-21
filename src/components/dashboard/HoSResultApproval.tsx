@@ -34,7 +34,9 @@ export function HoSResultApproval({ selectedYear, filterClasses }: Props) {
   const [selectedClass, setSelectedClass] = useState('');
   const [selectedStream, setSelectedStream] = useState('all');
   const [selectedTerm, setSelectedTerm] = useState('');
-  const [loading, setLoading] = useState(true);
+  const [loading, setLoading] = useState(false);
+  const [loaded, setLoaded] = useState(false);
+  const [expanded, setExpanded] = useState(false);
   const [toggling, setToggling] = useState(false);
 
   // Data
@@ -84,6 +86,7 @@ export function HoSResultApproval({ selectedYear, filterClasses }: Props) {
       setAllAssignments(assignments || []);
       setAllSubjects(subjects || []);
       setAllTeachers(teachers || []);
+      setLoaded(true);
     } catch (err) {
       console.error('Error fetching result approval data:', err);
     } finally {
@@ -91,18 +94,20 @@ export function HoSResultApproval({ selectedYear, filterClasses }: Props) {
     }
   }, [selectedYear, user, fetchTable, fetchAllPaginated]);
 
-  useEffect(() => { fetchData(); }, [fetchData]);
+  useEffect(() => {
+    if (expanded && !loaded && !loading) fetchData();
+  }, [expanded, loaded, loading, fetchData]);
 
-  // Realtime: auto-refresh when result statuses or marks change
+  // Realtime: auto-refresh when result statuses or marks change (only after first load)
   useRealtimeSubscription({
     table: 'result_release_statuses',
     onUpdate: fetchData,
-    enabled: !!selectedYear && !!user,
+    enabled: !!selectedYear && !!user && loaded,
   });
   useRealtimeSubscription({
     table: 'marks',
     onUpdate: fetchData,
-    enabled: !!selectedYear && !!user,
+    enabled: !!selectedYear && !!user && loaded,
   });
 
   const streams = useMemo(() => getStreamsForClass(selectedClass), [selectedClass]);
