@@ -145,8 +145,11 @@ export function HoSResultApproval({ selectedYear, filterClasses }: Props) {
       const promotedStudents = allStudents.filter(s => promotedStudentIds.includes(s.id));
       students = [...students, ...promotedStudents];
     }
-    
-    return students;
+
+    // Sort alphabetically (A → Z) by full name
+    return [...students].sort((a, b) =>
+      (a.full_name || '').localeCompare(b.full_name || '', undefined, { sensitivity: 'base' })
+    );
   }, [allStudents, allMarks, selectedClass, selectedStream, streams]);
 
   // Class assignments (teachers + subjects for this class)
