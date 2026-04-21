@@ -177,31 +177,33 @@ export function ResultApprovalManager({ selectedYear, filterClasses }: Props) {
     }
   };
 
-  if (loading) {
-    return (
-      <div className="card-elevated p-6 animate-fade-in">
-        <div className="flex items-center gap-3 mb-4">
+  return (
+    <div className="card-elevated p-6 animate-fade-in">
+      <button
+        type="button"
+        onClick={handleExpand}
+        className="w-full flex items-center justify-between gap-3 mb-2 text-left"
+      >
+        <div className="flex items-center gap-3">
           <ShieldCheck className="w-5 h-5 text-primary" />
           <h3 className="font-display font-semibold text-lg text-card-foreground">Result Approval</h3>
         </div>
+        <div className="flex items-center gap-2">
+          {loading && <Loader2 className="w-4 h-4 animate-spin text-muted-foreground" />}
+          <ChevronDown className={`w-5 h-5 text-muted-foreground transition-transform ${expanded ? 'rotate-180' : ''}`} />
+        </div>
+      </button>
+      <p className="text-sm text-muted-foreground mb-4">
+        {expanded
+          ? 'Allow parents to see results only after teachers finish entering marks and you approve them here.'
+          : 'Click to load and manage result approvals (loaded only when needed for faster dashboard).'}
+      </p>
+
+      {!expanded ? null : loading && !loaded ? (
         <div className="flex items-center justify-center py-8">
           <Loader2 className="w-6 h-6 animate-spin text-muted-foreground" />
         </div>
-      </div>
-    );
-  }
-
-  return (
-    <div className="card-elevated p-6 animate-fade-in">
-      <div className="flex items-center gap-3 mb-2">
-        <ShieldCheck className="w-5 h-5 text-primary" />
-        <h3 className="font-display font-semibold text-lg text-card-foreground">Result Approval</h3>
-      </div>
-      <p className="text-sm text-muted-foreground mb-4">
-        Allow parents to see results only after teachers finish entering marks and you approve them here.
-      </p>
-
-      {completionData.length === 0 ? (
+      ) : completionData.length === 0 ? (
         <div className="text-center py-8 text-muted-foreground">
           <Clock className="w-12 h-12 mx-auto mb-3 opacity-50" />
           <p>No marks found for {selectedYear}</p>
