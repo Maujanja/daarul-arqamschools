@@ -74,9 +74,15 @@ export function HoSResultApproval({ selectedYear, filterClasses }: Props) {
     try {
       const [statuses, marks, students, assignments, subjects, teachers] = await Promise.all([
         fetchTable<ResultReleaseStatus>('result_release_statuses', { academic_year: selectedYear }),
-        fetchAllPaginated<any>('marks', { academic_year: selectedYear }),
-        fetchTable<any>('students'),
-        fetchTable<any>('teacher_assignments', { academic_year: selectedYear }),
+        selectedClass
+          ? fetchAllPaginated<any>('marks', { academic_year: selectedYear, class: selectedClass })
+          : Promise.resolve([]),
+        selectedClass
+          ? fetchTable<any>('students', { class: selectedClass })
+          : Promise.resolve([]),
+        selectedClass
+          ? fetchTable<any>('teacher_assignments', { academic_year: selectedYear, class: selectedClass })
+          : fetchTable<any>('teacher_assignments', { academic_year: selectedYear }),
         fetchTable<any>('subjects'),
         fetchTable<any>('teachers'),
       ]);
@@ -92,11 +98,19 @@ export function HoSResultApproval({ selectedYear, filterClasses }: Props) {
     } finally {
       setLoading(false);
     }
-  }, [selectedYear, user, fetchTable, fetchAllPaginated]);
+  }, [selectedYear, user, selectedClass, fetchTable, fetchAllPaginated]);
 
   useEffect(() => {
     if (expanded && !loaded && !loading) fetchData();
   }, [expanded, loaded, loading, fetchData]);
+
+  // Refetch scoped data when class changes (after first load)
+  useEffect(() => {
+    if (expanded && loaded && selectedClass) {
+      fetchData();
+    }
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [selectedClass]);
 
   // Realtime: auto-refresh when result statuses or marks change (only after first load)
   useRealtimeSubscription({
