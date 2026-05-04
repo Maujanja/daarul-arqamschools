@@ -116,7 +116,7 @@ const mapClassToFullName = (shortCode: string): string => {
 export default function StudentsPage() {
   const { user } = useAuth();
   const { academicYears, currentYear } = useAcademicYears();
-  const { fetchTable, query } = useSecureQuery();
+  const { fetchTable, query, fetchAllPaginated } = useSecureQuery();
   const { insert, update, remove } = useSecureData();
   
   const [searchQuery, setSearchQuery] = useState('');
@@ -213,20 +213,12 @@ export default function StudentsPage() {
         });
       }
 
-      // Get marks - filter by teacher's subjects if teacher
+      // Get marks - filter by teacher's subjects if teacher (paginated to handle >1000 rows)
       let marksData: Mark[] = [];
       if (isTeacher && teacherSubjectIds.length > 0) {
-        const marksResult = await query<Mark>('marks', {
-          select: 'student_id, total, subject_id',
-          filters: { subject_id: teacherSubjectIds }
-        });
-        if (marksResult.success && marksResult.data) {
-          marksData = marksResult.data;
-        }
+        marksData = await fetchAllPaginated<Mark>('marks', { subject_id: teacherSubjectIds });
       } else {
-        marksData = await fetchTable<Mark>('marks', undefined, {
-          select: 'student_id, total, subject_id'
-        });
+        marksData = await fetchAllPaginated<Mark>('marks');
       }
 
       const studentsWithMarks: StudentWithMarks[] = (studentsData || []).map(student => {
@@ -254,7 +246,7 @@ export default function StudentsPage() {
     } finally {
       setLoading(false);
     }
-  }, [user, isTeacher, fetchTable, query]);
+  }, [user, isTeacher, fetchTable, query, fetchAllPaginated]);
 
   useEffect(() => {
     fetchStudents();
