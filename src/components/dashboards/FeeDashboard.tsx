@@ -1086,6 +1086,9 @@ export function FeeDashboard({ isAdminMode = false }: { isAdminMode?: boolean } 
         </div>
       </div>
 
+      {/* Beem SMS Balance */}
+      <BeemBalanceCard />
+
       {/* Historical Debt Management */}
       {showDebtManagement && debtHistory.length > 0 && (
         <div className="card-elevated p-6 animate-fade-in border-2 border-warning/30">
