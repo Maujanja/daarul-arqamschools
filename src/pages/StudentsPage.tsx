@@ -44,6 +44,7 @@ interface Student {
   boarding_type: string;
   gender?: string;
   avatar_url?: string | null;
+  parent_phone?: string | null;
 }
 
 interface StudentWithMarks extends Student {
@@ -138,6 +139,7 @@ export default function StudentsPage() {
     gender: 'Male',
     admission_date: new Date().toISOString().split('T')[0],
     avatar_url: null as string | null,
+    parent_phone: '',
   });
   const [tempAvatarUrl, setTempAvatarUrl] = useState<string | null>(null);
   const [newStudentTempId] = useState(() => `temp-${Date.now()}`);
@@ -275,6 +277,7 @@ export default function StudentsPage() {
         gender: newStudent.gender,
         admission_date: newStudent.admission_date,
         avatar_url: tempAvatarUrl,
+        parent_phone: newStudent.parent_phone?.trim() || null,
       });
 
       if (!result.success) throw new Error(result.error);
@@ -290,6 +293,7 @@ export default function StudentsPage() {
         gender: 'Male',
         admission_date: new Date().toISOString().split('T')[0],
         avatar_url: null,
+        parent_phone: '',
       });
       setTempAvatarUrl(null);
       fetchStudents();
@@ -325,6 +329,7 @@ export default function StudentsPage() {
         boarding_type: editingStudent.boarding_type,
         gender: editingStudent.gender || 'Male',
         avatar_url: editingStudent.avatar_url,
+        parent_phone: editingStudent.parent_phone?.trim() || null,
       }, { id: editingStudent.id });
 
       if (!result.success) throw new Error(result.error);
@@ -852,6 +857,17 @@ export default function StudentsPage() {
                 onChange={(e) => setNewStudent({ ...newStudent, admission_date: e.target.value })}
               />
             </div>
+            <div className="space-y-2 md:col-span-2">
+              <Label htmlFor="parent_phone">Parent Phone (for SMS reminders)</Label>
+              <Input
+                id="parent_phone"
+                type="tel"
+                placeholder="e.g. 0712345678 or 255712345678"
+                value={newStudent.parent_phone}
+                onChange={(e) => setNewStudent({ ...newStudent, parent_phone: e.target.value })}
+              />
+              <p className="text-xs text-muted-foreground">Used to automatically send fee installment reminders to the parent.</p>
+            </div>
           </div>
           <DialogFooter className="flex-shrink-0 pt-4 border-t">
             <Button variant="outline" onClick={() => setShowAddDialog(false)}>
@@ -1059,6 +1075,16 @@ export default function StudentsPage() {
                     <SelectItem value="Female">Female</SelectItem>
                   </SelectContent>
                 </Select>
+              </div>
+              <div className="space-y-2 md:col-span-2">
+                <Label>Parent Phone (for SMS reminders)</Label>
+                <Input
+                  type="tel"
+                  placeholder="e.g. 0712345678 or 255712345678"
+                  value={editingStudent.parent_phone || ''}
+                  onChange={(e) => setEditingStudent({ ...editingStudent, parent_phone: e.target.value })}
+                />
+                <p className="text-xs text-muted-foreground">Used to automatically send fee installment reminders to the parent.</p>
               </div>
             </div>
           )}
