@@ -276,6 +276,91 @@ serve(async (req) => {
     }
   }
 
+  // ------------- 2.5) CLASS-LEVEL INSTALLMENTS DUE TODAY (regular students) -------------
+  const { data: classInstallments } = await supabase
+    .from("fee_installments")
+    .select("id, class, boarding_type, installment_number, amount, due_date, academic_year")
+    .eq("due_date", today);
+
+  // Group unique (class, academic_year, installment_number) so admin gets ONE summary SMS per group
+  const adminGroupsSent = new Set<string>();
+
+  for (const inst of classInstallments ?? []) {
+    const amountTxt = `TZS ${Number(inst.amount).toLocaleString()}`;
+
+    // Fetch all students in this class + boarding_type for the academic year
+    const { data: studs } = await supabase
+      .from("students")
+      .select("id, full_name, class, parent_phone, boarding_type")
+      .eq("class", inst.class)
+      .eq("boarding_type", inst.boarding_type);
+
+    for (const student of studs ?? []) {
+      // Skip if student is in a family group for this academic year (family installment supersedes)
+      const { data: familyMember } = await supabase
+        .from("family_group_members")
+        .select("id")
+        .eq("student_id", student.id)
+        .eq("academic_year", inst.academic_year)
+        .limit(1);
+      if (familyMember && familyMember.length > 0) {
+        summary.skipped++;
+        continue;
+      }
+
+      // Skip if student has custom installments (special case)
+      const { data: customRows } = await supabase
+        .from("student_custom_installments")
+        .select("id")
+        .eq("student_id", student.id)
+        .eq("academic_year", inst.academic_year)
+        .limit(1);
+      if (customRows && customRows.length > 0) {
+        summary.skipped++;
+        continue;
+      }
+
+      const phone = normalizePhone(student.parent_phone);
+      const refKey = `${student.id}:${inst.installment_number}:${inst.academic_year}`;
+
+      if (phone && !(await alreadySent(supabase, "class_installment", phone, refKey))) {
+        const msg = `DAARUL-ARQAM SCHOOLS: Dear Parent, today is the due date for fee installment #${inst.installment_number} of ${amountTxt} for ${student.full_name} (${student.class}). Please make payment. Thank you.`;
+        const r = await sendSms(phone, msg);
+        await logSms(supabase, {
+          notification_type: "class_installment",
+          recipient_phone: phone,
+          reference_key: refKey,
+          message: msg,
+          status: r.success ? "sent" : "failed",
+          beem_request_id: r.request_id,
+          error: r.error,
+        });
+        if (r.success) summary.class_sent++;
+        else summary.errors.push(`class ${refKey}: ${r.error}`);
+      } else if (!phone) {
+        summary.skipped++;
+      }
+    }
+
+    // Admin: send ONE summary SMS per (class, boarding_type, installment, academic_year)
+    const adminRefKey = `class:${inst.class}:${inst.boarding_type}:${inst.installment_number}:${inst.academic_year}`;
+    if (!adminGroupsSent.has(adminRefKey) && !(await alreadySent(supabase, "admin_alert", ADMIN_PHONE, adminRefKey))) {
+      adminGroupsSent.add(adminRefKey);
+      const adminMsg = `DAARUL-ARQAM SCHOOLS: ${inst.class} (${inst.boarding_type}) fee installment #${inst.installment_number} of ${amountTxt} is due today (${today}). Parents have been notified.`;
+      const r = await sendSms(ADMIN_PHONE, adminMsg);
+      await logSms(supabase, {
+        notification_type: "admin_alert",
+        recipient_phone: ADMIN_PHONE,
+        reference_key: adminRefKey,
+        message: adminMsg,
+        status: r.success ? "sent" : "failed",
+        beem_request_id: r.request_id,
+        error: r.error,
+      });
+      if (r.success) summary.admin_sent++;
+    }
+  }
+
   // ------------- 3) BEEM CREDIT BALANCE CHECK -------------
   const balance = await checkBalance();
   summary.balance = balance;
