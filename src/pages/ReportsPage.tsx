@@ -52,7 +52,7 @@ interface Teacher {
 export default function ReportsPage() {
   const { user } = useAuth();
   const { academicYears, currentYear } = useAcademicYears();
-  const { fetchTable, query } = useSecureQuery();
+  const { fetchTable, query, fetchAllPaginated } = useSecureQuery();
   
   const [selectedClass, setSelectedClass] = useState('all');
   const [selectedTerm, setSelectedTerm] = useState(terms[0] || 'Series 1');
@@ -210,15 +210,8 @@ export default function ReportsPage() {
         }
       }
 
-      // Fetch marks with pagination support
-      let marks: Mark[] = [];
-      const marksResult = await query<Mark>('marks', {
-        filters: marksFilters,
-        range: { from: 0, to: 9999 }
-      });
-      if (marksResult.success && marksResult.data) {
-        marks = marksResult.data;
-      }
+      // Fetch marks with full pagination (handles >1000 rows)
+      const marks: Mark[] = await fetchAllPaginated<Mark>('marks', marksFilters);
 
       // Fetch subjects - filter by teacher's subjects if teacher
       let subjects: Subject[] = [];
@@ -332,7 +325,7 @@ export default function ReportsPage() {
     } finally {
       setLoading(false);
     }
-  }, [user, isTeacher, selectedClass, selectedTerm, selectedYear, fetchTable, query]);
+  }, [user, isTeacher, selectedClass, selectedTerm, selectedYear, fetchTable, query, fetchAllPaginated]);
 
   useEffect(() => {
     if (selectedYear) {
