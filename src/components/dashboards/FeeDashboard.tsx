@@ -49,6 +49,7 @@ import {
   Eye
 } from 'lucide-react';
 import { StudentFeeProfileDialog } from '@/components/dashboard/StudentFeeProfileDialog';
+import { BeemBalanceCard } from '@/components/dashboard/BeemBalanceCard';
 
 interface Student {
   id: string;
