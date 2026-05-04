@@ -288,7 +288,7 @@ export function ParentDashboard() {
 
     rankings.sort((a, b) => b.score - a.score);
     setSubjectRankings(rankings);
-  }, [fetchTable]);
+  }, [fetchTable, fetchAllPaginated]);
 
   // Set initial year when academic years load
   useEffect(() => {
