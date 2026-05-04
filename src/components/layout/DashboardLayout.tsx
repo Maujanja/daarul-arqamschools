@@ -54,7 +54,7 @@ export function DashboardLayout({ children }: DashboardLayoutProps) {
           </div>
           <div className="p-4 sm:p-6 lg:p-8 pt-16 lg:pt-6">
             <TeacherUnlockGuard />
-            <ScrollReveal className="space-y-6">{children}</ScrollReveal>
+            <ScrollReveal>{children}</ScrollReveal>
           </div>
         </main>
       </div>
