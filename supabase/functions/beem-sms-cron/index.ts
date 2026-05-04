@@ -130,6 +130,7 @@ serve(async (req) => {
     today,
     family_sent: 0,
     special_sent: 0,
+    class_sent: 0,
     admin_sent: 0,
     skipped: 0,
     errors: [] as string[],
