@@ -18,6 +18,7 @@ import { AnnualReportPreview } from '@/components/dashboard/AnnualReportPreview'
 import { HoSResultApproval } from '@/components/dashboard/HoSResultApproval';
 import { CLASS_STREAMS, parseClassStream } from '@/utils/classStreams';
 import { resolveSubjectsFromMarks } from '@/utils/subjectResolution';
+import { fetchAllMarksPaginated } from '@/utils/fetchAllMarks';
 
 // Helper function
 async function secureQuery(table: string, userRole: string, userId: string, options?: any) {
@@ -308,12 +309,15 @@ export function HeadOfSchoolDashboard() {
     if (!user || !selectedYear) return;
     try {
       setGeneratingReport(true);
-      // Fetch marks first, then resolve students from marks
-      const [marksResult, subjectsResult] = await Promise.all([
-        secureQuery('marks', user.role, user.id, { filters: { class: reportClass, term: reportTerm, academic_year: selectedYear }, range: { from: 0, to: 9999 } }),
+      // Paginated marks fetch (PostgREST caps single calls at 1000 rows).
+      const [marks, subjectsResult] = await Promise.all([
+        fetchAllMarksPaginated({
+          userRole: user.role,
+          userId: user.id,
+          filters: { class: reportClass, term: reportTerm, academic_year: selectedYear },
+        }),
         secureQuery('subjects', user.role, user.id),
       ]);
-      const marks = marksResult?.success ? marksResult.data : [];
       const subjects = subjectsResult?.success ? subjectsResult.data : [];
       if (!marks?.length) { toast.error(`No marks found for ${reportClass} - ${reportTerm}`); return; }
 
@@ -342,11 +346,15 @@ export function HeadOfSchoolDashboard() {
     if (!user || !selectedYear || !reportClass) return;
     setLoadingPreview(true);
     try {
-      const [marksResult, subjectsResult] = await Promise.all([
-        secureQuery('marks', user.role, user.id, { filters: { class: reportClass, term: reportTerm, academic_year: selectedYear }, range: { from: 0, to: 9999 } }),
+      // Paginated marks fetch (PostgREST caps single calls at 1000 rows).
+      const [marks, subjectsResult] = await Promise.all([
+        fetchAllMarksPaginated({
+          userRole: user.role,
+          userId: user.id,
+          filters: { class: reportClass, term: reportTerm, academic_year: selectedYear },
+        }),
         secureQuery('subjects', user.role, user.id),
       ]);
-      const marks = marksResult?.success ? marksResult.data : [];
       const subjects = subjectsResult?.success ? subjectsResult.data : [];
       if (!marks?.length) {
         toast.error('No marks data found for preview');

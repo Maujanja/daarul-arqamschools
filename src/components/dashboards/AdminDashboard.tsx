@@ -19,6 +19,7 @@ import { generateAnnualExamReportPDF } from '@/utils/annualReportPdfGenerator';
 import { toast } from 'sonner';
 import { AnnualReportPreview } from '@/components/dashboard/AnnualReportPreview';
 import { resolveSubjectsFromMarks } from '@/utils/subjectResolution';
+import { fetchAllMarksPaginated } from '@/utils/fetchAllMarks';
 
 import { HoSResultApproval } from '@/components/dashboard/HoSResultApproval';
 
@@ -441,15 +442,16 @@ export function AdminDashboard() {
     try {
       setGeneratingReport(true);
 
-      // Fetch marks first to discover all students who have marks for this class
-      const [marksResult, subjectsResult] = await Promise.all([
-        secureQuery('marks', user.role, user.id, {
+      // Fetch marks first (paginated to bypass PostgREST max-rows cap of 1000),
+      // then resolve students from the marks set.
+      const [marks, subjectsResult] = await Promise.all([
+        fetchAllMarksPaginated({
+          userRole: user.role,
+          userId: user.id,
           filters: { class: reportClass, term: reportTerm, academic_year: selectedYear },
-          range: { from: 0, to: 9999 },
         }),
         secureQuery('subjects', user.role, user.id),
       ]);
-      const marks = marksResult?.success ? marksResult.data : [];
       const subjects = subjectsResult?.success ? subjectsResult.data : [];
 
       if (!marks || marks.length === 0) {
@@ -491,16 +493,17 @@ export function AdminDashboard() {
     try {
       setLoadingPreview(true);
 
-      // Fetch marks first, then resolve students from marks
-      const [marksResult, subjectsResult] = await Promise.all([
-        secureQuery('marks', user.role, user.id, {
+      // Fetch marks first (paginated to bypass PostgREST max-rows cap of 1000),
+      // then resolve students from the marks set.
+      const [marks, subjectsResult] = await Promise.all([
+        fetchAllMarksPaginated({
+          userRole: user.role,
+          userId: user.id,
           filters: { class: reportClass, term: reportTerm, academic_year: selectedYear },
-          range: { from: 0, to: 9999 },
         }),
         secureQuery('subjects', user.role, user.id),
       ]);
 
-      const marks = marksResult?.success ? marksResult.data : [];
       const subjects = subjectsResult?.success ? subjectsResult.data : [];
 
       if (!marks?.length) { toast.error(`No marks found for ${reportClass} - ${reportTerm}`); return; }
