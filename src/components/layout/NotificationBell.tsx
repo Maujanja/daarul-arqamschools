@@ -1,6 +1,6 @@
 import { useState, useEffect, useCallback, useRef } from 'react';
 import { useNavigate } from 'react-router-dom';
-import { Bell, CheckCircle, XCircle, Clock, Unlock } from 'lucide-react';
+import { Bell, CheckCircle, XCircle, Clock, Unlock, AlertTriangle, Zap } from 'lucide-react';
 import { useAuth } from '@/contexts/AuthContext';
 import { useSecureQuery } from '@/hooks/useSecureQuery';
 import { useRealtimeSubscription } from '@/hooks/useRealtimeSubscription';
@@ -30,12 +30,23 @@ interface UnlockRequest {
 
 interface NotificationItem {
   id: string;
-  type: 'request' | 'approved' | 'rejected';
+  type: 'request' | 'approved' | 'rejected' | 'low_credit' | 'zero_credit';
   title: string;
   message: string;
   time: string;
-  request: UnlockRequest;
+  request?: UnlockRequest;
   read: boolean;
+}
+
+interface SystemAlert {
+  id: string;
+  alert_type: string;
+  title: string;
+  message: string;
+  severity: string;
+  target_roles: string[];
+  is_read: boolean;
+  created_at: string;
 }
 
 const SEEN_KEY_PREFIX = 'notif_seen_v1_';
@@ -81,7 +92,9 @@ export function NotificationBell() {
   const isAdmin = user?.role === 'admin';
   const isHeadOfSchool = !!user?.role?.startsWith('head_');
   const isTeacher = user?.role === 'teacher';
-  const enabled = !!user && (isAdmin || isHeadOfSchool || isTeacher);
+  const isAccountant = user?.role === 'accountant';
+  const canSeeSystemAlerts = isAdmin || isAccountant;
+  const enabled = !!user && (isAdmin || isHeadOfSchool || isTeacher || isAccountant);
 
   const buildItems = useCallback(
     (requests: UnlockRequest[], seen: Record<string, string>): NotificationItem[] => {
@@ -143,9 +156,38 @@ export function NotificationBell() {
 
   const refresh = useCallback(async () => {
     if (!enabled || !user) return;
-    const data = await fetchTable<UnlockRequest>('marks_unlock_requests');
+    const tasks: Promise<unknown>[] = [];
+    tasks.push(
+      isAdmin || isHeadOfSchool || isTeacher
+        ? fetchTable<UnlockRequest>('marks_unlock_requests')
+        : Promise.resolve([] as UnlockRequest[])
+    );
+    tasks.push(
+      canSeeSystemAlerts
+        ? fetchTable<SystemAlert>('system_alerts')
+        : Promise.resolve([] as SystemAlert[])
+    );
+    const [reqData, alertData] = (await Promise.all(tasks)) as [UnlockRequest[], SystemAlert[]];
     const seen = loadSeen(user.id);
-    const next = buildItems(data, seen);
+    let next = buildItems(reqData || [], seen);
+
+    // Append system alerts (low credit / zero credit)
+    if (canSeeSystemAlerts && alertData) {
+      for (const a of alertData) {
+        if (!a.target_roles?.includes(user.role)) continue;
+        const id = `alert-${a.id}`;
+        next.push({
+          id,
+          type: a.alert_type === 'zero_credit' ? 'zero_credit' : 'low_credit',
+          title: a.title,
+          message: a.message,
+          time: a.created_at,
+          read: a.is_read || seen[id] === a.created_at,
+        });
+      }
+      next.sort((a, b) => new Date(b.time).getTime() - new Date(a.time).getTime());
+      next = next.slice(0, 30);
+    }
 
     // Detect brand-new notifications (after first load) and toast them
     if (!initialLoadRef.current) {
@@ -157,6 +199,10 @@ export function NotificationBell() {
             toast.success(it.title, { description: it.message, duration: 8000 });
           } else if (it.type === 'rejected') {
             toast.error(it.title, { description: it.message, duration: 8000 });
+          } else if (it.type === 'zero_credit') {
+            toast.error(it.title, { description: it.message, duration: 12000 });
+          } else if (it.type === 'low_credit') {
+            toast.warning(it.title, { description: it.message, duration: 10000 });
           }
         }
       }
@@ -164,7 +210,7 @@ export function NotificationBell() {
     knownIdsRef.current = new Set(next.map((n) => n.id));
     initialLoadRef.current = false;
     setItems(next);
-  }, [enabled, user, fetchTable, buildItems]);
+  }, [enabled, user, fetchTable, buildItems, isAdmin, isHeadOfSchool, isTeacher, canSeeSystemAlerts]);
 
   useEffect(() => {
     if (!enabled) return;
@@ -180,6 +226,11 @@ export function NotificationBell() {
     table: 'marks_unlock_requests',
     onUpdate: refresh,
     enabled,
+  });
+  useRealtimeSubscription({
+    table: 'system_alerts',
+    onUpdate: refresh,
+    enabled: canSeeSystemAlerts,
   });
 
   const unreadCount = items.filter((i) => !i.read).length;
@@ -202,6 +253,10 @@ export function NotificationBell() {
     setItems((prev) => prev.map((i) => (i.id === item.id ? { ...i, read: true } : i)));
     setOpen(false);
 
+    if (item.type === 'low_credit' || item.type === 'zero_credit') {
+      // No internal page; just dismiss
+      return;
+    }
     if (isTeacher && item.type === 'approved') {
       // Direct teacher to marks entry to edit
       navigate('/marks-entry');
@@ -255,12 +310,20 @@ export function NotificationBell() {
                     ? Unlock
                     : item.type === 'approved'
                     ? CheckCircle
+                    : item.type === 'zero_credit'
+                    ? Zap
+                    : item.type === 'low_credit'
+                    ? AlertTriangle
                     : XCircle;
                 const colorClass =
                   item.type === 'approved'
                     ? 'text-success bg-success/10'
                     : item.type === 'rejected'
                     ? 'text-destructive bg-destructive/10'
+                    : item.type === 'zero_credit'
+                    ? 'text-destructive bg-destructive/10'
+                    : item.type === 'low_credit'
+                    ? 'text-warning bg-warning/10'
                     : 'text-warning bg-warning/10';
                 return (
                   <li key={item.id}>

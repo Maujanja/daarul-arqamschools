@@ -24,7 +24,8 @@ type AllowedTable =
   | "family_groups"
   | "family_group_members"
   | "family_group_installments"
-  | "result_release_statuses";
+  | "result_release_statuses"
+  | "system_alerts";
 
 type AllowedOperation = "insert" | "update" | "delete" | "upsert";
 

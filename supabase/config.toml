@@ -11,3 +11,6 @@ verify_jwt = false
 
 [functions.data-query]
 verify_jwt = false
+
+[functions.beem-sms-cron]
+verify_jwt = false
