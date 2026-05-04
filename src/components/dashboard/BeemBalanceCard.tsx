@@ -37,10 +37,10 @@ export function BeemBalanceCard() {
   const isLow = balance !== null && balance < LOW_THRESHOLD;
   const isZero = balance !== null && balance <= 0;
   const stateClass = isZero
-    ? 'border-destructive/40 bg-destructive/5'
+    ? 'border-destructive/50 bg-card'
     : isLow
-    ? 'border-warning/40 bg-warning/5'
-    : 'border-border';
+    ? 'border-warning/50 bg-card'
+    : 'border-border bg-card';
 
   return (
     <Card className={`p-4 ${stateClass}`}>
