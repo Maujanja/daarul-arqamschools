@@ -13,6 +13,7 @@ import { useSecureQuery } from '@/hooks/useSecureQuery';
 import { useSecureData } from '@/hooks/useSecureData';
 import { useToast } from '@/hooks/use-toast';
 import { useAcademicYears } from '@/hooks/useAcademicYears';
+import { useAuth } from '@/contexts/AuthContext';
 import { StudentAvatarUpload } from '@/components/StudentAvatarUpload';
 import * as XLSX from 'xlsx';
 import { FamilyGroupsManager } from './FamilyGroupsManager';
@@ -180,6 +181,7 @@ export function FeeDashboard({ isAdminMode = false }: { isAdminMode?: boolean } 
   const { fetchTable } = useSecureQuery();
   const { insert, update, remove } = useSecureData();
   const { academicYears, currentYear, loading: yearsLoading } = useAcademicYears();
+  const { user } = useAuth();
   
   const [isLoading, setIsLoading] = useState(true);
   const [students, setStudents] = useState<Student[]>([]);
@@ -833,7 +835,11 @@ export function FeeDashboard({ isAdminMode = false }: { isAdminMode?: boolean } 
     
     try {
       const response = await supabase.functions.invoke('fee-assistant', {
-        body: { question: userMessage }
+        body: {
+          question: userMessage,
+          userId: user?.id,
+          userRole: user?.role,
+        },
       });
       
       if (response.error) throw new Error(response.error.message);
