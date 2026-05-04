@@ -209,6 +209,7 @@ export type Database = {
           id: string
           notes: string | null
           parent_name: string
+          parent_phone: string | null
           updated_at: string
         }
         Insert: {
@@ -217,6 +218,7 @@ export type Database = {
           id?: string
           notes?: string | null
           parent_name: string
+          parent_phone?: string | null
           updated_at?: string
         }
         Update: {
@@ -225,6 +227,7 @@ export type Database = {
           id?: string
           notes?: string | null
           parent_name?: string
+          parent_phone?: string | null
           updated_at?: string
         }
         Relationships: []
@@ -682,6 +685,42 @@ export type Database = {
         }
         Relationships: []
       }
+      sms_notifications_log: {
+        Row: {
+          beem_request_id: string | null
+          created_at: string
+          error: string | null
+          id: string
+          message: string
+          notification_type: string
+          recipient_phone: string
+          reference_key: string
+          status: string
+        }
+        Insert: {
+          beem_request_id?: string | null
+          created_at?: string
+          error?: string | null
+          id?: string
+          message: string
+          notification_type: string
+          recipient_phone: string
+          reference_key: string
+          status?: string
+        }
+        Update: {
+          beem_request_id?: string | null
+          created_at?: string
+          error?: string | null
+          id?: string
+          message?: string
+          notification_type?: string
+          recipient_phone?: string
+          reference_key?: string
+          status?: string
+        }
+        Relationships: []
+      }
       student_custom_installments: {
         Row: {
           academic_year: string
@@ -792,6 +831,7 @@ export type Database = {
           gender: string | null
           id: string
           parent_id: string | null
+          parent_phone: string | null
           roll_number: string
           stream: string | null
           updated_at: string
@@ -808,6 +848,7 @@ export type Database = {
           gender?: string | null
           id?: string
           parent_id?: string | null
+          parent_phone?: string | null
           roll_number: string
           stream?: string | null
           updated_at?: string
@@ -824,6 +865,7 @@ export type Database = {
           gender?: string | null
           id?: string
           parent_id?: string | null
+          parent_phone?: string | null
           roll_number?: string
           stream?: string | null
           updated_at?: string
@@ -859,6 +901,42 @@ export type Database = {
           id?: string
           max_marks?: number
           name?: string
+        }
+        Relationships: []
+      }
+      system_alerts: {
+        Row: {
+          alert_type: string
+          created_at: string
+          id: string
+          is_read: boolean
+          message: string
+          metadata: Json | null
+          severity: string
+          target_roles: string[]
+          title: string
+        }
+        Insert: {
+          alert_type: string
+          created_at?: string
+          id?: string
+          is_read?: boolean
+          message: string
+          metadata?: Json | null
+          severity?: string
+          target_roles?: string[]
+          title: string
+        }
+        Update: {
+          alert_type?: string
+          created_at?: string
+          id?: string
+          is_read?: boolean
+          message?: string
+          metadata?: Json | null
+          severity?: string
+          target_roles?: string[]
+          title?: string
         }
         Relationships: []
       }
