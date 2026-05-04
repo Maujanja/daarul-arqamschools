@@ -857,6 +857,17 @@ export default function StudentsPage() {
                 onChange={(e) => setNewStudent({ ...newStudent, admission_date: e.target.value })}
               />
             </div>
+            <div className="space-y-2 md:col-span-2">
+              <Label htmlFor="parent_phone">Parent Phone (for SMS reminders)</Label>
+              <Input
+                id="parent_phone"
+                type="tel"
+                placeholder="e.g. 0712345678 or 255712345678"
+                value={newStudent.parent_phone}
+                onChange={(e) => setNewStudent({ ...newStudent, parent_phone: e.target.value })}
+              />
+              <p className="text-xs text-muted-foreground">Used to automatically send fee installment reminders to the parent.</p>
+            </div>
           </div>
           <DialogFooter className="flex-shrink-0 pt-4 border-t">
             <Button variant="outline" onClick={() => setShowAddDialog(false)}>
