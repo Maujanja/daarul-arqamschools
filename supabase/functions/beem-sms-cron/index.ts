@@ -173,7 +173,7 @@ serve(async (req) => {
 
     // Send to parent
     if (phone && !(await alreadySent(supabase, "family_installment", phone, refKey))) {
-      const msg = `DAARUL-ARQAM SCHOOLS: Dear ${group.parent_name}, today is the due date for family fee installment #${inst.installment_number} of ${amountTxt} for ${studentNames || "your children"}. Please make payment. Thank you.`;
+      const msg = `DAARUL-ARQAM SCHOOLS: Dear ${group.parent_name}, leo ni tarehe ya kulipia awamu #${inst.installment_number} ya ada ya kundi la familia yako. Kiasi cha kulipa: ${amountTxt} (jumla ya wanafunzi wote wa kundi: ${studentNames || "watoto wako"}). Tafadhali fanya malipo. Asante.`;
       const r = await sendSms(phone, msg);
       await logSms(supabase, {
         notification_type: "family_installment",
@@ -241,7 +241,7 @@ serve(async (req) => {
     const amountTxt = `TZS ${Number(inst.amount).toLocaleString()}`;
 
     if (phone && !(await alreadySent(supabase, "special_case_installment", phone, refKey))) {
-      const msg = `DAARUL-ARQAM SCHOOLS: Dear Parent, today is the due date for fee installment #${inst.installment_number} of ${amountTxt} for ${student.full_name} (${student.class}). Please make payment. Thank you.`;
+      const msg = `DAARUL-ARQAM SCHOOLS: Mzazi mpendwa, leo ni tarehe ya kulipia awamu #${inst.installment_number} ya ada ya ${student.full_name} (${student.class}). Kiasi cha kulipa: ${amountTxt}. Tafadhali fanya malipo. Asante.`;
       const r = await sendSms(phone, msg);
       await logSms(supabase, {
         notification_type: "special_case_installment",
@@ -324,7 +324,7 @@ serve(async (req) => {
       const refKey = `${student.id}:${inst.installment_number}:${inst.academic_year}`;
 
       if (phone && !(await alreadySent(supabase, "class_installment", phone, refKey))) {
-        const msg = `DAARUL-ARQAM SCHOOLS: Dear Parent, today is the due date for fee installment #${inst.installment_number} of ${amountTxt} for ${student.full_name} (${student.class}). Please make payment. Thank you.`;
+        const msg = `DAARUL-ARQAM SCHOOLS: Mzazi mpendwa, leo ni tarehe ya kulipia awamu #${inst.installment_number} ya ada ya ${student.full_name} (${student.class}). Kiasi cha kulipa: ${amountTxt}. Tafadhali fanya malipo. Asante.`;
         const r = await sendSms(phone, msg);
         await logSms(supabase, {
           notification_type: "class_installment",
