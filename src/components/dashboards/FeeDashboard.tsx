@@ -13,6 +13,7 @@ import { useSecureQuery } from '@/hooks/useSecureQuery';
 import { useSecureData } from '@/hooks/useSecureData';
 import { useToast } from '@/hooks/use-toast';
 import { useAcademicYears } from '@/hooks/useAcademicYears';
+import { useAuth } from '@/contexts/AuthContext';
 import { StudentAvatarUpload } from '@/components/StudentAvatarUpload';
 import * as XLSX from 'xlsx';
 import { FamilyGroupsManager } from './FamilyGroupsManager';
