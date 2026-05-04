@@ -1,6 +1,6 @@
 import { useState, useEffect } from 'react';
 import { NavLink, useLocation } from 'react-router-dom';
-import { motion, AnimatePresence } from 'framer-motion';
+import { motion, AnimatePresence, type Variants } from 'framer-motion';
 import { useAuth } from '@/contexts/AuthContext';
 import {
   LayoutDashboard,
@@ -48,9 +48,9 @@ const navItems: NavItem[] = [
 
 const STAGGER = 0.08;
 
-const ITEM_VARIANTS = {
+const ITEM_VARIANTS: Variants = {
   hidden: { x: -20, opacity: 0 },
-  visible: { x: 0, opacity: 1, transition: { duration: 0.25, ease: 'easeOut' } },
+  visible: { x: 0, opacity: 1, transition: { duration: 0.25, ease: [0.16, 1, 0.3, 1] } },
 };
 
 function getRoleDisplay(role: string) {
