@@ -270,10 +270,14 @@ export function generateAnnualExamReport(
     ]);
   });
 
-  const candidatesPerSubject = activeSubjects.map(subject => studentRows.reduce((sum, row) => {
-    const ss = row.subjectScores.find(s => s.subjectId === subject.id);
-    return sum + (ss && ss.score > 0 ? 1 : 0);
-  }, 0));
+  // Count every student who has a marks entry for the subject (including
+  // absentees / 0 scores) so candidate totals match the Result Approval view.
+  const candidatesPerSubject = activeSubjects.map(subject => {
+    const studentsWithEntry = new Set(
+      marks.filter(m => m.subject_id === subject.id).map(m => m.student_id)
+    );
+    return studentsWithEntry.size;
+  });
   const candidatesTotal = candidatesPerSubject.reduce((a, b) => a + b, 0);
   const gpa = candidatesTotal > 0 ? grandVolume / candidatesTotal : 0;
 
