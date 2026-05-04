@@ -60,6 +60,7 @@ interface Student {
   custom_fee?: number | null;
   discount_notes?: string | null;
   avatar_url?: string | null;
+  parent_phone?: string | null;
 }
 
 interface FeePayment {
@@ -244,6 +245,7 @@ export function FeeDashboard({ isAdminMode = false }: { isAdminMode?: boolean } 
   const [selectedStudentForDiscount, setSelectedStudentForDiscount] = useState<Student | null>(null);
   const [discountAmount, setDiscountAmount] = useState('');
   const [discountNotes, setDiscountNotes] = useState('');
+  const [specialCasePhone, setSpecialCasePhone] = useState('');
   
   // Student photo management
   const [showPhotoDialog, setShowPhotoDialog] = useState(false);
@@ -622,6 +624,7 @@ export function FeeDashboard({ isAdminMode = false }: { isAdminMode?: boolean } 
     // Load discount info into same dialog
     setDiscountAmount(student.custom_fee?.toString() || '');
     setDiscountNotes(student.discount_notes || '');
+    setSpecialCasePhone(student.parent_phone || '');
     
     // Fetch existing custom installments for this student
     const existing = await fetchTable<StudentCustomInstallment>('student_custom_installments', {
@@ -687,7 +690,8 @@ export function FeeDashboard({ isAdminMode = false }: { isAdminMode?: boolean } 
       const totalCustomFee = records.reduce((sum, r) => sum + r.amount, 0);
       await update('students', { 
         custom_fee: totalCustomFee,
-        discount_notes: discountNotes || `Special installments (${records.length} installments)`
+        discount_notes: discountNotes || `Special installments (${records.length} installments)`,
+        parent_phone: specialCasePhone.trim() || null,
       }, { id: selectedStudentForInstallment.id });
 
       toast({ title: "Success", description: `Special case saved for ${selectedStudentForInstallment.full_name}` });
@@ -1998,6 +2002,19 @@ export function FeeDashboard({ isAdminMode = false }: { isAdminMode?: boolean } 
                 />
                 <p className="text-xs text-muted-foreground">
                   Explain why this student is a special case (e.g. staff child, scholarship, special arrangement)
+                </p>
+              </div>
+
+              {/* Parent Phone for SMS reminders */}
+              <div className="space-y-2 border border-border rounded-lg p-3">
+                <Label className="text-xs sm:text-sm font-semibold">Parent Phone Number</Label>
+                <Input
+                  placeholder="e.g. 255712345678 or 0712345678"
+                  value={specialCasePhone}
+                  onChange={(e) => setSpecialCasePhone(e.target.value)}
+                />
+                <p className="text-xs text-muted-foreground">
+                  Required to send automated SMS reminders when each installment due date arrives.
                 </p>
               </div>
 
