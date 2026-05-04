@@ -1,12 +1,13 @@
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
 import { NavLink, useLocation } from 'react-router-dom';
+import { motion, AnimatePresence } from 'framer-motion';
 import { useAuth } from '@/contexts/AuthContext';
-import { 
-  LayoutDashboard, 
-  Users, 
-  BookOpen, 
-  FileText, 
-  Settings, 
+import {
+  LayoutDashboard,
+  Users,
+  BookOpen,
+  FileText,
+  Settings,
   LogOut,
   GraduationCap,
   ClipboardList,
@@ -16,7 +17,7 @@ import {
   Menu,
   X,
   Calendar,
-  Unlock
+  Unlock,
 } from 'lucide-react';
 import { cn } from '@/lib/utils';
 import { Button } from '@/components/ui/button';
@@ -45,147 +46,242 @@ const navItems: NavItem[] = [
   { label: 'Settings', icon: Settings, href: '/settings', roles: ['admin'] },
 ];
 
+const STAGGER = 0.08;
+
+const ITEM_VARIANTS = {
+  hidden: { x: -20, opacity: 0 },
+  visible: { x: 0, opacity: 1, transition: { duration: 0.25, ease: 'easeOut' } },
+};
+
+function getRoleDisplay(role: string) {
+  const map: Record<string, string> = {
+    admin: 'Admin',
+    teacher: 'Teacher',
+    parent: 'Parent',
+    secretary: 'Secretary',
+    accountant: 'Accountant',
+    head_nursery: 'Head of Nursery',
+    head_primary: 'Head of Primary',
+    head_secondary: 'Head of Secondary',
+  };
+  return map[role] || role;
+}
+
+interface SidebarInnerProps {
+  items: NavItem[];
+  user: ReturnType<typeof useAuth>['user'];
+  logout: () => void;
+  pathname: string;
+  onNavigate?: () => void;
+  itemsVisible: boolean;
+}
+
+function SidebarInner({ items, user, logout, pathname, onNavigate, itemsVisible }: SidebarInnerProps) {
+  return (
+    <div className="flex flex-col h-full">
+      <div className="p-6 pb-5">
+        <div className="flex items-center gap-4">
+          <div className="w-14 h-14 rounded-full bg-white/10 flex items-center justify-center ring-2 ring-white/20 shadow-lg backdrop-blur-sm">
+            <img src={dasLogo} alt="Logo" className="w-10 h-10 object-contain" />
+          </div>
+          <div className="flex-1 min-w-0">
+            <h2 className="text-base font-semibold text-white truncate">{user?.name || 'User'}</h2>
+            <p className="text-sm text-white/50">{getRoleDisplay(user?.role || 'Guest')}</p>
+          </div>
+        </div>
+      </div>
+
+      <div className="mx-5 h-px bg-white/10" />
+
+      <nav className="flex-1 px-4 py-5 overflow-y-auto">
+        <AnimatePresence initial={false}>
+          {itemsVisible && (
+            <motion.ul
+              key="nav-list"
+              className="space-y-1 list-none m-0 p-0"
+              initial="hidden"
+              animate="visible"
+              exit="hidden"
+              variants={{
+                visible: { transition: { staggerChildren: STAGGER, delayChildren: 0.15 } },
+                hidden: { transition: { staggerChildren: STAGGER, staggerDirection: -1 } },
+              }}
+            >
+              {items.map((item) => {
+                const isActive = pathname === item.href;
+                return (
+                  <motion.li key={item.href} variants={ITEM_VARIANTS}>
+                    <NavLink
+                      to={item.href}
+                      onClick={onNavigate}
+                      className={cn(
+                        'group flex items-center gap-3 px-4 py-3 rounded-xl transition-colors duration-200',
+                        isActive
+                          ? 'bg-white/15 text-white shadow-md'
+                          : 'text-white/70 hover:text-white hover:bg-white/5',
+                      )}
+                    >
+                      <item.icon
+                        className={cn(
+                          'w-5 h-5 transition-colors duration-200',
+                          isActive ? 'text-sky-300' : 'text-white/50 group-hover:text-white/80',
+                        )}
+                      />
+                      <span className="flex-1 font-medium text-sm">{item.label}</span>
+                      {isActive && <div className="w-2 h-2 rounded-full bg-sky-300" />}
+                    </NavLink>
+                  </motion.li>
+                );
+              })}
+            </motion.ul>
+          )}
+        </AnimatePresence>
+      </nav>
+
+      <div className="mx-5 h-px bg-white/10" />
+
+      <div className="p-4">
+        <button
+          onClick={logout}
+          className="w-full flex items-center gap-3 px-4 py-3 rounded-xl text-red-300/80 hover:text-red-300 hover:bg-red-500/10 transition-all duration-200"
+        >
+          <LogOut className="w-5 h-5" />
+          <span className="font-medium text-sm">Sign Out</span>
+        </button>
+      </div>
+
+      <div className="p-4 pt-2">
+        <div className="px-4 py-3 rounded-xl bg-white/5">
+          <p className="text-xs font-semibold text-white/80 tracking-wide">DAARUL-ARQAM</p>
+          <p className="text-xs text-white/40">Schools Management System</p>
+        </div>
+      </div>
+    </div>
+  );
+}
+
 export function Sidebar() {
   const { user, logout } = useAuth();
   const location = useLocation();
   const [isOpen, setIsOpen] = useState(false);
+  // Controls items visibility separately so on close: items exit first, then panel.
+  const [itemsVisible, setItemsVisible] = useState(false);
+  // Keeps panel mounted/animated until items finish exiting on close.
+  const [panelOpen, setPanelOpen] = useState(false);
 
-  const filteredNavItems = navItems.filter(item => 
-    user && item.roles.includes(user.role)
-  );
+  const filteredNavItems = navItems.filter((item) => user && item.roles.includes(user.role));
 
-  const toggleSidebar = () => setIsOpen(!isOpen);
+  // Sync open state -> two-phase animation
+  useEffect(() => {
+    if (isOpen) {
+      setPanelOpen(true);
+      // Items will animate after panel slides in (delayChildren handles timing)
+      setItemsVisible(true);
+    } else {
+      // Close: items exit first, then panel after exit completes
+      setItemsVisible(false);
+      const exitMs = filteredNavItems.length * STAGGER * 1000 + 250;
+      const t = setTimeout(() => setPanelOpen(false), exitMs);
+      return () => clearTimeout(t);
+    }
+  }, [isOpen, filteredNavItems.length]);
 
-  const getRoleDisplay = (role: string) => {
-    const map: Record<string, string> = {
-      admin: 'Admin',
-      teacher: 'Teacher',
-      parent: 'Parent',
-      secretary: 'Secretary',
-      accountant: 'Accountant',
-      head_nursery: 'Head of Nursery',
-      head_primary: 'Head of Primary',
-      head_secondary: 'Head of Secondary',
-    };
-    return map[role] || role;
-  };
+  const toggleSidebar = () => setIsOpen((v) => !v);
 
   return (
     <>
-      {!isOpen && (
-        <Button
-          variant="ghost"
-          size="icon"
-          className="fixed top-4 left-4 z-50 lg:hidden bg-[#1e3a5f]/90 text-white hover:bg-[#1e3a5f] shadow-lg"
-          onClick={toggleSidebar}
-        >
-          <Menu className="h-6 w-6" />
-        </Button>
-      )}
+      {/* Mobile toggle button */}
+      <Button
+        variant="ghost"
+        size="icon"
+        className="fixed top-4 left-4 z-[60] lg:hidden bg-[#1e3a5f]/90 text-white hover:bg-[#1e3a5f] shadow-lg"
+        onClick={toggleSidebar}
+        aria-label={isOpen ? 'Close menu' : 'Open menu'}
+      >
+        <AnimatePresence mode="wait" initial={false}>
+          {isOpen ? (
+            <motion.span
+              key="x"
+              initial={{ rotate: -90, opacity: 0 }}
+              animate={{ rotate: 0, opacity: 1 }}
+              exit={{ rotate: 90, opacity: 0 }}
+              transition={{ duration: 0.18 }}
+              className="inline-flex"
+            >
+              <X className="h-6 w-6" />
+            </motion.span>
+          ) : (
+            <motion.span
+              key="menu"
+              initial={{ rotate: 90, opacity: 0 }}
+              animate={{ rotate: 0, opacity: 1 }}
+              exit={{ rotate: -90, opacity: 0 }}
+              transition={{ duration: 0.18 }}
+              className="inline-flex"
+            >
+              <Menu className="h-6 w-6" />
+            </motion.span>
+          )}
+        </AnimatePresence>
+      </Button>
 
-      <div 
-        className={cn(
-          "fixed inset-0 bg-black/50 backdrop-blur-sm z-40 lg:hidden transition-opacity duration-300",
-          isOpen ? "opacity-100" : "opacity-0 pointer-events-none"
+      {/* Mobile backdrop */}
+      <AnimatePresence>
+        {isOpen && (
+          <motion.div
+            className="fixed inset-0 bg-black/50 backdrop-blur-sm z-40 lg:hidden"
+            initial={{ opacity: 0 }}
+            animate={{ opacity: 1 }}
+            exit={{ opacity: 0 }}
+            transition={{ duration: 0.25 }}
+            onClick={() => setIsOpen(false)}
+          />
         )}
-        onClick={() => setIsOpen(false)}
-      />
+      </AnimatePresence>
 
-      <aside 
+      {/* Mobile animated sidebar */}
+      <AnimatePresence>
+        {panelOpen && (
+          <motion.aside
+            key="mobile-sidebar"
+            className={cn(
+              'fixed left-0 top-0 h-full w-72 z-50 lg:hidden',
+              'bg-gradient-to-b from-[#1e3a5f] via-[#1a3455] to-[#152a45]',
+              'shadow-2xl',
+            )}
+            initial={{ x: '-100%' }}
+            animate={{ x: 0 }}
+            exit={{ x: '-100%' }}
+            transition={{ type: 'spring', stiffness: 260, damping: 30, mass: 0.8 }}
+          >
+            <SidebarInner
+              items={filteredNavItems}
+              user={user}
+              logout={logout}
+              pathname={location.pathname}
+              onNavigate={() => setIsOpen(false)}
+              itemsVisible={itemsVisible}
+            />
+          </motion.aside>
+        )}
+      </AnimatePresence>
+
+      {/* Desktop static sidebar (always visible, items animate in once) */}
+      <aside
         className={cn(
-          "fixed left-0 top-0 h-full w-72 z-50",
-          "bg-gradient-to-b from-[#1e3a5f] via-[#1a3455] to-[#152a45]",
-          "shadow-2xl transition-transform duration-300",
-          "lg:translate-x-0",
-          isOpen ? "translate-x-0" : "-translate-x-full"
+          'hidden lg:block fixed left-0 top-0 h-full w-72 z-50',
+          'bg-gradient-to-b from-[#1e3a5f] via-[#1a3455] to-[#152a45]',
+          'shadow-2xl',
         )}
       >
-        <div className={cn(
-          "flex flex-col h-full",
-          isOpen && "animate-content-wiggle"
-        )}>
-          <button 
-            onClick={() => setIsOpen(false)}
-            className="absolute top-5 right-4 lg:hidden text-white/60 hover:text-white transition-colors duration-200"
-          >
-            <X className="w-5 h-5" />
-          </button>
-
-          <div className="p-6 pb-5">
-            <div className="flex items-center gap-4">
-              <div className="w-14 h-14 rounded-full bg-white/10 flex items-center justify-center ring-2 ring-white/20 shadow-lg backdrop-blur-sm">
-                <img src={dasLogo} alt="Logo" className="w-10 h-10 object-contain" />
-              </div>
-              <div className="flex-1 min-w-0">
-                <h2 className="text-base font-semibold text-white truncate">
-                  {user?.name || 'User'}
-                </h2>
-                <p className="text-sm text-white/50">{getRoleDisplay(user?.role || 'Guest')}</p>
-              </div>
-            </div>
-          </div>
-
-          <div className="mx-5 h-px bg-white/10" />
-
-          <nav className="flex-1 px-4 py-5 space-y-1 overflow-y-auto">
-            {filteredNavItems.map((item, index) => {
-              const isActive = location.pathname === item.href;
-              return (
-                <NavLink
-                  key={item.href}
-                  to={item.href}
-                  onClick={() => setIsOpen(false)}
-                  className={cn(
-                    "group flex items-center gap-3 px-4 py-3 rounded-xl transition-all duration-200",
-                    isActive 
-                      ? "bg-white/15 text-white shadow-md" 
-                      : "text-white/70 hover:text-white hover:bg-white/5"
-                  )}
-                  style={{ animationDelay: isOpen ? `${index * 30}ms` : '0ms' }}
-                >
-                  <item.icon className={cn(
-                    "w-5 h-5 transition-all duration-200",
-                    isActive ? "text-sky-300" : "text-white/50 group-hover:text-white/80"
-                  )} />
-                  <span className="flex-1 font-medium text-sm">{item.label}</span>
-                  {isActive && <div className="w-2 h-2 rounded-full bg-sky-300" />}
-                </NavLink>
-              );
-            })}
-          </nav>
-
-          <div className="mx-5 h-px bg-white/10" />
-
-          <div className="p-4">
-            <button
-              onClick={logout}
-              className="w-full flex items-center gap-3 px-4 py-3 rounded-xl text-red-300/80 hover:text-red-300 hover:bg-red-500/10 transition-all duration-200"
-            >
-              <LogOut className="w-5 h-5" />
-              <span className="font-medium text-sm">Sign Out</span>
-            </button>
-          </div>
-
-          <div className="p-4 pt-2">
-            <div className="px-4 py-3 rounded-xl bg-white/5">
-              <p className="text-xs font-semibold text-white/80 tracking-wide">DAARUL-ARQAM</p>
-              <p className="text-xs text-white/40">Schools Management System</p>
-            </div>
-          </div>
-        </div>
+        <SidebarInner
+          items={filteredNavItems}
+          user={user}
+          logout={logout}
+          pathname={location.pathname}
+          itemsVisible={true}
+        />
       </aside>
-
-      <style>{`
-        @keyframes content-wiggle {
-          0% { transform: translateX(-5px); opacity: 0; }
-          30% { transform: translateX(3px); opacity: 0.7; }
-          60% { transform: translateX(-2px); opacity: 0.9; }
-          100% { transform: translateX(0); opacity: 1; }
-        }
-        .animate-content-wiggle {
-          animation: content-wiggle 0.5s ease-out forwards;
-        }
-      `}</style>
     </>
   );
 }
