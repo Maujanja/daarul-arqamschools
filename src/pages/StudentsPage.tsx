@@ -44,6 +44,7 @@ interface Student {
   boarding_type: string;
   gender?: string;
   avatar_url?: string | null;
+  parent_phone?: string | null;
 }
 
 interface StudentWithMarks extends Student {
