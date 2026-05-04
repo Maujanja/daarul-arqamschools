@@ -30,7 +30,8 @@ type AllowedTable =
   | "family_groups"
   | "family_group_members"
   | "family_group_installments"
-  | "result_release_statuses";
+  | "result_release_statuses"
+  | "system_alerts";
 
 type AllowedOperation = "insert" | "update" | "delete" | "upsert";
 
@@ -69,6 +70,7 @@ const permissions: Record<string, Record<AllowedTable, AllowedOperation[]>> = {
     family_group_members: ["insert", "update", "delete"],
     family_group_installments: ["insert", "update", "delete"],
     result_release_statuses: ["insert", "update", "delete"],
+    system_alerts: ["update", "delete"],
   },
   teacher: {
     students: [],
@@ -95,6 +97,7 @@ const permissions: Record<string, Record<AllowedTable, AllowedOperation[]>> = {
     family_group_members: [],
     family_group_installments: [],
     result_release_statuses: [],
+    system_alerts: [],
   },
   secretary: {
     students: ["insert", "update", "delete"],
@@ -121,6 +124,7 @@ const permissions: Record<string, Record<AllowedTable, AllowedOperation[]>> = {
     family_group_members: [],
     family_group_installments: [],
     result_release_statuses: [],
+    system_alerts: [],
   },
   accountant: {
     students: [],
@@ -147,6 +151,7 @@ const permissions: Record<string, Record<AllowedTable, AllowedOperation[]>> = {
     family_group_members: ["insert", "update", "delete"],
     family_group_installments: ["insert", "update", "delete"],
     result_release_statuses: [],
+    system_alerts: ["update"],
   },
   parent: {
     students: [],
@@ -173,6 +178,7 @@ const permissions: Record<string, Record<AllowedTable, AllowedOperation[]>> = {
     family_group_members: [],
     family_group_installments: [],
     result_release_statuses: [],
+    system_alerts: [],
   },
   head_nursery: {
     students: [],
@@ -199,6 +205,7 @@ const permissions: Record<string, Record<AllowedTable, AllowedOperation[]>> = {
     family_group_members: [],
     family_group_installments: [],
     result_release_statuses: ["insert", "update", "delete"],
+    system_alerts: [],
   },
   head_primary: {
     students: [],
@@ -225,6 +232,7 @@ const permissions: Record<string, Record<AllowedTable, AllowedOperation[]>> = {
     family_group_members: [],
     family_group_installments: [],
     result_release_statuses: ["insert", "update", "delete"],
+    system_alerts: [],
   },
   head_secondary: {
     students: [],
@@ -251,6 +259,7 @@ const permissions: Record<string, Record<AllowedTable, AllowedOperation[]>> = {
     family_group_members: [],
     family_group_installments: [],
     result_release_statuses: ["insert", "update", "delete"],
+    system_alerts: [],
   },
 };
 
