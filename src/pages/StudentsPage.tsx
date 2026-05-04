@@ -277,6 +277,7 @@ export default function StudentsPage() {
         gender: newStudent.gender,
         admission_date: newStudent.admission_date,
         avatar_url: tempAvatarUrl,
+        parent_phone: newStudent.parent_phone?.trim() || null,
       });
 
       if (!result.success) throw new Error(result.error);
@@ -292,6 +293,7 @@ export default function StudentsPage() {
         gender: 'Male',
         admission_date: new Date().toISOString().split('T')[0],
         avatar_url: null,
+        parent_phone: '',
       });
       setTempAvatarUrl(null);
       fetchStudents();
@@ -327,6 +329,7 @@ export default function StudentsPage() {
         boarding_type: editingStudent.boarding_type,
         gender: editingStudent.gender || 'Male',
         avatar_url: editingStudent.avatar_url,
+        parent_phone: editingStudent.parent_phone?.trim() || null,
       }, { id: editingStudent.id });
 
       if (!result.success) throw new Error(result.error);
