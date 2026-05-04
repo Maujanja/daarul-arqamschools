@@ -1076,6 +1076,16 @@ export default function StudentsPage() {
                   </SelectContent>
                 </Select>
               </div>
+              <div className="space-y-2 md:col-span-2">
+                <Label>Parent Phone (for SMS reminders)</Label>
+                <Input
+                  type="tel"
+                  placeholder="e.g. 0712345678 or 255712345678"
+                  value={editingStudent.parent_phone || ''}
+                  onChange={(e) => setEditingStudent({ ...editingStudent, parent_phone: e.target.value })}
+                />
+                <p className="text-xs text-muted-foreground">Used to automatically send fee installment reminders to the parent.</p>
+              </div>
             </div>
           )}
           <DialogFooter className="flex-shrink-0 pt-4 border-t mt-auto">
