@@ -106,7 +106,7 @@ export function ParentDashboard() {
   };
 
   const { user } = useAuth();
-  const { fetchTable } = useSecureQuery();
+  const { fetchTable, fetchAllPaginated } = useSecureQuery();
   const { academicYears, currentYear, loading: yearsLoading } = useAcademicYears();
   const [isLoading, setIsLoading] = useState(true);
   const [childName, setChildName] = useState('');
@@ -171,7 +171,7 @@ export function ParentDashboard() {
     console.log('calculateRankings called with:', { studentId, studentClass, term, year });
     
     // Get all marks for students in the same class for the selected term/year
-    const classMarks = await fetchTable<any>('marks', { 
+    const classMarks = await fetchAllPaginated<any>('marks', { 
       class: studentClass, 
       term: term, 
       academic_year: year 
@@ -288,7 +288,7 @@ export function ParentDashboard() {
 
     rankings.sort((a, b) => b.score - a.score);
     setSubjectRankings(rankings);
-  }, [fetchTable]);
+  }, [fetchTable, fetchAllPaginated]);
 
   // Set initial year when academic years load
   useEffect(() => {
