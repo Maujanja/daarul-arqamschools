@@ -46,7 +46,9 @@ const navItems: NavItem[] = [
   { label: 'Settings', icon: Settings, href: '/settings', roles: ['admin'] },
 ];
 
-const STAGGER = 0.08;
+const STAGGER = 0.05;
+const PANEL_OPEN_MS = 550;
+const PANEL_DELAY_BEFORE_ITEMS = 220;
 
 const ITEM_VARIANTS: Variants = {
   hidden: { x: -20, opacity: 0 },
@@ -175,13 +177,13 @@ export function Sidebar() {
   useEffect(() => {
     if (isOpen) {
       setPanelOpen(true);
-      // Phase 1: panel slides in (~0.4s). Phase 2: items stagger in afterwards.
-      const t = setTimeout(() => setItemsVisible(true), 400);
+      // Phase 1: panel glides in. Phase 2: items stagger in shortly after.
+      const t = setTimeout(() => setItemsVisible(true), PANEL_DELAY_BEFORE_ITEMS);
       return () => clearTimeout(t);
     } else {
-      // Close: items exit first, then panel after exit completes
+      // Close: items exit first (quickly), then panel glides out.
       setItemsVisible(false);
-      const exitMs = filteredNavItems.length * STAGGER * 1000 + 250;
+      const exitMs = filteredNavItems.length * STAGGER * 1000 + 120;
       const t = setTimeout(() => setPanelOpen(false), exitMs);
       return () => clearTimeout(t);
     }
@@ -254,7 +256,7 @@ export function Sidebar() {
             animate={{ x: 0 }}
             exit={{ x: '-100%' }}
             transition={{
-              x: { type: 'spring', stiffness: 220, damping: 30, mass: 0.9, duration: 0.4 },
+              x: { duration: 0.55, ease: [0.22, 1, 0.36, 1] },
             }}
             // Smoother, slower tween on close so the panel glides out
             // (overrides the spring above when exiting)
