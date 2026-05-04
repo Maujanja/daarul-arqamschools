@@ -1,0 +1,1 @@
+DELETE FROM public.marks_unlock_requests WHERE id IN ('17d0a985-f539-45c3-afb6-e074cbefb56c', 'fefbde68-2526-4a41-a1fb-f359d0e0848b');
