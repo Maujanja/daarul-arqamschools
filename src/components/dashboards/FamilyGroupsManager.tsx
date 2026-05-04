@@ -19,6 +19,7 @@ interface Student {
 interface FamilyGroup {
   id: string;
   parent_name: string;
+  parent_phone: string | null;
   academic_year: string;
   notes: string | null;
   created_at: string;
@@ -122,6 +123,7 @@ export function FamilyGroupsManager({ selectedYear, students, onDataChanged }: P
   const [showDialog, setShowDialog] = useState(false);
   const [editingGroup, setEditingGroup] = useState<FamilyGroup | null>(null);
   const [parentName, setParentName] = useState('');
+  const [parentPhone, setParentPhone] = useState('');
   const [groupNotes, setGroupNotes] = useState('');
   const [selectedMembers, setSelectedMembers] = useState<string[]>([]);
   const [memberEntries, setMemberEntries] = useState<MemberEntry[]>([]);
@@ -208,6 +210,7 @@ export function FamilyGroupsManager({ selectedYear, students, onDataChanged }: P
   const openCreateDialog = () => {
     setEditingGroup(null);
     setParentName('');
+    setParentPhone('');
     setGroupNotes('');
     setSelectedMembers([]);
     setMemberEntries([{ typedName: '', matchedStudentId: null, matchedName: null, matchedClass: null, score: 0 }]);
@@ -217,6 +220,7 @@ export function FamilyGroupsManager({ selectedYear, students, onDataChanged }: P
   const openEditDialog = (group: FamilyGroup) => {
     setEditingGroup(group);
     setParentName(group.parent_name);
+    setParentPhone(group.parent_phone || '');
     setGroupNotes(group.notes || '');
     const gMembers = getGroupMembers(group.id);
     setSelectedMembers(gMembers.map(m => m.student_id));
@@ -251,7 +255,7 @@ export function FamilyGroupsManager({ selectedYear, students, onDataChanged }: P
 
       if (editingGroup) {
         // Update group
-        ensureSuccess(await update('family_groups', { parent_name: parentName.trim(), notes: groupNotes.trim() || null }, { id: editingGroup.id }));
+        ensureSuccess(await update('family_groups', { parent_name: parentName.trim(), parent_phone: parentPhone.trim() || null, notes: groupNotes.trim() || null }, { id: editingGroup.id }));
         groupId = editingGroup.id;
 
         // Remove old members and re-insert
@@ -263,6 +267,7 @@ export function FamilyGroupsManager({ selectedYear, students, onDataChanged }: P
         // Create group
         const result = ensureSuccess(await insert<{ id: string }>('family_groups', {
           parent_name: parentName.trim(),
+          parent_phone: parentPhone.trim() || null,
           academic_year: selectedYear,
           notes: groupNotes.trim() || null,
         }));
@@ -593,6 +598,17 @@ export function FamilyGroupsManager({ selectedYear, students, onDataChanged }: P
             <div>
               <Label>Parent Name</Label>
               <Input value={parentName} onChange={e => setParentName(e.target.value)} placeholder="e.g. Mr. & Mrs. Hassan" />
+            </div>
+            <div>
+              <Label>Parent Phone Number</Label>
+              <Input
+                value={parentPhone}
+                onChange={e => setParentPhone(e.target.value)}
+                placeholder="e.g. 255712345678 or 0712345678"
+              />
+              <p className="text-xs text-muted-foreground mt-1">
+                Required for automated SMS reminders when an installment is due.
+              </p>
             </div>
             <div>
               <Label>Notes (optional)</Label>
