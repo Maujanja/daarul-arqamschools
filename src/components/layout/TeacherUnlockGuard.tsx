@@ -25,9 +25,11 @@ interface UnlockRequest {
   term: string;
   student_name: string | null;
   updated_at: string;
+  admin_note?: string | null;
 }
 
 const NOTIFIED_KEY = 'teacher_unlock_notified_v1';
+const REJECTED_NOTIFIED_KEY = 'teacher_unlock_rejected_notified_v1';
 
 function loadNotified(userId: string): Record<string, string> {
   try {
@@ -40,6 +42,22 @@ function loadNotified(userId: string): Record<string, string> {
 function saveNotified(userId: string, data: Record<string, string>) {
   try {
     localStorage.setItem(NOTIFIED_KEY + '_' + userId, JSON.stringify(data));
+  } catch {
+    /* noop */
+  }
+}
+
+function loadRejectedNotified(userId: string): Record<string, string> {
+  try {
+    const raw = localStorage.getItem(REJECTED_NOTIFIED_KEY + '_' + userId);
+    return raw ? JSON.parse(raw) : {};
+  } catch {
+    return {};
+  }
+}
+function saveRejectedNotified(userId: string, data: Record<string, string>) {
+  try {
+    localStorage.setItem(REJECTED_NOTIFIED_KEY + '_' + userId, JSON.stringify(data));
   } catch {
     /* noop */
   }
@@ -86,6 +104,29 @@ export function TeacherUnlockGuard() {
       }
     }
     if (changed) saveNotified(user.id, notified);
+
+    // Notify rejected requests once each — does NOT block teacher
+    const rejectedMine = data.filter(
+      (r) => r.teacher_id === user.id && r.status === 'rejected'
+    );
+    const rejNotified = loadRejectedNotified(user.id);
+    let rejChanged = false;
+    for (const r of rejectedMine) {
+      const stamp = r.updated_at;
+      if (rejNotified[r.id] !== stamp) {
+        toast.error('Marks unlock request rejected', {
+          description: `Your request to edit ${r.subject_name}${
+            r.student_name ? ` for ${r.student_name}` : ''
+          } in ${r.class} (${r.term}) was rejected.${
+            r.admin_note ? ` Note: ${r.admin_note}` : ''
+          }`,
+          duration: 9000,
+        });
+        rejNotified[r.id] = stamp;
+        rejChanged = true;
+      }
+    }
+    if (rejChanged) saveRejectedNotified(user.id, rejNotified);
   }, [isTeacher, user, fetchTable, navigate]);
 
   useEffect(() => {
