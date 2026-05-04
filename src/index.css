@@ -272,30 +272,24 @@
   }
 }
 
-/* Smooth scroll-reveal used across dashboards */
+/* Scroll-driven reveal/overlap used across dashboards */
 @layer utilities {
-  .reveal {
-    opacity: 0;
-    transform: translateY(22px) scale(0.985);
-    filter: blur(4px);
+  .reveal-card {
+    /* JS sets transform/opacity/filter directly each frame.
+       A tiny transition smooths fast scroll deltas without lagging the curve. */
     transition:
-      opacity 0.7s cubic-bezier(0.22, 1, 0.36, 1),
-      transform 0.7s cubic-bezier(0.22, 1, 0.36, 1),
-      filter 0.7s cubic-bezier(0.22, 1, 0.36, 1);
-    will-change: opacity, transform, filter;
-  }
-  .reveal.reveal-in {
-    opacity: 1;
-    transform: translateY(0) scale(1);
-    filter: blur(0);
+      transform 120ms linear,
+      opacity 120ms linear,
+      filter 120ms linear;
+    backface-visibility: hidden;
+    transform-origin: center top;
   }
   @media (prefers-reduced-motion: reduce) {
-    .reveal,
-    .reveal.reveal-in {
-      opacity: 1;
-      transform: none;
-      filter: none;
-      transition: none;
+    .reveal-card {
+      transform: none !important;
+      opacity: 1 !important;
+      filter: none !important;
+      transition: none !important;
     }
   }
 }
