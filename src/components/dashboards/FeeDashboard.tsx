@@ -835,7 +835,11 @@ export function FeeDashboard({ isAdminMode = false }: { isAdminMode?: boolean } 
     
     try {
       const response = await supabase.functions.invoke('fee-assistant', {
-        body: { question: userMessage }
+        body: {
+          question: userMessage,
+          userId: user?.id,
+          userRole: user?.role,
+        },
       });
       
       if (response.error) throw new Error(response.error.message);
