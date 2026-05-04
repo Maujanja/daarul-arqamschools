@@ -189,22 +189,26 @@ export function NotificationBell() {
       next = next.slice(0, 30);
     }
 
-    // Detect brand-new notifications (after first load) and toast them
-    if (!initialLoadRef.current) {
-      for (const it of next) {
-        if (!knownIdsRef.current.has(it.id) && !it.read) {
-          if (it.type === 'request') {
-            toast.info(it.title, { description: it.message, duration: 6000 });
-          } else if (it.type === 'approved') {
-            toast.success(it.title, { description: it.message, duration: 8000 });
-          } else if (it.type === 'rejected') {
-            toast.error(it.title, { description: it.message, duration: 8000 });
-          } else if (it.type === 'zero_credit') {
-            toast.error(it.title, { description: it.message, duration: 12000 });
-          } else if (it.type === 'low_credit') {
-            toast.warning(it.title, { description: it.message, duration: 10000 });
-          }
-        }
+    for (const it of next) {
+      const isNew = !knownIdsRef.current.has(it.id);
+      // On initial load: only toast unread credit alerts (so admins are alerted on login).
+      // After first load: toast any new unread item.
+      const shouldToast =
+        !it.read &&
+        (initialLoadRef.current
+          ? it.type === 'low_credit' || it.type === 'zero_credit'
+          : isNew);
+      if (!shouldToast) continue;
+      if (it.type === 'request') {
+        toast.info(it.title, { description: it.message, duration: 6000 });
+      } else if (it.type === 'approved') {
+        toast.success(it.title, { description: it.message, duration: 8000 });
+      } else if (it.type === 'rejected') {
+        toast.error(it.title, { description: it.message, duration: 8000 });
+      } else if (it.type === 'zero_credit') {
+        toast.error(it.title, { description: it.message, duration: 12000 });
+      } else if (it.type === 'low_credit') {
+        toast.warning(it.title, { description: it.message, duration: 10000 });
       }
     }
     knownIdsRef.current = new Set(next.map((n) => n.id));

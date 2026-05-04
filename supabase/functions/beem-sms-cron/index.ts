@@ -366,8 +366,8 @@ serve(async (req) => {
   summary.balance = balance;
 
   if (balance !== null) {
+    let alertInserted = false;
     if (balance <= 0) {
-      const dayKey = `zero_credit:${today}`;
       const { data: existing } = await supabase
         .from("system_alerts")
         .select("id")
@@ -383,6 +383,7 @@ serve(async (req) => {
           target_roles: ["admin", "accountant"],
           metadata: { balance, day: today },
         });
+        alertInserted = true;
       }
     } else if (balance < LOW_CREDIT_THRESHOLD) {
       const { data: existing } = await supabase
@@ -400,6 +401,18 @@ serve(async (req) => {
           target_roles: ["admin", "accountant"],
           metadata: { balance, day: today },
         });
+        alertInserted = true;
+      }
+    }
+
+    // Broadcast realtime event so NotificationBell refreshes immediately
+    if (alertInserted) {
+      try {
+        const ch = supabase.channel("table-changes-system_alerts");
+        await ch.send({ type: "broadcast", event: "mutation", payload: { table: "system_alerts" } });
+        await supabase.removeChannel(ch);
+      } catch (e) {
+        console.error("broadcast failed", e);
       }
     }
   }
