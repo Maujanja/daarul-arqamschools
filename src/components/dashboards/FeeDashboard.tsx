@@ -49,6 +49,7 @@ import {
   Eye
 } from 'lucide-react';
 import { StudentFeeProfileDialog } from '@/components/dashboard/StudentFeeProfileDialog';
+import { BeemBalanceCard } from '@/components/dashboard/BeemBalanceCard';
 
 interface Student {
   id: string;
@@ -1084,6 +1085,9 @@ export function FeeDashboard({ isAdminMode = false }: { isAdminMode?: boolean } 
           </Button>
         </div>
       </div>
+
+      {/* Beem SMS Balance */}
+      <BeemBalanceCard />
 
       {/* Historical Debt Management */}
       {showDebtManagement && debtHistory.length > 0 && (

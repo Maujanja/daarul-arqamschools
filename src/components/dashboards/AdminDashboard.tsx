@@ -22,6 +22,7 @@ import { resolveSubjectsFromMarks } from '@/utils/subjectResolution';
 import { fetchAllMarksPaginated } from '@/utils/fetchAllMarks';
 
 import { HoSResultApproval } from '@/components/dashboard/HoSResultApproval';
+import { BeemBalanceCard } from '@/components/dashboard/BeemBalanceCard';
 
 interface FeedbackItem {
   id: string;
@@ -584,6 +585,8 @@ export function AdminDashboard() {
         <StatCard title="Secretaries" value={secretariesCount.toLocaleString()} subtitle="All secretaries" icon={UserCog} variant="success" bgStyle="silk" />
         <StatCard title="Feedback" value={feedbackCount.toLocaleString()} subtitle="Pending response" icon={MessageSquare} variant="warning" bgStyle="cherries" />
       </div>
+
+      <BeemBalanceCard />
 
       {/* Series Summary Table - Class Average Per Series */}
       {classSummaryData.length > 0 && seriesLabels.length > 0 && (
