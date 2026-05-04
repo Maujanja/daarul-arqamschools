@@ -139,6 +139,7 @@ export default function StudentsPage() {
     gender: 'Male',
     admission_date: new Date().toISOString().split('T')[0],
     avatar_url: null as string | null,
+    parent_phone: '',
   });
   const [tempAvatarUrl, setTempAvatarUrl] = useState<string | null>(null);
   const [newStudentTempId] = useState(() => `temp-${Date.now()}`);
