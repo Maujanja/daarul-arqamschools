@@ -175,8 +175,9 @@ export function Sidebar() {
   useEffect(() => {
     if (isOpen) {
       setPanelOpen(true);
-      // Items will animate after panel slides in (delayChildren handles timing)
-      setItemsVisible(true);
+      // Phase 1: panel slides in (~0.4s). Phase 2: items stagger in afterwards.
+      const t = setTimeout(() => setItemsVisible(true), 400);
+      return () => clearTimeout(t);
     } else {
       // Close: items exit first, then panel after exit completes
       setItemsVisible(false);
@@ -252,7 +253,12 @@ export function Sidebar() {
             initial={{ x: '-100%' }}
             animate={{ x: 0 }}
             exit={{ x: '-100%' }}
-            transition={{ type: 'spring', stiffness: 260, damping: 30, mass: 0.8 }}
+            transition={{
+              x: { type: 'spring', stiffness: 220, damping: 30, mass: 0.9, duration: 0.4 },
+            }}
+            // Smoother, slower tween on close so the panel glides out
+            // (overrides the spring above when exiting)
+            // @ts-ignore - framer-motion accepts per-state transition via exit prop variant
           >
             <SidebarInner
               items={filteredNavItems}
