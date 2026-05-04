@@ -181,6 +181,7 @@ export function FeeDashboard({ isAdminMode = false }: { isAdminMode?: boolean } 
   const { fetchTable } = useSecureQuery();
   const { insert, update, remove } = useSecureData();
   const { academicYears, currentYear, loading: yearsLoading } = useAcademicYears();
+  const { user } = useAuth();
   
   const [isLoading, setIsLoading] = useState(true);
   const [students, setStudents] = useState<Student[]>([]);
