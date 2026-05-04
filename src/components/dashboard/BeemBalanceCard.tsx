@@ -44,8 +44,8 @@ export function BeemBalanceCard() {
 
   return (
     <Card className={`p-4 ${stateClass}`}>
-      <div className="flex items-start justify-between gap-3">
-        <div className="flex items-start gap-3 min-w-0">
+      <div className="flex flex-col sm:flex-row sm:items-start sm:justify-between gap-3">
+        <div className="flex items-start gap-3 min-w-0 flex-1">
           <div
             className={`w-10 h-10 rounded-lg flex items-center justify-center shrink-0 ${
               isZero
@@ -65,7 +65,7 @@ export function BeemBalanceCard() {
             <p className="text-xs uppercase tracking-wide text-muted-foreground font-medium">
               Beem SMS Balance
             </p>
-            <p className="text-2xl font-bold mt-0.5">
+            <p className="text-2xl font-bold mt-0.5 break-words">
               {balance === null ? '—' : `${balance}`}{' '}
               <span className="text-sm font-normal text-muted-foreground">credits</span>
             </p>
@@ -75,35 +75,45 @@ export function BeemBalanceCard() {
               </p>
             )}
             {isZero && (
-              <p className="text-xs text-destructive mt-1 font-medium">
+              <p className="text-xs text-destructive mt-1 font-medium break-words">
                 Salio limeisha. SMS hazitatumwa hadi uweke credits.
               </p>
             )}
             {isLow && !isZero && (
-              <p className="text-xs text-warning mt-1 font-medium">
+              <p className="text-xs text-warning mt-1 font-medium break-words">
                 Salio linakaribia kuisha. Weka credits hivi karibuni.
               </p>
             )}
           </div>
         </div>
-        <div className="flex flex-col gap-2 shrink-0">
-          <Button size="sm" variant="outline" onClick={() => refresh(false)} disabled={loading}>
+        <div className="flex flex-row sm:flex-col gap-2 shrink-0 w-full sm:w-auto">
+          <Button
+            size="sm"
+            variant="outline"
+            onClick={() => refresh(false)}
+            disabled={loading}
+            className="flex-1 sm:flex-none"
+          >
             {loading ? (
               <Loader2 className="w-3.5 h-3.5 animate-spin" />
             ) : (
-              <RefreshCw className="w-3.5 h-3.5" />
+              <>
+                <RefreshCw className="w-3.5 h-3.5" />
+                <span className="sm:hidden ml-1">Refresh</span>
+              </>
             )}
           </Button>
           <Button
             size="sm"
             variant={isLow || isZero ? 'default' : 'outline'}
             asChild
+            className="flex-1 sm:flex-none"
           >
             <a
               href="https://login.beem.africa/"
               target="_blank"
               rel="noopener noreferrer"
-              className="inline-flex items-center gap-1"
+              className="inline-flex items-center justify-center gap-1"
             >
               Top Up <ExternalLink className="w-3 h-3" />
             </a>
