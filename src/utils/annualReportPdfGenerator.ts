@@ -351,11 +351,13 @@ export async function generateAnnualExamReportPDF(
   });
 
   // ===== NUMBER OF CANDIDATES ROW =====
+  // Count every student who has a marks entry for the subject (including
+  // absentees / 0 scores) so candidate totals match the Result Approval view.
   const candidateCounts = activeSubjects.map(subject => {
-    return studentRows.filter(r => {
-      const sc = r.subjectScores.find(s => s.subjectId === subject.id);
-      return sc && sc.score > 0;
-    }).length;
+    const studentsWithEntry = new Set(
+      marks.filter(m => m.subject_id === subject.id).map(m => m.student_id)
+    );
+    return studentsWithEntry.size;
   });
   const totalCandidates = candidateCounts.reduce((s, c) => s + c, 0);
 
