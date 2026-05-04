@@ -26,7 +26,7 @@ interface Props {
 
 export function ResultApprovalManager({ selectedYear, filterClasses }: Props) {
   const { user } = useAuth();
-  const { fetchTable } = useSecureQuery();
+  const { fetchTable, fetchAllPaginated } = useSecureQuery();
   const { insert, update } = useSecureData();
   const [releaseStatuses, setReleaseStatuses] = useState<ResultReleaseStatus[]>([]);
   const [allMarks, setAllMarks] = useState<any[]>([]);
@@ -43,7 +43,7 @@ export function ResultApprovalManager({ selectedYear, filterClasses }: Props) {
     try {
       const [statuses, marks, students, assignments] = await Promise.all([
         fetchTable<ResultReleaseStatus>('result_release_statuses', { academic_year: selectedYear }),
-        fetchTable<any>('marks', { academic_year: selectedYear }),
+        fetchAllPaginated<any>('marks', { academic_year: selectedYear }),
         fetchTable<any>('students'),
         fetchTable<any>('teacher_assignments', { academic_year: selectedYear }),
       ]);
@@ -57,7 +57,7 @@ export function ResultApprovalManager({ selectedYear, filterClasses }: Props) {
     } finally {
       setLoading(false);
     }
-  }, [selectedYear, user, fetchTable]);
+  }, [selectedYear, user, fetchTable, fetchAllPaginated]);
 
   const handleExpand = () => {
     const next = !expanded;
