@@ -9,6 +9,7 @@ import { CheckCircle, Clock, Lock, Unlock, Loader2, ShieldCheck, AlertTriangle, 
 import { toast } from 'sonner';
 import { getTestsForClass, getTestDisplayName, getFilterLabel } from '@/utils/seniorGrading';
 import { getStreamsForClass, getClassStreamDisplay } from '@/utils/classStreams';
+import { supabase } from '@/integrations/supabase/client';
 
 interface ResultReleaseStatus {
   id: string;
@@ -260,6 +261,17 @@ export function HoSResultApproval({ selectedYear, filterClasses }: Props) {
         });
       }
       toast.success(`${selectedClass} - ${termLabel}: ${completionStats.isApproved ? 'Results hidden' : 'Results released'}`);
+      if (!completionStats.isApproved) {
+        try {
+          const { data: notifyData } = await supabase.functions.invoke('notify-results-approved', {
+            body: { class_name: selectedClass, term: selectedTerm, academic_year: selectedYear },
+          });
+          const sent = notifyData?.summary?.sent ?? 0;
+          if (sent > 0) toast.success(`SMS notifications sent to ${sent} parent(s)`);
+        } catch (e) {
+          console.error('notify-results-approved failed', e);
+        }
+      }
       await fetchData();
     } catch (err) {
       toast.error('Failed to update results status');
