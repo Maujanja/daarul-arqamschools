@@ -7,6 +7,7 @@ import { CheckCircle, Clock, Lock, Unlock, Loader2, ShieldCheck, AlertTriangle, 
 import { toast } from 'sonner';
 import { classes } from '@/data/mockData';
 import { getTestsForClass, getTestDisplayName } from '@/utils/seniorGrading';
+import { supabase } from '@/integrations/supabase/client';
 
 interface ResultReleaseStatus {
   id: string;
@@ -169,6 +170,18 @@ export function ResultApprovalManager({ selectedYear, filterClasses }: Props) {
         });
       }
       toast.success(`${item.className} - ${item.termLabel}: ${item.isApproved ? 'Results hidden' : 'Results released'}`);
+      // Notify parents via SMS only when transitioning to APPROVED
+      if (!item.isApproved) {
+        try {
+          const { data: notifyData } = await supabase.functions.invoke('notify-results-approved', {
+            body: { class_name: item.className, term: item.term, academic_year: selectedYear },
+          });
+          const sent = notifyData?.summary?.sent ?? 0;
+          if (sent > 0) toast.success(`SMS notifications sent to ${sent} parent(s)`);
+        } catch (e) {
+          console.error('notify-results-approved failed', e);
+        }
+      }
       await fetchData();
     } catch (err) {
       toast.error('Failed to update results status');
