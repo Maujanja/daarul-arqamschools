@@ -1,8 +1,10 @@
+import { useRef } from 'react';
 import { LineChart, Line, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer, Legend } from 'recharts';
 import { Download } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import jsPDF from 'jspdf';
 import autoTable from 'jspdf-autotable';
+import html2canvas from 'html2canvas';
 import { toast } from 'sonner';
 
 interface SeriesData {
@@ -40,55 +42,68 @@ export function SeriesPerformanceChart({
   colors = DEFAULT_COLORS,
   pdfFileName = 'performance_chart'
 }: SeriesPerformanceChartProps) {
+  const chartRef = useRef<HTMLDivElement>(null);
 
-  const handleDownloadPDF = () => {
+  const handleDownloadPDF = async () => {
     try {
-      console.log('Starting chart PDF download...');
-      const doc = new jsPDF();
-      
+      console.log('Starting chart PDF download (image capture)...');
+      const node = chartRef.current;
+      if (!node) {
+        toast.error('Chart not ready. Please try again.');
+        return;
+      }
+
+      toast.info('Preparing chart PDF...');
+
+      // Capture the chart container as a high-DPI canvas
+      const canvas = await html2canvas(node, {
+        backgroundColor: '#ffffff',
+        scale: 2,
+        useCORS: true,
+        logging: false,
+      });
+      const imgData = canvas.toDataURL('image/png');
+
+      // Landscape A4 fits wide line charts better
+      const doc = new jsPDF({ orientation: 'landscape', unit: 'mm', format: 'a4' });
+      const pageWidth = doc.internal.pageSize.getWidth();
+      const pageHeight = doc.internal.pageSize.getHeight();
+      const margin = 12;
+
       // Title
       doc.setFontSize(16);
       doc.setFont('helvetica', 'bold');
-      doc.text(title, 14, 20);
-      
-      // Subtitle
+      doc.text(title, margin, margin + 4);
+
+      let cursorY = margin + 8;
       if (subtitle) {
         doc.setFontSize(10);
         doc.setFont('helvetica', 'normal');
-        doc.text(subtitle, 14, 28);
+        doc.setTextColor(90);
+        doc.text(subtitle, margin, cursorY + 4);
+        cursorY += 6;
+        doc.setTextColor(0);
       }
-      
-      // Create table headers: Series | Key1 | Key2 | ...
-      const headers = ['Series', ...seriesKeys];
-      
-      // Create table rows
-      const tableData = data.map(item => {
-        const row = [item.name];
-        seriesKeys.forEach(key => {
-          const value = item[key];
-          row.push(value !== undefined && value !== null ? `${Math.round(Number(value))}%` : '-');
-        });
-        return row;
-      });
-      
-      autoTable(doc, {
-        head: [headers],
-        body: tableData,
-        startY: subtitle ? 35 : 30,
-        styles: { fontSize: 8, cellPadding: 3 },
-        headStyles: { fillColor: [59, 130, 246], textColor: 255, fontStyle: 'bold' },
-        alternateRowStyles: { fillColor: [245, 247, 250] },
-        columnStyles: {
-          0: { fontStyle: 'bold', cellWidth: 30 }
-        }
-      });
-      
-      // Add timestamp
-      const finalY = (doc as any).lastAutoTable?.finalY || 100;
+
+      // Compute image dimensions while preserving aspect ratio
+      const availableWidth = pageWidth - margin * 2;
+      const availableHeight = pageHeight - cursorY - margin - 10; // leave space for footer
+      const imgRatio = canvas.width / canvas.height;
+      let imgWidth = availableWidth;
+      let imgHeight = imgWidth / imgRatio;
+      if (imgHeight > availableHeight) {
+        imgHeight = availableHeight;
+        imgWidth = imgHeight * imgRatio;
+      }
+      const imgX = margin + (availableWidth - imgWidth) / 2;
+      const imgY = cursorY + 4;
+      doc.addImage(imgData, 'PNG', imgX, imgY, imgWidth, imgHeight);
+
+      // Footer with timestamp
       doc.setFontSize(8);
       doc.setTextColor(128);
-      doc.text(`Generated on: ${new Date().toLocaleString()}`, 14, finalY + 10);
-      
+      doc.text(`Generated on: ${new Date().toLocaleString()}`, margin, pageHeight - 6);
+
       doc.save(`${pdfFileName}.pdf`);
       toast.success('PDF downloaded successfully!');
     } catch (error) {
@@ -121,7 +136,7 @@ export function SeriesPerformanceChart({
           Download PDF
         </Button>
       </div>
-      <div className={data.length >= 6 ? "h-[420px]" : "h-[350px]"}>
+      <div ref={chartRef} className={data.length >= 6 ? "h-[420px] bg-card p-2 rounded" : "h-[350px] bg-card p-2 rounded"}>
         <ResponsiveContainer width="100%" height="100%">
           <LineChart data={data} margin={{ top: 10, right: 30, left: 20, bottom: data.length >= 6 ? 70 : 10 }}>
             <CartesianGrid strokeDasharray="3 3" stroke="hsl(var(--border))" />
