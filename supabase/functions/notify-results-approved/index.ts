@@ -107,6 +107,36 @@ serve(async (req) => {
     else { summary.failed++; if (r.error) summary.errors.push(r.error); }
   }
 
+  // ---- Send Web Push notifications to all parents of the class ----
+  try {
+    const { data: stWithParents } = await supabase
+      .from("students")
+      .select("id, parent_id")
+      .eq("class", class_name);
+    const ids = new Set<string>();
+    for (const s of stWithParents ?? []) {
+      // Parent users login as parent.id (when linked) or student.id (fallback)
+      if (s.parent_id) ids.add(s.parent_id);
+      ids.add(s.id);
+    }
+    if (ids.size > 0) {
+      await supabase.functions.invoke("push-send", {
+        body: {
+          payload: {
+            title: "📊 Matokeo yako yamefunguliwa",
+            body: `Matokeo ya ${class_name} - ${term} (${academic_year}) sasa yanapatikana kwenye dashibodi.`,
+            url: "/dashboard",
+            tag: `results-${class_name}-${term}`,
+            requireInteraction: false,
+          },
+          target: { userIdentifiers: Array.from(ids) },
+        },
+      });
+    }
+  } catch (e) {
+    console.error("push-send (results) failed", e);
+  }
+
   return new Response(JSON.stringify({ success: true, summary }), {
     status: 200, headers: { ...corsHeaders, "Content-Type": "application/json" },
   });
