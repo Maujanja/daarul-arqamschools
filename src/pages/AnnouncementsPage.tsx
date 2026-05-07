@@ -119,6 +119,23 @@ export default function AnnouncementsPage() {
         if (!result.success) throw new Error(result.error);
         
         toast({ title: "Success", description: "Announcement created successfully" });
+
+        // Send push notification to all subscribed devices
+        try {
+          await supabase.functions.invoke('push-send', {
+            body: {
+              payload: {
+                title: `📢 ${title.trim()}`,
+                body: content.trim().slice(0, 160),
+                url: '/announcements',
+                tag: 'announcement',
+                requireInteraction: false,
+              },
+            },
+          });
+        } catch (pushErr) {
+          console.error('Push notification failed:', pushErr);
+        }
       }
       
       setTitle('');
