@@ -74,7 +74,7 @@ export default function EnableNotifications() {
         body: {
           action: "subscribe",
           subscription: sub.toJSON(),
-          userIdentifier: user?.id ?? user?.username ?? null,
+          userIdentifier: user?.id ?? null,
           userRole: user?.role ?? null,
         },
       });
