@@ -64,6 +64,9 @@ interface Announcement {
   academic_year: string;
   visibility_type: string;
   expires_at: string | null;
+  media_url?: string | null;
+  media_type?: string | null;
+  link_url?: string | null;
 }
 
 interface SubjectRanking {
