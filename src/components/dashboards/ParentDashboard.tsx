@@ -14,6 +14,7 @@ import { terms } from '@/data/mockData';
 import { isSeniorClass, isPrimaryClass, calculateDivision, calculateGradeForClass, getTestDisplayName, getTestsForClass, getFilterLabel, getDivisionBgColor } from '@/utils/seniorGrading';
 import { useAuth } from '@/contexts/AuthContext';
 import { useAcademicYears } from '@/hooks/useAcademicYears';
+import { AnnouncementMedia } from '@/components/AnnouncementMedia';
 import { BarChart, Bar, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer, LineChart, Line, Legend, PieChart, Pie, Cell } from 'recharts';
 import jsPDF from 'jspdf';
 import autoTable from 'jspdf-autotable';
