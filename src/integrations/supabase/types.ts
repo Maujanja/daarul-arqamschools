@@ -95,6 +95,9 @@ export type Database = {
           expires_at: string | null
           id: string
           is_active: boolean
+          link_url: string | null
+          media_type: string | null
+          media_url: string | null
           title: string
           updated_at: string
           visibility_type: string | null
@@ -107,6 +110,9 @@ export type Database = {
           expires_at?: string | null
           id?: string
           is_active?: boolean
+          link_url?: string | null
+          media_type?: string | null
+          media_url?: string | null
           title: string
           updated_at?: string
           visibility_type?: string | null
@@ -119,6 +125,9 @@ export type Database = {
           expires_at?: string | null
           id?: string
           is_active?: boolean
+          link_url?: string | null
+          media_type?: string | null
+          media_url?: string | null
           title?: string
           updated_at?: string
           visibility_type?: string | null

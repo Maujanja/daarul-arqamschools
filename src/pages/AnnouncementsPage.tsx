@@ -6,7 +6,7 @@ import { Textarea } from '@/components/ui/textarea';
 import { Label } from '@/components/ui/label';
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger } from '@/components/ui/dialog';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
-import { Megaphone, Plus, Calendar, User, Trash2, Edit, Loader2, Clock } from 'lucide-react';
+import { Megaphone, Plus, Calendar, User, Trash2, Edit, Loader2, Clock, Paperclip, X } from 'lucide-react';
 import { useAuth } from '@/contexts/AuthContext';
 import { useToast } from '@/hooks/use-toast';
 import { useAcademicYears } from '@/hooks/useAcademicYears';
@@ -14,6 +14,7 @@ import { useRealtimeSubscription } from '@/hooks/useRealtimeSubscription';
 import { useSecureQuery } from '@/hooks/useSecureQuery';
 import { useSecureData } from '@/hooks/useSecureData';
 import { supabase } from '@/integrations/supabase/client';
+import { AnnouncementMedia } from '@/components/AnnouncementMedia';
 
 interface Announcement {
   id: string;
@@ -26,6 +27,9 @@ interface Announcement {
   academic_year: string;
   visibility_type: string;
   expires_at: string | null;
+  media_url: string | null;
+  media_type: string | null;
+  link_url: string | null;
 }
 
 export default function AnnouncementsPage() {
@@ -44,6 +48,11 @@ export default function AnnouncementsPage() {
   const [title, setTitle] = useState('');
   const [content, setContent] = useState('');
   const [visibilityType, setVisibilityType] = useState('yearly');
+  const [linkUrl, setLinkUrl] = useState('');
+  const [mediaFile, setMediaFile] = useState<File | null>(null);
+  const [existingMediaUrl, setExistingMediaUrl] = useState<string | null>(null);
+  const [existingMediaType, setExistingMediaType] = useState<string | null>(null);
+  const [removeMedia, setRemoveMedia] = useState(false);
   
   const isAdmin = user?.role === 'admin';
 
@@ -98,12 +107,36 @@ export default function AnnouncementsPage() {
     setSubmitting(true);
     
     try {
+      // Handle file upload first if a new file is chosen
+      let mediaUrl: string | null | undefined = undefined;
+      let mediaType: string | null | undefined = undefined;
+      if (mediaFile) {
+        const ext = mediaFile.name.split('.').pop() || 'bin';
+        const path = `announcements/${Date.now()}-${Math.random().toString(36).slice(2, 8)}.${ext}`;
+        const { error: upErr } = await supabase.storage
+          .from('announcement-media')
+          .upload(path, mediaFile, { contentType: mediaFile.type, upsert: false });
+        if (upErr) throw upErr;
+        const { data: pub } = supabase.storage.from('announcement-media').getPublicUrl(path);
+        mediaUrl = pub.publicUrl;
+        mediaType = mediaFile.type;
+      } else if (removeMedia) {
+        mediaUrl = null;
+        mediaType = null;
+      }
+
       if (editingAnnouncement) {
-        const result = await update('announcements', {
+        const updatePayload: Record<string, unknown> = {
           title: title.trim(),
           content: content.trim(),
           visibility_type: visibilityType,
-        }, { id: editingAnnouncement.id });
+          link_url: linkUrl.trim() || null,
+        };
+        if (mediaUrl !== undefined) {
+          updatePayload.media_url = mediaUrl;
+          updatePayload.media_type = mediaType;
+        }
+        const result = await update('announcements', updatePayload, { id: editingAnnouncement.id });
         
         if (!result.success) throw new Error(result.error);
         
@@ -115,6 +148,9 @@ export default function AnnouncementsPage() {
           created_by: user?.name || 'Admin',
           academic_year: selectedYear,
           visibility_type: visibilityType,
+          link_url: linkUrl.trim() || null,
+          media_url: mediaUrl ?? null,
+          media_type: mediaType ?? null,
         });
         
         if (!result.success) throw new Error(result.error);
@@ -139,11 +175,7 @@ export default function AnnouncementsPage() {
         }
       }
       
-      setTitle('');
-      setContent('');
-      setVisibilityType('yearly');
-      setEditingAnnouncement(null);
-      setDialogOpen(false);
+      handleDialogClose();
       fetchAnnouncements();
     } catch (error: any) {
       console.error('Error saving announcement:', error);
@@ -162,6 +194,11 @@ export default function AnnouncementsPage() {
     setTitle(announcement.title);
     setContent(announcement.content);
     setVisibilityType(announcement.visibility_type || 'yearly');
+    setLinkUrl(announcement.link_url || '');
+    setExistingMediaUrl(announcement.media_url || null);
+    setExistingMediaType(announcement.media_type || null);
+    setMediaFile(null);
+    setRemoveMedia(false);
     setDialogOpen(true);
   };
 
@@ -190,6 +227,11 @@ export default function AnnouncementsPage() {
     setTitle('');
     setContent('');
     setVisibilityType('yearly');
+    setLinkUrl('');
+    setMediaFile(null);
+    setExistingMediaUrl(null);
+    setExistingMediaType(null);
+    setRemoveMedia(false);
   };
 
   const getVisibilityLabel = (type: string) => {
@@ -287,6 +329,49 @@ export default function AnnouncementsPage() {
                         required
                       />
                     </div>
+                    <div className="space-y-2">
+                      <Label htmlFor="link">Clickable Link (optional)</Label>
+                      <Input
+                        id="link"
+                        type="url"
+                        value={linkUrl}
+                        onChange={(e) => setLinkUrl(e.target.value)}
+                        placeholder="https://example.com"
+                        className="input-enhanced"
+                      />
+                    </div>
+                    <div className="space-y-2">
+                      <Label htmlFor="media">Attachment (image, PDF, or video — optional)</Label>
+                      <Input
+                        id="media"
+                        type="file"
+                        accept="image/*,application/pdf,video/*"
+                        onChange={(e) => {
+                          const f = e.target.files?.[0] || null;
+                          setMediaFile(f);
+                          if (f) setRemoveMedia(false);
+                        }}
+                        className="input-enhanced"
+                      />
+                      {(existingMediaUrl && !mediaFile && !removeMedia) && (
+                        <div className="flex items-center justify-between gap-2 rounded-md border border-border/60 bg-muted/30 px-3 py-2 text-xs">
+                          <span className="flex items-center gap-2 truncate">
+                            <Paperclip className="w-3 h-3" />
+                            <span className="truncate">Current attachment kept</span>
+                          </span>
+                          <button
+                            type="button"
+                            onClick={() => setRemoveMedia(true)}
+                            className="text-destructive inline-flex items-center gap-1 hover:underline"
+                          >
+                            <X className="w-3 h-3" /> Remove
+                          </button>
+                        </div>
+                      )}
+                      {removeMedia && (
+                        <p className="text-xs text-destructive">Attachment will be removed on save.</p>
+                      )}
+                    </div>
                     <div className="flex gap-2 justify-end">
                       <Button type="button" variant="outline" onClick={handleDialogClose}>
                         Cancel
@@ -341,6 +426,11 @@ export default function AnnouncementsPage() {
                     <p className="text-card-foreground whitespace-pre-wrap break-words overflow-wrap-anywhere text-sm sm:text-base leading-relaxed">
                       {announcement.content}
                     </p>
+                    <AnnouncementMedia
+                      mediaUrl={announcement.media_url}
+                      mediaType={announcement.media_type}
+                      linkUrl={announcement.link_url}
+                    />
                     <div className="flex flex-wrap items-center gap-2 sm:gap-4 mt-4 text-xs sm:text-sm text-muted-foreground">
                       <span className="flex items-center gap-1">
                         <User className="w-4 h-4" />

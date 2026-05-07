@@ -14,6 +14,7 @@ import { terms } from '@/data/mockData';
 import { isSeniorClass, isPrimaryClass, calculateDivision, calculateGradeForClass, getTestDisplayName, getTestsForClass, getFilterLabel, getDivisionBgColor } from '@/utils/seniorGrading';
 import { useAuth } from '@/contexts/AuthContext';
 import { useAcademicYears } from '@/hooks/useAcademicYears';
+import { AnnouncementMedia } from '@/components/AnnouncementMedia';
 import { BarChart, Bar, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer, LineChart, Line, Legend, PieChart, Pie, Cell } from 'recharts';
 import jsPDF from 'jspdf';
 import autoTable from 'jspdf-autotable';
@@ -64,6 +65,9 @@ interface Announcement {
   academic_year: string;
   visibility_type: string;
   expires_at: string | null;
+  media_url?: string | null;
+  media_type?: string | null;
+  link_url?: string | null;
 }
 
 interface SubjectRanking {
@@ -1310,6 +1314,12 @@ export function ParentDashboard() {
                   <div className="flex-1 min-w-0 overflow-hidden">
                     <h4 className="font-semibold text-card-foreground break-words overflow-wrap-anywhere">{announcement.title}</h4>
                     <p className="text-sm text-muted-foreground mt-1 whitespace-pre-wrap break-words overflow-wrap-anywhere" style={{ wordBreak: 'break-word', overflowWrap: 'anywhere' }}>{announcement.content}</p>
+                    <AnnouncementMedia
+                      mediaUrl={announcement.media_url}
+                      mediaType={announcement.media_type}
+                      linkUrl={announcement.link_url}
+                      compact
+                    />
                     <div className="flex flex-wrap items-center gap-2 sm:gap-4 mt-2 text-xs text-muted-foreground">
                       <span className="flex items-center gap-1">
                         <User className="w-3 h-3" />
