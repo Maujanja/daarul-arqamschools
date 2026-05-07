@@ -406,6 +406,49 @@ serve(async (req) => {
     }
 
     // Broadcast realtime event so NotificationBell refreshes immediately
+    // Send push notification when balance is low/zero — independent of whether
+    // a new system_alerts row was inserted, so that admins who subscribed AFTER
+    // today's alert was created still receive the push, and so re-runs of the
+    // cron (or manual triggers) keep pushing while balance stays low.
+    // Dedupe per day using sms_notifications_log so we don't spam.
+    if (balance <= 0 || balance < LOW_CREDIT_THRESHOLD) {
+      const pushKey = `beem_${balance <= 0 ? "zero" : "low"}_push_${today}`;
+      const pushAlreadySent = await alreadySent(
+        supabase,
+        "beem_credit_push",
+        "push-broadcast",
+        pushKey
+      );
+      if (!pushAlreadySent) {
+        try {
+          const isZero = balance <= 0;
+          await supabase.functions.invoke("push-send", {
+            body: {
+              payload: {
+                title: isZero ? "⚡ Beem credits zimeisha" : "⚠️ Beem credits zinaisha",
+                body: isZero
+                  ? `Salio la SMS limefika 0. Bulk SMS hazitatoka mpaka ujaze credits.`
+                  : `Salio la SMS limepungua (${balance}). Tafadhali jaza credits hivi karibuni.`,
+                url: "/dashboard",
+                tag: "beem-credit",
+                requireInteraction: true,
+              },
+              target: { roles: ["admin", "accountant"] },
+            },
+          });
+          await logSms(supabase, {
+            notification_type: "beem_credit_push",
+            recipient_phone: "push-broadcast",
+            reference_key: pushKey,
+            message: `push sent for balance=${balance}`,
+            status: "sent",
+          });
+        } catch (e) {
+          console.error("push-send (beem credit) failed", e);
+        }
+      }
+    }
+
     if (alertInserted) {
       try {
         const ch = supabase.channel("table-changes-system_alerts");
@@ -413,26 +456,6 @@ serve(async (req) => {
         await supabase.removeChannel(ch);
       } catch (e) {
         console.error("broadcast failed", e);
-      }
-      // Push notification to admins/accountants
-      try {
-        const isZero = balance <= 0;
-        await supabase.functions.invoke("push-send", {
-          body: {
-            payload: {
-              title: isZero ? "⚡ Beem credits zimeisha" : "⚠️ Beem credits zinaisha",
-              body: isZero
-                ? `Salio la SMS limefika 0. Bulk SMS hazitatoka mpaka ujaze credits.`
-                : `Salio la SMS limepungua (${balance}). Tafadhali jaza credits hivi karibuni.`,
-              url: "/dashboard",
-              tag: "beem-credit",
-              requireInteraction: true,
-            },
-            target: { roles: ["admin", "accountant"] },
-          },
-        });
-      } catch (e) {
-        console.error("push-send (beem credit) failed", e);
       }
     }
   }
