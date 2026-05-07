@@ -8,7 +8,7 @@ type BIPEvent = Event & {
 };
 
 const DISMISS_KEY = "pwa-install-dismissed-at";
-const DISMISS_TTL_MS = 1000 * 60 * 60 * 24 * 7; // 7 days
+const DISMISS_TTL_MS = 1000 * 60 * 60 * 24 * 3; // 3 days
 
 function isStandalone() {
   if (typeof window === "undefined") return false;
