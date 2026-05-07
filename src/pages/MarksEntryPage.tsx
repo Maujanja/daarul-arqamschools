@@ -572,6 +572,23 @@ export default function MarksEntryPage() {
           title: "Request Sent!",
           description: `Request to update marks for ${unlockTargetStudent.studentName} has been sent to Admin.`,
         });
+        // Push: notify admin + heads of school of new request
+        try {
+          await supabase.functions.invoke('push-send', {
+            body: {
+              payload: {
+                title: '🔓 Ombi jipya la kuhariri alama',
+                body: `${user?.name || 'Mwalimu'} ameomba kuhariri ${selectedSubjectData?.name || 'alama'} kwa ${unlockTargetStudent.studentName} (${selectedClass}, ${selectedTerm}).`,
+                url: '/unlock-requests',
+                tag: 'unlock-request',
+                requireInteraction: true,
+              },
+              target: { roles: ['admin', 'head_nursery', 'head_primary', 'head_secondary'] },
+            },
+          });
+        } catch (pushErr) {
+          console.error('push-send (unlock request) failed', pushErr);
+        }
         setShowUnlockDialog(false);
         setUnlockReason('');
         setUnlockTargetStudent(null);

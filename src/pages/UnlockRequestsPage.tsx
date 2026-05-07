@@ -10,6 +10,7 @@ import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import { Textarea } from '@/components/ui/textarea';
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from '@/components/ui/dialog';
 import { useRealtimeSubscription } from '@/hooks/useRealtimeSubscription';
+import { supabase } from '@/integrations/supabase/client';
 
 interface UnlockRequest {
   id: string;
@@ -107,6 +108,27 @@ export default function UnlockRequestsPage() {
             ? `${selectedRequest.teacher_name} can now update marks.`
             : `${selectedRequest.teacher_name}'s request has been rejected.`,
         });
+        // Push: notify the teacher who requested
+        try {
+          await supabase.functions.invoke('push-send', {
+            body: {
+              payload: {
+                title: actionType === 'approved'
+                  ? '✅ Ombi lako limekubaliwa'
+                  : '❌ Ombi lako limekataliwa',
+                body: actionType === 'approved'
+                  ? `Sasa unaweza kuhariri ${selectedRequest.subject_name}${selectedRequest.student_name ? ' kwa ' + selectedRequest.student_name : ''} (${selectedRequest.class}, ${selectedRequest.term}).`
+                  : `Ombi la kuhariri ${selectedRequest.subject_name}${selectedRequest.student_name ? ' kwa ' + selectedRequest.student_name : ''} limekataliwa.${adminNote ? ' Sababu: ' + adminNote : ''}`,
+                url: '/marks-entry',
+                tag: `unlock-decision-${selectedRequest.id}`,
+                requireInteraction: true,
+              },
+              target: { userIdentifier: selectedRequest.teacher_id },
+            },
+          });
+        } catch (pushErr) {
+          console.error('push-send (unlock decision) failed', pushErr);
+        }
         await loadRequests();
       } else {
         throw new Error(result.error || 'Failed');
