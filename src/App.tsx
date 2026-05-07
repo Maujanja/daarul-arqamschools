@@ -19,6 +19,7 @@ import MyClassStudentsPage from "./pages/MyClassStudentsPage";
 import AcademicYearsPage from "./pages/AcademicYearsPage";
 import UnlockRequestsPage from "./pages/UnlockRequestsPage";
 import NotFound from "./pages/NotFound";
+import InstallPWA from "./components/InstallPWA";
 
 const queryClient = new QueryClient();
 
@@ -28,6 +29,7 @@ const App = () => (
       <TooltipProvider>
         <Toaster />
         <Sonner />
+        <InstallPWA />
         <BrowserRouter>
           <Routes>
             <Route path="/" element={<Navigate to="/login" replace />} />
