@@ -190,6 +190,35 @@ serve(async (req) => {
       summary.skipped++;
     }
 
+    // Web Push to all parents/students of this family group
+    try {
+      const ids = new Set<string>();
+      for (const sid of studentIds) ids.add(sid);
+      const { data: stu } = await supabase
+        .from("students")
+        .select("id, parent_id")
+        .in("id", studentIds.length ? studentIds : ["00000000-0000-0000-0000-000000000000"]);
+      for (const s of stu ?? []) {
+        if (s.parent_id) ids.add(s.parent_id);
+      }
+      if (ids.size > 0) {
+        await supabase.functions.invoke("push-send", {
+          body: {
+            payload: {
+              title: "💰 Ukumbusho wa ada",
+              body: `Leo ni tarehe ya kulipia awamu #${inst.installment_number} ya ada ya familia (${amountTxt}).`,
+              url: "/dashboard",
+              tag: `fee-family-${inst.family_group_id}-${inst.installment_number}`,
+              requireInteraction: false,
+            },
+            target: { userIdentifiers: Array.from(ids) },
+          },
+        });
+      }
+    } catch (e) {
+      console.error("push-send (family fee) failed", e);
+    }
+
     // Send to admin
     const adminRefKey = `family:${refKey}`;
     if (!(await alreadySent(supabase, "admin_alert", ADMIN_PHONE, adminRefKey))) {
@@ -256,6 +285,31 @@ serve(async (req) => {
       else summary.errors.push(`special ${refKey}: ${r.error}`);
     } else if (!phone) {
       summary.skipped++;
+    }
+
+    // Web Push to parent/student of this special-case student
+    try {
+      const ids = new Set<string>([student.id]);
+      const { data: stuRow } = await supabase
+        .from("students")
+        .select("parent_id")
+        .eq("id", student.id)
+        .limit(1);
+      if (stuRow?.[0]?.parent_id) ids.add(stuRow[0].parent_id);
+      await supabase.functions.invoke("push-send", {
+        body: {
+          payload: {
+            title: "💰 Ukumbusho wa ada",
+            body: `Leo ni tarehe ya kulipia awamu #${inst.installment_number} ya ada ya ${student.full_name} (${amountTxt}).`,
+            url: "/dashboard",
+            tag: `fee-special-${student.id}-${inst.installment_number}`,
+            requireInteraction: false,
+          },
+          target: { userIdentifiers: Array.from(ids) },
+        },
+      });
+    } catch (e) {
+      console.error("push-send (special fee) failed", e);
     }
 
     // Admin alert
@@ -339,6 +393,31 @@ serve(async (req) => {
         else summary.errors.push(`class ${refKey}: ${r.error}`);
       } else if (!phone) {
         summary.skipped++;
+      }
+
+      // Web Push to this student's parent/student account
+      try {
+        const ids = new Set<string>([student.id]);
+        const { data: stuRow } = await supabase
+          .from("students")
+          .select("parent_id")
+          .eq("id", student.id)
+          .limit(1);
+        if (stuRow?.[0]?.parent_id) ids.add(stuRow[0].parent_id);
+        await supabase.functions.invoke("push-send", {
+          body: {
+            payload: {
+              title: "💰 Ukumbusho wa ada",
+              body: `Leo ni tarehe ya kulipia awamu #${inst.installment_number} ya ada ya ${student.full_name} (${amountTxt}).`,
+              url: "/dashboard",
+              tag: `fee-class-${student.id}-${inst.installment_number}`,
+              requireInteraction: false,
+            },
+            target: { userIdentifiers: Array.from(ids) },
+          },
+        });
+      } catch (e) {
+        console.error("push-send (class fee) failed", e);
       }
     }
 
