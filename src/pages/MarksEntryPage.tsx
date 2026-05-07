@@ -27,6 +27,7 @@ import { Textarea } from '@/components/ui/textarea';
 import { useAcademicYears } from '@/hooks/useAcademicYears';
 import { useSecureQuery } from '@/hooks/useSecureQuery';
 import { useSecureData } from '@/hooks/useSecureData';
+import { supabase } from '@/integrations/supabase/client';
 import { getStreamsForClass, hasStreams } from '@/utils/classStreams';
 import { getTestsForClass, getFilterLabel, getTestDisplayName } from '@/utils/seniorGrading';
 import { useRealtimeSubscription } from '@/hooks/useRealtimeSubscription';
