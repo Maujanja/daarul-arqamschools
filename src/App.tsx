@@ -20,6 +20,7 @@ import AcademicYearsPage from "./pages/AcademicYearsPage";
 import UnlockRequestsPage from "./pages/UnlockRequestsPage";
 import NotFound from "./pages/NotFound";
 import InstallPWA from "./components/InstallPWA";
+import EnableNotifications from "./components/EnableNotifications";
 
 const queryClient = new QueryClient();
 
@@ -30,6 +31,7 @@ const App = () => (
         <Toaster />
         <Sonner />
         <InstallPWA />
+        <EnableNotifications />
         <BrowserRouter>
           <Routes>
             <Route path="/" element={<Navigate to="/login" replace />} />
