@@ -56,7 +56,10 @@ export default function EnableNotifications() {
         return;
       }
 
-      const vapidPublic = import.meta.env.VITE_VAPID_PUBLIC_KEY as string | undefined;
+      const VAPID_PUBLIC_KEY =
+        "BCuCw2Qrvqr-lIQ5MmRlJMrVDJxIX-vCIe1_xjEqIzUFyU8157kzAGlKdyOMddR__53XPC0Pt1pWS2CufD4d5MQ";
+      const vapidPublic =
+        (import.meta.env.VITE_VAPID_PUBLIC_KEY as string | undefined) || VAPID_PUBLIC_KEY;
       if (!vapidPublic) {
         toast.error("VAPID public key haijawekwa.");
         return;
