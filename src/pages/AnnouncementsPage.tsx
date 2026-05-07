@@ -13,6 +13,7 @@ import { useAcademicYears } from '@/hooks/useAcademicYears';
 import { useRealtimeSubscription } from '@/hooks/useRealtimeSubscription';
 import { useSecureQuery } from '@/hooks/useSecureQuery';
 import { useSecureData } from '@/hooks/useSecureData';
+import { supabase } from '@/integrations/supabase/client';
 
 interface Announcement {
   id: string;
