@@ -189,26 +189,45 @@ export function NotificationBell() {
       next = next.slice(0, 30);
     }
 
+    // Toast only the SINGLE most-recent unread credit alert on initial load
+    // (prevents stack of duplicate "low credit" toasts when multiple daily alerts pile up).
+    const creditToastedKey = 'last_credit_toast_id';
+    const lastToastedCreditId =
+      typeof window !== 'undefined' ? localStorage.getItem(creditToastedKey) : null;
+    let creditToastFired = false;
+
     for (const it of next) {
       const isNew = !knownIdsRef.current.has(it.id);
-      // On initial load: only toast unread credit alerts (so admins are alerted on login).
-      // After first load: toast any new unread item.
-      const shouldToast =
-        !it.read &&
-        (initialLoadRef.current
-          ? it.type === 'low_credit' || it.type === 'zero_credit'
-          : isNew);
+      const isCredit = it.type === 'low_credit' || it.type === 'zero_credit';
+
+      let shouldToast = false;
+      if (isCredit) {
+        // Show at most ONE credit toast, and only if we haven't already toasted this exact alert
+        // in a previous session.
+        if (!creditToastFired && !it.read && lastToastedCreditId !== it.id) {
+          shouldToast = true;
+          creditToastFired = true;
+          try {
+            localStorage.setItem(creditToastedKey, it.id);
+          } catch {
+            /* noop */
+          }
+        }
+      } else if (!it.read && !initialLoadRef.current && isNew) {
+        shouldToast = true;
+      }
+
       if (!shouldToast) continue;
       if (it.type === 'request') {
-        toast.info(it.title, { description: it.message, duration: 6000 });
+        toast.info(it.title, { id: it.id, description: it.message, duration: 6000 });
       } else if (it.type === 'approved') {
-        toast.success(it.title, { description: it.message, duration: 8000 });
+        toast.success(it.title, { id: it.id, description: it.message, duration: 8000 });
       } else if (it.type === 'rejected') {
-        toast.error(it.title, { description: it.message, duration: 8000 });
+        toast.error(it.title, { id: it.id, description: it.message, duration: 8000 });
       } else if (it.type === 'zero_credit') {
-        toast.error(it.title, { description: it.message, duration: 12000 });
+        toast.error(it.title, { id: it.id, description: it.message, duration: 12000 });
       } else if (it.type === 'low_credit') {
-        toast.warning(it.title, { description: it.message, duration: 10000 });
+        toast.warning(it.title, { id: it.id, description: it.message, duration: 10000 });
       }
     }
     knownIdsRef.current = new Set(next.map((n) => n.id));
