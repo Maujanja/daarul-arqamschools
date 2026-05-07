@@ -36,7 +36,12 @@ serve(async (req) => {
 
     const { payload, target } = (await req.json()) as {
       payload: PushPayload;
-      target?: { role?: string; userIdentifier?: string };
+      target?: {
+        role?: string;
+        roles?: string[];
+        userIdentifier?: string;
+        userIdentifiers?: string[];
+      };
     };
 
     if (!payload?.title || !payload?.body) {
@@ -53,7 +58,10 @@ serve(async (req) => {
 
     let query = supabase.from("push_subscriptions").select("endpoint, p256dh, auth");
     if (target?.role) query = query.eq("user_role", target.role);
+    if (target?.roles && target.roles.length) query = query.in("user_role", target.roles);
     if (target?.userIdentifier) query = query.eq("user_identifier", target.userIdentifier);
+    if (target?.userIdentifiers && target.userIdentifiers.length)
+      query = query.in("user_identifier", target.userIdentifiers);
 
     const { data: subs, error } = await query;
     if (error) throw error;

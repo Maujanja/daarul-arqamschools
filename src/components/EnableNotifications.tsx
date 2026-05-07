@@ -39,6 +39,37 @@ export default function EnableNotifications() {
     }
   }, []);
 
+  // Whenever user identity changes, re-tag the existing push subscription
+  // so notifications are routed correctly for this device's CURRENT user.
+  useEffect(() => {
+    if (!user) return;
+    if (!("serviceWorker" in navigator) || !("PushManager" in window)) return;
+    if (Notification.permission !== "granted") return;
+
+    const lastTag = localStorage.getItem("push-tag-key");
+    const tagKey = `${user.role}:${user.id}`;
+    if (lastTag === tagKey) return;
+
+    (async () => {
+      try {
+        const reg = await navigator.serviceWorker.ready;
+        const sub = await reg.pushManager.getSubscription();
+        if (!sub) return;
+        const { error } = await supabase.functions.invoke("push-subscribe", {
+          body: {
+            action: "subscribe",
+            subscription: sub.toJSON(),
+            userIdentifier: user.id,
+            userRole: user.role,
+          },
+        });
+        if (!error) localStorage.setItem("push-tag-key", tagKey);
+      } catch (e) {
+        console.error("Re-tag push subscription failed", e);
+      }
+    })();
+  }, [user?.id, user?.role]);
+
   const dismiss = () => {
     localStorage.setItem(DISMISS_KEY, String(Date.now()));
     setShow(false);
@@ -84,6 +115,9 @@ export default function EnableNotifications() {
       if (error) throw error;
 
       toast.success("Umejiandikisha kupokea notifications!");
+      try {
+        localStorage.setItem("push-tag-key", `${user?.role}:${user?.id}`);
+      } catch {}
       setShow(false);
     } catch (e: any) {
       console.error(e);
