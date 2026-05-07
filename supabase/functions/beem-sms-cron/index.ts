@@ -414,6 +414,26 @@ serve(async (req) => {
       } catch (e) {
         console.error("broadcast failed", e);
       }
+      // Push notification to admins/accountants
+      try {
+        const isZero = balance <= 0;
+        await supabase.functions.invoke("push-send", {
+          body: {
+            payload: {
+              title: isZero ? "⚡ Beem credits zimeisha" : "⚠️ Beem credits zinaisha",
+              body: isZero
+                ? `Salio la SMS limefika 0. Bulk SMS hazitatoka mpaka ujaze credits.`
+                : `Salio la SMS limepungua (${balance}). Tafadhali jaza credits hivi karibuni.`,
+              url: "/dashboard",
+              tag: "beem-credit",
+              requireInteraction: true,
+            },
+            target: { roles: ["admin", "accountant"] },
+          },
+        });
+      } catch (e) {
+        console.error("push-send (beem credit) failed", e);
+      }
     }
   }
 
