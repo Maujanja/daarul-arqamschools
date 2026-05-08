@@ -32,3 +32,16 @@ export function filterMarksForAverage<T extends { subject_name?: string | null; 
     return !isExcludedFromPrimaryAverage(name, className);
   });
 }
+
+// Build a set of subject IDs to exclude for the given class
+export function getExcludedSubjectIds(
+  subjects: { id: string; name: string }[] | null | undefined,
+  className?: string | null,
+): Set<string> {
+  if (!subjects || !isPrimaryClass(className)) return new Set();
+  return new Set(
+    subjects
+      .filter(s => isExcludedFromPrimaryAverage(s.name, className))
+      .map(s => s.id),
+  );
+}
