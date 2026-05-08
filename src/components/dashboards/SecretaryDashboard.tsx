@@ -12,6 +12,7 @@ import { useToast } from '@/hooks/use-toast';
 import { useAcademicYears } from '@/hooks/useAcademicYears';
 import { StudentAvatarUpload } from '@/components/StudentAvatarUpload';
 import { CLASS_STREAMS, getStreamsForClass, hasStreams } from '@/utils/classStreams';
+import { generateParentPhonesTemplate } from '@/utils/parentPhonesTemplate';
 
 import { 
   Users, 
@@ -23,6 +24,7 @@ import {
   Camera,
   ChevronDown,
   ChevronUp,
+  Download,
 } from 'lucide-react';
 
 interface Student {
@@ -174,6 +176,14 @@ export function SecretaryDashboard({ isAdminMode = false }: { isAdminMode?: bool
           <Button className="btn-gradient" onClick={() => setShowAddStudentDialog(true)}>
             <Plus className="w-4 h-4 mr-2" />
             Add Student
+          </Button>
+          <Button
+            variant="outline"
+            onClick={() => generateParentPhonesTemplate(students)}
+            disabled={students.length === 0}
+          >
+            <Download className="w-4 h-4 mr-2" />
+            Parent Phones Template
           </Button>
         </div>
       </div>
