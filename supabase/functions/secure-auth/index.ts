@@ -65,8 +65,7 @@ serve(async (req) => {
 
         const { data: admins, error } = await supabase
           .from("admin_credentials")
-          .select("id, username, password_hash")
-          .ilike("username", username.trim());
+          .select("id, username, password_hash");
 
         const data = findByNormalized(admins, "username", username);
 
@@ -172,8 +171,7 @@ serve(async (req) => {
 
         const { data: secretaries, error } = await supabase
           .from("secretary_credentials")
-          .select("id, username, password_hash, full_name")
-          .ilike("username", username.trim());
+          .select("id, username, password_hash, full_name");
 
         const data = findByNormalized(secretaries, "username", username);
 
@@ -203,8 +201,7 @@ serve(async (req) => {
 
         const { data: accountants, error } = await supabase
           .from("accountant_credentials")
-          .select("id, username, password_hash, full_name")
-          .ilike("username", username.trim());
+          .select("id, username, password_hash, full_name");
 
         const data = findByNormalized(accountants, "username", username);
 
@@ -234,8 +231,7 @@ serve(async (req) => {
 
         const { data: heads, error } = await supabase
           .from("head_of_school_credentials")
-          .select("id, username, password_hash, full_name, department")
-          .ilike("username", username.trim());
+          .select("id, username, password_hash, full_name, department");
 
         const data = findByNormalized(heads, "username", username);
 
