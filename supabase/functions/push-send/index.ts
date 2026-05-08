@@ -56,15 +56,28 @@ serve(async (req) => {
       Deno.env.get("SUPABASE_SERVICE_ROLE_KEY")!
     );
 
-    let query = supabase.from("push_subscriptions").select("endpoint, p256dh, auth");
+    let query = supabase
+      .from("push_subscriptions")
+      .select("endpoint, p256dh, auth, user_identifier, last_used_at")
+      .order("last_used_at", { ascending: false });
     if (target?.role) query = query.eq("user_role", target.role);
     if (target?.roles && target.roles.length) query = query.in("user_role", target.roles);
     if (target?.userIdentifier) query = query.eq("user_identifier", target.userIdentifier);
     if (target?.userIdentifiers && target.userIdentifiers.length)
       query = query.in("user_identifier", target.userIdentifiers);
 
-    const { data: subs, error } = await query;
+    const { data: subsRaw, error } = await query;
     if (error) throw error;
+
+    // Dedupe: keep only the most recently used subscription per user_identifier
+    // so users with multiple devices get a single notification per event.
+    const seen = new Set<string>();
+    const subs = (subsRaw || []).filter((s) => {
+      const key = s.user_identifier || s.endpoint; // fallback when no identifier
+      if (seen.has(key)) return false;
+      seen.add(key);
+      return true;
+    });
 
     const message = JSON.stringify(payload);
     let sent = 0;
