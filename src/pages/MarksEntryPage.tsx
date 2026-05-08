@@ -691,23 +691,37 @@ export default function MarksEntryPage() {
   };
 
   const handleExportTemplate = () => {
-    const templateData = marks.map(mark => ({
-      'Roll Number': mark.rollNumber,
-      'Student Name': mark.studentName,
-      'Exam Marks': mark.exam === '' ? '' : mark.exam,
-    }));
+    const subjectName = selectedSubjectData?.name || 'Subject';
+    const seriesLabel = getTestDisplayName(selectedTerm, selectedClass);
+    const streamLabel = selectedStream || '-';
 
-    const ws = XLSX.utils.json_to_sheet(templateData);
+    // Build sheet with metadata header rows + table
+    const aoa: (string | number)[][] = [
+      ['DAARUL-ARQAM SCHOOLS — MARKS ENTRY TEMPLATE'],
+      [],
+      ['Class', selectedClass, '', 'Subject', subjectName],
+      ['Stream', streamLabel, '', 'Series', seriesLabel],
+      ['Academic Year', selectedYear, '', 'Max Marks', maxMarks],
+      [],
+      ['Roll Number', 'Student Name', 'Exam Marks'],
+      ...marks.map(mark => [
+        mark.rollNumber,
+        mark.studentName,
+        mark.exam === '' ? '' : (mark.exam as number),
+      ]),
+    ];
+
+    const ws = XLSX.utils.aoa_to_sheet(aoa);
+    ws['!cols'] = [{ wch: 18 }, { wch: 32 }, { wch: 15 }, { wch: 14 }, { wch: 20 }];
+    ws['!merges'] = [{ s: { r: 0, c: 0 }, e: { r: 0, c: 4 } }];
+
     const wb = XLSX.utils.book_new();
     XLSX.utils.book_append_sheet(wb, ws, 'Marks');
-    
-    ws['!cols'] = [
-      { wch: 15 },
-      { wch: 30 },
-      { wch: 15 },
-    ];
-    
-    XLSX.writeFile(wb, `marks_${selectedClass}_${selectedSubjectData?.name || 'subject'}_${selectedTerm}.xlsx`);
+
+    XLSX.writeFile(
+      wb,
+      `marks_${selectedClass}_${streamLabel}_${subjectName}_${selectedTerm}_${selectedYear}.xlsx`
+    );
     
     toast({
       title: "Template Downloaded",
@@ -731,11 +745,21 @@ export default function MarksEntryPage() {
       const data = await file.arrayBuffer();
       const workbook = XLSX.read(data);
       const worksheet = workbook.Sheets[workbook.SheetNames[0]];
-      const jsonData = XLSX.utils.sheet_to_json<{
-        'Roll Number': string;
-        'Student Name': string;
-        'Exam Marks': number | string;
-      }>(worksheet);
+      // Read as array of arrays so we can locate the header row dynamically
+      // (template now contains metadata rows above the table)
+      const rows = XLSX.utils.sheet_to_json<(string | number)[]>(worksheet, { header: 1, defval: '' });
+      const headerIdx = rows.findIndex(r =>
+        Array.isArray(r) && r.some(c => String(c).trim().toLowerCase() === 'roll number')
+      );
+      const startIdx = headerIdx >= 0 ? headerIdx : 0;
+      const headerRow = (rows[startIdx] || []).map(c => String(c).trim());
+      const rollIdx = headerRow.findIndex(c => c.toLowerCase() === 'roll number');
+      const marksIdx = headerRow.findIndex(c => c.toLowerCase() === 'exam marks');
+      const jsonData = rows.slice(startIdx + 1).map(r => ({
+        'Roll Number': r?.[rollIdx >= 0 ? rollIdx : 0],
+        'Student Name': r?.[1],
+        'Exam Marks': r?.[marksIdx >= 0 ? marksIdx : 2],
+      })) as { 'Roll Number': string; 'Student Name': string; 'Exam Marks': number | string }[];
 
       let updatedCount = 0;
       
