@@ -1,4 +1,5 @@
 import { useState, useEffect, useCallback } from 'react';
+import { isExcludedFromPrimaryAverage } from '@/utils/averageExclusions';
 import { DashboardLayout } from '@/components/layout/DashboardLayout';
 import { GradeBadge } from '@/components/dashboard/GradeBadge';
 import { Button } from '@/components/ui/button';
