@@ -20,6 +20,7 @@ import jsPDF from 'jspdf';
 import autoTable from 'jspdf-autotable';
 import html2canvas from 'html2canvas';
 import { createSubjectNameLookup, resolveSubjectName } from '@/utils/subjectResolution';
+import { isExcludedFromPrimaryAverage } from '@/utils/averageExclusions';
 
 interface StudentMark {
   subject: string;
@@ -211,6 +212,8 @@ export function ParentDashboard() {
     // Calculate average for each student
     const studentAverages: Record<string, { total: number; count: number }> = {};
     classMarks.forEach((mark: any) => {
+      const subjName = subjectLookup[mark.subject_id];
+      if (isExcludedFromPrimaryAverage(subjName, studentClass)) return;
       if (!studentAverages[mark.student_id]) {
         studentAverages[mark.student_id] = { total: 0, count: 0 };
       }
@@ -378,7 +381,8 @@ export function ParentDashboard() {
           setStudentMarks(filtered);
           
           if (filtered.length > 0) {
-            const avg = filtered.reduce((sum: number, m: any) => sum + m.total, 0) / filtered.length;
+            const avgList = filtered.filter((m: any) => !isExcludedFromPrimaryAverage(m.subject, studentData.class));
+            const avg = avgList.length > 0 ? avgList.reduce((sum: number, m: any) => sum + m.total, 0) / avgList.length : 0;
             setOverallAverage(avg);
           } else {
             setOverallAverage(0);
@@ -581,7 +585,8 @@ export function ParentDashboard() {
       setStudentMarks(filtered);
       
       if (filtered.length > 0) {
-        const avg = filtered.reduce((sum, m) => sum + m.total, 0) / filtered.length;
+        const avgList = filtered.filter(m => !isExcludedFromPrimaryAverage(m.subject, activeClass));
+        const avg = avgList.length > 0 ? avgList.reduce((sum, m) => sum + m.total, 0) / avgList.length : 0;
         setOverallAverage(avg);
       } else {
         setOverallAverage(0);
@@ -729,7 +734,9 @@ export function ParentDashboard() {
     
     studentTerms.forEach((term, termIndex) => {
       const label = getTestDisplayName(term, activeClass);
-      const termMarks = yearFilteredMarks.filter(m => m.term === term);
+      const termMarks = yearFilteredMarks
+        .filter(m => m.term === term)
+        .filter(m => !isExcludedFromPrimaryAverage(m.subject, activeClass));
       if (termMarks.length > 0) {
         const avg = termMarks.reduce((sum, m) => sum + m.total, 0) / termMarks.length;
         result[label] = avg;
