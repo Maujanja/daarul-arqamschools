@@ -145,11 +145,11 @@
 
 @layer components {
   .card-elevated {
-    @apply bg-card rounded-xl shadow-md border border-border/50 transition-all duration-300;
+    @apply bg-card rounded-xl border border-border/40;
   }
 
   .card-elevated:hover {
-    @apply shadow-lg -translate-y-0.5;
+    /* no hover effect */
   }
 
   .quick-action-button {
@@ -186,16 +186,15 @@
   }
 
   .stat-card {
-    @apply rounded-xl shadow-md border border-border/50 transition-all duration-300 p-6 relative overflow-hidden;
+    @apply rounded-xl border border-border/40 p-6 relative overflow-hidden;
   }
 
   .stat-card:hover {
-    @apply shadow-lg -translate-y-0.5;
+    /* no hover effect */
   }
 
   .stat-card::before {
-    content: '';
-    @apply absolute top-0 left-0 w-1 h-full bg-gradient-to-b from-primary to-accent;
+    content: none;
   }
 
   .stat-card-silk {
