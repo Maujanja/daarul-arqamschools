@@ -149,7 +149,7 @@
   }
 
   .card-elevated:hover {
-    @apply;
+    /* no hover effect */
   }
 
   .quick-action-button {
@@ -190,7 +190,7 @@
   }
 
   .stat-card:hover {
-    @apply;
+    /* no hover effect */
   }
 
   .stat-card::before {
