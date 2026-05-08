@@ -1,6 +1,7 @@
 import * as XLSX from 'xlsx';
 import { isSeniorClass, isNurseryClass, scoreToPoints, calculateDivision, calculateGradeForClass, getTestDisplayName } from './seniorGrading';
 import { resolveSubjectsFromMarks } from './subjectResolution';
+import { isExcludedFromPrimaryAverage } from './averageExclusions';
 
 interface StudentData {
   id: string;
@@ -59,19 +60,21 @@ export function generateAnnualExamReport(
   // Build student rows with calculated data
   const studentRows = students.map(student => {
     const studentMarks = marks.filter(m => m.student_id === student.id);
-    const subjectScores: { subjectId: string; score: number; grade: string; points: number }[] = [];
+    const subjectScores: { subjectId: string; subjectName: string; score: number; grade: string; points: number }[] = [];
 
     activeSubjects.forEach(subject => {
       const mark = studentMarks.find(m => m.subject_id === subject.id);
       const score = mark ? mark.total : 0;
       const grade = score > 0 ? calculateGradeForClass(score, className) : '-';
       const points = isSenior && score > 0 ? scoreToPoints(score) : 0;
-      subjectScores.push({ subjectId: subject.id, score, grade, points });
+      subjectScores.push({ subjectId: subject.id, subjectName: subject.name, score, grade, points });
     });
 
     const scoredSubjects = subjectScores.filter(s => s.score > 0);
-    const totalMarks = scoredSubjects.reduce((sum, s) => sum + s.score, 0);
-    const average = scoredSubjects.length > 0 ? Math.round((totalMarks / scoredSubjects.length) * 10) / 10 : 0;
+    // Exclude E.D.K, Arabic, QURAN from Primary averages (and totals)
+    const averagingSubjects = scoredSubjects.filter(s => !isExcludedFromPrimaryAverage(s.subjectName, className));
+    const totalMarks = averagingSubjects.reduce((sum, s) => sum + s.score, 0);
+    const average = averagingSubjects.length > 0 ? Math.round((totalMarks / averagingSubjects.length) * 10) / 10 : 0;
     const overallGrade = average > 0 ? calculateGradeForClass(average, className) : '-';
 
     let division = '-';
