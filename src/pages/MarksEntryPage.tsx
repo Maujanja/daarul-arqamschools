@@ -691,23 +691,37 @@ export default function MarksEntryPage() {
   };
 
   const handleExportTemplate = () => {
-    const templateData = marks.map(mark => ({
-      'Roll Number': mark.rollNumber,
-      'Student Name': mark.studentName,
-      'Exam Marks': mark.exam === '' ? '' : mark.exam,
-    }));
+    const subjectName = selectedSubjectData?.name || 'Subject';
+    const seriesLabel = getTestDisplayName(selectedTerm, selectedClass);
+    const streamLabel = selectedStream || '-';
 
-    const ws = XLSX.utils.json_to_sheet(templateData);
+    // Build sheet with metadata header rows + table
+    const aoa: (string | number)[][] = [
+      ['DAARUL-ARQAM SCHOOLS — MARKS ENTRY TEMPLATE'],
+      [],
+      ['Class', selectedClass, '', 'Subject', subjectName],
+      ['Stream', streamLabel, '', 'Series', seriesLabel],
+      ['Academic Year', selectedYear, '', 'Max Marks', maxMarks],
+      [],
+      ['Roll Number', 'Student Name', 'Exam Marks'],
+      ...marks.map(mark => [
+        mark.rollNumber,
+        mark.studentName,
+        mark.exam === '' ? '' : (mark.exam as number),
+      ]),
+    ];
+
+    const ws = XLSX.utils.aoa_to_sheet(aoa);
+    ws['!cols'] = [{ wch: 18 }, { wch: 32 }, { wch: 15 }, { wch: 14 }, { wch: 20 }];
+    ws['!merges'] = [{ s: { r: 0, c: 0 }, e: { r: 0, c: 4 } }];
+
     const wb = XLSX.utils.book_new();
     XLSX.utils.book_append_sheet(wb, ws, 'Marks');
-    
-    ws['!cols'] = [
-      { wch: 15 },
-      { wch: 30 },
-      { wch: 15 },
-    ];
-    
-    XLSX.writeFile(wb, `marks_${selectedClass}_${selectedSubjectData?.name || 'subject'}_${selectedTerm}.xlsx`);
+
+    XLSX.writeFile(
+      wb,
+      `marks_${selectedClass}_${streamLabel}_${subjectName}_${selectedTerm}_${selectedYear}.xlsx`
+    );
     
     toast({
       title: "Template Downloaded",
