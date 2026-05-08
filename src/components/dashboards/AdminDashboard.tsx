@@ -822,7 +822,7 @@ export function AdminDashboard() {
       {/* Quick Actions */}
       <div className="card-elevated p-6 animate-fade-in">
         <h3 className="font-display font-semibold text-lg text-card-foreground mb-4">Quick Actions</h3>
-        <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
+        <div className="grid grid-cols-1 sm:grid-cols-2 xl:grid-cols-4 gap-4">
           <Button variant="outline" className="quick-action-button" onClick={() => navigate('/reports')}>
             <FileText className="w-6 h-6" />
             <span className="quick-action-label">Generate Reports</span>

@@ -153,7 +153,18 @@
   }
 
   .quick-action-button {
-    @apply h-auto py-4 flex flex-col gap-2 whitespace-normal border-border bg-secondary text-secondary-foreground shadow-sm hover:bg-muted hover:text-foreground focus-visible:ring-primary;
+    @apply h-auto min-h-28 w-full px-3 py-4 flex flex-col items-center justify-center gap-2 whitespace-normal text-center border-border bg-secondary text-secondary-foreground shadow-sm hover:bg-muted hover:text-foreground focus-visible:ring-primary overflow-hidden;
+    height: auto !important;
+    min-height: 7rem !important;
+    width: 100%;
+    min-width: 0;
+    display: flex !important;
+    flex-direction: column !important;
+    align-items: center !important;
+    justify-content: center !important;
+    white-space: normal !important;
+    text-align: center;
+    padding: 1rem 0.75rem !important;
     backdrop-filter: none;
     -webkit-backdrop-filter: none;
     filter: none;
@@ -161,15 +172,17 @@
   }
 
   .quick-action-button svg {
-    @apply text-primary;
+    @apply shrink-0 text-primary;
   }
 
   .quick-action-label {
-    @apply font-semibold leading-tight text-secondary-foreground;
+    @apply block max-w-full font-semibold leading-tight text-secondary-foreground;
+    overflow-wrap: anywhere;
   }
 
   .quick-action-description {
-    @apply text-xs font-medium leading-tight text-muted-foreground;
+    @apply block max-w-full text-xs font-medium leading-tight text-muted-foreground;
+    overflow-wrap: anywhere;
   }
 
   .stat-card {
