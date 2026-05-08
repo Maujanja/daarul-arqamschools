@@ -29,6 +29,18 @@ interface AuthResponse {
   error?: string;
 }
 
+const normalizeText = (value?: string | null) =>
+  (value || "").trim().replace(/\s+/g, " ").toLowerCase();
+
+const normalizeCode = (value?: string | null) =>
+  (value || "").trim().replace(/\s+/g, "").toUpperCase();
+
+const findByNormalized = <T extends Record<string, any>>(
+  rows: T[] | null | undefined,
+  field: keyof T,
+  value?: string,
+) => rows?.find((row) => normalizeText(String(row[field] || "")) === normalizeText(value)) || null;
+
 serve(async (req) => {
   if (req.method === "OPTIONS") {
     return new Response(null, { headers: corsHeaders });
