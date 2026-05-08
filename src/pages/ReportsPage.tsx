@@ -18,6 +18,7 @@ import { useAcademicYears } from '@/hooks/useAcademicYears';
 import { useSecureQuery } from '@/hooks/useSecureQuery';
 import { isSeniorClass, calculateDivision, getTestDisplayName, getTestsForClass, getFilterLabel, getDivisionBgColor } from '@/utils/seniorGrading';
 import { extractUniqueBaseClasses } from '@/utils/classStreams';
+import { isExcludedFromPrimaryAverage } from '@/utils/averageExclusions';
 
 interface Student {
   id: string;
@@ -237,10 +238,13 @@ export default function ReportsPage() {
         : (marks || []).filter(m => m.class === selectedClass);
 
       // Calculate student averages using filtered data
+      const subjectNameById: Record<string, string> = {};
+      (subjects || []).forEach((s: any) => { subjectNameById[s.id] = s.name; });
       const studentsWithAvg = filteredStudents.map(student => {
         const studentMarks = filteredMarks.filter(m => m.student_id === student.id);
-        const average = studentMarks.length > 0
-          ? Math.round(studentMarks.reduce((sum, m) => sum + m.total, 0) / studentMarks.length)
+        const averagingMarks = studentMarks.filter(m => !isExcludedFromPrimaryAverage(subjectNameById[m.subject_id], student.class));
+        const average = averagingMarks.length > 0
+          ? Math.round(averagingMarks.reduce((sum, m) => sum + m.total, 0) / averagingMarks.length)
           : 0;
         
         // Calculate division for senior students
