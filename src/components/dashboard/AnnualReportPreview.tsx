@@ -5,6 +5,7 @@ import { Button } from '@/components/ui/button';
 import { Download, X } from 'lucide-react';
 import { ScrollArea } from '@/components/ui/scroll-area';
 import { resolveSubjectsFromMarks } from '@/utils/subjectResolution';
+import { isExcludedFromPrimaryAverage } from '@/utils/averageExclusions';
 
 interface StudentData {
   id: string;
@@ -57,6 +58,7 @@ export function AnnualReportPreview({
     const studentRows = students.map(student => {
       const studentMarks = marks.filter(m => m.student_id === student.id);
       const subjectScores: { subjectId: string; score: number; grade: string; points: number }[] = [];
+      const subjectScoresMeta: { subjectId: string; subjectName: string; score: number }[] = [];
 
       activeSubjects.forEach(subject => {
         const mark = studentMarks.find(m => m.subject_id === subject.id);
@@ -64,11 +66,13 @@ export function AnnualReportPreview({
         const grade = score > 0 ? calculateGradeForClass(score, className) : '-';
         const points = isSenior && score > 0 ? scoreToPoints(score) : 0;
         subjectScores.push({ subjectId: subject.id, score, grade, points });
+        subjectScoresMeta.push({ subjectId: subject.id, subjectName: subject.name, score });
       });
 
       const scoredSubjects = subjectScores.filter(s => s.score > 0);
-      const totalMarks = scoredSubjects.reduce((sum, s) => sum + s.score, 0);
-      const average = scoredSubjects.length > 0 ? Math.round((totalMarks / scoredSubjects.length) * 10) / 10 : 0;
+      const averagingSubjects = subjectScoresMeta.filter(s => s.score > 0 && !isExcludedFromPrimaryAverage(s.subjectName, className));
+      const totalMarks = averagingSubjects.reduce((sum, s) => sum + s.score, 0);
+      const average = averagingSubjects.length > 0 ? Math.round((totalMarks / averagingSubjects.length) * 10) / 10 : 0;
       const overallGrade = average > 0 ? calculateGradeForClass(average, className) : '-';
 
       let division = '-';

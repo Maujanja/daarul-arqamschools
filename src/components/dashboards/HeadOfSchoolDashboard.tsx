@@ -19,6 +19,7 @@ import { HoSResultApproval } from '@/components/dashboard/HoSResultApproval';
 import { CLASS_STREAMS, parseClassStream } from '@/utils/classStreams';
 import { resolveSubjectsFromMarks } from '@/utils/subjectResolution';
 import { fetchAllMarksPaginated } from '@/utils/fetchAllMarks';
+import { isExcludedFromPrimaryAverage } from '@/utils/averageExclusions';
 
 // Helper function
 async function secureQuery(table: string, userRole: string, userId: string, options?: any) {
@@ -177,8 +178,12 @@ export function HeadOfSchoolDashboard() {
   const seriesLabels = useMemo(() => uniqueTerms.map((_, i) => `S${i + 1}`), [uniqueTerms]);
 
   const classSummaryData = useMemo(() => {
+    const subjectNameById: Record<string, string> = {};
+    (allSubjects || []).forEach((s: any) => { subjectNameById[s.id] = s.name; });
     return uniqueClasses.map((className, index) => {
-      const classMarks = sectionMarks.filter(m => m.class === className);
+      const classMarks = sectionMarks
+        .filter(m => m.class === className)
+        .filter(m => !isExcludedFromPrimaryAverage(subjectNameById[m.subject_id], className));
       const seriesData: { [key: string]: number | null } = {};
       let totalSum = 0, totalCount = 0;
 
@@ -200,18 +205,20 @@ export function HeadOfSchoolDashboard() {
       return { sn: index + 1, name: className, seriesData, average, grade };
     }).sort((a, b) => b.average - a.average)
       .map((item, index) => ({ ...item, position: index + 1, sn: index + 1 }));
-  }, [sectionMarks, uniqueClasses, uniqueTerms]);
+  }, [sectionMarks, uniqueClasses, uniqueTerms, allSubjects]);
 
   const averagePerSeries = useMemo(() => {
+    const subjectNameById: Record<string, string> = {};
+    (allSubjects || []).forEach((s: any) => { subjectNameById[s.id] = s.name; });
     const result: { [key: string]: number } = {};
     uniqueTerms.forEach((term, termIndex) => {
-      const termMarks = sectionMarks.filter(m => m.term === term);
+      const termMarks = sectionMarks.filter(m => m.term === term && !isExcludedFromPrimaryAverage(subjectNameById[m.subject_id], m.class));
       if (termMarks.length > 0) {
         result[`S${termIndex + 1}`] = termMarks.reduce((sum, m) => sum + m.total, 0) / termMarks.length;
       }
     });
     return result;
-  }, [sectionMarks, uniqueTerms]);
+  }, [sectionMarks, uniqueTerms, allSubjects]);
 
   // Subject performance for selected class
   const classMarksOnly = useMemo(() => sectionMarks.filter(m => m.class === selectedClass), [sectionMarks, selectedClass]);
@@ -249,16 +256,18 @@ export function HeadOfSchoolDashboard() {
   }, [classMarksOnly, validSubjectsForClass, uniqueTerms, selectedClass]);
 
   const subjectAveragePerSeries = useMemo(() => {
+    const subjectNameById: Record<string, string> = {};
+    (allSubjects || []).forEach((s: any) => { subjectNameById[s.id] = s.name; });
     const result: { [key: string]: number } = {};
     uniqueTerms.forEach((term) => {
       const termLabel = getTestDisplayName(term, selectedClass);
-      const termMarks = classMarksOnly.filter(m => m.term === term);
+      const termMarks = classMarksOnly.filter(m => m.term === term && !isExcludedFromPrimaryAverage(subjectNameById[m.subject_id], selectedClass));
       if (termMarks.length > 0) {
         result[termLabel] = termMarks.reduce((sum, m) => sum + m.total, 0) / termMarks.length;
       }
     });
     return result;
-  }, [classMarksOnly, uniqueTerms, selectedClass]);
+  }, [classMarksOnly, uniqueTerms, selectedClass, allSubjects]);
 
   // Feedback for my section
   // Teachers that have assignments in my section

@@ -1,4 +1,5 @@
 import { useState, useEffect, useCallback } from 'react';
+import { isExcludedFromPrimaryAverage } from '@/utils/averageExclusions';
 import { DashboardLayout } from '@/components/layout/DashboardLayout';
 import { GradeBadge } from '@/components/dashboard/GradeBadge';
 import { Button } from '@/components/ui/button';
@@ -223,10 +224,16 @@ export default function StudentsPage() {
         marksData = await fetchAllPaginated<Mark>('marks');
       }
 
+      // Build subject id → name lookup for exclusion filtering
+      const allSubjectsList = await fetchTable<Subject>('subjects');
+      const subjectNameById: Record<string, string> = {};
+      (allSubjectsList || []).forEach((s: any) => { subjectNameById[s.id] = s.name; });
+
       const studentsWithMarks: StudentWithMarks[] = (studentsData || []).map(student => {
         const studentMarks = marksData?.filter(m => m.student_id === student.id) || [];
-        const averageMarks = studentMarks.length > 0
-          ? Math.round(studentMarks.reduce((sum, m) => sum + m.total, 0) / studentMarks.length)
+        const averagingMarks = studentMarks.filter(m => !isExcludedFromPrimaryAverage(subjectNameById[m.subject_id], student.class));
+        const averageMarks = averagingMarks.length > 0
+          ? Math.round(averagingMarks.reduce((sum, m) => sum + m.total, 0) / averagingMarks.length)
           : 0;
         const grade = calculateGrade(averageMarks);
 
