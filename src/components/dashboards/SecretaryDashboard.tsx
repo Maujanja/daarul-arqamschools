@@ -348,15 +348,15 @@ export function SecretaryDashboard({ isAdminMode = false }: { isAdminMode?: bool
         <div className="grid grid-cols-1 sm:grid-cols-3 gap-4">
           <Button variant="outline" className="h-auto py-4 flex flex-col gap-2" onClick={() => navigate('/students')}>
             <GraduationCap className="w-6 h-6" />
-            <span>Students Page</span>
+            <span className="text-foreground">Students Page</span>
           </Button>
           <Button variant="outline" className="h-auto py-4 flex flex-col gap-2" onClick={() => navigate('/teachers')}>
             <Users className="w-6 h-6" />
-            <span>Teachers Page</span>
+            <span className="text-foreground">Teachers Page</span>
           </Button>
           <Button variant="outline" className="h-auto py-4 flex flex-col gap-2" onClick={() => setShowAddStudentDialog(true)}>
             <UserPlus className="w-6 h-6" />
-            <span>Register New Student</span>
+            <span className="text-foreground">Register New Student</span>
           </Button>
         </div>
       </div>
