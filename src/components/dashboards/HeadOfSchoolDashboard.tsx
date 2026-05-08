@@ -582,23 +582,23 @@ export function HeadOfSchoolDashboard() {
         <div className="grid grid-cols-1 sm:grid-cols-5 gap-4">
           <Button variant="outline" className="h-auto py-4 flex flex-col gap-2" onClick={() => navigate('/teachers')}>
             <Users className="w-6 h-6" />
-            <span>Assign Teachers</span>
+            <span className="text-foreground">Assign Teachers</span>
           </Button>
           <Button variant="outline" className="h-auto py-4 flex flex-col gap-2" onClick={() => navigate('/subjects')}>
             <BookOpen className="w-6 h-6" />
-            <span>Manage Subjects</span>
+            <span className="text-foreground">Manage Subjects</span>
           </Button>
           <Button variant="outline" className="h-auto py-4 flex flex-col gap-2" onClick={() => navigate('/reports')}>
             <FileText className="w-6 h-6" />
-            <span>Reports</span>
+            <span className="text-foreground">Reports</span>
           </Button>
           <Button variant="outline" className="h-auto py-4 flex flex-col gap-2" onClick={() => navigate('/unlock-requests')}>
             <KeyRound className="w-6 h-6" />
-            <span>Unlock Requests</span>
+            <span className="text-foreground">Unlock Requests</span>
           </Button>
           <Button variant="outline" className="h-auto py-4 flex flex-col gap-2" onClick={() => navigate('/feedback')}>
             <MessageSquare className="w-6 h-6" />
-            <span>Feedback</span>
+            <span className="text-foreground">Feedback</span>
           </Button>
         </div>
       </div>

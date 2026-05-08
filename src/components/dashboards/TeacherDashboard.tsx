@@ -487,13 +487,13 @@ export function TeacherDashboard() {
         </CardHeader>
         <CardContent>
           <div className="flex flex-wrap gap-3">
-            <Button variant="outline" onClick={() => navigate('/marks-entry')}>
+            <Button variant="outline" className="text-foreground" onClick={() => navigate('/marks-entry')}>
               Enter Marks
             </Button>
-            <Button variant="outline" onClick={() => navigate('/my-students')}>
+            <Button variant="outline" className="text-foreground" onClick={() => navigate('/my-students')}>
               View Students
             </Button>
-            <Button variant="outline" onClick={() => navigate('/feedback')}>
+            <Button variant="outline" className="text-foreground" onClick={() => navigate('/feedback')}>
               View Feedback
             </Button>
           </div>

@@ -825,17 +825,17 @@ export function AdminDashboard() {
         <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
           <Button variant="outline" className="h-auto py-4 flex flex-col gap-2" onClick={() => navigate('/reports')}>
             <FileText className="w-6 h-6" />
-            <span>Generate Reports</span>
+            <span className="text-foreground">Generate Reports</span>
             <span className="text-xs text-muted-foreground">Academic reports</span>
           </Button>
           <Button variant="outline" className="h-auto py-4 flex flex-col gap-2" onClick={() => navigate('/users')}>
             <User className="w-6 h-6" />
-            <span>Manage Users</span>
+            <span className="text-foreground">Manage Users</span>
             <span className="text-xs text-muted-foreground">Teachers, Secretaries, Parents</span>
           </Button>
           <Button variant="outline" className="h-auto py-4 flex flex-col gap-2" onClick={() => navigate('/feedback')}>
             <MessageSquare className="w-6 h-6" />
-            <span>View Feedback</span>
+            <span className="text-foreground">View Feedback</span>
             <span className="text-xs text-muted-foreground">{feedbackCount} pending response</span>
           </Button>
           <Button
@@ -862,7 +862,7 @@ export function AdminDashboard() {
             }}
           >
             <Download className="w-6 h-6" />
-            <span>Parent Phones Template</span>
+            <span className="text-foreground">Parent Phones Template</span>
             <span className="text-xs text-muted-foreground">Excel by class</span>
           </Button>
         </div>
