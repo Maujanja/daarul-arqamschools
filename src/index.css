@@ -141,6 +141,32 @@
   h1, h2, h3, h4, h5, h6 {
     @apply font-display font-semibold tracking-tight;
   }
+
+  /* Clean, single-line focus across interactive elements — no glow rings */
+  *:focus { outline: none; }
+  *:focus-visible {
+    outline: 1px solid hsl(var(--ring) / 0.55);
+    outline-offset: 1px;
+    box-shadow: none !important;
+  }
+  button:focus,
+  button:focus-visible,
+  a:focus,
+  a:focus-visible,
+  [role="button"]:focus,
+  [role="button"]:focus-visible {
+    box-shadow: none !important;
+  }
+  input:focus,
+  textarea:focus,
+  select:focus,
+  input:focus-visible,
+  textarea:focus-visible,
+  select:focus-visible {
+    outline: none;
+    box-shadow: none !important;
+    border-color: hsl(var(--ring) / 0.6);
+  }
 }
 
 @layer components {
