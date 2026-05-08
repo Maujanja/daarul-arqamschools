@@ -692,7 +692,7 @@ export function AdminDashboard() {
               <div key={payment.id} className="flex items-center justify-between p-3 bg-muted/50 rounded-lg">
                 <div>
                   <p className="font-medium">{payment.studentName}</p>
-                  <p className="text-xs text-muted-foreground">{payment.studentClass} • {new Date(payment.payment_date).toLocaleDateString()}</p>
+                  <p className="quick-action-description">{payment.studentClass} • {new Date(payment.payment_date).toLocaleDateString()}</p>
                 </div>
                 <p className="font-bold text-success">TZS {Number(payment.amount).toLocaleString()}</p>
               </div>
@@ -823,24 +823,24 @@ export function AdminDashboard() {
       <div className="card-elevated p-6 animate-fade-in">
         <h3 className="font-display font-semibold text-lg text-card-foreground mb-4">Quick Actions</h3>
         <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
-          <Button variant="outline" className="h-auto py-4 flex flex-col gap-2" onClick={() => navigate('/reports')}>
+          <Button variant="outline" className="quick-action-button" onClick={() => navigate('/reports')}>
             <FileText className="w-6 h-6" />
-            <span className="text-foreground">Generate Reports</span>
-            <span className="text-xs text-muted-foreground">Academic reports</span>
+            <span className="quick-action-label">Generate Reports</span>
+            <span className="quick-action-description">Academic reports</span>
           </Button>
-          <Button variant="outline" className="h-auto py-4 flex flex-col gap-2" onClick={() => navigate('/users')}>
+          <Button variant="outline" className="quick-action-button" onClick={() => navigate('/users')}>
             <User className="w-6 h-6" />
-            <span className="text-foreground">Manage Users</span>
-            <span className="text-xs text-muted-foreground">Teachers, Secretaries, Parents</span>
+            <span className="quick-action-label">Manage Users</span>
+            <span className="quick-action-description">Teachers, Secretaries, Parents</span>
           </Button>
-          <Button variant="outline" className="h-auto py-4 flex flex-col gap-2" onClick={() => navigate('/feedback')}>
+          <Button variant="outline" className="quick-action-button" onClick={() => navigate('/feedback')}>
             <MessageSquare className="w-6 h-6" />
-            <span className="text-foreground">View Feedback</span>
-            <span className="text-xs text-muted-foreground">{feedbackCount} pending response</span>
+            <span className="quick-action-label">View Feedback</span>
+            <span className="quick-action-description">{feedbackCount} pending response</span>
           </Button>
           <Button
             variant="outline"
-            className="h-auto py-4 flex flex-col gap-2"
+            className="quick-action-button"
             onClick={async () => {
               if (!user) return;
               try {
@@ -862,8 +862,8 @@ export function AdminDashboard() {
             }}
           >
             <Download className="w-6 h-6" />
-            <span className="text-foreground">Parent Phones Template</span>
-            <span className="text-xs text-muted-foreground">Excel by class</span>
+            <span className="quick-action-label">Parent Phones Template</span>
+            <span className="quick-action-description">Excel by class</span>
           </Button>
         </div>
       </div>
@@ -891,7 +891,7 @@ function FeedbackList({ feedback, onMarkReviewed }: { feedback: FeedbackItem[]; 
             <div className="flex-1">
               <div className="flex items-center gap-2 mb-1">
                 <span className="font-medium">{fb.parentName}</span>
-                <span className="text-xs text-muted-foreground">about</span>
+                <span className="quick-action-description">about</span>
                 <span className="font-medium">{fb.studentName}</span>
                 <span className="text-xs bg-primary/10 text-primary px-2 py-0.5 rounded">{fb.studentClass}</span>
               </div>
