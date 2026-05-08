@@ -270,7 +270,7 @@ serve(async (req) => {
 
     return new Response(JSON.stringify(response), {
       headers: { ...corsHeaders, "Content-Type": "application/json" },
-      status: response.success ? 200 : 401,
+      status: 200,
     });
   } catch (error) {
     console.error("Auth error:", error);
