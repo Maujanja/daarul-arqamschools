@@ -8,6 +8,8 @@ import bgGeneral from '@/assets/bg-general.jpg';
 import { NotificationBell } from './NotificationBell';
 import { TeacherUnlockGuard } from './TeacherUnlockGuard';
 import { ScrollReveal } from './ScrollReveal';
+import { Button } from '@/components/ui/button';
+import { RefreshCw } from 'lucide-react';
 
 interface DashboardLayoutProps {
   children: ReactNode;
@@ -22,6 +24,17 @@ export function DashboardLayout({ children }: DashboardLayoutProps) {
 
   const isAdmin = user?.role === 'admin';
   const backgroundImage = isAdmin ? bgAdmin : bgGeneral;
+
+  const handleRefresh = () => {
+    // Clear caches if available (PWA), then hard reload
+    if ('caches' in window) {
+      caches.keys().then((keys) => Promise.all(keys.map((k) => caches.delete(k)))).finally(() => {
+        window.location.reload();
+      });
+    } else {
+      window.location.reload();
+    }
+  };
 
   return (
     <div className="min-h-screen relative">
@@ -44,10 +57,28 @@ export function DashboardLayout({ children }: DashboardLayoutProps) {
               <h1 className="font-display font-bold text-white text-sm leading-tight">DAARUL-ARQAM SCHOOLS</h1>
               <p className="text-xs text-white/70">Exam Results Management System</p>
             </div>
+            <Button
+              variant="ghost"
+              size="icon"
+              onClick={handleRefresh}
+              className="text-white hover:bg-white/10"
+              title="Refresh"
+              aria-label="Refresh"
+            >
+              <RefreshCw className="w-5 h-5" />
+            </Button>
             <NotificationBell />
           </header>
           {/* Mobile floating bell */}
-          <div className="lg:hidden fixed top-4 right-4 z-40">
+          <div className="lg:hidden fixed top-4 right-4 z-40 flex items-center gap-2">
+            <button
+              onClick={handleRefresh}
+              className="bg-[#1e3a5f]/90 rounded-full shadow-lg w-10 h-10 flex items-center justify-center text-white hover:bg-[#1e3a5f]"
+              title="Refresh"
+              aria-label="Refresh"
+            >
+              <RefreshCw className="w-5 h-5" />
+            </button>
             <div className="bg-[#1e3a5f]/90 rounded-full shadow-lg">
               <NotificationBell />
             </div>
