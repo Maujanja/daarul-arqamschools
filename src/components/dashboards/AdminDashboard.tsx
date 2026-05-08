@@ -20,6 +20,7 @@ import { toast } from 'sonner';
 import { AnnualReportPreview } from '@/components/dashboard/AnnualReportPreview';
 import { resolveSubjectsFromMarks } from '@/utils/subjectResolution';
 import { fetchAllMarksPaginated } from '@/utils/fetchAllMarks';
+import { generateParentPhonesTemplate } from '@/utils/parentPhonesTemplate';
 
 import { HoSResultApproval } from '@/components/dashboard/HoSResultApproval';
 import { BeemBalanceCard } from '@/components/dashboard/BeemBalanceCard';
@@ -821,7 +822,7 @@ export function AdminDashboard() {
       {/* Quick Actions */}
       <div className="card-elevated p-6 animate-fade-in">
         <h3 className="font-display font-semibold text-lg text-card-foreground mb-4">Quick Actions</h3>
-        <div className="grid grid-cols-1 sm:grid-cols-3 gap-4">
+        <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
           <Button variant="outline" className="h-auto py-4 flex flex-col gap-2" onClick={() => navigate('/reports')}>
             <FileText className="w-6 h-6" />
             <span>Generate Reports</span>
@@ -836,6 +837,33 @@ export function AdminDashboard() {
             <MessageSquare className="w-6 h-6" />
             <span>View Feedback</span>
             <span className="text-xs text-muted-foreground">{feedbackCount} pending response</span>
+          </Button>
+          <Button
+            variant="outline"
+            className="h-auto py-4 flex flex-col gap-2"
+            onClick={async () => {
+              if (!user) return;
+              try {
+                toast.loading('Preparing template...', { id: 'pp-tpl' });
+                const result = await secureQuery('students', user.role, user.id, {
+                  select: 'id, full_name, class, roll_number',
+                });
+                const students = result?.success ? result.data : [];
+                if (!students || students.length === 0) {
+                  toast.error('No students found', { id: 'pp-tpl' });
+                  return;
+                }
+                generateParentPhonesTemplate(students);
+                toast.success('Template downloaded', { id: 'pp-tpl' });
+              } catch (e) {
+                console.error(e);
+                toast.error('Failed to generate template', { id: 'pp-tpl' });
+              }
+            }}
+          >
+            <Download className="w-6 h-6" />
+            <span>Parent Phones Template</span>
+            <span className="text-xs text-muted-foreground">Excel by class</span>
           </Button>
         </div>
       </div>
