@@ -71,13 +71,13 @@ export function DashboardLayout({ children }: DashboardLayoutProps) {
           <div className="lg:hidden fixed top-4 right-4 z-40 flex items-center gap-2">
             <button
               onClick={handleRefresh}
-              className="bg-[#1e3a5f]/90 rounded-full shadow-lg w-10 h-10 flex items-center justify-center text-white hover:bg-[#1e3a5f]"
+              className="bg-[#1e3a5f] rounded-full w-10 h-10 flex items-center justify-center text-white hover:bg-[#1e3a5f]"
               title="Refresh"
               aria-label="Refresh"
             >
               <RefreshCw className="w-5 h-5" />
             </button>
-            <div className="bg-[#1e3a5f]/90 rounded-full shadow-lg">
+            <div className="bg-[#1e3a5f] rounded-full">
               <NotificationBell />
             </div>
           </div>
