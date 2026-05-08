@@ -98,7 +98,7 @@ export default function InstallPWA() {
   return (
     <>
       <div
-        className="fixed bottom-4 left-1/2 -translate-x-1/2 z-[9999] w-[min(92vw,420px)] rounded-2xl border border-sky-300/30 bg-slate-900/95 backdrop-blur-md shadow-[0_10px_40px_-10px_rgba(56,189,248,0.45)] p-3 flex items-center gap-3 animate-in slide-in-from-bottom-4 fade-in duration-500"
+        className="fixed bottom-4 left-1/2 -translate-x-1/2 z-[9999] w-[min(92vw,420px)] rounded-2xl border border-sky-300/30 bg-slate-900/95 shadow-[0_10px_40px_-10px_rgba(56,189,248,0.45)] p-3 flex items-center gap-3 animate-in slide-in-from-bottom-4 fade-in duration-500"
         role="dialog"
         aria-label="Install app"
       >
@@ -131,7 +131,7 @@ export default function InstallPWA() {
 
       {showIOSGuide && (
         <div
-          className="fixed inset-0 z-[10000] bg-black/70 backdrop-blur-sm flex items-end sm:items-center justify-center p-4"
+          className="fixed inset-0 z-[10000] bg-black/70 flex items-end sm:items-center justify-center p-4"
           onClick={() => setShowIOSGuide(false)}
         >
           <div

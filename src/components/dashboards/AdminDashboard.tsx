@@ -538,7 +538,7 @@ export function AdminDashboard() {
           <p className="text-white/80 mt-1">Welcome! Here is your school overview.</p>
         </div>
         <div className="flex items-center gap-2">
-          <div className="flex bg-background/80 backdrop-blur-sm rounded-lg p-1">
+          <div className="flex bg-background/80 rounded-lg p-1">
             <Button
               variant={adminMode === 'overview' ? 'default' : 'ghost'}
               size="sm"
