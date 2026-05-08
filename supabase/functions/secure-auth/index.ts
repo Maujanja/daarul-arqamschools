@@ -29,6 +29,18 @@ interface AuthResponse {
   error?: string;
 }
 
+const normalizeText = (value?: string | null) =>
+  (value || "").trim().replace(/\s+/g, " ").toLowerCase();
+
+const normalizeCode = (value?: string | null) =>
+  (value || "").trim().replace(/\s+/g, "").toUpperCase();
+
+const findByNormalized = <T extends Record<string, any>>(
+  rows: T[] | null | undefined,
+  field: keyof T,
+  value?: string,
+) => rows?.find((row) => normalizeText(String(row[field] || "")) === normalizeText(value)) || null;
+
 serve(async (req) => {
   if (req.method === "OPTIONS") {
     return new Response(null, { headers: corsHeaders });
@@ -51,11 +63,11 @@ serve(async (req) => {
           break;
         }
 
-        const { data, error } = await supabase
+        const { data: admins, error } = await supabase
           .from("admin_credentials")
-          .select("id, username, password_hash")
-          .eq("username", username.trim())
-          .maybeSingle();
+          .select("id, username, password_hash");
+
+        const data = findByNormalized(admins, "username", username);
 
         if (error || !data) {
           response = { success: false, error: "Invalid username or password" };
@@ -85,9 +97,7 @@ serve(async (req) => {
           .from("teachers")
           .select("id, full_name, email, password_hash");
 
-        const data = allTeachers?.find(
-          (t: any) => t.full_name.trim().toLowerCase() === name.trim().toLowerCase()
-        );
+        const data = findByNormalized(allTeachers, "full_name", name);
 
         if (error || !data) {
           response = { success: false, error: "Teacher name not found" };
@@ -113,16 +123,16 @@ serve(async (req) => {
           break;
         }
 
-        const normalizedName = studentName.trim().replace(/\s+/g, ' ');
-        const normalizedRoll = rollNumber.trim().toUpperCase();
+        const normalizedName = normalizeText(studentName);
+        const normalizedRoll = normalizeCode(rollNumber);
 
         const { data: rollMatches, error } = await supabase
           .from("students")
-          .select("id, full_name, parent_id")
-          .eq("roll_number", normalizedRoll);
+          .select("id, full_name, roll_number, parent_id")
+          .range(0, 4999);
 
         const student = rollMatches?.find((s: any) => 
-          s.full_name.trim().replace(/\s+/g, ' ').toLowerCase() === normalizedName.toLowerCase()
+          normalizeText(s.full_name) === normalizedName && normalizeCode(s.roll_number) === normalizedRoll
         ) || null;
 
         if (error || !student) {
@@ -160,11 +170,11 @@ serve(async (req) => {
           break;
         }
 
-        const { data, error } = await supabase
+        const { data: secretaries, error } = await supabase
           .from("secretary_credentials")
-          .select("id, username, password_hash, full_name")
-          .eq("username", username.trim())
-          .maybeSingle();
+          .select("id, username, password_hash, full_name");
+
+        const data = findByNormalized(secretaries, "username", username);
 
         if (error || !data) {
           response = { success: false, error: "Invalid username or password" };
@@ -190,11 +200,11 @@ serve(async (req) => {
           break;
         }
 
-        const { data, error } = await supabase
+        const { data: accountants, error } = await supabase
           .from("accountant_credentials")
-          .select("id, username, password_hash, full_name")
-          .eq("username", username.trim())
-          .maybeSingle();
+          .select("id, username, password_hash, full_name");
+
+        const data = findByNormalized(accountants, "username", username);
 
         if (error || !data) {
           response = { success: false, error: "Invalid username or password" };
@@ -220,11 +230,11 @@ serve(async (req) => {
           break;
         }
 
-        const { data, error } = await supabase
+        const { data: heads, error } = await supabase
           .from("head_of_school_credentials")
-          .select("id, username, password_hash, full_name, department")
-          .eq("username", username.trim())
-          .maybeSingle();
+          .select("id, username, password_hash, full_name, department");
+
+        const data = findByNormalized(heads, "username", username);
 
         if (error || !data) {
           response = { success: false, error: "Invalid username or password" };
@@ -261,7 +271,7 @@ serve(async (req) => {
 
     return new Response(JSON.stringify(response), {
       headers: { ...corsHeaders, "Content-Type": "application/json" },
-      status: response.success ? 200 : 401,
+      status: 200,
     });
   } catch (error) {
     console.error("Auth error:", error);
