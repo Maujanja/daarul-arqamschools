@@ -11,6 +11,7 @@ import { useAcademicYears } from '@/hooks/useAcademicYears';
 import { SeriesSummaryTable } from '@/components/dashboard/SeriesSummaryTable';
 import { SeriesPerformanceChart } from '@/components/dashboard/SeriesPerformanceChart';
 import { getTestDisplayName, getTestsForClass, getFilterLabel, calculateGradeForClass, isPrimaryClass, getSeriesCountForClass, usesCATSeries, getSeriesLabel } from '@/utils/seniorGrading';
+import { isExcludedFromPrimaryAverage } from '@/utils/averageExclusions';
 import { extractUniqueBaseClasses } from '@/utils/classStreams';
 
 interface TeacherInfo {
