@@ -166,6 +166,16 @@ export function ParentDashboard() {
   );
 
   const activeClass = resultsClass || childClass;
+
+  // Whether the selected term/year has been admin-approved for this class
+  const isSelectedTermApproved = useMemo(
+    () => releaseStatuses.some(
+      s => s.class_name === activeClass &&
+           (s.term === selectedTerm || termMatches(s.term, selectedTerm)) &&
+           s.approved_by_admin
+    ),
+    [releaseStatuses, activeClass, selectedTerm]
+  );
   
   // Chart refs for capturing as images
   const subjectChartRef = useRef<HTMLDivElement>(null);
