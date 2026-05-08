@@ -208,8 +208,10 @@ export default function TeachersPage() {
   const handleOpenAssignDialog = (teacher: Teacher) => {
     setSelectedTeacher(teacher);
     
-    // Load existing assignments for this teacher
-    const teacherAssigns = assignments.filter(a => a.teacher_id === teacher.id);
+    // Load existing assignments for this teacher (current academic year only)
+    const teacherAssigns = assignments.filter(
+      a => a.teacher_id === teacher.id && a.academic_year === currentYear
+    );
     const assignmentMap: Record<string, Set<string>> = {};
     
     teacherAssigns.forEach(a => {
@@ -272,13 +274,41 @@ export default function TeachersPage() {
         });
       });
 
-      // Delete existing assignments for this teacher for current year, then insert new ones
-      const deleteResult = await remove('teacher_assignments', { teacher_id: selectedTeacher.id, academic_year: currentYear });
-      console.log('Delete result:', deleteResult);
+      // Compute existing assignments for this teacher in current year
+      const existing = assignments.filter(
+        a => a.teacher_id === selectedTeacher.id && a.academic_year === currentYear
+      );
 
-      if (newAssignments.length > 0) {
-        const result = await insert('teacher_assignments', newAssignments);
-        console.log('Insert result:', result);
+      const sigOf = (a: { class: string; stream: string | null; subject_id: string }) =>
+        `${a.class}||${a.stream || ''}||${a.subject_id}`;
+
+      const newSigs = new Set(newAssignments.map(sigOf));
+      const existingSigs = new Set(existing.map(a => sigOf({ class: a.class, stream: a.stream, subject_id: a.subject_id })));
+
+      // Safety: if user is about to wipe all assignments, confirm explicitly
+      if (existing.length > 0 && newAssignments.length === 0) {
+        const ok = window.confirm(
+          `Una uhakika unataka kuondoa assignments zote (${existing.length}) za ${selectedTeacher.full_name} kwa mwaka ${currentYear}?`
+        );
+        if (!ok) {
+          setSaving(false);
+          return;
+        }
+      }
+
+      // Diff-based: only delete removed rows, only insert added rows
+      const toRemove = existing.filter(a =>
+        !newSigs.has(sigOf({ class: a.class, stream: a.stream, subject_id: a.subject_id }))
+      );
+      const toAdd = newAssignments.filter(a => !existingSigs.has(sigOf(a)));
+
+      for (const row of toRemove) {
+        const r = await remove('teacher_assignments', { id: row.id });
+        if (!r.success) throw new Error(r.error || 'Failed to remove old assignment');
+      }
+
+      if (toAdd.length > 0) {
+        const result = await insert('teacher_assignments', toAdd);
         if (!result.success) throw new Error(result.error);
       }
 
