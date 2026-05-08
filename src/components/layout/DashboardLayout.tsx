@@ -26,13 +26,11 @@ export function DashboardLayout({ children }: DashboardLayoutProps) {
   const backgroundImage = isAdmin ? bgAdmin : bgGeneral;
 
   const handleRefresh = () => {
-    // Clear caches if available (PWA), then hard reload
-    if ('caches' in window) {
-      caches.keys().then((keys) => Promise.all(keys.map((k) => caches.delete(k)))).finally(() => {
-        window.location.reload();
-      });
+    const reload = () => window.location.reload();
+    if (typeof caches !== 'undefined') {
+      caches.keys().then((keys) => Promise.all(keys.map((k) => caches.delete(k)))).finally(reload);
     } else {
-      window.location.reload();
+      reload();
     }
   };
 
