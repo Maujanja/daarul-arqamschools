@@ -190,7 +190,7 @@ export function TeacherUnlockGuard() {
   return (
     <>
       {showBanner && (
-        <div className="sticky top-0 z-40 bg-amber-500/95 text-amber-950 shadow-md">
+        <div className="sticky top-0 z-40 bg-amber-500 text-amber-950">
           <div className="px-4 py-2 flex items-center gap-3 max-w-screen-2xl mx-auto">
             <AlertTriangle className="w-5 h-5 shrink-0" />
             <div className="flex-1 text-sm">

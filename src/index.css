@@ -130,12 +130,27 @@
 }
 
 @layer base {
+  html,
+  body,
+  #root {
+    min-height: 100%;
+    background: hsl(var(--background));
+    overscroll-behavior: none;
+  }
+
+  html {
+    overflow-x: hidden;
+  }
+
   * {
     @apply border-border;
   }
 
   body {
     @apply bg-background text-foreground font-sans antialiased;
+    min-height: 100dvh;
+    overflow-x: hidden;
+    overscroll-behavior-y: none;
   }
 
   h1, h2, h3, h4, h5, h6 {
@@ -167,6 +182,19 @@
     box-shadow: none !important;
     border-color: hsl(var(--ring) / 0.6);
   }
+
+  header,
+  footer,
+  aside,
+  [class*="fixed"],
+  [class*="sticky"],
+  [role="dialog"],
+  [data-radix-popper-content-wrapper] {
+    backdrop-filter: none !important;
+    -webkit-backdrop-filter: none !important;
+    filter: none !important;
+    box-shadow: none !important;
+  }
 }
 
 @layer components {
@@ -179,7 +207,7 @@
   }
 
   .quick-action-button {
-    @apply h-auto min-h-28 w-full px-3 py-4 flex flex-col items-center justify-center gap-2 whitespace-normal text-center border-primary/40 bg-primary/10 text-card-foreground shadow-md hover:border-primary hover:bg-primary/20 hover:text-card-foreground focus-visible:ring-primary overflow-hidden;
+    @apply h-auto min-h-28 w-full px-3 py-4 flex flex-col items-center justify-center gap-2 whitespace-normal text-center border-primary/40 bg-primary/10 text-card-foreground hover:border-primary hover:bg-primary/20 hover:text-card-foreground focus-visible:ring-primary overflow-hidden;
     height: auto !important;
     min-height: 7rem !important;
     width: 100%;
@@ -191,14 +219,11 @@
     white-space: normal !important;
     text-align: center;
     padding: 1rem 0.75rem !important;
-    backdrop-filter: none;
-    -webkit-backdrop-filter: none;
-    filter: none;
-    text-shadow: 0 1px 2px hsl(var(--background) / 0.7);
+    text-shadow: none;
   }
 
   .quick-action-button svg {
-    @apply shrink-0 text-primary drop-shadow;
+    @apply shrink-0 text-primary;
   }
 
   .quick-action-label {
@@ -329,24 +354,21 @@
   }
 }
 
-/* Scroll-driven reveal/overlap used across dashboards */
+/* Scroll reveal is fully disabled: no fade, blur, filter, overlap, or scroll-driven motion. */
 @layer utilities {
   .reveal-card {
-    /* JS sets transform/opacity/filter directly each frame.
-       A tiny transition smooths fast scroll deltas without lagging the curve. */
-    transition:
-      transform 120ms linear,
-      opacity 120ms linear,
-      filter 120ms linear;
-    backface-visibility: hidden;
-    transform-origin: center top;
+    transform: none !important;
+    opacity: 1 !important;
+    transition: none !important;
+    animation: none !important;
+    backface-visibility: visible;
   }
   @media (prefers-reduced-motion: reduce) {
     .reveal-card {
       transform: none !important;
       opacity: 1 !important;
-      filter: none !important;
       transition: none !important;
+      animation: none !important;
     }
   }
 }
