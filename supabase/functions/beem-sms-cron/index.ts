@@ -491,14 +491,39 @@ serve(async (req) => {
     // cron (or manual triggers) keep pushing while balance stays low.
     // Dedupe per day using sms_notifications_log so we don't spam.
     if (balance <= 0 || balance < LOW_CREDIT_THRESHOLD) {
-      const pushKey = `beem_${balance <= 0 ? "zero" : "low"}_push_${today}`;
-      const pushAlreadySent = await alreadySent(
-        supabase,
-        "beem_credit_push",
-        "push-broadcast",
-        pushKey
-      );
-      if (!pushAlreadySent) {
+      // Fire ONCE per low/zero cycle: only push if we haven't already pushed
+      // since the last time the balance was healthy. When balance recovers
+      // above the threshold, we insert a "recovery" marker so the next dip
+      // pushes again.
+      const stateKey = balance <= 0 ? "zero" : "low";
+      const { data: lastRecovery } = await supabase
+        .from("sms_notifications_log")
+        .select("created_at")
+        .eq("notification_type", "beem_credit_push")
+        .eq("reference_key", "beem_credit_recovery")
+        .order("created_at", { ascending: false })
+        .limit(1);
+      const recoveryAt = lastRecovery?.[0]?.created_at;
+
+      const { data: lastPush } = await supabase
+        .from("sms_notifications_log")
+        .select("id, reference_key, created_at")
+        .eq("notification_type", "beem_credit_push")
+        .like("reference_key", "beem_%_push_cycle")
+        .order("created_at", { ascending: false })
+        .limit(1);
+      const lastPushAt = lastPush?.[0]?.created_at;
+      const lastPushState = lastPush?.[0]?.reference_key;
+
+      // Already pushed in this cycle (no recovery since)?
+      const alreadyInCycle =
+        !!lastPushAt &&
+        (!recoveryAt || new Date(lastPushAt) > new Date(recoveryAt)) &&
+        // re-push only if state escalated from "low" -> "zero"
+        !(lastPushState === "beem_low_push_cycle" && stateKey === "zero");
+
+      if (!alreadyInCycle) {
+        const pushKey = `beem_${stateKey}_push_cycle`;
         try {
           const isZero = balance <= 0;
           await supabase.functions.invoke("push-send", {
@@ -525,6 +550,32 @@ serve(async (req) => {
         } catch (e) {
           console.error("push-send (beem credit) failed", e);
         }
+      }
+    } else {
+      // Balance is healthy — record a recovery marker so a future dip
+      // counts as a new cycle and pushes again. Insert at most once per day.
+      const recoveryKeyToday = `beem_credit_recovery_${today}`;
+      const recordedToday = await alreadySent(
+        supabase,
+        "beem_credit_push",
+        "push-broadcast",
+        recoveryKeyToday
+      );
+      if (!recordedToday) {
+        await logSms(supabase, {
+          notification_type: "beem_credit_push",
+          recipient_phone: "push-broadcast",
+          reference_key: "beem_credit_recovery",
+          message: `balance healthy=${balance}`,
+          status: "sent",
+        });
+        await logSms(supabase, {
+          notification_type: "beem_credit_push",
+          recipient_phone: "push-broadcast",
+          reference_key: recoveryKeyToday,
+          message: `recovery marker for ${today}`,
+          status: "sent",
+        });
       }
     }
 
