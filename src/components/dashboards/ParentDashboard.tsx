@@ -1311,10 +1311,26 @@ export function ParentDashboard() {
         <div className="card-elevated p-6 animate-fade-in text-center">
           <div className="py-12">
             <BookOpen className="w-12 h-12 mx-auto text-muted-foreground/50 mb-4" />
-            <h3 className="font-display font-semibold text-lg text-card-foreground mb-2">No Results Yet</h3>
-            <p className="text-muted-foreground max-w-md mx-auto">
-              Matokeo bado hayajaandaliwa au hayajaidhinishwa kuonekana kwa series hii. Matokeo yataonekana baada ya walimu kukamilisha na admin kuidhinisha.
-            </p>
+            {isSelectedTermApproved ? (
+              <>
+                <div className="inline-flex items-center justify-center w-20 h-20 rounded-full bg-destructive/10 mb-4">
+                  <span className="text-3xl font-display font-bold text-destructive">ABS</span>
+                </div>
+                <h3 className="font-display font-semibold text-lg text-card-foreground mb-2">
+                  Hakuhudhuria Series Hii (ABS)
+                </h3>
+                <p className="text-muted-foreground max-w-md mx-auto">
+                  {childName} hakufanya somo hata moja katika {selectedTerm}. Matokeo yameidhinishwa lakini hakuna maksi zilizoingizwa kwa mwanafunzi huyu kwa series hii.
+                </p>
+              </>
+            ) : (
+              <>
+                <h3 className="font-display font-semibold text-lg text-card-foreground mb-2">No Results Yet</h3>
+                <p className="text-muted-foreground max-w-md mx-auto">
+                  Matokeo bado hayajaandaliwa au hayajaidhinishwa kuonekana kwa series hii. Matokeo yataonekana baada ya walimu kukamilisha na admin kuidhinisha.
+                </p>
+              </>
+            )}
           </div>
         </div>
       )}
