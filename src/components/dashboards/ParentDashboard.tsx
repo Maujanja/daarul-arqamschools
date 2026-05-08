@@ -294,6 +294,24 @@ export function ParentDashboard() {
     });
 
     rankings.sort((a, b) => b.score - a.score);
+
+    // Add INC entries for assigned subjects the student has no marks for in this term
+    const studentSubjectIds = new Set(rankings.map(r => r.subject_id));
+    assignedSubjectIds.forEach((subjectId: string) => {
+      if (!studentSubjectIds.has(subjectId)) {
+        const subjName = subjectLookup[subjectId] || 'Unknown';
+        rankings.push({
+          subject: subjName,
+          subject_id: subjectId,
+          score: 0,
+          grade: 'INC',
+          rank: 0,
+          totalStudents: totalStudentsInClass,
+          complete: false,
+        });
+      }
+    });
+
     setSubjectRankings(rankings);
   }, [fetchTable, fetchAllPaginated]);
 
