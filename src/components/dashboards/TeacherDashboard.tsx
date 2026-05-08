@@ -133,6 +133,11 @@ export function TeacherDashboard() {
         // We need to also fetch students separately to join the data
         const studentsData = await fetchTable<any>('students', { class: baseClasses });
 
+        // Fetch subjects for exclusion lookup
+        const subjectsList = await fetchTable<any>('subjects');
+        const subjectNameById: Record<string, string> = {};
+        (subjectsList || []).forEach((s: any) => { subjectNameById[s.id] = s.name; });
+
         if (marksData && marksData.length > 0) {
           // Build a lookup map for student info
           const studentMap = new Map(studentsData?.map((s: any) => [s.id, s]) || []);
@@ -143,6 +148,8 @@ export function TeacherDashboard() {
           marksData.forEach((mark: any) => {
             const studentId = mark.student_id;
             const student = studentMap.get(studentId);
+            const studentClass = student?.class || mark.class;
+            if (isExcludedFromPrimaryAverage(subjectNameById[mark.subject_id], studentClass)) return;
             if (!studentTotals[studentId]) {
               studentTotals[studentId] = {
                 name: student?.full_name || 'Unknown',
@@ -179,7 +186,9 @@ export function TeacherDashboard() {
           console.log('TeacherDashboard: Processing marks for series summary', { marksCount: marksData.length, classes: baseClasses });
           
           baseClasses.forEach((cls: string) => {
-            const classMarks = marksData.filter((m: any) => m.class === cls);
+            const classMarks = marksData
+              .filter((m: any) => m.class === cls)
+              .filter((m: any) => !isExcludedFromPrimaryAverage(subjectNameById[m.subject_id], cls));
             const seriesAverages: Record<string, number | null> = {};
             const seriesCount = getSeriesCountForClass(cls);
             const classSeriesLabels = Array.from({ length: seriesCount }, (_, i) => `Series ${i + 1}`);
