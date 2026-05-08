@@ -83,7 +83,7 @@ function SidebarInner({ items, user, logout, pathname, onNavigate, itemsVisible 
     <div className="flex flex-col h-full">
       <div className="p-6 pb-5">
         <div className="flex items-center gap-4">
-          <div className="w-14 h-14 rounded-full bg-white/10 flex items-center justify-center ring-2 ring-white/20 shadow-lg">
+          <div className="w-14 h-14 rounded-full bg-white/10 flex items-center justify-center ring-2 ring-white/20">
             <img src={dasLogo} alt="Logo" className="w-10 h-10 object-contain" />
           </div>
           <div className="flex-1 min-w-0">
@@ -119,7 +119,7 @@ function SidebarInner({ items, user, logout, pathname, onNavigate, itemsVisible 
                       className={cn(
                         'group flex items-center gap-3 px-4 py-3 rounded-xl transition-colors duration-200',
                         isActive
-                          ? 'bg-white/15 text-white shadow-md'
+                          ? 'bg-white/15 text-white'
                           : 'text-white/70 hover:text-white hover:bg-white/5',
                       )}
                     >
@@ -197,7 +197,7 @@ export function Sidebar() {
       <Button
         variant="ghost"
         size="icon"
-        className="fixed top-4 left-4 z-[60] lg:hidden bg-[#1e3a5f]/90 text-white hover:bg-[#1e3a5f] shadow-lg"
+        className="fixed top-4 left-4 z-[60] lg:hidden bg-[#1e3a5f] text-white hover:bg-[#1e3a5f]"
         onClick={toggleSidebar}
         aria-label={isOpen ? 'Close menu' : 'Open menu'}
       >
@@ -250,7 +250,7 @@ export function Sidebar() {
             className={cn(
               'fixed left-0 top-0 h-full w-72 z-50 lg:hidden',
               'bg-gradient-to-b from-[#1e3a5f] via-[#1a3455] to-[#152a45]',
-              'shadow-2xl',
+              'shadow-none',
             )}
             initial={{ x: '-100%' }}
             animate={{ x: 0 }}
@@ -279,7 +279,7 @@ export function Sidebar() {
         className={cn(
           'hidden lg:block fixed left-0 top-0 h-full w-72 z-50',
           'bg-gradient-to-b from-[#1e3a5f] via-[#1a3455] to-[#152a45]',
-          'shadow-2xl',
+          'shadow-none',
         )}
       >
         <SidebarInner
