@@ -83,7 +83,7 @@ function SidebarInner({ items, user, logout, pathname, onNavigate, itemsVisible 
     <div className="flex flex-col h-full">
       <div className="p-6 pb-5">
         <div className="flex items-center gap-4">
-          <div className="w-14 h-14 rounded-full bg-white/10 flex items-center justify-center ring-2 ring-white/20 shadow-lg backdrop-blur-sm">
+          <div className="w-14 h-14 rounded-full bg-white/10 flex items-center justify-center ring-2 ring-white/20 shadow-lg">
             <img src={dasLogo} alt="Logo" className="w-10 h-10 object-contain" />
           </div>
           <div className="flex-1 min-w-0">
@@ -232,7 +232,7 @@ export function Sidebar() {
       <AnimatePresence>
         {isOpen && (
           <motion.div
-            className="fixed inset-0 bg-black/50 backdrop-blur-sm z-40 lg:hidden"
+            className="fixed inset-0 bg-black/50 z-40 lg:hidden"
             initial={{ opacity: 0 }}
             animate={{ opacity: 1 }}
             exit={{ opacity: 0 }}
