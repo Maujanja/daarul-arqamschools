@@ -129,8 +129,7 @@ serve(async (req) => {
 
         const { data: rollMatches, error } = await supabase
           .from("students")
-          .select("id, full_name, parent_id")
-          .ilike("roll_number", `%${rollNumber.trim()}%`);
+          .select("id, full_name, roll_number, parent_id");
 
         const student = rollMatches?.find((s: any) => 
           normalizeText(s.full_name) === normalizedName && normalizeCode(s.roll_number) === normalizedRoll
@@ -171,11 +170,12 @@ serve(async (req) => {
           break;
         }
 
-        const { data, error } = await supabase
+        const { data: secretaries, error } = await supabase
           .from("secretary_credentials")
           .select("id, username, password_hash, full_name")
-          .eq("username", username.trim())
-          .maybeSingle();
+          .ilike("username", username.trim());
+
+        const data = findByNormalized(secretaries, "username", username);
 
         if (error || !data) {
           response = { success: false, error: "Invalid username or password" };
@@ -201,11 +201,12 @@ serve(async (req) => {
           break;
         }
 
-        const { data, error } = await supabase
+        const { data: accountants, error } = await supabase
           .from("accountant_credentials")
           .select("id, username, password_hash, full_name")
-          .eq("username", username.trim())
-          .maybeSingle();
+          .ilike("username", username.trim());
+
+        const data = findByNormalized(accountants, "username", username);
 
         if (error || !data) {
           response = { success: false, error: "Invalid username or password" };
@@ -231,11 +232,12 @@ serve(async (req) => {
           break;
         }
 
-        const { data, error } = await supabase
+        const { data: heads, error } = await supabase
           .from("head_of_school_credentials")
           .select("id, username, password_hash, full_name, department")
-          .eq("username", username.trim())
-          .maybeSingle();
+          .ilike("username", username.trim());
+
+        const data = findByNormalized(heads, "username", username);
 
         if (error || !data) {
           response = { success: false, error: "Invalid username or password" };
