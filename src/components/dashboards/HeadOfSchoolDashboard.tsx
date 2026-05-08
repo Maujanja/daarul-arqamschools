@@ -580,25 +580,25 @@ export function HeadOfSchoolDashboard() {
       <div className="card-elevated p-6 animate-fade-in">
         <h3 className="font-display font-semibold text-lg text-card-foreground mb-4">Quick Actions</h3>
         <div className="grid grid-cols-1 sm:grid-cols-5 gap-4">
-          <Button variant="outline" className="h-auto py-4 flex flex-col gap-2" onClick={() => navigate('/teachers')}>
+          <Button variant="outline" className="quick-action-button" onClick={() => navigate('/teachers')}>
             <Users className="w-6 h-6" />
-            <span className="text-foreground">Assign Teachers</span>
+            <span className="quick-action-label">Assign Teachers</span>
           </Button>
-          <Button variant="outline" className="h-auto py-4 flex flex-col gap-2" onClick={() => navigate('/subjects')}>
+          <Button variant="outline" className="quick-action-button" onClick={() => navigate('/subjects')}>
             <BookOpen className="w-6 h-6" />
-            <span className="text-foreground">Manage Subjects</span>
+            <span className="quick-action-label">Manage Subjects</span>
           </Button>
-          <Button variant="outline" className="h-auto py-4 flex flex-col gap-2" onClick={() => navigate('/reports')}>
+          <Button variant="outline" className="quick-action-button" onClick={() => navigate('/reports')}>
             <FileText className="w-6 h-6" />
-            <span className="text-foreground">Reports</span>
+            <span className="quick-action-label">Reports</span>
           </Button>
-          <Button variant="outline" className="h-auto py-4 flex flex-col gap-2" onClick={() => navigate('/unlock-requests')}>
+          <Button variant="outline" className="quick-action-button" onClick={() => navigate('/unlock-requests')}>
             <KeyRound className="w-6 h-6" />
-            <span className="text-foreground">Unlock Requests</span>
+            <span className="quick-action-label">Unlock Requests</span>
           </Button>
-          <Button variant="outline" className="h-auto py-4 flex flex-col gap-2" onClick={() => navigate('/feedback')}>
+          <Button variant="outline" className="quick-action-button" onClick={() => navigate('/feedback')}>
             <MessageSquare className="w-6 h-6" />
-            <span className="text-foreground">Feedback</span>
+            <span className="quick-action-label">Feedback</span>
           </Button>
         </div>
       </div>
