@@ -1070,16 +1070,26 @@ export function ParentDashboard() {
                   const isTop = index === 0;
                   const isFirst = item.rank === 1;
                    const supportThreshold = isPrimaryClass(activeClass) ? 41 : 45;
-                   const needsSupport = index === subjectRankings.length - 1 && item.score < supportThreshold;
+                   const isIncomplete = item.grade === 'INC';
+                   const needsSupport = !isIncomplete && index === subjectRankings.length - 1 && item.score < supportThreshold;
                   
                   return (
                     <tr key={item.subject_id} className="border-b border-border/50 table-row-hover">
                       <td className="py-4 px-4 font-medium text-card-foreground">{item.subject}</td>
-                      <td className="py-4 px-4 text-center font-semibold text-card-foreground">{item.score}%</td>
-                      <td className="py-4 px-4 text-center">
-                        <GradeBadge grade={item.grade} />
+                      <td className="py-4 px-4 text-center font-semibold text-card-foreground">
+                        {isIncomplete ? <span className="text-warning font-bold">INC</span> : `${item.score}%`}
                       </td>
                       <td className="py-4 px-4 text-center">
+                        {isIncomplete ? (
+                          <span className="inline-flex items-center px-2 py-1 rounded-full text-xs font-bold bg-warning/10 text-warning">INC</span>
+                        ) : (
+                          <GradeBadge grade={item.grade} />
+                        )}
+                      </td>
+                      <td className="py-4 px-4 text-center">
+                        {isIncomplete ? (
+                          <span className="text-muted-foreground text-sm">-</span>
+                        ) : (
                           <span className={`inline-flex items-center gap-1 px-3 py-1 rounded-full text-sm font-medium ${
                             item.rank === 1 ? 'bg-yellow-500/10 text-yellow-600' :
                             item.rank <= 3 ? 'bg-primary/10 text-primary' :
@@ -1088,15 +1098,22 @@ export function ParentDashboard() {
                             {item.rank === 1 && <Trophy className="w-3 h-3" />}
                             {item.rank}/{item.totalStudents}
                           </span>
+                        )}
                       </td>
                       <td className="py-4 px-4 text-center">
-                        {isFirst && (
+                        {isIncomplete && (
+                          <span className="inline-flex items-center gap-1 px-2 py-1 rounded-full text-xs font-medium bg-warning/10 text-warning">
+                            <AlertTriangle className="w-3 h-3" />
+                            Haijajazwa Maksi
+                          </span>
+                        )}
+                        {!isIncomplete && isFirst && (
                           <span className="inline-flex items-center gap-1 px-2 py-1 rounded-full text-xs font-medium bg-yellow-500/10 text-yellow-600">
                             <Trophy className="w-3 h-3" />
                             1st in Class
                           </span>
                         )}
-                        {isTop && !isFirst && (
+                        {!isIncomplete && isTop && !isFirst && (
                           <span className="inline-flex items-center gap-1 px-2 py-1 rounded-full text-xs font-medium bg-success/10 text-success">
                             <TrendingUp className="w-3 h-3" />
                             Best Subject
