@@ -63,11 +63,12 @@ serve(async (req) => {
           break;
         }
 
-        const { data, error } = await supabase
+        const { data: admins, error } = await supabase
           .from("admin_credentials")
           .select("id, username, password_hash")
-          .eq("username", username.trim())
-          .maybeSingle();
+          .ilike("username", username.trim());
+
+        const data = findByNormalized(admins, "username", username);
 
         if (error || !data) {
           response = { success: false, error: "Invalid username or password" };
@@ -97,9 +98,7 @@ serve(async (req) => {
           .from("teachers")
           .select("id, full_name, email, password_hash");
 
-        const data = allTeachers?.find(
-          (t: any) => t.full_name.trim().toLowerCase() === name.trim().toLowerCase()
-        );
+        const data = findByNormalized(allTeachers, "full_name", name);
 
         if (error || !data) {
           response = { success: false, error: "Teacher name not found" };
@@ -125,16 +124,16 @@ serve(async (req) => {
           break;
         }
 
-        const normalizedName = studentName.trim().replace(/\s+/g, ' ');
-        const normalizedRoll = rollNumber.trim().toUpperCase();
+        const normalizedName = normalizeText(studentName);
+        const normalizedRoll = normalizeCode(rollNumber);
 
         const { data: rollMatches, error } = await supabase
           .from("students")
           .select("id, full_name, parent_id")
-          .eq("roll_number", normalizedRoll);
+          .ilike("roll_number", `%${rollNumber.trim()}%`);
 
         const student = rollMatches?.find((s: any) => 
-          s.full_name.trim().replace(/\s+/g, ' ').toLowerCase() === normalizedName.toLowerCase()
+          normalizeText(s.full_name) === normalizedName && normalizeCode(s.roll_number) === normalizedRoll
         ) || null;
 
         if (error || !student) {
