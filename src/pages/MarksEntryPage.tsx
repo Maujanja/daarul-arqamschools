@@ -745,11 +745,21 @@ export default function MarksEntryPage() {
       const data = await file.arrayBuffer();
       const workbook = XLSX.read(data);
       const worksheet = workbook.Sheets[workbook.SheetNames[0]];
-      const jsonData = XLSX.utils.sheet_to_json<{
-        'Roll Number': string;
-        'Student Name': string;
-        'Exam Marks': number | string;
-      }>(worksheet);
+      // Read as array of arrays so we can locate the header row dynamically
+      // (template now contains metadata rows above the table)
+      const rows = XLSX.utils.sheet_to_json<(string | number)[]>(worksheet, { header: 1, defval: '' });
+      const headerIdx = rows.findIndex(r =>
+        Array.isArray(r) && r.some(c => String(c).trim().toLowerCase() === 'roll number')
+      );
+      const startIdx = headerIdx >= 0 ? headerIdx : 0;
+      const headerRow = (rows[startIdx] || []).map(c => String(c).trim());
+      const rollIdx = headerRow.findIndex(c => c.toLowerCase() === 'roll number');
+      const marksIdx = headerRow.findIndex(c => c.toLowerCase() === 'exam marks');
+      const jsonData = rows.slice(startIdx + 1).map(r => ({
+        'Roll Number': r?.[rollIdx >= 0 ? rollIdx : 0],
+        'Student Name': r?.[1],
+        'Exam Marks': r?.[marksIdx >= 0 ? marksIdx : 2],
+      })) as { 'Roll Number': string; 'Student Name': string; 'Exam Marks': number | string }[];
 
       let updatedCount = 0;
       
