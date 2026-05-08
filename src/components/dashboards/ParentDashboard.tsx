@@ -166,6 +166,16 @@ export function ParentDashboard() {
   );
 
   const activeClass = resultsClass || childClass;
+
+  // Whether the selected term/year has been admin-approved for this class
+  const isSelectedTermApproved = useMemo(
+    () => releaseStatuses.some(
+      s => s.class_name === activeClass &&
+           (s.term === selectedTerm || termMatches(s.term, selectedTerm)) &&
+           s.approved_by_admin
+    ),
+    [releaseStatuses, activeClass, selectedTerm]
+  );
   
   // Chart refs for capturing as images
   const subjectChartRef = useRef<HTMLDivElement>(null);
@@ -294,6 +304,24 @@ export function ParentDashboard() {
     });
 
     rankings.sort((a, b) => b.score - a.score);
+
+    // Add INC entries for assigned subjects the student has no marks for in this term
+    const studentSubjectIds = new Set(rankings.map(r => r.subject_id));
+    assignedSubjectIds.forEach((subjectId: string) => {
+      if (!studentSubjectIds.has(subjectId)) {
+        const subjName = subjectLookup[subjectId] || 'Unknown';
+        rankings.push({
+          subject: subjName,
+          subject_id: subjectId,
+          score: 0,
+          grade: 'INC',
+          rank: 0,
+          totalStudents: totalStudentsInClass,
+          complete: false,
+        });
+      }
+    });
+
     setSubjectRankings(rankings);
   }, [fetchTable, fetchAllPaginated]);
 
@@ -1042,16 +1070,26 @@ export function ParentDashboard() {
                   const isTop = index === 0;
                   const isFirst = item.rank === 1;
                    const supportThreshold = isPrimaryClass(activeClass) ? 41 : 45;
-                   const needsSupport = index === subjectRankings.length - 1 && item.score < supportThreshold;
+                   const isIncomplete = item.grade === 'INC';
+                   const needsSupport = !isIncomplete && index === subjectRankings.length - 1 && item.score < supportThreshold;
                   
                   return (
                     <tr key={item.subject_id} className="border-b border-border/50 table-row-hover">
                       <td className="py-4 px-4 font-medium text-card-foreground">{item.subject}</td>
-                      <td className="py-4 px-4 text-center font-semibold text-card-foreground">{item.score}%</td>
-                      <td className="py-4 px-4 text-center">
-                        <GradeBadge grade={item.grade} />
+                      <td className="py-4 px-4 text-center font-semibold text-card-foreground">
+                        {isIncomplete ? <span className="text-warning font-bold">INC</span> : `${item.score}%`}
                       </td>
                       <td className="py-4 px-4 text-center">
+                        {isIncomplete ? (
+                          <span className="inline-flex items-center px-2 py-1 rounded-full text-xs font-bold bg-warning/10 text-warning">INC</span>
+                        ) : (
+                          <GradeBadge grade={item.grade} />
+                        )}
+                      </td>
+                      <td className="py-4 px-4 text-center">
+                        {isIncomplete ? (
+                          <span className="text-muted-foreground text-sm">-</span>
+                        ) : (
                           <span className={`inline-flex items-center gap-1 px-3 py-1 rounded-full text-sm font-medium ${
                             item.rank === 1 ? 'bg-yellow-500/10 text-yellow-600' :
                             item.rank <= 3 ? 'bg-primary/10 text-primary' :
@@ -1060,15 +1098,22 @@ export function ParentDashboard() {
                             {item.rank === 1 && <Trophy className="w-3 h-3" />}
                             {item.rank}/{item.totalStudents}
                           </span>
+                        )}
                       </td>
                       <td className="py-4 px-4 text-center">
-                        {isFirst && (
+                        {isIncomplete && (
+                          <span className="inline-flex items-center gap-1 px-2 py-1 rounded-full text-xs font-medium bg-warning/10 text-warning">
+                            <AlertTriangle className="w-3 h-3" />
+                            Haijajazwa Maksi
+                          </span>
+                        )}
+                        {!isIncomplete && isFirst && (
                           <span className="inline-flex items-center gap-1 px-2 py-1 rounded-full text-xs font-medium bg-yellow-500/10 text-yellow-600">
                             <Trophy className="w-3 h-3" />
                             1st in Class
                           </span>
                         )}
-                        {isTop && !isFirst && (
+                        {!isIncomplete && isTop && !isFirst && (
                           <span className="inline-flex items-center gap-1 px-2 py-1 rounded-full text-xs font-medium bg-success/10 text-success">
                             <TrendingUp className="w-3 h-3" />
                             Best Subject
@@ -1283,10 +1328,26 @@ export function ParentDashboard() {
         <div className="card-elevated p-6 animate-fade-in text-center">
           <div className="py-12">
             <BookOpen className="w-12 h-12 mx-auto text-muted-foreground/50 mb-4" />
-            <h3 className="font-display font-semibold text-lg text-card-foreground mb-2">No Results Yet</h3>
-            <p className="text-muted-foreground max-w-md mx-auto">
-              Matokeo bado hayajaandaliwa au hayajaidhinishwa kuonekana kwa series hii. Matokeo yataonekana baada ya walimu kukamilisha na admin kuidhinisha.
-            </p>
+            {isSelectedTermApproved ? (
+              <>
+                <div className="inline-flex items-center justify-center w-20 h-20 rounded-full bg-destructive/10 mb-4">
+                  <span className="text-3xl font-display font-bold text-destructive">ABS</span>
+                </div>
+                <h3 className="font-display font-semibold text-lg text-card-foreground mb-2">
+                  Hakuhudhuria Series Hii (ABS)
+                </h3>
+                <p className="text-muted-foreground max-w-md mx-auto">
+                  {childName} hakufanya somo hata moja katika {selectedTerm}. Matokeo yameidhinishwa lakini hakuna maksi zilizoingizwa kwa mwanafunzi huyu kwa series hii.
+                </p>
+              </>
+            ) : (
+              <>
+                <h3 className="font-display font-semibold text-lg text-card-foreground mb-2">No Results Yet</h3>
+                <p className="text-muted-foreground max-w-md mx-auto">
+                  Matokeo bado hayajaandaliwa au hayajaidhinishwa kuonekana kwa series hii. Matokeo yataonekana baada ya walimu kukamilisha na admin kuidhinisha.
+                </p>
+              </>
+            )}
           </div>
         </div>
       )}
