@@ -28,8 +28,23 @@ interface SubjectData {
 
 const gradeWeight: Record<string, number> = { A: 1, B: 2, C: 3, D: 4, E: 5, F: 5 };
 
+const SUBJECT_ABBREVIATIONS: { match: RegExp; abbr: string }[] = [
+  { match: /social\s*studies.*vocational/i, abbr: 'SST' },
+  { match: /^social\s*studies$/i, abbr: 'SST' },
+  { match: /vocational\s*skills/i, abbr: 'SST' },
+  { match: /mathematics|^math$|arithmetic/i, abbr: 'MATH' },
+  { match: /science\s*&?\s*technology|^science$/i, abbr: 'SCIE' },
+  { match: /^english(\s*language)?$/i, abbr: 'ENG' },
+  { match: /civic.*moral|^civics$/i, abbr: 'C/MO' },
+  { match: /kiswahili/i, abbr: 'KISW' },
+];
+
 const abbreviateSubject = (name: string): string => {
-  const cleaned = name.replace(/[^A-Za-z0-9 ]/g, '').trim();
+  const trimmed = name.trim();
+  for (const { match, abbr } of SUBJECT_ABBREVIATIONS) {
+    if (match.test(trimmed)) return abbr;
+  }
+  const cleaned = trimmed.replace(/[^A-Za-z0-9 ]/g, '').trim();
   if (!cleaned) return 'SUB';
   if (cleaned.length <= 10) return cleaned.toUpperCase();
   const words = cleaned.split(/\s+/);
