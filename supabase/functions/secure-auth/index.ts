@@ -128,7 +128,8 @@ serve(async (req) => {
 
         const { data: rollMatches, error } = await supabase
           .from("students")
-          .select("id, full_name, roll_number, parent_id");
+          .select("id, full_name, roll_number, parent_id")
+          .range(0, 4999);
 
         const student = rollMatches?.find((s: any) => 
           normalizeText(s.full_name) === normalizedName && normalizeCode(s.roll_number) === normalizedRoll
