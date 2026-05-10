@@ -144,14 +144,14 @@ export default function LoginPage() {
               </div>
               <form onSubmit={(e) => { e.preventDefault(); handleLogin(() => loginAsAdmin(adminUsername, adminPassword), "Welcome Admin!"); }} className="space-y-6">
                 <div className="space-y-2">
-                  <Label htmlFor="admin-username">Username</Label>
+                  <Label className="text-white/90" htmlFor="admin-username">Username</Label>
                   <div className="relative">
                     <User className="absolute left-3 top-1/2 -translate-y-1/2 w-5 h-5 text-muted-foreground" />
                     <Input id="admin-username" type="text" placeholder="Enter username" value={adminUsername} onChange={(e) => setAdminUsername(e.target.value)} className="pl-10 input-enhanced" required />
                   </div>
                 </div>
                 <div className="space-y-2">
-                  <Label htmlFor="admin-password">Password</Label>
+                  <Label className="text-white/90" htmlFor="admin-password">Password</Label>
                   <div className="relative">
                     <Lock className="absolute left-3 top-1/2 -translate-y-1/2 w-5 h-5 text-muted-foreground" />
                     <Input id="admin-password" type={showPassword ? 'text' : 'password'} placeholder="Enter password" value={adminPassword} onChange={(e) => setAdminPassword(e.target.value)} className="pl-10 pr-10 input-enhanced" required />
@@ -172,14 +172,14 @@ export default function LoginPage() {
               </div>
               <form onSubmit={(e) => { e.preventDefault(); handleLogin(() => loginAsTeacher(teacherName, teacherPassword), "Welcome Teacher!"); }} className="space-y-6">
                 <div className="space-y-2">
-                  <Label htmlFor="teacher-name">Name</Label>
+                  <Label className="text-white/90" htmlFor="teacher-name">Name</Label>
                   <div className="relative">
                     <User className="absolute left-3 top-1/2 -translate-y-1/2 w-5 h-5 text-muted-foreground" />
                     <Input id="teacher-name" type="text" placeholder="Enter your name" value={teacherName} onChange={(e) => setTeacherName(e.target.value)} className="pl-10 input-enhanced" required />
                   </div>
                 </div>
                 <div className="space-y-2">
-                  <Label htmlFor="teacher-password">Password</Label>
+                  <Label className="text-white/90" htmlFor="teacher-password">Password</Label>
                   <div className="relative">
                     <Lock className="absolute left-3 top-1/2 -translate-y-1/2 w-5 h-5 text-muted-foreground" />
                     <Input id="teacher-password" type={showPassword ? 'text' : 'password'} placeholder="Enter your password" value={teacherPassword} onChange={(e) => setTeacherPassword(e.target.value)} className="pl-10 pr-10 input-enhanced" required />
@@ -200,14 +200,14 @@ export default function LoginPage() {
               </div>
               <form onSubmit={(e) => { e.preventDefault(); handleLogin(() => loginAsParent(studentName, studentRollNumber), "Welcome Parent!"); }} className="space-y-6">
                 <div className="space-y-2">
-                  <Label htmlFor="student-name">Student Name</Label>
+                  <Label className="text-white/90" htmlFor="student-name">Student Name</Label>
                   <div className="relative">
                     <User className="absolute left-3 top-1/2 -translate-y-1/2 w-5 h-5 text-muted-foreground" />
                     <Input id="student-name" type="text" placeholder="Enter your child's name" value={studentName} onChange={(e) => setStudentName(e.target.value)} className="pl-10 input-enhanced" required />
                   </div>
                 </div>
                 <div className="space-y-2">
-                  <Label htmlFor="student-roll">Student ID Number</Label>
+                  <Label className="text-white/90" htmlFor="student-roll">Student ID Number</Label>
                   <div className="relative">
                     <Hash className="absolute left-3 top-1/2 -translate-y-1/2 w-5 h-5 text-muted-foreground" />
                     <Input id="student-roll" type="text" placeholder="Enter your child's ID number" value={studentRollNumber} onChange={(e) => setStudentRollNumber(e.target.value)} className="pl-10 input-enhanced" required />
@@ -227,14 +227,14 @@ export default function LoginPage() {
               </div>
               <form onSubmit={(e) => { e.preventDefault(); handleLogin(() => loginAsSecretary(secretaryUsername, secretaryPassword), "Welcome Secretary!"); }} className="space-y-6">
                 <div className="space-y-2">
-                  <Label htmlFor="secretary-username">Username</Label>
+                  <Label className="text-white/90" htmlFor="secretary-username">Username</Label>
                   <div className="relative">
                     <User className="absolute left-3 top-1/2 -translate-y-1/2 w-5 h-5 text-muted-foreground" />
                     <Input id="secretary-username" type="text" placeholder="Enter username" value={secretaryUsername} onChange={(e) => setSecretaryUsername(e.target.value)} className="pl-10 input-enhanced" required />
                   </div>
                 </div>
                 <div className="space-y-2">
-                  <Label htmlFor="secretary-password">Password</Label>
+                  <Label className="text-white/90" htmlFor="secretary-password">Password</Label>
                   <div className="relative">
                     <Lock className="absolute left-3 top-1/2 -translate-y-1/2 w-5 h-5 text-muted-foreground" />
                     <Input id="secretary-password" type={showPassword ? 'text' : 'password'} placeholder="Enter password" value={secretaryPassword} onChange={(e) => setSecretaryPassword(e.target.value)} className="pl-10 pr-10 input-enhanced" required />
@@ -255,14 +255,14 @@ export default function LoginPage() {
               </div>
               <form onSubmit={(e) => { e.preventDefault(); handleLogin(() => loginAsAccountant(accountantUsername, accountantPassword), "Welcome Accountant!"); }} className="space-y-6">
                 <div className="space-y-2">
-                  <Label htmlFor="accountant-username">Username</Label>
+                  <Label className="text-white/90" htmlFor="accountant-username">Username</Label>
                   <div className="relative">
                     <User className="absolute left-3 top-1/2 -translate-y-1/2 w-5 h-5 text-muted-foreground" />
                     <Input id="accountant-username" type="text" placeholder="Enter username" value={accountantUsername} onChange={(e) => setAccountantUsername(e.target.value)} className="pl-10 input-enhanced" required />
                   </div>
                 </div>
                 <div className="space-y-2">
-                  <Label htmlFor="accountant-password">Password</Label>
+                  <Label className="text-white/90" htmlFor="accountant-password">Password</Label>
                   <div className="relative">
                     <Lock className="absolute left-3 top-1/2 -translate-y-1/2 w-5 h-5 text-muted-foreground" />
                     <Input id="accountant-password" type={showPassword ? 'text' : 'password'} placeholder="Enter password" value={accountantPassword} onChange={(e) => setAccountantPassword(e.target.value)} className="pl-10 pr-10 input-enhanced" required />
@@ -283,14 +283,14 @@ export default function LoginPage() {
               </div>
               <form onSubmit={(e) => { e.preventDefault(); handleLogin(() => loginAsHeadOfSchool(headUsername, headPassword), "Welcome Head of School!"); }} className="space-y-6">
                 <div className="space-y-2">
-                  <Label htmlFor="head-username">Username</Label>
+                  <Label className="text-white/90" htmlFor="head-username">Username</Label>
                   <div className="relative">
                     <User className="absolute left-3 top-1/2 -translate-y-1/2 w-5 h-5 text-muted-foreground" />
                     <Input id="head-username" type="text" placeholder="Enter username" value={headUsername} onChange={(e) => setHeadUsername(e.target.value)} className="pl-10 input-enhanced" required />
                   </div>
                 </div>
                 <div className="space-y-2">
-                  <Label htmlFor="head-password">Password</Label>
+                  <Label className="text-white/90" htmlFor="head-password">Password</Label>
                   <div className="relative">
                     <Lock className="absolute left-3 top-1/2 -translate-y-1/2 w-5 h-5 text-muted-foreground" />
                     <Input id="head-password" type={showPassword ? 'text' : 'password'} placeholder="Enter password" value={headPassword} onChange={(e) => setHeadPassword(e.target.value)} className="pl-10 pr-10 input-enhanced" required />
