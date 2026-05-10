@@ -139,8 +139,8 @@ export default function LoginPage() {
             {/* Admin Login */}
             <TabsContent value="admin" className="space-y-6 mt-6">
               <div className="text-center lg:text-left">
-                <h2 className="text-2xl font-display font-bold text-foreground">Administrator</h2>
-                <p className="text-muted-foreground mt-2">Login as system administrator</p>
+                <h2 className="text-2xl font-display font-bold text-white drop-shadow">Administrator</h2>
+                <p className="text-white/80 mt-2">Login as system administrator</p>
               </div>
               <form onSubmit={(e) => { e.preventDefault(); handleLogin(() => loginAsAdmin(adminUsername, adminPassword), "Welcome Admin!"); }} className="space-y-6">
                 <div className="space-y-2">
@@ -167,8 +167,8 @@ export default function LoginPage() {
             {/* Teacher Login */}
             <TabsContent value="teacher" className="space-y-6 mt-6">
               <div className="text-center lg:text-left">
-                <h2 className="text-2xl font-display font-bold text-foreground">Teacher</h2>
-                <p className="text-muted-foreground mt-2">Login with credentials provided by admin</p>
+                <h2 className="text-2xl font-display font-bold text-white drop-shadow">Teacher</h2>
+                <p className="text-white/80 mt-2">Login with credentials provided by admin</p>
               </div>
               <form onSubmit={(e) => { e.preventDefault(); handleLogin(() => loginAsTeacher(teacherName, teacherPassword), "Welcome Teacher!"); }} className="space-y-6">
                 <div className="space-y-2">
@@ -195,8 +195,8 @@ export default function LoginPage() {
             {/* Parent Login */}
             <TabsContent value="parent" className="space-y-6 mt-6">
               <div className="text-center lg:text-left">
-                <h2 className="text-2xl font-display font-bold text-foreground">Parent</h2>
-                <p className="text-muted-foreground mt-2">Login with your child's information</p>
+                <h2 className="text-2xl font-display font-bold text-white drop-shadow">Parent</h2>
+                <p className="text-white/80 mt-2">Login with your child's information</p>
               </div>
               <form onSubmit={(e) => { e.preventDefault(); handleLogin(() => loginAsParent(studentName, studentRollNumber), "Welcome Parent!"); }} className="space-y-6">
                 <div className="space-y-2">
@@ -222,8 +222,8 @@ export default function LoginPage() {
             {/* Secretary Login */}
             <TabsContent value="secretary" className="space-y-6 mt-6">
               <div className="text-center lg:text-left">
-                <h2 className="text-2xl font-display font-bold text-foreground">Secretary</h2>
-                <p className="text-muted-foreground mt-2">Login to manage admissions</p>
+                <h2 className="text-2xl font-display font-bold text-white drop-shadow">Secretary</h2>
+                <p className="text-white/80 mt-2">Login to manage admissions</p>
               </div>
               <form onSubmit={(e) => { e.preventDefault(); handleLogin(() => loginAsSecretary(secretaryUsername, secretaryPassword), "Welcome Secretary!"); }} className="space-y-6">
                 <div className="space-y-2">
@@ -250,8 +250,8 @@ export default function LoginPage() {
             {/* Accountant Login */}
             <TabsContent value="accountant" className="space-y-6 mt-6">
               <div className="text-center lg:text-left">
-                <h2 className="text-2xl font-display font-bold text-foreground">Accountant</h2>
-                <p className="text-muted-foreground mt-2">Login to manage fees and payments</p>
+                <h2 className="text-2xl font-display font-bold text-white drop-shadow">Accountant</h2>
+                <p className="text-white/80 mt-2">Login to manage fees and payments</p>
               </div>
               <form onSubmit={(e) => { e.preventDefault(); handleLogin(() => loginAsAccountant(accountantUsername, accountantPassword), "Welcome Accountant!"); }} className="space-y-6">
                 <div className="space-y-2">
@@ -278,8 +278,8 @@ export default function LoginPage() {
             {/* Head of School Login */}
             <TabsContent value="head" className="space-y-6 mt-6">
               <div className="text-center lg:text-left">
-                <h2 className="text-2xl font-display font-bold text-foreground">Head of School</h2>
-                <p className="text-muted-foreground mt-2">Login to manage your section</p>
+                <h2 className="text-2xl font-display font-bold text-white drop-shadow">Head of School</h2>
+                <p className="text-white/80 mt-2">Login to manage your section</p>
               </div>
               <form onSubmit={(e) => { e.preventDefault(); handleLogin(() => loginAsHeadOfSchool(headUsername, headPassword), "Welcome Head of School!"); }} className="space-y-6">
                 <div className="space-y-2">
