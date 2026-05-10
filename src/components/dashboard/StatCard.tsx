@@ -38,44 +38,35 @@ const bgImages = {
 };
 
 export function StatCard({ title, value, subtitle, icon: Icon, trend, variant = 'default', bgStyle }: StatCardProps) {
-  const backgroundImage = bgStyle ? bgImages[bgStyle] : undefined;
+  // Force glass look across all stat cards (ignore bgStyle background images)
+  const backgroundImage: string | undefined = undefined;
 
   return (
-    <div 
-      className={cn("stat-card animate-fade-in", variantStyles[variant])}
-      style={backgroundImage ? {
-        backgroundImage: `linear-gradient(135deg, rgba(255,255,255,0.55) 0%, rgba(255,255,255,0.45) 100%), url(${backgroundImage})`,
-        backgroundSize: 'cover',
-        backgroundPosition: 'center',
-      } : undefined}
-    >
+    <div className={cn("stat-card animate-fade-in", variantStyles[variant])}>
       <div className="flex items-start justify-between">
         <div className="space-y-2">
           <p className={cn(
             "text-sm font-semibold",
-            backgroundImage ? "text-slate-700 drop-shadow-sm" : "text-muted-foreground"
+            "text-white/80"
           )}>{title}</p>
           <p className={cn(
             "text-3xl font-bold font-display",
-            backgroundImage ? "text-slate-900 drop-shadow-md" : "text-card-foreground"
+            "text-white drop-shadow"
           )}>{value}</p>
           {subtitle && (
             <p className={cn(
               "text-sm font-medium",
-              backgroundImage ? "text-slate-600 drop-shadow-sm" : "text-muted-foreground"
+              "text-white/70"
             )}>{subtitle}</p>
           )}
           {trend && (
             <div className={cn(
               "inline-flex items-center gap-1 text-sm font-semibold drop-shadow-sm",
-              trend.isPositive ? "text-emerald-700" : "text-red-700"
+              trend.isPositive ? "text-emerald-300" : "text-red-300"
             )}>
               <span>{trend.isPositive ? '↑' : '↓'}</span>
               <span>{Math.abs(trend.value)}%</span>
-              <span className={cn(
-                "font-medium",
-                backgroundImage ? "text-slate-600" : "text-muted-foreground"
-              )}>vs last term</span>
+              <span className="font-medium text-white/70">vs last term</span>
             </div>
           )}
         </div>
