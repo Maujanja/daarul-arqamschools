@@ -128,12 +128,12 @@ export default function LoginPage() {
 
           <Tabs defaultValue="admin" className="w-full">
             <TabsList className="grid w-full grid-cols-3 lg:grid-cols-6">
-              <TabsTrigger value="admin" className="text-xs text-white/80 data-[state=active]:text-white data-[state=active]:bg-white/20">Admin</TabsTrigger>
-              <TabsTrigger value="teacher" className="text-xs text-white/80 data-[state=active]:text-white data-[state=active]:bg-white/20">Teacher</TabsTrigger>
-              <TabsTrigger value="parent" className="text-xs text-white/80 data-[state=active]:text-white data-[state=active]:bg-white/20">Parent</TabsTrigger>
-              <TabsTrigger value="secretary" className="text-xs text-white/80 data-[state=active]:text-white data-[state=active]:bg-white/20">Secretary</TabsTrigger>
-              <TabsTrigger value="accountant" className="text-xs text-white/80 data-[state=active]:text-white data-[state=active]:bg-white/20">Accountant</TabsTrigger>
-              <TabsTrigger value="head" className="text-xs text-white/80 data-[state=active]:text-white data-[state=active]:bg-white/20">Head</TabsTrigger>
+              <TabsTrigger value="admin" className="text-xs text-white/80 data-[state=active]:text-white data-[state=active]:bg-purple-900/70">Admin</TabsTrigger>
+              <TabsTrigger value="teacher" className="text-xs text-white/80 data-[state=active]:text-white data-[state=active]:bg-purple-900/70">Teacher</TabsTrigger>
+              <TabsTrigger value="parent" className="text-xs text-white/80 data-[state=active]:text-white data-[state=active]:bg-purple-900/70">Parent</TabsTrigger>
+              <TabsTrigger value="secretary" className="text-xs text-white/80 data-[state=active]:text-white data-[state=active]:bg-purple-900/70">Secretary</TabsTrigger>
+              <TabsTrigger value="accountant" className="text-xs text-white/80 data-[state=active]:text-white data-[state=active]:bg-purple-900/70">Accountant</TabsTrigger>
+              <TabsTrigger value="head" className="text-xs text-white/80 data-[state=active]:text-white data-[state=active]:bg-purple-900/70">Head</TabsTrigger>
             </TabsList>
 
             {/* Admin Login */}
