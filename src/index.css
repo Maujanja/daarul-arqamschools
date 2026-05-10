@@ -221,17 +221,24 @@
 
   /* Glassmorphism for dashboard cards */
   [data-glass-card="true"] {
-    backdrop-filter: blur(22px) saturate(170%) !important;
-    -webkit-backdrop-filter: blur(22px) saturate(170%) !important;
-    background: linear-gradient(135deg, rgba(255,255,255,0.22) 0%, rgba(255,255,255,0.06) 100%) !important;
-    border: 1px solid rgba(255,255,255,0.35) !important;
-    box-shadow:
-      0 30px 60px -20px rgba(0,0,0,0.55),
-      0 18px 30px -12px rgba(0,0,0,0.35),
-      inset 0 1px 0 rgba(255,255,255,0.45),
-      inset 0 -1px 0 rgba(255,255,255,0.10),
-      inset 1px 0 0 rgba(255,255,255,0.18) !important;
-    color: #fff !important;
+    position: relative;
+    isolation: isolate;
+    backdrop-filter: blur(28px) saturate(190%) brightness(1.12) !important;
+    -webkit-backdrop-filter: blur(28px) saturate(190%) brightness(1.12) !important;
+    background: var(--glass-panel), var(--glass-prism) !important;
+    border: 1px solid var(--glass-border) !important;
+    box-shadow: var(--glass-shadow) !important;
+    color: var(--glass-foreground) !important;
+  }
+  [data-glass-card="true"]::before {
+    content: "";
+    position: absolute;
+    inset: 1px;
+    border-radius: inherit;
+    background: var(--glass-highlight);
+    opacity: 0.76;
+    pointer-events: none;
+    z-index: -1;
   }
   [data-glass-card="true"] .text-muted-foreground,
   [data-glass-card="true"] p,
@@ -244,6 +251,7 @@
   }
 
   /* Apply glass effect broadly to dashboard surfaces (excluding sidebar) */
+  main .card-elevated,
   main .bg-card,
   main .bg-white,
   main .bg-background,
@@ -252,16 +260,14 @@
   main .rounded-xl.border,
   main .rounded-2xl.border,
   main .rounded-lg.border {
-    backdrop-filter: blur(22px) saturate(170%);
-    -webkit-backdrop-filter: blur(22px) saturate(170%);
-    background: linear-gradient(135deg, rgba(255,255,255,0.18) 0%, rgba(255,255,255,0.06) 100%) !important;
-    border-color: rgba(255,255,255,0.30) !important;
-    box-shadow:
-      0 24px 50px -18px rgba(0,0,0,0.55),
-      0 12px 24px -10px rgba(0,0,0,0.30),
-      inset 0 1px 0 rgba(255,255,255,0.40),
-      inset 0 -1px 0 rgba(255,255,255,0.08);
-    color: #fff;
+    position: relative;
+    isolation: isolate;
+    backdrop-filter: blur(28px) saturate(190%) brightness(1.12);
+    -webkit-backdrop-filter: blur(28px) saturate(190%) brightness(1.12);
+    background: var(--glass-panel), var(--glass-prism) !important;
+    border-color: var(--glass-border) !important;
+    box-shadow: var(--glass-shadow);
+    color: var(--glass-foreground);
   }
 
   /* Keep sidebar untouched */
