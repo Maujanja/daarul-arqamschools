@@ -37,16 +37,16 @@ export function StatCard({ title, value, subtitle, icon: Icon, trend, variant = 
         <div className="space-y-2">
           <p className={cn(
             "text-sm font-semibold",
-            "text-current/80"
+            "text-foreground/80"
           )}>{title}</p>
           <p className={cn(
             "text-3xl font-bold font-display",
-            "text-current drop-shadow-sm"
+            "text-foreground drop-shadow-sm"
           )}>{value}</p>
           {subtitle && (
             <p className={cn(
               "text-sm font-medium",
-              "text-current/70"
+              "text-foreground/70"
             )}>{subtitle}</p>
           )}
           {trend && (
@@ -56,7 +56,7 @@ export function StatCard({ title, value, subtitle, icon: Icon, trend, variant = 
             )}>
               <span>{trend.isPositive ? '↑' : '↓'}</span>
               <span>{Math.abs(trend.value)}%</span>
-              <span className="font-medium text-current/70">vs last term</span>
+              <span className="font-medium text-foreground/70">vs last term</span>
             </div>
           )}
         </div>
