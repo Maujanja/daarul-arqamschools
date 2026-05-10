@@ -85,48 +85,35 @@ export default function LoginPage() {
   );
 
   return (
-    <div className="min-h-screen flex">
-      {/* Left Panel - Hero */}
-      <div className="hidden lg:flex lg:w-1/2 relative overflow-hidden" style={{ background: 'var(--gradient-hero)' }}>
-        <div className="absolute inset-0 bg-[url('data:image/svg+xml,%3Csvg%20width%3D%2260%22%20height%3D%2260%22%20viewBox%3D%220%200%2060%2060%22%20xmlns%3D%22http%3A//www.w3.org/2000/svg%22%3E%3Cg%20fill%3D%22none%22%20fill-rule%3D%22evenodd%22%3E%3Cg%20fill%3D%22%23ffffff%22%20fill-opacity%3D%220.05%22%3E%3Cpath%20d%3D%22M36%2034v-4h-2v4h-4v2h4v4h2v-4h4v-2h-4zm0-30V0h-2v4h-4v2h4v4h2V6h4V4h-4zM6%2034v-4H4v4H0v2h4v4h2v-4h4v-2H6zM6%204V0H4v4H0v2h4v4h2V6h4V4H6z%22/%3E%3C/g%3E%3C/g%3E%3C/svg%3E')] opacity-50" />
-        <div className="relative z-10 flex flex-col justify-center p-12 text-primary-foreground">
-          <div className="mb-8">
-            <img src={dasLogo} alt="Daarul Arqam Logo" className="w-24 h-24 object-contain mb-6" />
-            <h1 className="text-3xl font-display font-bold mb-2">DAARUL-ARQAM</h1>
-            <h2 className="text-2xl font-display font-semibold mb-4">SCHOOLS</h2>
-            <p className="text-lg text-primary-foreground/80">Exam Results Management System</p>
-          </div>
-          
-          <div className="space-y-4 mt-8">
-            {[
-              { icon: UserCheck, title: 'Admin', desc: 'Full system control' },
-              { icon: User, title: 'Teacher', desc: 'Marks entry & reports' },
-              { icon: Hash, title: 'Parent', desc: "View child's results" },
-              { icon: FileText, title: 'Secretary', desc: 'Student admission' },
-              { icon: DollarSign, title: 'Accountant', desc: 'Fee management' },
-              { icon: School, title: 'Head of School', desc: 'Section oversight' },
-            ].map(({ icon: Icon, title, desc }) => (
-              <div key={title} className="flex items-start gap-4">
-                <div className="w-10 h-10 rounded-lg bg-primary/20 flex items-center justify-center shrink-0">
-                  <Icon className="w-5 h-5" />
-                </div>
-                <div>
-                  <h3 className="font-semibold mb-1">{title}</h3>
-                  <p className="text-sm text-primary-foreground/70">{desc}</p>
-                </div>
-              </div>
-            ))}
-          </div>
-        </div>
-      </div>
+    <div
+      className="min-h-screen flex items-center justify-center p-4 sm:p-8 relative overflow-hidden"
+      style={{
+        background:
+          'radial-gradient(circle at 20% 20%, #5b2a8c 0%, #2a0f4d 45%, #14062b 100%)',
+      }}
+    >
+      {/* Decorative purple blobs */}
+      <div
+        aria-hidden
+        className="pointer-events-none absolute -top-32 -left-24 w-[28rem] h-[28rem] rounded-full opacity-40"
+        style={{ background: 'radial-gradient(circle, #9d5bff 0%, transparent 70%)' }}
+      />
+      <div
+        aria-hidden
+        className="pointer-events-none absolute -bottom-32 -right-24 w-[32rem] h-[32rem] rounded-full opacity-40"
+        style={{ background: 'radial-gradient(circle, #6a2dd1 0%, transparent 70%)' }}
+      />
 
-      {/* Right Panel - Login Forms */}
-      <div className="flex-1 flex items-center justify-center p-8">
-        <div className="w-full max-w-md space-y-8 animate-fade-in">
-          <div className="lg:hidden text-center">
-            <img src={dasLogo} alt="Daarul Arqam Logo" className="w-20 h-20 object-contain mx-auto mb-4" />
-            <h1 className="text-xl font-display font-bold text-foreground">DAARUL-ARQAM</h1>
-            <p className="text-sm text-muted-foreground">SCHOOLS</p>
+      {/* Glass Card */}
+      <div
+        data-login-glass="true"
+        className="relative w-full max-w-md rounded-3xl border border-white/20 bg-white/10 p-6 sm:p-8 animate-fade-in"
+      >
+        <div className="w-full space-y-6">
+          <div className="text-center">
+            <img src={dasLogo} alt="Daarul Arqam Logo" className="w-20 h-20 object-contain mx-auto mb-3 drop-shadow-lg" />
+            <h1 className="text-xl font-display font-bold text-white">DAARUL-ARQAM</h1>
+            <p className="text-sm text-white/70">SCHOOLS</p>
           </div>
 
           {error && (
