@@ -240,14 +240,8 @@
     pointer-events: none;
     z-index: -1;
   }
-  [data-glass-card="true"] .text-muted-foreground,
-  [data-glass-card="true"] p,
-  [data-glass-card="true"] span,
-  [data-glass-card="true"] h1,
-  [data-glass-card="true"] h2,
-  [data-glass-card="true"] h3,
-  [data-glass-card="true"] h4 {
-    color: inherit;
+  [data-glass-card="true"] .text-muted-foreground {
+    color: var(--glass-muted) !important;
   }
 
   /* Apply glass effect broadly to dashboard surfaces (excluding sidebar) */
@@ -257,6 +251,7 @@
   main .bg-background,
   main [role="dialog"] > div,
   main table,
+  main .rounded-md.border,
   main .rounded-xl.border,
   main .rounded-2xl.border,
   main .rounded-lg.border {
@@ -268,6 +263,24 @@
     border-color: var(--glass-border) !important;
     box-shadow: var(--glass-shadow);
     color: var(--glass-foreground);
+  }
+
+  main .card-elevated::before,
+  main .bg-card::before,
+  main .bg-white::before,
+  main .bg-background::before,
+  main .rounded-md.border::before,
+  main .rounded-xl.border::before,
+  main .rounded-2xl.border::before,
+  main .rounded-lg.border::before {
+    content: "";
+    position: absolute;
+    inset: 1px;
+    border-radius: inherit;
+    background: var(--glass-highlight);
+    opacity: 0.72;
+    pointer-events: none;
+    z-index: -1;
   }
 
   /* Keep sidebar untouched */
