@@ -330,11 +330,14 @@
   }
 
   .stat-card {
-    @apply rounded-2xl border border-white/25 p-6 relative overflow-hidden text-white;
-    background: linear-gradient(135deg, rgba(255,255,255,0.18) 0%, rgba(255,255,255,0.08) 100%);
-    backdrop-filter: blur(20px) saturate(150%);
-    -webkit-backdrop-filter: blur(20px) saturate(150%);
-    box-shadow: 0 12px 40px -12px rgba(0,0,0,0.45), inset 0 1px 0 rgba(255,255,255,0.25);
+    @apply rounded-2xl border p-6 relative overflow-hidden;
+    isolation: isolate;
+    color: var(--glass-foreground);
+    border-color: var(--glass-border);
+    background: var(--glass-panel), var(--glass-prism);
+    backdrop-filter: blur(28px) saturate(190%) brightness(1.12);
+    -webkit-backdrop-filter: blur(28px) saturate(190%) brightness(1.12);
+    box-shadow: var(--glass-shadow);
   }
 
   .stat-card:hover {
@@ -342,7 +345,14 @@
   }
 
   .stat-card::before {
-    content: none;
+    content: "";
+    position: absolute;
+    inset: 1px;
+    border-radius: inherit;
+    background: var(--glass-highlight);
+    opacity: 0.8;
+    pointer-events: none;
+    z-index: -1;
   }
 
   .stat-card-silk {
