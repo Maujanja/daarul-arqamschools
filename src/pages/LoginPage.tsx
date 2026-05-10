@@ -87,7 +87,7 @@ export default function LoginPage() {
 
   return (
     <div
-      className="min-h-screen flex items-center justify-center p-4 sm:p-8 relative overflow-hidden"
+      className="min-h-dvh flex items-center justify-center p-4 sm:p-8 relative overflow-x-hidden overflow-y-auto"
       style={{
         backgroundImage: `linear-gradient(135deg, rgba(20,6,43,0.75) 0%, rgba(42,15,77,0.7) 50%, rgba(91,42,140,0.65) 100%), url(${bgLogin})`,
         backgroundSize: 'cover',
