@@ -247,10 +247,13 @@ export function Sidebar() {
         {panelOpen && (
           <motion.aside
             key="mobile-sidebar"
+            data-sidebar-glass="true"
             className={cn(
-              'fixed left-0 top-0 h-full w-72 z-50 lg:hidden',
-              'bg-gradient-to-b from-[#1e3a5f] via-[#1a3455] to-[#152a45]',
-              'shadow-none',
+              'fixed left-3 top-3 bottom-3 w-[17rem] z-50 lg:hidden',
+              'rounded-3xl overflow-hidden',
+              'bg-gradient-to-b from-[#1e3a5f]/55 via-[#1a3455]/55 to-[#152a45]/60',
+              'border border-white/15',
+              'shadow-[0_20px_60px_-15px_rgba(0,0,0,0.55)]',
             )}
             initial={{ x: '-100%' }}
             animate={{ x: 0 }}
@@ -276,10 +279,13 @@ export function Sidebar() {
 
       {/* Desktop static sidebar (always visible, items animate in once) */}
       <aside
+        data-sidebar-glass="true"
         className={cn(
-          'hidden lg:block fixed left-0 top-0 h-full w-72 z-50',
-          'bg-gradient-to-b from-[#1e3a5f] via-[#1a3455] to-[#152a45]',
-          'shadow-none',
+          'hidden lg:block fixed left-4 top-4 bottom-4 w-[17rem] z-50',
+          'rounded-3xl overflow-hidden',
+          'bg-gradient-to-b from-[#1e3a5f]/55 via-[#1a3455]/55 to-[#152a45]/60',
+          'border border-white/15',
+          'shadow-[0_20px_60px_-15px_rgba(0,0,0,0.55)]',
         )}
       >
         <SidebarInner
