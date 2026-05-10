@@ -38,11 +38,11 @@ export function DashboardLayout({ children }: DashboardLayoutProps) {
     <div className="min-h-screen relative">
       {/* Background Image */}
       <div 
-        className="fixed inset-0 bg-cover bg-center bg-no-repeat"
+        className="fixed inset-0 bg-cover bg-center bg-no-repeat pointer-events-none -z-10"
         style={{ backgroundImage: `url(${backgroundImage})` }}
       />
       {/* Overlay for better readability */}
-      <div className="fixed inset-0 bg-black/30" />
+      <div className="fixed inset-0 bg-black/30 pointer-events-none -z-10" />
       
       {/* Content */}
       <div className="relative z-10">
