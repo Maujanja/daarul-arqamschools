@@ -1,5 +1,7 @@
 import { LucideIcon } from 'lucide-react';
 import { cn } from '@/lib/utils';
+import cardBgSilk from '@/assets/card-bg-silk.jpg';
+import cardBgCherries from '@/assets/card-bg-cherries.jpg';
 
 interface StatCardProps {
   title: string;
@@ -30,10 +32,22 @@ const iconVariantStyles = {
   warning: 'bg-gradient-to-br from-amber-400 to-orange-500 text-white shadow-lg shadow-orange-500/30',
 };
 
-export function StatCard({ title, value, subtitle, icon: Icon, trend, variant = 'default' }: StatCardProps) {
+export function StatCard({ title, value, subtitle, icon: Icon, trend, variant = 'default', bgStyle }: StatCardProps) {
+  const bgImage = bgStyle === 'silk' ? cardBgSilk : bgStyle === 'cherries' ? cardBgCherries : null;
   return (
-    <div className={cn("stat-card animate-fade-in", variantStyles[variant])}>
-      <div className="flex items-start justify-between">
+    <div
+      className={cn("stat-card animate-fade-in", variantStyles[variant])}
+      style={
+        bgImage
+          ? {
+              backgroundImage: `linear-gradient(rgba(255,255,255,0.55), rgba(255,255,255,0.55)), url(${bgImage})`,
+              backgroundSize: 'cover',
+              backgroundPosition: 'center',
+            }
+          : undefined
+      }
+    >
+      <div className="relative flex items-start justify-between">
         <div className="space-y-2">
           <p className={cn(
             "text-sm font-semibold",
