@@ -185,7 +185,6 @@
 
   header,
   footer,
-  aside,
   [class*="fixed"],
   [class*="sticky"],
   [role="dialog"],
@@ -194,6 +193,13 @@
     -webkit-backdrop-filter: none !important;
     filter: none !important;
     box-shadow: none !important;
+  }
+
+  /* Allow glass effect specifically on the sidebar */
+  aside[data-sidebar-glass="true"] {
+    backdrop-filter: blur(24px) saturate(140%) !important;
+    -webkit-backdrop-filter: blur(24px) saturate(140%) !important;
+    box-shadow: 0 20px 60px -15px rgba(0,0,0,0.55) !important;
   }
 }
 
