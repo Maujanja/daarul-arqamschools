@@ -67,6 +67,13 @@
     --shadow-md: 0 4px 6px -1px hsl(222 47% 11% / 0.1), 0 2px 4px -2px hsl(222 47% 11% / 0.1);
     --shadow-lg: 0 10px 15px -3px hsl(222 47% 11% / 0.1), 0 4px 6px -4px hsl(222 47% 11% / 0.1);
     --shadow-glow: 0 0 20px hsl(199 89% 48% / 0.3);
+    --glass-panel: linear-gradient(145deg, hsl(0 0% 100% / 0.46) 0%, hsl(205 80% 98% / 0.22) 42%, hsl(215 72% 91% / 0.12) 100%);
+    --glass-highlight: linear-gradient(155deg, hsl(0 0% 100% / 0.82) 0%, hsl(0 0% 100% / 0.14) 26%, transparent 48%);
+    --glass-prism: radial-gradient(circle at 8% 10%, hsl(0 0% 100% / 0.82) 0 8%, transparent 22%), radial-gradient(circle at 98% 88%, hsl(38 92% 62% / 0.38) 0 8%, transparent 23%), radial-gradient(circle at 92% 18%, hsl(206 100% 68% / 0.32) 0 7%, transparent 20%);
+    --glass-border: hsl(210 55% 96% / 0.72);
+    --glass-foreground: hsl(222 47% 14%);
+    --glass-muted: hsl(218 26% 34%);
+    --glass-shadow: 0 24px 42px -22px hsl(222 47% 11% / 0.52), 0 10px 18px -12px hsl(215 42% 18% / 0.44), inset 0 1px 0 hsl(0 0% 100% / 0.86), inset 0 -10px 18px hsl(210 76% 98% / 0.16), inset 1px 0 0 hsl(0 0% 100% / 0.42), inset -1px 0 0 hsl(214 55% 67% / 0.22);
 
     /* Chart colors */
     --chart-1: 199 89% 48%;
@@ -135,7 +142,8 @@
   #root {
     min-height: 100%;
     background: hsl(var(--background));
-    overscroll-behavior: none;
+    overscroll-behavior-x: none;
+    overscroll-behavior-y: auto;
   }
 
   html {
@@ -150,7 +158,9 @@
     @apply bg-background text-foreground font-sans antialiased;
     min-height: 100dvh;
     overflow-x: hidden;
-    overscroll-behavior-y: none;
+    overflow-y: auto;
+    overscroll-behavior-y: auto;
+    -webkit-overflow-scrolling: touch;
   }
 
   h1, h2, h3, h4, h5, h6 {
@@ -211,47 +221,66 @@
 
   /* Glassmorphism for dashboard cards */
   [data-glass-card="true"] {
-    backdrop-filter: blur(22px) saturate(170%) !important;
-    -webkit-backdrop-filter: blur(22px) saturate(170%) !important;
-    background: linear-gradient(135deg, rgba(255,255,255,0.22) 0%, rgba(255,255,255,0.06) 100%) !important;
-    border: 1px solid rgba(255,255,255,0.35) !important;
-    box-shadow:
-      0 30px 60px -20px rgba(0,0,0,0.55),
-      0 18px 30px -12px rgba(0,0,0,0.35),
-      inset 0 1px 0 rgba(255,255,255,0.45),
-      inset 0 -1px 0 rgba(255,255,255,0.10),
-      inset 1px 0 0 rgba(255,255,255,0.18) !important;
-    color: #fff !important;
+    position: relative;
+    isolation: isolate;
+    backdrop-filter: blur(28px) saturate(190%) brightness(1.12) !important;
+    -webkit-backdrop-filter: blur(28px) saturate(190%) brightness(1.12) !important;
+    background: var(--glass-panel), var(--glass-prism) !important;
+    border: 1px solid var(--glass-border) !important;
+    box-shadow: var(--glass-shadow) !important;
+    color: var(--glass-foreground) !important;
   }
-  [data-glass-card="true"] .text-muted-foreground,
-  [data-glass-card="true"] p,
-  [data-glass-card="true"] span,
-  [data-glass-card="true"] h1,
-  [data-glass-card="true"] h2,
-  [data-glass-card="true"] h3,
-  [data-glass-card="true"] h4 {
-    color: inherit;
+  [data-glass-card="true"]::before {
+    content: "";
+    position: absolute;
+    inset: 1px;
+    border-radius: inherit;
+    background: var(--glass-highlight);
+    opacity: 0.76;
+    pointer-events: none;
+    z-index: -1;
+  }
+  [data-glass-card="true"] .text-muted-foreground {
+    color: var(--glass-muted) !important;
   }
 
   /* Apply glass effect broadly to dashboard surfaces (excluding sidebar) */
+  main .card-elevated,
   main .bg-card,
   main .bg-white,
   main .bg-background,
   main [role="dialog"] > div,
   main table,
+  main .rounded-md.border,
   main .rounded-xl.border,
   main .rounded-2xl.border,
   main .rounded-lg.border {
-    backdrop-filter: blur(22px) saturate(170%);
-    -webkit-backdrop-filter: blur(22px) saturate(170%);
-    background: linear-gradient(135deg, rgba(255,255,255,0.18) 0%, rgba(255,255,255,0.06) 100%) !important;
-    border-color: rgba(255,255,255,0.30) !important;
-    box-shadow:
-      0 24px 50px -18px rgba(0,0,0,0.55),
-      0 12px 24px -10px rgba(0,0,0,0.30),
-      inset 0 1px 0 rgba(255,255,255,0.40),
-      inset 0 -1px 0 rgba(255,255,255,0.08);
-    color: #fff;
+    position: relative;
+    isolation: isolate;
+    backdrop-filter: blur(28px) saturate(190%) brightness(1.12);
+    -webkit-backdrop-filter: blur(28px) saturate(190%) brightness(1.12);
+    background: var(--glass-panel), var(--glass-prism) !important;
+    border-color: var(--glass-border) !important;
+    box-shadow: var(--glass-shadow);
+    color: var(--glass-foreground);
+  }
+
+  main .card-elevated::before,
+  main .bg-card::before,
+  main .bg-white::before,
+  main .bg-background::before,
+  main .rounded-md.border::before,
+  main .rounded-xl.border::before,
+  main .rounded-2xl.border::before,
+  main .rounded-lg.border::before {
+    content: "";
+    position: absolute;
+    inset: 1px;
+    border-radius: inherit;
+    background: var(--glass-highlight);
+    opacity: 0.72;
+    pointer-events: none;
+    z-index: -1;
   }
 
   /* Keep sidebar untouched */
@@ -314,11 +343,14 @@
   }
 
   .stat-card {
-    @apply rounded-2xl border border-white/25 p-6 relative overflow-hidden text-white;
-    background: linear-gradient(135deg, rgba(255,255,255,0.18) 0%, rgba(255,255,255,0.08) 100%);
-    backdrop-filter: blur(20px) saturate(150%);
-    -webkit-backdrop-filter: blur(20px) saturate(150%);
-    box-shadow: 0 12px 40px -12px rgba(0,0,0,0.45), inset 0 1px 0 rgba(255,255,255,0.25);
+    @apply rounded-2xl border p-6 relative overflow-hidden;
+    isolation: isolate;
+    color: var(--glass-foreground);
+    border-color: var(--glass-border);
+    background: var(--glass-panel), var(--glass-prism);
+    backdrop-filter: blur(28px) saturate(190%) brightness(1.12);
+    -webkit-backdrop-filter: blur(28px) saturate(190%) brightness(1.12);
+    box-shadow: var(--glass-shadow);
   }
 
   .stat-card:hover {
@@ -326,7 +358,14 @@
   }
 
   .stat-card::before {
-    content: none;
+    content: "";
+    position: absolute;
+    inset: 1px;
+    border-radius: inherit;
+    background: var(--glass-highlight);
+    opacity: 0.8;
+    pointer-events: none;
+    z-index: -1;
   }
 
   .stat-card-silk {

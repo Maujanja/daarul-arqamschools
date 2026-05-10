@@ -35,19 +35,22 @@ export function DashboardLayout({ children }: DashboardLayoutProps) {
   };
 
   return (
-    <div className="min-h-screen relative">
+    <div className="min-h-dvh relative overflow-x-hidden">
       {/* Background Image */}
       <div 
         className="fixed inset-0 bg-cover bg-center bg-no-repeat pointer-events-none -z-10"
         style={{ backgroundImage: `url(${backgroundImage})` }}
       />
       {/* Overlay for better readability */}
-      <div className="fixed inset-0 bg-black/30 pointer-events-none -z-10" />
+      <div className="fixed inset-0 bg-black/25 pointer-events-none -z-10" />
       
       {/* Content */}
       <div className="relative z-10">
         <Sidebar />
-        <main className="lg:ml-72 min-h-screen">
+        <main
+          className="lg:ml-72 h-[100dvh] min-h-[100dvh] overflow-y-auto overflow-x-hidden touch-pan-y overscroll-contain"
+          style={{ WebkitOverflowScrolling: 'touch' }}
+        >
           {/* Header with Logo */}
           <header className="hidden lg:flex items-center gap-3 px-8 py-4 border-b border-white/10 bg-[#1e3a5f] sticky top-0 z-30">
             <img src={dasLogo} alt="Daarul Arqam Logo" className="w-10 h-10 object-contain" />
@@ -81,7 +84,7 @@ export function DashboardLayout({ children }: DashboardLayoutProps) {
               <NotificationBell />
             </div>
           </div>
-          <div className="p-4 sm:p-6 lg:p-8 pt-16 lg:pt-6">
+          <div className="p-4 sm:p-6 lg:p-8 pt-16 lg:pt-6 pb-24 lg:pb-10">
             <TeacherUnlockGuard />
             <ScrollReveal>{children}</ScrollReveal>
           </div>

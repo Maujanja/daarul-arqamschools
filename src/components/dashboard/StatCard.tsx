@@ -1,7 +1,5 @@
 import { LucideIcon } from 'lucide-react';
 import { cn } from '@/lib/utils';
-import cardBgSilk from '@/assets/card-bg-silk.jpg';
-import cardBgCherries from '@/assets/card-bg-cherries.jpg';
 
 interface StatCardProps {
   title: string;
@@ -32,41 +30,33 @@ const iconVariantStyles = {
   warning: 'bg-gradient-to-br from-amber-400 to-orange-500 text-white shadow-lg shadow-orange-500/30',
 };
 
-const bgImages = {
-  silk: cardBgSilk,
-  cherries: cardBgCherries,
-};
-
-export function StatCard({ title, value, subtitle, icon: Icon, trend, variant = 'default', bgStyle }: StatCardProps) {
-  // Force glass look across all stat cards (ignore bgStyle background images)
-  const backgroundImage: string | undefined = undefined;
-
+export function StatCard({ title, value, subtitle, icon: Icon, trend, variant = 'default' }: StatCardProps) {
   return (
     <div className={cn("stat-card animate-fade-in", variantStyles[variant])}>
       <div className="flex items-start justify-between">
         <div className="space-y-2">
           <p className={cn(
             "text-sm font-semibold",
-            "text-white/80"
+            "text-foreground/80"
           )}>{title}</p>
           <p className={cn(
             "text-3xl font-bold font-display",
-            "text-white drop-shadow"
+            "text-foreground drop-shadow-sm"
           )}>{value}</p>
           {subtitle && (
             <p className={cn(
               "text-sm font-medium",
-              "text-white/70"
+              "text-foreground/70"
             )}>{subtitle}</p>
           )}
           {trend && (
             <div className={cn(
               "inline-flex items-center gap-1 text-sm font-semibold drop-shadow-sm",
-              trend.isPositive ? "text-emerald-300" : "text-red-300"
+              trend.isPositive ? "text-success" : "text-destructive"
             )}>
               <span>{trend.isPositive ? '↑' : '↓'}</span>
               <span>{Math.abs(trend.value)}%</span>
-              <span className="font-medium text-white/70">vs last term</span>
+              <span className="font-medium text-foreground/70">vs last term</span>
             </div>
           )}
         </div>
