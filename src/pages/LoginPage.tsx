@@ -9,6 +9,7 @@ import { Lock, Eye, EyeOff, AlertCircle, User, Hash, UserCheck, FileText, Dollar
 import { useToast } from '@/hooks/use-toast';
 import { UserRole } from '@/types';
 import dasLogo from '@/assets/das-logo.png';
+import bgLogin from '@/assets/bg-general.jpg';
 
 function LoginSpinner() {
   return (
@@ -88,8 +89,10 @@ export default function LoginPage() {
     <div
       className="min-h-screen flex items-center justify-center p-4 sm:p-8 relative overflow-hidden"
       style={{
-        background:
-          'radial-gradient(circle at 20% 20%, #5b2a8c 0%, #2a0f4d 45%, #14062b 100%)',
+        backgroundImage: `linear-gradient(135deg, rgba(20,6,43,0.75) 0%, rgba(42,15,77,0.7) 50%, rgba(91,42,140,0.65) 100%), url(${bgLogin})`,
+        backgroundSize: 'cover',
+        backgroundPosition: 'center',
+        backgroundRepeat: 'no-repeat',
       }}
     >
       {/* Decorative purple blobs */}
