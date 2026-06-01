@@ -871,13 +871,17 @@ export type Database = {
           class: string
           created_at: string
           custom_fee: number | null
+          date_of_birth: string | null
           discount_notes: string | null
+          external_id: string | null
           full_name: string
           gender: string | null
           id: string
           parent_id: string | null
+          parent_name: string | null
           parent_phone: string | null
           roll_number: string
+          source: string
           stream: string | null
           updated_at: string
         }
@@ -888,13 +892,17 @@ export type Database = {
           class: string
           created_at?: string
           custom_fee?: number | null
+          date_of_birth?: string | null
           discount_notes?: string | null
+          external_id?: string | null
           full_name: string
           gender?: string | null
           id?: string
           parent_id?: string | null
+          parent_name?: string | null
           parent_phone?: string | null
           roll_number: string
+          source?: string
           stream?: string | null
           updated_at?: string
         }
@@ -905,13 +913,17 @@ export type Database = {
           class?: string
           created_at?: string
           custom_fee?: number | null
+          date_of_birth?: string | null
           discount_notes?: string | null
+          external_id?: string | null
           full_name?: string
           gender?: string | null
           id?: string
           parent_id?: string | null
+          parent_name?: string | null
           parent_phone?: string | null
           roll_number?: string
+          source?: string
           stream?: string | null
           updated_at?: string
         }
