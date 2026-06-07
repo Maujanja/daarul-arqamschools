@@ -92,8 +92,10 @@ interface UnlockRequest {
   status: string;
   class: string;
   subject_id: string;
+  subject_name?: string;
   term: string;
   academic_year: string;
+  stream?: string | null;
   student_id?: string;
   student_name?: string;
   current_marks?: number;
@@ -117,6 +119,20 @@ const mapClassToFullName = (shortClass: string): string => {
     'F3A': 'Form 3 A',
   };
   return mappings[shortClass] || shortClass;
+};
+
+const normalizeSubjectName = (name?: string | null): string => {
+  return (name || '')
+    .toLowerCase()
+    .replace(/&/g, 'and')
+    .replace(/\barithmetics\b/g, 'arithmetic')
+    .replace(/[^a-z0-9]/g, '');
+};
+
+const subjectNamesMatch = (left?: string | null, right?: string | null): boolean => {
+  const a = normalizeSubjectName(left);
+  const b = normalizeSubjectName(right);
+  return !!a && !!b && a === b;
 };
 
 export default function MarksEntryPage() {
