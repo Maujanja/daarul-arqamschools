@@ -557,21 +557,24 @@ export default function MarksEntryPage() {
       filters: {
         teacher_id: currentTeacherId,
         class: selectedClass,
-        subject_id: selectedSubject,
         term: selectedTerm,
         academic_year: selectedYear
       }
     }).then(result => {
       if (result.success && result.data) {
-        setUnlockRequests(result.data);
+        const matchingRequests = result.data.filter((request) =>
+          unlockRequestMatchesSelectedSubject(request) &&
+          (!request.stream || !selectedStream || request.stream === selectedStream)
+        );
+        setUnlockRequests(matchingRequests);
         const approved = new Set<string>();
-        result.data.forEach(r => {
+        matchingRequests.forEach(r => {
           if (r.status === 'approved' && r.student_id) approved.add(r.student_id);
         });
         setApprovedStudentIds(approved);
       }
     });
-  }, [isTeacher, selectedSubject, selectedClass, selectedTerm, selectedYear, resolvedTeacherId, user?.id, query]);
+  }, [isTeacher, selectedSubject, selectedClass, selectedTerm, selectedYear, selectedStream, selectedSubjectData?.name, resolvedTeacherId, user?.id, query]);
 
   useRealtimeSubscription({
     table: 'marks_unlock_requests',
