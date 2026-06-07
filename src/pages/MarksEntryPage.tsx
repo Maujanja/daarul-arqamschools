@@ -510,7 +510,6 @@ export default function MarksEntryPage() {
         filters: {
           teacher_id: currentTeacherId,
           class: selectedClass,
-          subject_id: selectedSubject,
           term: selectedTerm,
           academic_year: selectedYear
         }
@@ -519,10 +518,14 @@ export default function MarksEntryPage() {
       if (marksLoadRequestRef.current !== requestId) return;
       
       if (result.success && result.data && result.data.length > 0) {
-        setUnlockRequests(result.data);
+        const matchingRequests = result.data.filter((request) =>
+          unlockRequestMatchesSelectedSubject(request) &&
+          (!request.stream || !selectedStream || request.stream === selectedStream)
+        );
+        setUnlockRequests(matchingRequests);
         // Build set of student IDs that have been approved
         const approved = new Set<string>();
-        result.data.forEach(r => {
+        matchingRequests.forEach(r => {
           if (r.status === 'approved' && r.student_id) {
             approved.add(r.student_id);
           }
@@ -542,7 +545,7 @@ export default function MarksEntryPage() {
         marksLoadRequestRef.current++;
       }
     };
-  }, [selectedSubject, selectedTerm, selectedYear, students, selectedClass, user, query, isTeacher]);
+  }, [selectedSubject, selectedTerm, selectedYear, students, selectedClass, selectedStream, user, query, isTeacher, resolvedTeacherId, selectedSubjectData?.name]);
 
   // Realtime: auto-refresh when unlock requests change (teacher sees approval instantly)
   const reloadUnlockRequests = useCallback(() => {
