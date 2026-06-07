@@ -232,6 +232,9 @@ export default function MarksEntryPage() {
     : subjects;
 
   const selectedSubjectData = subjects.find(s => s.id === selectedSubject);
+  const unlockRequestMatchesSelectedSubject = (request: UnlockRequest): boolean => {
+    return request.subject_id === selectedSubject || subjectNamesMatch(request.subject_name, selectedSubjectData?.name);
+  };
   const classMaxMarks = getMaxMarksForClass(selectedClass);
   const maxMarks = Math.min(selectedSubjectData?.max_marks || 100, classMaxMarks);
 
@@ -417,7 +420,7 @@ export default function MarksEntryPage() {
     };
     
     fetchStudents();
-  }, [selectedClass, selectedSubject, selectedStream, selectedYear, isTeacher, user?.id, user, fetchTable]);
+  }, [selectedClass, selectedSubject, selectedStream, selectedYear, isTeacher, user?.id, user, fetchTable, resolvedTeacherId]);
 
   // Clear marks immediately when series/year changes to prevent stale data
   useEffect(() => {
