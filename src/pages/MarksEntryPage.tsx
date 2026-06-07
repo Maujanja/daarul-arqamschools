@@ -232,9 +232,9 @@ export default function MarksEntryPage() {
     : subjects;
 
   const selectedSubjectData = subjects.find(s => s.id === selectedSubject);
-  const unlockRequestMatchesSelectedSubject = (request: UnlockRequest): boolean => {
+  const unlockRequestMatchesSelectedSubject = useCallback((request: UnlockRequest): boolean => {
     return request.subject_id === selectedSubject || subjectNamesMatch(request.subject_name, selectedSubjectData?.name);
-  };
+  }, [selectedSubject, selectedSubjectData?.name]);
   const classMaxMarks = getMaxMarksForClass(selectedClass);
   const maxMarks = Math.min(selectedSubjectData?.max_marks || 100, classMaxMarks);
 
@@ -545,7 +545,7 @@ export default function MarksEntryPage() {
         marksLoadRequestRef.current++;
       }
     };
-  }, [selectedSubject, selectedTerm, selectedYear, students, selectedClass, selectedStream, user, query, isTeacher, resolvedTeacherId, selectedSubjectData?.name]);
+  }, [selectedSubject, selectedTerm, selectedYear, students, selectedClass, selectedStream, user, query, isTeacher, resolvedTeacherId, unlockRequestMatchesSelectedSubject]);
 
   // Realtime: auto-refresh when unlock requests change (teacher sees approval instantly)
   const reloadUnlockRequests = useCallback(() => {
@@ -574,7 +574,7 @@ export default function MarksEntryPage() {
         setApprovedStudentIds(approved);
       }
     });
-  }, [isTeacher, selectedSubject, selectedClass, selectedTerm, selectedYear, selectedStream, selectedSubjectData?.name, resolvedTeacherId, user?.id, query]);
+  }, [isTeacher, selectedSubject, selectedClass, selectedTerm, selectedYear, selectedStream, unlockRequestMatchesSelectedSubject, resolvedTeacherId, user?.id, query]);
 
   useRealtimeSubscription({
     table: 'marks_unlock_requests',
