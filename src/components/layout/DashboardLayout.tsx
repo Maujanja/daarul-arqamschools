@@ -1,4 +1,4 @@
-import { ReactNode } from 'react';
+import { ReactNode, useEffect, useRef } from 'react';
 import { Sidebar } from './Sidebar';
 import { useAuth } from '@/contexts/AuthContext';
 import { Navigate } from 'react-router-dom';
@@ -17,6 +17,36 @@ interface DashboardLayoutProps {
 
 export function DashboardLayout({ children }: DashboardLayoutProps) {
   const { isAuthenticated, user } = useAuth();
+  const mainRef = useRef<HTMLElement | null>(null);
+
+  useEffect(() => {
+    const main = mainRef.current;
+    if (!main) return;
+
+    let startY = 0;
+    let startScrollTop = 0;
+
+    const handleTouchStart = (event: TouchEvent) => {
+      startY = event.touches[0]?.clientY ?? 0;
+      startScrollTop = main.scrollTop;
+    };
+
+    const handleTouchMove = (event: TouchEvent) => {
+      const currentY = event.touches[0]?.clientY ?? 0;
+      const isPullingDownFromTop = startScrollTop <= 0 && main.scrollTop <= 0 && currentY > startY;
+      if (isPullingDownFromTop) {
+        event.preventDefault();
+      }
+    };
+
+    main.addEventListener('touchstart', handleTouchStart, { passive: true });
+    main.addEventListener('touchmove', handleTouchMove, { passive: false });
+
+    return () => {
+      main.removeEventListener('touchstart', handleTouchStart);
+      main.removeEventListener('touchmove', handleTouchMove);
+    };
+  }, []);
 
   if (!isAuthenticated) {
     return <Navigate to="/login" replace />;
@@ -48,8 +78,9 @@ export function DashboardLayout({ children }: DashboardLayoutProps) {
       <div className="relative z-10">
         <Sidebar />
         <main
+          ref={mainRef}
           className="lg:ml-72 h-[100dvh] min-h-[100dvh] overflow-y-auto overflow-x-hidden touch-pan-y overscroll-contain"
-          style={{ WebkitOverflowScrolling: 'touch' }}
+          style={{ WebkitOverflowScrolling: 'touch', overscrollBehaviorY: 'contain' }}
         >
           {/* Header with Logo */}
           <header className="hidden lg:flex items-center gap-3 px-8 py-4 border-b border-white/10 bg-[#1e3a5f] sticky top-0 z-30">
