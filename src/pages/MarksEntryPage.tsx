@@ -92,8 +92,10 @@ interface UnlockRequest {
   status: string;
   class: string;
   subject_id: string;
+  subject_name?: string;
   term: string;
   academic_year: string;
+  stream?: string | null;
   student_id?: string;
   student_name?: string;
   current_marks?: number;
@@ -117,6 +119,20 @@ const mapClassToFullName = (shortClass: string): string => {
     'F3A': 'Form 3 A',
   };
   return mappings[shortClass] || shortClass;
+};
+
+const normalizeSubjectName = (name?: string | null): string => {
+  return (name || '')
+    .toLowerCase()
+    .replace(/&/g, 'and')
+    .replace(/\barithmetics\b/g, 'arithmetic')
+    .replace(/[^a-z0-9]/g, '');
+};
+
+const subjectNamesMatch = (left?: string | null, right?: string | null): boolean => {
+  const a = normalizeSubjectName(left);
+  const b = normalizeSubjectName(right);
+  return !!a && !!b && a === b;
 };
 
 export default function MarksEntryPage() {
@@ -216,6 +232,9 @@ export default function MarksEntryPage() {
     : subjects;
 
   const selectedSubjectData = subjects.find(s => s.id === selectedSubject);
+  const unlockRequestMatchesSelectedSubject = useCallback((request: UnlockRequest): boolean => {
+    return request.subject_id === selectedSubject || subjectNamesMatch(request.subject_name, selectedSubjectData?.name);
+  }, [selectedSubject, selectedSubjectData?.name]);
   const classMaxMarks = getMaxMarksForClass(selectedClass);
   const maxMarks = Math.min(selectedSubjectData?.max_marks || 100, classMaxMarks);
 
@@ -237,12 +256,20 @@ export default function MarksEntryPage() {
 
       if (isTeacher && user?.id) {
         let currentTeacherId = user.id;
+        let initialUnlockSubjectId = '';
+        let initialUnlockClass = '';
+        let initialUnlockTerm = '';
+        let initialUnlockYear = '';
+        let initialUnlockStream = '';
 
         const teacherResult = await query<{ id: string }>('teachers', { limit: 1 });
         if (teacherResult.success && teacherResult.data && teacherResult.data.length > 0) {
           currentTeacherId = teacherResult.data[0].id || user.id;
         }
         setResolvedTeacherId(currentTeacherId);
+
+        const approvedUnlocks = await fetchTable<UnlockRequest>('marks_unlock_requests', { teacher_id: currentTeacherId });
+        const activeUnlock = (approvedUnlocks || []).find((request) => request.status === 'approved');
 
         const assignmentsData = await fetchTable<TeacherAssignment>('teacher_assignments', { teacher_id: currentTeacherId });
         
@@ -252,10 +279,29 @@ export default function MarksEntryPage() {
             class: mapClassToFullName(a.class)
           }));
           setTeacherAssignments(mappedAssignments);
-          const firstClass = mappedAssignments[0].class;
+
+          if (activeUnlock) {
+            const unlockClass = mapClassToFullName(activeUnlock.class);
+            const currentSubject = subjectsData.find(subject =>
+              subject.id === activeUnlock.subject_id || subjectNamesMatch(subject.name, activeUnlock.subject_name)
+            );
+            const matchingAssignment = mappedAssignments.find(assignment =>
+              assignment.class === unlockClass &&
+              (!currentSubject || assignment.subject_id === currentSubject.id)
+            );
+            initialUnlockClass = unlockClass;
+            initialUnlockSubjectId = matchingAssignment?.subject_id || currentSubject?.id || '';
+            initialUnlockTerm = activeUnlock.term;
+            initialUnlockYear = activeUnlock.academic_year;
+            initialUnlockStream = activeUnlock.stream || matchingAssignment?.stream || '';
+          }
+
+          const firstClass = initialUnlockClass || mappedAssignments[0].class;
           setSelectedClass(firstClass);
+          if (initialUnlockTerm) setSelectedTerm(initialUnlockTerm);
+          if (initialUnlockYear) setSelectedYear(initialUnlockYear);
           // Auto-select first stream: use assignment stream, or first available stream for class
-          const assignmentStream = mappedAssignments[0].stream;
+          const assignmentStream = initialUnlockStream || mappedAssignments.find(a => a.class === firstClass)?.stream;
           if (assignmentStream) {
             setSelectedStream(assignmentStream);
           } else if (hasStreams(firstClass)) {
@@ -265,7 +311,7 @@ export default function MarksEntryPage() {
             }
           }
           const effectiveStream = assignmentStream || (hasStreams(firstClass) ? getStreamsForClass(firstClass)[0] : null);
-          const firstSubject = mappedAssignments.find(a => a.class === firstClass && (!hasStreams(firstClass) || !a.stream || a.stream === effectiveStream))?.subject_id;
+          const firstSubject = initialUnlockSubjectId || mappedAssignments.find(a => a.class === firstClass && (!hasStreams(firstClass) || !a.stream || a.stream === effectiveStream))?.subject_id;
           if (firstSubject) {
             setSelectedSubject(firstSubject);
           }
@@ -374,7 +420,7 @@ export default function MarksEntryPage() {
     };
     
     fetchStudents();
-  }, [selectedClass, selectedSubject, selectedStream, selectedYear, isTeacher, user?.id, user, fetchTable]);
+  }, [selectedClass, selectedSubject, selectedStream, selectedYear, isTeacher, user?.id, user, fetchTable, resolvedTeacherId]);
 
   // Clear marks immediately when series/year changes to prevent stale data
   useEffect(() => {
@@ -464,7 +510,6 @@ export default function MarksEntryPage() {
         filters: {
           teacher_id: currentTeacherId,
           class: selectedClass,
-          subject_id: selectedSubject,
           term: selectedTerm,
           academic_year: selectedYear
         }
@@ -473,10 +518,14 @@ export default function MarksEntryPage() {
       if (marksLoadRequestRef.current !== requestId) return;
       
       if (result.success && result.data && result.data.length > 0) {
-        setUnlockRequests(result.data);
+        const matchingRequests = result.data.filter((request) =>
+          unlockRequestMatchesSelectedSubject(request) &&
+          (!request.stream || !selectedStream || request.stream === selectedStream)
+        );
+        setUnlockRequests(matchingRequests);
         // Build set of student IDs that have been approved
         const approved = new Set<string>();
-        result.data.forEach(r => {
+        matchingRequests.forEach(r => {
           if (r.status === 'approved' && r.student_id) {
             approved.add(r.student_id);
           }
@@ -496,7 +545,7 @@ export default function MarksEntryPage() {
         marksLoadRequestRef.current++;
       }
     };
-  }, [selectedSubject, selectedTerm, selectedYear, students, selectedClass, user, query, isTeacher]);
+  }, [selectedSubject, selectedTerm, selectedYear, students, selectedClass, selectedStream, user, query, isTeacher, resolvedTeacherId, unlockRequestMatchesSelectedSubject]);
 
   // Realtime: auto-refresh when unlock requests change (teacher sees approval instantly)
   const reloadUnlockRequests = useCallback(() => {
@@ -508,21 +557,24 @@ export default function MarksEntryPage() {
       filters: {
         teacher_id: currentTeacherId,
         class: selectedClass,
-        subject_id: selectedSubject,
         term: selectedTerm,
         academic_year: selectedYear
       }
     }).then(result => {
       if (result.success && result.data) {
-        setUnlockRequests(result.data);
+        const matchingRequests = result.data.filter((request) =>
+          unlockRequestMatchesSelectedSubject(request) &&
+          (!request.stream || !selectedStream || request.stream === selectedStream)
+        );
+        setUnlockRequests(matchingRequests);
         const approved = new Set<string>();
-        result.data.forEach(r => {
+        matchingRequests.forEach(r => {
           if (r.status === 'approved' && r.student_id) approved.add(r.student_id);
         });
         setApprovedStudentIds(approved);
       }
     });
-  }, [isTeacher, selectedSubject, selectedClass, selectedTerm, selectedYear, resolvedTeacherId, user?.id, query]);
+  }, [isTeacher, selectedSubject, selectedClass, selectedTerm, selectedYear, selectedStream, unlockRequestMatchesSelectedSubject, resolvedTeacherId, user?.id, query]);
 
   useRealtimeSubscription({
     table: 'marks_unlock_requests',
