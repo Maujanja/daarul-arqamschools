@@ -253,12 +253,20 @@ export default function MarksEntryPage() {
 
       if (isTeacher && user?.id) {
         let currentTeacherId = user.id;
+        let initialUnlockSubjectId = '';
+        let initialUnlockClass = '';
+        let initialUnlockTerm = '';
+        let initialUnlockYear = '';
+        let initialUnlockStream = '';
 
         const teacherResult = await query<{ id: string }>('teachers', { limit: 1 });
         if (teacherResult.success && teacherResult.data && teacherResult.data.length > 0) {
           currentTeacherId = teacherResult.data[0].id || user.id;
         }
         setResolvedTeacherId(currentTeacherId);
+
+        const approvedUnlocks = await fetchTable<UnlockRequest>('marks_unlock_requests', { teacher_id: currentTeacherId });
+        const activeUnlock = (approvedUnlocks || []).find((request) => request.status === 'approved');
 
         const assignmentsData = await fetchTable<TeacherAssignment>('teacher_assignments', { teacher_id: currentTeacherId });
         
@@ -268,10 +276,29 @@ export default function MarksEntryPage() {
             class: mapClassToFullName(a.class)
           }));
           setTeacherAssignments(mappedAssignments);
-          const firstClass = mappedAssignments[0].class;
+
+          if (activeUnlock) {
+            const unlockClass = mapClassToFullName(activeUnlock.class);
+            const currentSubject = subjectsData.find(subject =>
+              subject.id === activeUnlock.subject_id || subjectNamesMatch(subject.name, activeUnlock.subject_name)
+            );
+            const matchingAssignment = mappedAssignments.find(assignment =>
+              assignment.class === unlockClass &&
+              (!currentSubject || assignment.subject_id === currentSubject.id)
+            );
+            initialUnlockClass = unlockClass;
+            initialUnlockSubjectId = matchingAssignment?.subject_id || currentSubject?.id || '';
+            initialUnlockTerm = activeUnlock.term;
+            initialUnlockYear = activeUnlock.academic_year;
+            initialUnlockStream = activeUnlock.stream || matchingAssignment?.stream || '';
+          }
+
+          const firstClass = initialUnlockClass || mappedAssignments[0].class;
           setSelectedClass(firstClass);
+          if (initialUnlockTerm) setSelectedTerm(initialUnlockTerm);
+          if (initialUnlockYear) setSelectedYear(initialUnlockYear);
           // Auto-select first stream: use assignment stream, or first available stream for class
-          const assignmentStream = mappedAssignments[0].stream;
+          const assignmentStream = initialUnlockStream || mappedAssignments.find(a => a.class === firstClass)?.stream;
           if (assignmentStream) {
             setSelectedStream(assignmentStream);
           } else if (hasStreams(firstClass)) {
@@ -281,7 +308,7 @@ export default function MarksEntryPage() {
             }
           }
           const effectiveStream = assignmentStream || (hasStreams(firstClass) ? getStreamsForClass(firstClass)[0] : null);
-          const firstSubject = mappedAssignments.find(a => a.class === firstClass && (!hasStreams(firstClass) || !a.stream || a.stream === effectiveStream))?.subject_id;
+          const firstSubject = initialUnlockSubjectId || mappedAssignments.find(a => a.class === firstClass && (!hasStreams(firstClass) || !a.stream || a.stream === effectiveStream))?.subject_id;
           if (firstSubject) {
             setSelectedSubject(firstSubject);
           }
