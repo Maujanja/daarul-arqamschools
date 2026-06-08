@@ -24,11 +24,23 @@ export function DashboardLayout({ children }: DashboardLayoutProps) {
     const main = mainRef.current;
     if (!main) return;
 
+    const keepScrollAwayFromEdges = () => {
+      const maxScrollTop = main.scrollHeight - main.clientHeight;
+      if (maxScrollTop <= 1) return;
+      if (main.scrollTop <= 0) {
+        main.scrollTop = 1;
+      } else if (main.scrollTop >= maxScrollTop) {
+        main.scrollTop = maxScrollTop - 1;
+      }
+    };
+
     const handleTouchStart = (event: TouchEvent) => {
+      keepScrollAwayFromEdges();
       lastTouchYRef.current = event.touches[0]?.clientY ?? 0;
     };
 
     const handleTouchMove = (event: TouchEvent) => {
+      if (!event.cancelable) return;
       const currentY = event.touches[0]?.clientY ?? 0;
       const deltaY = currentY - lastTouchYRef.current;
       const isAtTop = main.scrollTop <= 0;
@@ -43,10 +55,13 @@ export function DashboardLayout({ children }: DashboardLayoutProps) {
       lastTouchYRef.current = currentY;
     };
 
+    keepScrollAwayFromEdges();
+    main.addEventListener('scroll', keepScrollAwayFromEdges, { passive: true });
     main.addEventListener('touchstart', handleTouchStart, { passive: true });
     main.addEventListener('touchmove', handleTouchMove, { passive: false });
 
     return () => {
+      main.removeEventListener('scroll', keepScrollAwayFromEdges);
       main.removeEventListener('touchstart', handleTouchStart);
       main.removeEventListener('touchmove', handleTouchMove);
     };
