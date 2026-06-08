@@ -18,25 +18,29 @@ interface DashboardLayoutProps {
 export function DashboardLayout({ children }: DashboardLayoutProps) {
   const { isAuthenticated, user } = useAuth();
   const mainRef = useRef<HTMLElement | null>(null);
+  const lastTouchYRef = useRef(0);
 
   useEffect(() => {
     const main = mainRef.current;
     if (!main) return;
 
-    let startY = 0;
-    let startScrollTop = 0;
-
     const handleTouchStart = (event: TouchEvent) => {
-      startY = event.touches[0]?.clientY ?? 0;
-      startScrollTop = main.scrollTop;
+      lastTouchYRef.current = event.touches[0]?.clientY ?? 0;
     };
 
     const handleTouchMove = (event: TouchEvent) => {
       const currentY = event.touches[0]?.clientY ?? 0;
-      const isPullingDownFromTop = startScrollTop <= 0 && main.scrollTop <= 0 && currentY > startY;
-      if (isPullingDownFromTop) {
+      const deltaY = currentY - lastTouchYRef.current;
+      const isAtTop = main.scrollTop <= 0;
+      const isAtBottom = Math.ceil(main.scrollTop + main.clientHeight) >= main.scrollHeight;
+      const isPullingPastTop = isAtTop && deltaY > 0;
+      const isPushingPastBottom = isAtBottom && deltaY < 0;
+
+      if (isPullingPastTop || isPushingPastBottom) {
         event.preventDefault();
       }
+
+      lastTouchYRef.current = currentY;
     };
 
     main.addEventListener('touchstart', handleTouchStart, { passive: true });
@@ -65,7 +69,7 @@ export function DashboardLayout({ children }: DashboardLayoutProps) {
   };
 
   return (
-    <div className="min-h-dvh relative overflow-x-hidden">
+    <div className="fixed inset-0 h-dvh w-full overflow-hidden relative">
       {/* Background Image */}
       <div 
         className="fixed inset-0 bg-cover bg-center bg-no-repeat pointer-events-none -z-10"
@@ -79,8 +83,8 @@ export function DashboardLayout({ children }: DashboardLayoutProps) {
         <Sidebar />
         <main
           ref={mainRef}
-          className="lg:ml-72 h-[100dvh] min-h-[100dvh] overflow-y-auto overflow-x-hidden touch-pan-y overscroll-contain"
-          style={{ WebkitOverflowScrolling: 'touch', overscrollBehaviorY: 'contain' }}
+          className="lg:ml-72 h-dvh min-h-dvh overflow-y-auto overflow-x-hidden touch-pan-y overscroll-none"
+          style={{ WebkitOverflowScrolling: 'touch', overscrollBehavior: 'none', overscrollBehaviorY: 'none' }}
         >
           {/* Header with Logo */}
           <header className="hidden lg:flex items-center gap-3 px-8 py-4 border-b border-white/10 bg-[#1e3a5f] sticky top-0 z-30">
