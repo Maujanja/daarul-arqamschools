@@ -229,6 +229,26 @@ export function DashboardLayout({ children }: DashboardLayoutProps) {
               <NotificationBell />
             </div>
           </div>
+          {scrollDebugEnabled && (
+            <div className="fixed left-3 right-3 bottom-3 z-[60] rounded-lg border border-sky-300/40 bg-slate-950/95 p-3 text-xs text-sky-50 lg:left-auto lg:w-[420px]">
+              <div className="flex items-center justify-between gap-3">
+                <strong>Scroll debug ON</strong>
+                <button
+                  type="button"
+                  className="rounded border border-sky-300/30 px-2 py-1 text-sky-100"
+                  onClick={() => {
+                    localStorage.removeItem(SCROLL_DEBUG_ENABLED_KEY);
+                    setScrollDebugEnabled(false);
+                  }}
+                >
+                  Off
+                </button>
+              </div>
+              <pre className="mt-2 max-h-28 overflow-auto whitespace-pre-wrap break-words text-[10px] leading-snug text-sky-100/90">
+                {lastScrollDebug ? JSON.stringify(lastScrollDebug, null, 2) : 'Waiting for scroll gesture...'}
+              </pre>
+            </div>
+          )}
           <div className="p-4 sm:p-6 lg:p-8 pt-16 lg:pt-6 pb-24 lg:pb-10">
             <TeacherUnlockGuard />
             <ScrollReveal>{children}</ScrollReveal>

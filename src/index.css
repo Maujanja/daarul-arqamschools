@@ -148,6 +148,12 @@
     overscroll-behavior: none;
   }
 
+  #root {
+    position: fixed;
+    inset: 0;
+    overflow: hidden;
+  }
+
   html {
     position: fixed;
     inset: 0;
