@@ -67,7 +67,9 @@ export function DashboardLayout({ children }: DashboardLayoutProps) {
         const previous = JSON.parse(localStorage.getItem(SCROLL_DEBUG_LOG_KEY) || '[]');
         const next = Array.isArray(previous) ? [...previous.slice(-79), entry] : [entry];
         localStorage.setItem(SCROLL_DEBUG_LOG_KEY, JSON.stringify(next));
-      } catch {}
+      } catch {
+        // Debug logging must never break scrolling.
+      }
       console.warn('[DAS scroll-debug]', eventName, entry);
     };
 
@@ -237,7 +239,7 @@ export function DashboardLayout({ children }: DashboardLayoutProps) {
                   type="button"
                   className="rounded border border-sky-300/30 px-2 py-1 text-sky-100"
                   onClick={() => {
-                    localStorage.removeItem(SCROLL_DEBUG_ENABLED_KEY);
+                  localStorage.removeItem(SCROLL_DEBUG_ENABLED_KEY);
                     setScrollDebugEnabled(false);
                   }}
                 >
