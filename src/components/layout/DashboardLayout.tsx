@@ -19,23 +19,60 @@ export function DashboardLayout({ children }: DashboardLayoutProps) {
   const { isAuthenticated, user } = useAuth();
   const mainRef = useRef<HTMLElement | null>(null);
   const lastTouchYRef = useRef(0);
+  const activeScrollerRef = useRef<HTMLElement | null>(null);
+  const lastGestureRef = useRef<Record<string, unknown> | null>(null);
 
   useEffect(() => {
     const main = mainRef.current;
     if (!main) return;
 
-    const keepScrollAwayFromEdges = () => {
-      const maxScrollTop = main.scrollHeight - main.clientHeight;
+    const writeScrollDebug = (eventName: string, details: Record<string, unknown> = {}) => {
+      const entry = {
+        at: new Date().toISOString(),
+        event: eventName,
+        path: window.location.pathname,
+        standalone: window.matchMedia?.('(display-mode: standalone)').matches ?? false,
+        scrollTop: Math.round(main.scrollTop),
+        maxScrollTop: Math.round(main.scrollHeight - main.clientHeight),
+        ...details,
+      };
+      lastGestureRef.current = entry;
+      try {
+        const key = 'das-scroll-debug-log';
+        const previous = JSON.parse(localStorage.getItem(key) || '[]');
+        const next = Array.isArray(previous) ? [...previous.slice(-79), entry] : [entry];
+        localStorage.setItem(key, JSON.stringify(next));
+      } catch {}
+      console.warn('[DAS scroll-debug]', eventName, entry);
+    };
+
+    const getScrollableTarget = (target: EventTarget | null) => {
+      let node = target instanceof Element ? target : null;
+      while (node && node !== main) {
+        const element = node as HTMLElement;
+        const style = window.getComputedStyle(element);
+        const canScroll = /(auto|scroll)/.test(style.overflowY) && element.scrollHeight > element.clientHeight + 1;
+        if (canScroll) return element;
+        node = node.parentElement;
+      }
+      return main;
+    };
+
+    const keepScrollAwayFromEdges = (scroller: HTMLElement = main, reason = 'scroll-edge-guard') => {
+      const maxScrollTop = scroller.scrollHeight - scroller.clientHeight;
       if (maxScrollTop <= 1) return;
-      if (main.scrollTop <= 0) {
-        main.scrollTop = 1;
-      } else if (main.scrollTop >= maxScrollTop) {
-        main.scrollTop = maxScrollTop - 1;
+      if (scroller.scrollTop <= 0) {
+        scroller.scrollTop = 1;
+        writeScrollDebug(reason, { adjusted: 'top', target: scroller === main ? 'main' : scroller.tagName });
+      } else if (scroller.scrollTop >= maxScrollTop) {
+        scroller.scrollTop = maxScrollTop - 1;
+        writeScrollDebug(reason, { adjusted: 'bottom', target: scroller === main ? 'main' : scroller.tagName });
       }
     };
 
     const handleTouchStart = (event: TouchEvent) => {
-      keepScrollAwayFromEdges();
+      activeScrollerRef.current = getScrollableTarget(event.target);
+      keepScrollAwayFromEdges(activeScrollerRef.current, 'touchstart-edge-guard');
       lastTouchYRef.current = event.touches[0]?.clientY ?? 0;
     };
 
@@ -43,27 +80,52 @@ export function DashboardLayout({ children }: DashboardLayoutProps) {
       if (!event.cancelable) return;
       const currentY = event.touches[0]?.clientY ?? 0;
       const deltaY = currentY - lastTouchYRef.current;
-      const isAtTop = main.scrollTop <= 0;
-      const isAtBottom = Math.ceil(main.scrollTop + main.clientHeight) >= main.scrollHeight;
+      const scroller = activeScrollerRef.current || getScrollableTarget(event.target);
+      const maxScrollTop = scroller.scrollHeight - scroller.clientHeight;
+      const isScrollable = maxScrollTop > 1;
+      const isAtTop = !isScrollable || scroller.scrollTop <= 1;
+      const isAtBottom = isScrollable && Math.ceil(scroller.scrollTop + scroller.clientHeight) >= scroller.scrollHeight - 1;
       const isPullingPastTop = isAtTop && deltaY > 0;
       const isPushingPastBottom = isAtBottom && deltaY < 0;
 
       if (isPullingPastTop || isPushingPastBottom) {
         event.preventDefault();
+        keepScrollAwayFromEdges(scroller, 'touchmove-edge-guard');
+        writeScrollDebug('overscroll-gesture-blocked', {
+          direction: isPullingPastTop ? 'pull-down-at-top' : 'push-up-at-bottom',
+          deltaY: Math.round(deltaY),
+          target: scroller === main ? 'main' : scroller.tagName,
+          targetScrollTop: Math.round(scroller.scrollTop),
+          targetMaxScrollTop: Math.round(maxScrollTop),
+        });
       }
 
       lastTouchYRef.current = currentY;
     };
 
-    keepScrollAwayFromEdges();
-    main.addEventListener('scroll', keepScrollAwayFromEdges, { passive: true });
+    const handlePossibleRefresh = (event: Event) => {
+      writeScrollDebug('page-lifecycle-possible-refresh', {
+        type: event.type,
+        visibilityState: document.visibilityState,
+        lastGesture: lastGestureRef.current,
+      });
+    };
+
+    keepScrollAwayFromEdges(main, 'mount-edge-guard');
+    main.addEventListener('scroll', () => keepScrollAwayFromEdges(main, 'scroll-edge-guard'), { passive: true });
     main.addEventListener('touchstart', handleTouchStart, { passive: true });
-    main.addEventListener('touchmove', handleTouchMove, { passive: false });
+    document.addEventListener('touchmove', handleTouchMove, { passive: false, capture: true });
+    window.addEventListener('pagehide', handlePossibleRefresh);
+    window.addEventListener('beforeunload', handlePossibleRefresh);
+    document.addEventListener('visibilitychange', handlePossibleRefresh);
 
     return () => {
-      main.removeEventListener('scroll', keepScrollAwayFromEdges);
+      main.removeEventListener('scroll', () => keepScrollAwayFromEdges(main, 'scroll-edge-guard'));
       main.removeEventListener('touchstart', handleTouchStart);
-      main.removeEventListener('touchmove', handleTouchMove);
+      document.removeEventListener('touchmove', handleTouchMove, { capture: true });
+      window.removeEventListener('pagehide', handlePossibleRefresh);
+      window.removeEventListener('beforeunload', handlePossibleRefresh);
+      document.removeEventListener('visibilitychange', handlePossibleRefresh);
     };
   }, []);
 
@@ -94,11 +156,11 @@ export function DashboardLayout({ children }: DashboardLayoutProps) {
       <div className="fixed inset-0 bg-black/25 pointer-events-none -z-10" />
       
       {/* Content */}
-      <div className="relative z-10">
+      <div className="relative z-10 h-dvh overflow-hidden">
         <Sidebar />
         <main
           ref={mainRef}
-          className="lg:ml-72 h-dvh min-h-dvh overflow-y-auto overflow-x-hidden touch-pan-y overscroll-none"
+          className="lg:ml-72 h-full min-h-0 overflow-y-auto overflow-x-hidden touch-pan-y overscroll-none"
           style={{ WebkitOverflowScrolling: 'touch', overscrollBehavior: 'none', overscrollBehaviorY: 'none' }}
         >
           {/* Header with Logo */}
