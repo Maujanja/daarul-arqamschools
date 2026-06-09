@@ -1,4 +1,4 @@
-import { ReactNode, useEffect, useRef } from 'react';
+import { ReactNode, useEffect, useRef, useState } from 'react';
 import { Sidebar } from './Sidebar';
 import { useAuth } from '@/contexts/AuthContext';
 import { Navigate } from 'react-router-dom';
@@ -15,33 +15,58 @@ interface DashboardLayoutProps {
   children: ReactNode;
 }
 
+const SCROLL_DEBUG_ENABLED_KEY = 'das-scroll-debug-enabled';
+const SCROLL_DEBUG_LOG_KEY = 'das-scroll-debug-log';
+
+type ScrollDebugEntry = Record<string, unknown>;
+
+function getScrollDebugEnabled() {
+  if (typeof window === 'undefined') return false;
+  const params = new URLSearchParams(window.location.search);
+  const debugParam = params.get('scrollDebug');
+  if (debugParam === '1' || debugParam === 'true') {
+    localStorage.setItem(SCROLL_DEBUG_ENABLED_KEY, '1');
+  } else if (debugParam === '0' || debugParam === 'false') {
+    localStorage.removeItem(SCROLL_DEBUG_ENABLED_KEY);
+  }
+  return localStorage.getItem(SCROLL_DEBUG_ENABLED_KEY) === '1';
+}
+
 export function DashboardLayout({ children }: DashboardLayoutProps) {
   const { isAuthenticated, user } = useAuth();
   const mainRef = useRef<HTMLElement | null>(null);
   const lastTouchYRef = useRef(0);
   const activeScrollerRef = useRef<HTMLElement | null>(null);
-  const lastGestureRef = useRef<Record<string, unknown> | null>(null);
+  const lastGestureRef = useRef<ScrollDebugEntry | null>(null);
+  const [scrollDebugEnabled, setScrollDebugEnabled] = useState(getScrollDebugEnabled);
+  const [lastScrollDebug, setLastScrollDebug] = useState<ScrollDebugEntry | null>(null);
+  const scrollDebugEnabledRef = useRef(scrollDebugEnabled);
+  scrollDebugEnabledRef.current = scrollDebugEnabled;
 
   useEffect(() => {
     const main = mainRef.current;
     if (!main) return;
 
-    const writeScrollDebug = (eventName: string, details: Record<string, unknown> = {}) => {
+    const writeScrollDebug = (eventName: string, details: ScrollDebugEntry = {}) => {
+      if (!scrollDebugEnabledRef.current) return;
       const entry = {
         at: new Date().toISOString(),
         event: eventName,
         path: window.location.pathname,
         standalone: window.matchMedia?.('(display-mode: standalone)').matches ?? false,
+        displayMode: window.matchMedia?.('(display-mode: standalone)').matches ? 'standalone' : 'browser',
+        visibilityState: document.visibilityState,
+        viewportHeight: window.visualViewport?.height ?? window.innerHeight,
         scrollTop: Math.round(main.scrollTop),
         maxScrollTop: Math.round(main.scrollHeight - main.clientHeight),
         ...details,
       };
       lastGestureRef.current = entry;
+      setLastScrollDebug(entry);
       try {
-        const key = 'das-scroll-debug-log';
-        const previous = JSON.parse(localStorage.getItem(key) || '[]');
+        const previous = JSON.parse(localStorage.getItem(SCROLL_DEBUG_LOG_KEY) || '[]');
         const next = Array.isArray(previous) ? [...previous.slice(-79), entry] : [entry];
-        localStorage.setItem(key, JSON.stringify(next));
+        localStorage.setItem(SCROLL_DEBUG_LOG_KEY, JSON.stringify(next));
       } catch {}
       console.warn('[DAS scroll-debug]', eventName, entry);
     };
@@ -111,18 +136,26 @@ export function DashboardLayout({ children }: DashboardLayoutProps) {
       });
     };
 
+    const navigationEntry = performance.getEntriesByType('navigation')[0] as PerformanceNavigationTiming | undefined;
+    writeScrollDebug('dashboard-scroll-debug-ready', {
+      navigationType: navigationEntry?.type ?? 'unknown',
+      userAgent: navigator.userAgent,
+    });
+
+    const handleMainScroll = () => keepScrollAwayFromEdges(main, 'scroll-edge-guard');
+
     keepScrollAwayFromEdges(main, 'mount-edge-guard');
-    main.addEventListener('scroll', () => keepScrollAwayFromEdges(main, 'scroll-edge-guard'), { passive: true });
-    main.addEventListener('touchstart', handleTouchStart, { passive: true });
+    main.addEventListener('scroll', handleMainScroll, { passive: true });
+    document.addEventListener('touchstart', handleTouchStart, { passive: true, capture: true });
     document.addEventListener('touchmove', handleTouchMove, { passive: false, capture: true });
     window.addEventListener('pagehide', handlePossibleRefresh);
     window.addEventListener('beforeunload', handlePossibleRefresh);
     document.addEventListener('visibilitychange', handlePossibleRefresh);
 
     return () => {
-      main.removeEventListener('scroll', () => keepScrollAwayFromEdges(main, 'scroll-edge-guard'));
-      main.removeEventListener('touchstart', handleTouchStart);
-      document.removeEventListener('touchmove', handleTouchMove, { capture: true });
+      main.removeEventListener('scroll', handleMainScroll);
+      document.removeEventListener('touchstart', handleTouchStart, true);
+      document.removeEventListener('touchmove', handleTouchMove, true);
       window.removeEventListener('pagehide', handlePossibleRefresh);
       window.removeEventListener('beforeunload', handlePossibleRefresh);
       document.removeEventListener('visibilitychange', handlePossibleRefresh);
