@@ -22,7 +22,14 @@ import NotFound from "./pages/NotFound";
 import InstallPWA from "./components/InstallPWA";
 import EnableNotifications from "./components/EnableNotifications";
 
-const queryClient = new QueryClient();
+const queryClient = new QueryClient({
+  defaultOptions: {
+    queries: {
+      refetchOnWindowFocus: false,
+      refetchOnReconnect: false,
+    },
+  },
+});
 
 const App = () => (
   <QueryClientProvider client={queryClient}>
