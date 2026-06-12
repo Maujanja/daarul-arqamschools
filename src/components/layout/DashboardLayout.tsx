@@ -148,7 +148,7 @@ export function DashboardLayout({ children }: DashboardLayoutProps) {
 
     keepScrollAwayFromEdges(main, 'mount-edge-guard');
     main.addEventListener('scroll', handleMainScroll, { passive: true });
-    document.addEventListener('touchstart', handleTouchStart, { passive: true, capture: true });
+    document.addEventListener('touchstart', handleTouchStart, { passive: false, capture: true });
     document.addEventListener('touchmove', handleTouchMove, { passive: false, capture: true });
     window.addEventListener('pagehide', handlePossibleRefresh);
     window.addEventListener('beforeunload', handlePossibleRefresh);
