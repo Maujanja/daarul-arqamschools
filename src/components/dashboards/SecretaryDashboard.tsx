@@ -41,7 +41,7 @@ export function SecretaryDashboard(_props: { isAdminMode?: boolean } = {}) {
   };
 
   return (
-    <div className="flex flex-col gap-3 h-[calc(100dvh-9rem)]">
+    <div className="flex flex-col gap-3 h-[calc(var(--app-viewport-height)-9rem)]">
       <div className="flex items-center justify-between gap-3 flex-wrap">
         <div>
           <h1 className="text-2xl font-display font-bold text-foreground">
