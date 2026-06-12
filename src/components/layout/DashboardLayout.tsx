@@ -68,7 +68,7 @@ export function DashboardLayout({ children }: DashboardLayoutProps) {
   };
 
   return (
-    <div className="fixed inset-0 h-dvh w-full overflow-hidden relative touch-none">
+    <div className="app-viewport fixed inset-0 w-full overflow-hidden relative touch-none">
       {/* Background Image */}
       <div 
         className="fixed inset-0 bg-cover bg-center bg-no-repeat pointer-events-none -z-10"
@@ -78,10 +78,10 @@ export function DashboardLayout({ children }: DashboardLayoutProps) {
       <div className="fixed inset-0 bg-black/25 pointer-events-none -z-10" />
       
       {/* Content */}
-      <div className="relative z-10 h-dvh overflow-hidden">
+      <div className="relative z-10 h-full overflow-hidden">
         <Sidebar />
         <main
-          ref={mainRef}
+          data-app-scroll-container="true"
           className="lg:ml-72 h-full min-h-0 overflow-y-auto overflow-x-hidden touch-pan-y overscroll-none"
           style={{ WebkitOverflowScrolling: 'touch', overscrollBehavior: 'none', overscrollBehaviorY: 'none' }}
         >
