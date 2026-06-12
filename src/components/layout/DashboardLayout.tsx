@@ -1,4 +1,4 @@
-import { ReactNode, useEffect, useRef, useState } from 'react';
+import { ReactNode, useEffect, useState } from 'react';
 import { Sidebar } from './Sidebar';
 import { useAuth } from '@/contexts/AuthContext';
 import { Navigate } from 'react-router-dom';
@@ -10,38 +10,27 @@ import { TeacherUnlockGuard } from './TeacherUnlockGuard';
 import { ScrollReveal } from './ScrollReveal';
 import { Button } from '@/components/ui/button';
 import { RefreshCw } from 'lucide-react';
+import {
+  SCROLL_DEBUG_ENABLED_KEY,
+  SCROLL_DEBUG_EVENT_NAME,
+  SCROLL_DEBUG_LOG_KEY,
+} from '@/utils/preventPullToRefresh';
 
 interface DashboardLayoutProps {
   children: ReactNode;
 }
 
-const SCROLL_DEBUG_ENABLED_KEY = 'das-scroll-debug-enabled';
-const SCROLL_DEBUG_LOG_KEY = 'das-scroll-debug-log';
-
 type ScrollDebugEntry = Record<string, unknown>;
 
-function getScrollDebugEnabled() {
+function readScrollDebugEnabled() {
   if (typeof window === 'undefined') return false;
-  const params = new URLSearchParams(window.location.search);
-  const debugParam = params.get('scrollDebug');
-  if (debugParam === '1' || debugParam === 'true') {
-    localStorage.setItem(SCROLL_DEBUG_ENABLED_KEY, '1');
-  } else if (debugParam === '0' || debugParam === 'false') {
-    localStorage.removeItem(SCROLL_DEBUG_ENABLED_KEY);
-  }
   return localStorage.getItem(SCROLL_DEBUG_ENABLED_KEY) === '1';
 }
 
 export function DashboardLayout({ children }: DashboardLayoutProps) {
   const { isAuthenticated, user } = useAuth();
-  const mainRef = useRef<HTMLElement | null>(null);
-  const lastTouchYRef = useRef(0);
-  const activeScrollerRef = useRef<HTMLElement | null>(null);
-  const lastGestureRef = useRef<ScrollDebugEntry | null>(null);
-  const [scrollDebugEnabled, setScrollDebugEnabled] = useState(getScrollDebugEnabled);
+  const [scrollDebugEnabled, setScrollDebugEnabled] = useState(readScrollDebugEnabled);
   const [lastScrollDebug, setLastScrollDebug] = useState<ScrollDebugEntry | null>(null);
-  const scrollDebugEnabledRef = useRef(scrollDebugEnabled);
-  scrollDebugEnabledRef.current = scrollDebugEnabled;
 
   useEffect(() => {
     const main = mainRef.current;
