@@ -142,23 +142,17 @@
   #root {
     width: 100%;
     height: 100%;
-    min-height: 100%;
-    overscroll-behavior-x: none;
-    overscroll-behavior-y: none;
-    overscroll-behavior: none;
-  }
-
-  #root {
+    height: 100dvh;
+    min-height: 100dvh;
+    margin: 0;
+    padding: 0;
+    overflow: hidden !important;
+    overscroll-behavior: none !important;
+    overscroll-behavior-y: none !important;
+    overscroll-behavior-x: none !important;
+    touch-action: none;
     position: fixed;
     inset: 0;
-    overflow: hidden;
-  }
-
-  html {
-    position: fixed;
-    inset: 0;
-    overflow-x: hidden;
-    overflow-y: hidden;
   }
 
   * {
@@ -167,14 +161,7 @@
 
   body {
     @apply text-foreground font-sans antialiased;
-    position: fixed;
-    inset: 0;
-    min-height: 100%;
-    overflow: hidden;
-    overscroll-behavior-y: none;
-    overscroll-behavior: none;
     -webkit-overflow-scrolling: touch;
-    touch-action: none;
   }
 
   h1, h2, h3, h4, h5, h6 {

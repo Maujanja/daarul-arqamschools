@@ -95,7 +95,7 @@ function SidebarInner({ items, user, logout, pathname, onNavigate, itemsVisible 
 
       <div className="mx-5 h-px bg-white/10" />
 
-      <nav className="flex-1 px-4 py-5 overflow-y-auto">
+      <nav className="flex-1 px-4 py-5 overflow-y-auto overscroll-none touch-pan-y">
         <AnimatePresence initial={false}>
           {itemsVisible && (
             <motion.ul
@@ -197,7 +197,7 @@ export function Sidebar() {
       <Button
         variant="ghost"
         size="icon"
-        className="fixed top-4 left-4 z-[60] lg:hidden bg-[#1e3a5f] text-white hover:bg-[#1e3a5f]"
+        className="fixed top-4 left-4 z-[60] lg:hidden bg-[#1e3a5f] text-white hover:bg-[#1e3a5f] touch-none"
         onClick={toggleSidebar}
         aria-label={isOpen ? 'Close menu' : 'Open menu'}
       >
@@ -232,7 +232,7 @@ export function Sidebar() {
       <AnimatePresence>
         {isOpen && (
           <motion.div
-            className="fixed inset-0 bg-black/50 z-40 lg:hidden"
+            className="fixed inset-0 bg-black/50 z-40 lg:hidden touch-none"
             initial={{ opacity: 0 }}
             animate={{ opacity: 1 }}
             exit={{ opacity: 0 }}

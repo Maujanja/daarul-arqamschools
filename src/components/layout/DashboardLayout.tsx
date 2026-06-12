@@ -181,7 +181,7 @@ export function DashboardLayout({ children }: DashboardLayoutProps) {
   };
 
   return (
-    <div className="fixed inset-0 h-dvh w-full overflow-hidden relative">
+    <div className="fixed inset-0 h-dvh w-full overflow-hidden relative touch-none">
       {/* Background Image */}
       <div 
         className="fixed inset-0 bg-cover bg-center bg-no-repeat pointer-events-none -z-10"
@@ -199,7 +199,7 @@ export function DashboardLayout({ children }: DashboardLayoutProps) {
           style={{ WebkitOverflowScrolling: 'touch', overscrollBehavior: 'none', overscrollBehaviorY: 'none' }}
         >
           {/* Header with Logo */}
-          <header className="hidden lg:flex items-center gap-3 px-8 py-4 border-b border-white/10 bg-[#1e3a5f] sticky top-0 z-30">
+          <header className="hidden lg:flex items-center gap-3 px-8 py-4 border-b border-white/10 bg-[#1e3a5f] sticky top-0 z-30 touch-none">
             <img src={dasLogo} alt="Daarul Arqam Logo" className="w-10 h-10 object-contain" />
             <div className="flex-1">
               <h1 className="font-display font-bold text-white text-sm leading-tight">DAARUL-ARQAM SCHOOLS</h1>
@@ -218,7 +218,7 @@ export function DashboardLayout({ children }: DashboardLayoutProps) {
             <NotificationBell />
           </header>
           {/* Mobile floating bell */}
-          <div className="lg:hidden fixed top-4 right-4 z-40 flex items-center gap-2">
+          <div className="lg:hidden fixed top-4 right-4 z-40 flex items-center gap-2 touch-none">
             <button
               onClick={handleRefresh}
               className="bg-[#1e3a5f] rounded-full w-10 h-10 flex items-center justify-center text-white hover:bg-[#1e3a5f]"
