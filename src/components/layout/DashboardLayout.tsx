@@ -1,4 +1,4 @@
-import { ReactNode, useEffect, useRef, useState } from 'react';
+import { ReactNode, useEffect, useState } from 'react';
 import { Sidebar } from './Sidebar';
 import { useAuth } from '@/contexts/AuthContext';
 import { Navigate } from 'react-router-dom';
@@ -10,157 +10,44 @@ import { TeacherUnlockGuard } from './TeacherUnlockGuard';
 import { ScrollReveal } from './ScrollReveal';
 import { Button } from '@/components/ui/button';
 import { RefreshCw } from 'lucide-react';
+import {
+  SCROLL_DEBUG_ENABLED_KEY,
+  SCROLL_DEBUG_EVENT_NAME,
+  SCROLL_DEBUG_LOG_KEY,
+} from '@/utils/preventPullToRefresh';
 
 interface DashboardLayoutProps {
   children: ReactNode;
 }
 
-const SCROLL_DEBUG_ENABLED_KEY = 'das-scroll-debug-enabled';
-const SCROLL_DEBUG_LOG_KEY = 'das-scroll-debug-log';
-
 type ScrollDebugEntry = Record<string, unknown>;
 
-function getScrollDebugEnabled() {
+function readScrollDebugEnabled() {
   if (typeof window === 'undefined') return false;
-  const params = new URLSearchParams(window.location.search);
-  const debugParam = params.get('scrollDebug');
-  if (debugParam === '1' || debugParam === 'true') {
-    localStorage.setItem(SCROLL_DEBUG_ENABLED_KEY, '1');
-  } else if (debugParam === '0' || debugParam === 'false') {
-    localStorage.removeItem(SCROLL_DEBUG_ENABLED_KEY);
-  }
   return localStorage.getItem(SCROLL_DEBUG_ENABLED_KEY) === '1';
 }
 
 export function DashboardLayout({ children }: DashboardLayoutProps) {
   const { isAuthenticated, user } = useAuth();
-  const mainRef = useRef<HTMLElement | null>(null);
-  const lastTouchYRef = useRef(0);
-  const activeScrollerRef = useRef<HTMLElement | null>(null);
-  const lastGestureRef = useRef<ScrollDebugEntry | null>(null);
-  const [scrollDebugEnabled, setScrollDebugEnabled] = useState(getScrollDebugEnabled);
+  const [scrollDebugEnabled, setScrollDebugEnabled] = useState(readScrollDebugEnabled);
   const [lastScrollDebug, setLastScrollDebug] = useState<ScrollDebugEntry | null>(null);
-  const scrollDebugEnabledRef = useRef(scrollDebugEnabled);
-  scrollDebugEnabledRef.current = scrollDebugEnabled;
 
   useEffect(() => {
-    const main = mainRef.current;
-    if (!main) return;
-
-    const writeScrollDebug = (eventName: string, details: ScrollDebugEntry = {}) => {
-      if (!scrollDebugEnabledRef.current) return;
-      const entry = {
-        at: new Date().toISOString(),
-        event: eventName,
-        path: window.location.pathname,
-        standalone: window.matchMedia?.('(display-mode: standalone)').matches ?? false,
-        displayMode: window.matchMedia?.('(display-mode: standalone)').matches ? 'standalone' : 'browser',
-        visibilityState: document.visibilityState,
-        viewportHeight: window.visualViewport?.height ?? window.innerHeight,
-        scrollTop: Math.round(main.scrollTop),
-        maxScrollTop: Math.round(main.scrollHeight - main.clientHeight),
-        ...details,
-      };
-      lastGestureRef.current = entry;
-      setLastScrollDebug(entry);
-      try {
-        const previous = JSON.parse(localStorage.getItem(SCROLL_DEBUG_LOG_KEY) || '[]');
-        const next = Array.isArray(previous) ? [...previous.slice(-79), entry] : [entry];
-        localStorage.setItem(SCROLL_DEBUG_LOG_KEY, JSON.stringify(next));
-      } catch {
-        // Debug logging must never break scrolling.
+    const handleDebug = (event: Event) => {
+      setScrollDebugEnabled(readScrollDebugEnabled());
+      setLastScrollDebug((event as CustomEvent<ScrollDebugEntry>).detail || null);
+    };
+    try {
+      const previous = JSON.parse(localStorage.getItem(SCROLL_DEBUG_LOG_KEY) || '[]');
+      if (Array.isArray(previous) && previous.length > 0) {
+        setLastScrollDebug(previous[previous.length - 1]);
       }
-      console.warn('[DAS scroll-debug]', eventName, entry);
-    };
-
-    const getScrollableTarget = (target: EventTarget | null) => {
-      let node = target instanceof Element ? target : null;
-      while (node && node !== main) {
-        const element = node as HTMLElement;
-        const style = window.getComputedStyle(element);
-        const canScroll = /(auto|scroll)/.test(style.overflowY) && element.scrollHeight > element.clientHeight + 1;
-        if (canScroll) return element;
-        node = node.parentElement;
-      }
-      return main;
-    };
-
-    const keepScrollAwayFromEdges = (scroller: HTMLElement = main, reason = 'scroll-edge-guard') => {
-      const maxScrollTop = scroller.scrollHeight - scroller.clientHeight;
-      if (maxScrollTop <= 1) return;
-      if (scroller.scrollTop <= 0) {
-        scroller.scrollTop = 1;
-        writeScrollDebug(reason, { adjusted: 'top', target: scroller === main ? 'main' : scroller.tagName });
-      } else if (scroller.scrollTop >= maxScrollTop) {
-        scroller.scrollTop = maxScrollTop - 1;
-        writeScrollDebug(reason, { adjusted: 'bottom', target: scroller === main ? 'main' : scroller.tagName });
-      }
-    };
-
-    const handleTouchStart = (event: TouchEvent) => {
-      activeScrollerRef.current = getScrollableTarget(event.target);
-      keepScrollAwayFromEdges(activeScrollerRef.current, 'touchstart-edge-guard');
-      lastTouchYRef.current = event.touches[0]?.clientY ?? 0;
-    };
-
-    const handleTouchMove = (event: TouchEvent) => {
-      if (!event.cancelable) return;
-      const currentY = event.touches[0]?.clientY ?? 0;
-      const deltaY = currentY - lastTouchYRef.current;
-      const scroller = activeScrollerRef.current || getScrollableTarget(event.target);
-      const maxScrollTop = scroller.scrollHeight - scroller.clientHeight;
-      const isScrollable = maxScrollTop > 1;
-      const isAtTop = !isScrollable || scroller.scrollTop <= 1;
-      const isAtBottom = isScrollable && Math.ceil(scroller.scrollTop + scroller.clientHeight) >= scroller.scrollHeight - 1;
-      const isPullingPastTop = isAtTop && deltaY > 0;
-      const isPushingPastBottom = isAtBottom && deltaY < 0;
-
-      if (isPullingPastTop || isPushingPastBottom) {
-        event.preventDefault();
-        keepScrollAwayFromEdges(scroller, 'touchmove-edge-guard');
-        writeScrollDebug('overscroll-gesture-blocked', {
-          direction: isPullingPastTop ? 'pull-down-at-top' : 'push-up-at-bottom',
-          deltaY: Math.round(deltaY),
-          target: scroller === main ? 'main' : scroller.tagName,
-          targetScrollTop: Math.round(scroller.scrollTop),
-          targetMaxScrollTop: Math.round(maxScrollTop),
-        });
-      }
-
-      lastTouchYRef.current = currentY;
-    };
-
-    const handlePossibleRefresh = (event: Event) => {
-      writeScrollDebug('page-lifecycle-possible-refresh', {
-        type: event.type,
-        visibilityState: document.visibilityState,
-        lastGesture: lastGestureRef.current,
-      });
-    };
-
-    const navigationEntry = performance.getEntriesByType('navigation')[0] as PerformanceNavigationTiming | undefined;
-    writeScrollDebug('dashboard-scroll-debug-ready', {
-      navigationType: navigationEntry?.type ?? 'unknown',
-      userAgent: navigator.userAgent,
-    });
-
-    const handleMainScroll = () => keepScrollAwayFromEdges(main, 'scroll-edge-guard');
-
-    keepScrollAwayFromEdges(main, 'mount-edge-guard');
-    main.addEventListener('scroll', handleMainScroll, { passive: true });
-    document.addEventListener('touchstart', handleTouchStart, { passive: true, capture: true });
-    document.addEventListener('touchmove', handleTouchMove, { passive: false, capture: true });
-    window.addEventListener('pagehide', handlePossibleRefresh);
-    window.addEventListener('beforeunload', handlePossibleRefresh);
-    document.addEventListener('visibilitychange', handlePossibleRefresh);
-
+    } catch {
+      // Ignore invalid debug history.
+    }
+    window.addEventListener(SCROLL_DEBUG_EVENT_NAME, handleDebug);
     return () => {
-      main.removeEventListener('scroll', handleMainScroll);
-      document.removeEventListener('touchstart', handleTouchStart, true);
-      document.removeEventListener('touchmove', handleTouchMove, true);
-      window.removeEventListener('pagehide', handlePossibleRefresh);
-      window.removeEventListener('beforeunload', handlePossibleRefresh);
-      document.removeEventListener('visibilitychange', handlePossibleRefresh);
+      window.removeEventListener(SCROLL_DEBUG_EVENT_NAME, handleDebug);
     };
   }, []);
 
@@ -181,7 +68,7 @@ export function DashboardLayout({ children }: DashboardLayoutProps) {
   };
 
   return (
-    <div className="fixed inset-0 h-dvh w-full overflow-hidden relative">
+    <div className="app-viewport fixed inset-0 w-full overflow-hidden relative">
       {/* Background Image */}
       <div 
         className="fixed inset-0 bg-cover bg-center bg-no-repeat pointer-events-none -z-10"
@@ -191,15 +78,15 @@ export function DashboardLayout({ children }: DashboardLayoutProps) {
       <div className="fixed inset-0 bg-black/25 pointer-events-none -z-10" />
       
       {/* Content */}
-      <div className="relative z-10 h-dvh overflow-hidden">
+      <div className="relative z-10 h-full overflow-hidden">
         <Sidebar />
         <main
-          ref={mainRef}
+          data-app-scroll-container="true"
           className="lg:ml-72 h-full min-h-0 overflow-y-auto overflow-x-hidden touch-pan-y overscroll-none"
           style={{ WebkitOverflowScrolling: 'touch', overscrollBehavior: 'none', overscrollBehaviorY: 'none' }}
         >
           {/* Header with Logo */}
-          <header className="hidden lg:flex items-center gap-3 px-8 py-4 border-b border-white/10 bg-[#1e3a5f] sticky top-0 z-30">
+          <header className="hidden lg:flex items-center gap-3 px-8 py-4 border-b border-white/10 bg-[#1e3a5f] sticky top-0 z-30 touch-none">
             <img src={dasLogo} alt="Daarul Arqam Logo" className="w-10 h-10 object-contain" />
             <div className="flex-1">
               <h1 className="font-display font-bold text-white text-sm leading-tight">DAARUL-ARQAM SCHOOLS</h1>
@@ -218,7 +105,7 @@ export function DashboardLayout({ children }: DashboardLayoutProps) {
             <NotificationBell />
           </header>
           {/* Mobile floating bell */}
-          <div className="lg:hidden fixed top-4 right-4 z-40 flex items-center gap-2">
+          <div className="lg:hidden fixed top-4 right-4 z-40 flex items-center gap-2 touch-none">
             <button
               onClick={handleRefresh}
               className="bg-[#1e3a5f] rounded-full w-10 h-10 flex items-center justify-center text-white hover:bg-[#1e3a5f]"
