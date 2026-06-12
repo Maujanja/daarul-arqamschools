@@ -137,20 +137,30 @@
 }
 
 @layer base {
+  :root {
+    --app-viewport-height: 100vh;
+  }
+
+  @supports (height: 100svh) {
+    :root {
+      --app-viewport-height: 100svh;
+    }
+  }
+
   html,
   body,
   #root {
     width: 100%;
     height: 100%;
-    height: 100dvh;
-    min-height: 100dvh;
+    height: var(--app-viewport-height);
+    min-height: var(--app-viewport-height);
     margin: 0;
     padding: 0;
     overflow: hidden !important;
     overscroll-behavior: none !important;
     overscroll-behavior-y: none !important;
     overscroll-behavior-x: none !important;
-    touch-action: none;
+    touch-action: manipulation;
     position: fixed;
     inset: 0;
   }
@@ -162,6 +172,14 @@
   body {
     @apply text-foreground font-sans antialiased;
     -webkit-overflow-scrolling: touch;
+  }
+
+  .app-viewport {
+    height: var(--app-viewport-height);
+    min-height: var(--app-viewport-height);
+    max-height: var(--app-viewport-height);
+    overscroll-behavior: none;
+    overflow: hidden;
   }
 
   h1, h2, h3, h4, h5, h6 {
