@@ -68,7 +68,7 @@ export function DashboardLayout({ children }: DashboardLayoutProps) {
   };
 
   return (
-    <div className="app-viewport fixed inset-0 w-full overflow-hidden relative touch-none">
+    <div className="app-viewport fixed inset-0 w-full overflow-hidden relative">
       {/* Background Image */}
       <div 
         className="fixed inset-0 bg-cover bg-center bg-no-repeat pointer-events-none -z-10"
