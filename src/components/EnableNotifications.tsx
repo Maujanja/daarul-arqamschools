@@ -30,6 +30,8 @@ async function getPushRegistration() {
 
 export default function EnableNotifications() {
   const { user } = useAuth();
+  const userId = user?.id ?? null;
+  const userRole = user?.role ?? null;
   const [supported, setSupported] = useState(false);
   const [permission, setPermission] = useState<NotificationPermission>("default");
   const [show, setShow] = useState(false);
@@ -53,12 +55,12 @@ export default function EnableNotifications() {
   // Whenever user identity changes, re-tag the existing push subscription
   // so notifications are routed correctly for this device's CURRENT user.
   useEffect(() => {
-    if (!user) return;
+    if (!userId || !userRole) return;
     if (!("serviceWorker" in navigator) || !("PushManager" in window)) return;
     if (Notification.permission !== "granted") return;
 
     const lastTag = localStorage.getItem("push-tag-key");
-    const tagKey = `${user.role}:${user.id}`;
+    const tagKey = `${userRole}:${userId}`;
     if (lastTag === tagKey) return;
 
     (async () => {
@@ -70,8 +72,8 @@ export default function EnableNotifications() {
           body: {
             action: "subscribe",
             subscription: sub.toJSON(),
-            userIdentifier: user.id,
-            userRole: user.role,
+            userIdentifier: userId,
+            userRole,
           },
         });
         if (!error) localStorage.setItem("push-tag-key", tagKey);
@@ -79,7 +81,7 @@ export default function EnableNotifications() {
         console.error("Re-tag push subscription failed", e);
       }
     })();
-  }, [user?.id, user?.role]);
+  }, [userId, userRole]);
 
   const dismiss = () => {
     localStorage.setItem(DISMISS_KEY, String(Date.now()));
@@ -127,12 +129,14 @@ export default function EnableNotifications() {
 
       toast.success("Umejiandikisha kupokea notifications!");
       try {
-        localStorage.setItem("push-tag-key", `${user?.role}:${user?.id}`);
-      } catch {}
+        localStorage.setItem("push-tag-key", `${userRole}:${userId}`);
+      } catch {
+        // Ignore storage failures.
+      }
       setShow(false);
-    } catch (e: any) {
+    } catch (e: unknown) {
       console.error(e);
-      toast.error("Imeshindikana: " + (e?.message || e));
+      toast.error("Imeshindikana: " + (e instanceof Error ? e.message : String(e)));
     } finally {
       setBusy(false);
     }
