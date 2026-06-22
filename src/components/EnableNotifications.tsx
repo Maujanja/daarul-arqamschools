@@ -17,6 +17,17 @@ function urlBase64ToUint8Array(base64String: string) {
   return out;
 }
 
+async function getPushRegistration() {
+  if (!("serviceWorker" in navigator)) throw new Error("Notifications are not supported on this browser");
+  const registrations = await navigator.serviceWorker.getRegistrations();
+  const existing = registrations.find((registration) => {
+    const scriptUrl = registration.active?.scriptURL || registration.waiting?.scriptURL || registration.installing?.scriptURL || "";
+    return /\/push-sw\.js($|\?)/.test(scriptUrl);
+  });
+
+  return existing || navigator.serviceWorker.register("/push-sw.js", { scope: "/" });
+}
+
 export default function EnableNotifications() {
   const { user } = useAuth();
   const [supported, setSupported] = useState(false);
@@ -52,7 +63,7 @@ export default function EnableNotifications() {
 
     (async () => {
       try {
-        const reg = await navigator.serviceWorker.ready;
+        const reg = await getPushRegistration();
         const sub = await reg.pushManager.getSubscription();
         if (!sub) return;
         const { error } = await supabase.functions.invoke("push-subscribe", {
@@ -78,7 +89,7 @@ export default function EnableNotifications() {
   const enable = async () => {
     setBusy(true);
     try {
-      const reg = await navigator.serviceWorker.ready;
+      const reg = await getPushRegistration();
       const perm = await Notification.requestPermission();
       setPermission(perm);
       if (perm !== "granted") {
