@@ -7,25 +7,26 @@ installPullToRefreshGuard();
 
 createRoot(document.getElementById("root")!).render(<App />);
 
-// Register service worker only for push notifications; it must not cache or refresh pages.
+// Remove old app-shell service workers/caches. Push uses /push-sw.js only, registered on demand.
 if ("serviceWorker" in navigator) {
-  const isInIframe = (() => {
-    try { return window.self !== window.top; } catch { return true; }
-  })();
-  const host = window.location.hostname;
-  const isPreviewHost =
-    host.includes("lovableproject.com") ||
-    host.includes("lovable.app") && host.includes("id-preview--");
+  window.addEventListener("load", () => {
+    navigator.serviceWorker.getRegistrations?.().then((regs) => {
+      regs.forEach((registration) => {
+        const scriptUrl = registration.active?.scriptURL || registration.waiting?.scriptURL || registration.installing?.scriptURL || "";
+        if (/\/(sw|service-worker)\.js($|\?)/.test(scriptUrl)) {
+          registration.unregister().catch(() => {});
+        }
+      });
+    }).catch(() => {});
 
-  const hasPushSupport = "PushManager" in window && "Notification" in window;
-
-  if (!isInIframe && !isPreviewHost && import.meta.env.PROD && hasPushSupport) {
-    window.addEventListener("load", () => {
-      navigator.serviceWorker.register("/sw.js").catch(() => {});
-    });
-  } else {
-    navigator.serviceWorker.getRegistrations?.().then((regs) =>
-      regs.forEach((r) => r.unregister())
-    );
-  }
+    if ("caches" in window) {
+      caches.keys().then((keys) => {
+        const oldAppCaches = keys.filter((key) =>
+          key.startsWith("daarul-arqam-") ||
+          /(^|-)precache-v\d+-|(^|-)runtime-|(^|-)googleAnalytics-/.test(key)
+        );
+        return Promise.allSettled(oldAppCaches.map((key) => caches.delete(key)));
+      }).catch(() => {});
+    }
+  });
 }
