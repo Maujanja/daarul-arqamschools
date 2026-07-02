@@ -11,7 +11,8 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@
 import { supabase } from '@/integrations/supabase/client';
 import { useSecureQuery } from '@/hooks/useSecureQuery';
 import { terms } from '@/data/mockData';
-import { isSeniorClass, isPrimaryClass, calculateDivision, calculateGradeForClass, getTestDisplayName, getTestsForClass, getFilterLabel, getDivisionBgColor } from '@/utils/seniorGrading';
+import { isSeniorClass, isPrimaryClass, isNurseryClass, calculateDivision, calculateGradeForClass, getTestDisplayName, getTestsForClass, getFilterLabel, getDivisionBgColor } from '@/utils/seniorGrading';
+import dasLogoUrl from '@/assets/das-logo.png';
 import { useAuth } from '@/contexts/AuthContext';
 import { useAcademicYears } from '@/hooks/useAcademicYears';
 import { AnnouncementMedia } from '@/components/AnnouncementMedia';
