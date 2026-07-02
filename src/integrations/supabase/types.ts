@@ -766,6 +766,24 @@ export type Database = {
         }
         Relationships: []
       }
+      sso_used_jtis: {
+        Row: {
+          expires_at: string
+          jti: string
+          used_at: string
+        }
+        Insert: {
+          expires_at: string
+          jti: string
+          used_at?: string
+        }
+        Update: {
+          expires_at?: string
+          jti?: string
+          used_at?: string
+        }
+        Relationships: []
+      }
       student_custom_installments: {
         Row: {
           academic_year: string
