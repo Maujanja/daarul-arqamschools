@@ -785,6 +785,60 @@ export function ParentDashboard() {
   }, [activeClass, studentAveragePerSeries]);
 
 
+  // Shared PDF header: logo + school name + report title. Returns next Y.
+  const addPdfHeader = async (doc: jsPDF, reportTitle: string): Promise<number> => {
+    const pageWidth = doc.internal.pageSize.getWidth();
+    // Load logo as base64
+    let logoData: string | null = null;
+    try {
+      const res = await fetch(dasLogoUrl);
+      const blob = await res.blob();
+      logoData = await new Promise<string>((resolve, reject) => {
+        const reader = new FileReader();
+        reader.onload = () => resolve(reader.result as string);
+        reader.onerror = reject;
+        reader.readAsDataURL(blob);
+      });
+    } catch (e) {
+      logoData = null;
+    }
+
+    let y = 12;
+    if (logoData) {
+      const size = 16;
+      doc.addImage(logoData, 'PNG', (pageWidth - size) / 2, y - 4, size, size);
+      y += 16;
+    }
+    doc.setFontSize(9);
+    doc.setFont('helvetica', 'italic');
+    doc.text('Bismillaahir Rahmaanir Rahiim', pageWidth / 2, y, { align: 'center' });
+    y += 6;
+
+    const schoolName = isSeniorClass(activeClass)
+      ? 'DAARUL-ARQAM SECONDARY SCHOOL'
+      : isNurseryClass(activeClass)
+      ? 'DAARUL-ARQAM NURSERY SCHOOL'
+      : 'DAARUL-ARQAM PRIMARY SCHOOL';
+    doc.setFontSize(14);
+    doc.setFont('helvetica', 'bold');
+    doc.text(schoolName, pageWidth / 2, y, { align: 'center' });
+    y += 6;
+
+    doc.setFontSize(9);
+    doc.setFont('helvetica', 'italic');
+    doc.text("Qur'an, Taaluma na Maadili", pageWidth / 2, y, { align: 'center' });
+    y += 7;
+
+    doc.setFontSize(13);
+    doc.setFont('helvetica', 'bold');
+    doc.text(reportTitle, pageWidth / 2, y, { align: 'center' });
+    y += 8;
+
+    doc.setDrawColor(180);
+    doc.line(15, y - 2, pageWidth - 15, y - 2);
+    return y + 4;
+  };
+
   // Download Subject Performance PDF with chart image
   const handleDownloadSubjectPerformance = async () => {
     const doc = new jsPDF();
