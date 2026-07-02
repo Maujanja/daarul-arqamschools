@@ -788,15 +788,14 @@ export function ParentDashboard() {
   // Download Subject Performance PDF with chart image
   const handleDownloadSubjectPerformance = async () => {
     const doc = new jsPDF();
-    
-    doc.setFontSize(18);
-    doc.text('Subject Performance Report', 105, 20, { align: 'center' });
-    
+    let y = await addPdfHeader(doc, 'Subject Performance Report');
     doc.setFontSize(12);
-    doc.text(`Student: ${childName}`, 20, 35);
-    doc.text(`Class: ${childClass}`, 20, 43);
-    doc.text(`Term: ${selectedTerm} - ${selectedYear}`, 20, 51);
-    doc.text(`Date: ${new Date().toLocaleDateString()}`, 20, 59);
+    doc.setFont('helvetica', 'normal');
+    doc.text(`Student: ${childName}`, 20, y); y += 7;
+    doc.text(`Class: ${childClass}${childStream ? ' ' + childStream : ''}`, 20, y); y += 7;
+    doc.text(`${getFilterLabel(activeClass)}: ${getTestDisplayName(selectedTerm, activeClass)}`, 20, y); y += 7;
+    doc.text(`Academic Year: ${selectedYear}`, 20, y); y += 7;
+    doc.text(`Date: ${new Date().toLocaleDateString()}`, 20, y);
     
     // Capture chart as image
     if (subjectChartRef.current) {
@@ -806,7 +805,7 @@ export function ParentDashboard() {
           scale: 2
         });
         const imgData = canvas.toDataURL('image/png');
-        doc.addImage(imgData, 'PNG', 15, 70, 180, 100);
+        doc.addImage(imgData, 'PNG', 15, y + 6, 180, 90);
       } catch (error) {
         console.error('Error capturing chart:', error);
       }
@@ -821,7 +820,7 @@ export function ParentDashboard() {
     autoTable(doc, {
       head: [['Subject', 'Average', 'Grade']],
       body: tableData,
-      startY: 180,
+      startY: y + 102,
       theme: 'striped',
       headStyles: { fillColor: [59, 130, 246] }
     });
@@ -833,16 +832,15 @@ export function ParentDashboard() {
   // Download Grade Distribution PDF with chart image
   const handleDownloadGradeDistribution = async () => {
     const doc = new jsPDF();
-    
-    doc.setFontSize(18);
-    doc.text('Grade Distribution Report', 105, 20, { align: 'center' });
-    
+    let y = await addPdfHeader(doc, 'Grade Distribution Report');
     doc.setFontSize(12);
-    doc.text(`Student: ${childName}`, 20, 35);
-    doc.text(`Class: ${activeClass}`, 20, 43);
-    doc.text(`Term: ${selectedTerm} - ${selectedYear}`, 20, 51);
-    doc.text(`Overall Average: ${overallAverage.toFixed(1)}%`, 20, 59);
-    doc.text(`Date: ${new Date().toLocaleDateString()}`, 20, 67);
+    doc.setFont('helvetica', 'normal');
+    doc.text(`Student: ${childName}`, 20, y); y += 7;
+    doc.text(`Class: ${activeClass}${childStream ? ' ' + childStream : ''}`, 20, y); y += 7;
+    doc.text(`${getFilterLabel(activeClass)}: ${getTestDisplayName(selectedTerm, activeClass)}`, 20, y); y += 7;
+    doc.text(`Academic Year: ${selectedYear}`, 20, y); y += 7;
+    doc.text(`Overall Average: ${overallAverage.toFixed(1)}%`, 20, y); y += 7;
+    doc.text(`Date: ${new Date().toLocaleDateString()}`, 20, y);
     
     // Capture chart as image
     if (gradeChartRef.current) {
@@ -852,7 +850,7 @@ export function ParentDashboard() {
           scale: 2
         });
         const imgData = canvas.toDataURL('image/png');
-        doc.addImage(imgData, 'PNG', 15, 80, 180, 100);
+        doc.addImage(imgData, 'PNG', 15, y + 6, 180, 90);
       } catch (error) {
         console.error('Error capturing chart:', error);
       }
@@ -870,7 +868,7 @@ export function ParentDashboard() {
     autoTable(doc, {
       head: [['Grade Range', 'Number of Subjects', 'Percentage']],
       body: tableData,
-      startY: 190,
+      startY: y + 102,
       theme: 'striped',
       headStyles: { fillColor: [139, 92, 246] }
     });
@@ -879,21 +877,20 @@ export function ParentDashboard() {
   };
 
   // Download PDF report (main report)
-  const handleDownloadReport = () => {
+  const handleDownloadReport = async () => {
     const doc = new jsPDF();
-    
-    // Header
-    doc.setFontSize(20);
-    doc.text('Student Academic Report', 105, 20, { align: 'center' });
-    
+    let y = await addPdfHeader(doc, 'Student Academic Report');
     doc.setFontSize(12);
-    doc.text(`Student: ${childName}`, 20, 40);
-    doc.text(`Class: ${activeClass}`, 20, 50);
-    doc.text(`Academic Year: ${selectedYear}`, 20, 60);
-    
-    // Subject Performance Table
+    doc.setFont('helvetica', 'normal');
+    doc.text(`Student: ${childName}`, 20, y); y += 7;
+    doc.text(`Class: ${activeClass}${childStream ? ' ' + childStream : ''}`, 20, y); y += 7;
+    doc.text(`${getFilterLabel(activeClass)}: ${getTestDisplayName(selectedTerm, activeClass)}`, 20, y); y += 7;
+    doc.text(`Academic Year: ${selectedYear}`, 20, y); y += 10;
+
     doc.setFontSize(14);
-    doc.text('Subject Performance', 20, 80);
+    doc.setFont('helvetica', 'bold');
+    doc.text('Subject Performance', 20, y);
+    y += 3;
     
     const tableData = subjectAverages.map(s => {
       const grade = calculateGradeForClass(s.average, activeClass);
@@ -903,7 +900,7 @@ export function ParentDashboard() {
     autoTable(doc, {
       head: [['Subject', 'Average', 'Grade']],
       body: tableData,
-      startY: 85,
+      startY: y + 2,
       theme: 'grid',
       headStyles: { fillColor: [59, 130, 246] }
     });
