@@ -160,7 +160,7 @@
     overscroll-behavior: none !important;
     overscroll-behavior-y: none !important;
     overscroll-behavior-x: none !important;
-    touch-action: manipulation;
+    touch-action: none;
     position: fixed;
     inset: 0;
   }
