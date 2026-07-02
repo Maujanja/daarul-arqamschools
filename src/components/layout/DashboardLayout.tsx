@@ -82,8 +82,8 @@ export function DashboardLayout({ children }: DashboardLayoutProps) {
         <Sidebar />
         <main
           data-app-scroll-container="true"
-          className="lg:ml-72 h-full min-h-0 overflow-y-auto overflow-x-hidden touch-pan-y overscroll-none"
-          style={{ WebkitOverflowScrolling: 'touch', overscrollBehavior: 'none', overscrollBehaviorY: 'none' }}
+          className="lg:ml-72 h-full min-h-0 overflow-y-auto overflow-x-hidden overscroll-none"
+          style={{ WebkitOverflowScrolling: 'touch', overscrollBehavior: 'none', overscrollBehaviorY: 'none', touchAction: 'pan-y' }}
         >
           {/* Header with Logo */}
           <header className="hidden lg:flex items-center gap-3 px-8 py-4 border-b border-white/10 bg-[#1e3a5f] sticky top-0 z-30 touch-none">
