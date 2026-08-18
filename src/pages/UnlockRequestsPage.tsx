@@ -35,7 +35,7 @@ export default function UnlockRequestsPage() {
   const { user } = useAuth();
   const { toast } = useToast();
   const { fetchTable } = useSecureQuery();
-  const { update } = useSecureData();
+  const { update, remove } = useSecureData();
   
   const [requests, setRequests] = useState<UnlockRequest[]>([]);
   const [isLoading, setIsLoading] = useState(true);
