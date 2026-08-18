@@ -159,7 +159,10 @@ export function NotificationBell() {
     const tasks: Promise<unknown>[] = [];
     tasks.push(
       isAdmin || isHeadOfSchool || isTeacher
-        ? fetchTable<UnlockRequest>('marks_unlock_requests')
+        ? fetchTable<UnlockRequest>('marks_unlock_requests', { status: 'pending' }, {
+            orderBy: { column: 'created_at', ascending: false },
+            limit: 200,
+          })
         : Promise.resolve([] as UnlockRequest[])
     );
     tasks.push(
