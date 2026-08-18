@@ -236,6 +236,7 @@ export default function UnlockRequestsPage() {
         </div>
 
         <Tabs defaultValue="pending">
+          <div className="flex flex-wrap items-center justify-between gap-3">
           <TabsList>
             <TabsTrigger value="pending" className="flex items-center gap-2">
               <Bell className="w-4 h-4" />
@@ -246,6 +247,13 @@ export default function UnlockRequestsPage() {
               Processed ({processedRequests.length})
             </TabsTrigger>
           </TabsList>
+          {canDelete && (
+            <Button variant="outline" size="sm" onClick={handlePurgeOld} disabled={isPurging}>
+              {isPurging ? <Loader2 className="w-4 h-4 mr-1 animate-spin" /> : <Trash2 className="w-4 h-4 mr-1" />}
+              Delete old (30+ days)
+            </Button>
+          )}
+          </div>
 
           <TabsContent value="pending" className="mt-6">
             {pendingRequests.length === 0 ? (
@@ -311,6 +319,16 @@ export default function UnlockRequestsPage() {
                           >
                             <XCircle className="w-4 h-4 mr-1" />Reject
                           </Button>
+                          {canDelete && (
+                            <Button
+                              size="sm"
+                              variant="outline"
+                              onClick={() => handleDelete(request)}
+                              disabled={deletingId === request.id}
+                            >
+                              {deletingId === request.id ? <Loader2 className="w-4 h-4 animate-spin" /> : <Trash2 className="w-4 h-4" />}
+                            </Button>
+                          )}
                         </div>
                       )}
                     </div>
@@ -330,6 +348,7 @@ export default function UnlockRequestsPage() {
               <div className="space-y-4">
                 {processedRequests.map(request => (
                   <div key={request.id} className={`card-elevated p-5 animate-fade-in border-l-4 ${request.status === 'approved' ? 'border-l-success' : 'border-l-destructive'}`}>
+                    <div className="flex items-start justify-between gap-3">
                     <div className="flex-1">
                       <div className="flex items-center gap-3 mb-2">
                         <h3 className="font-semibold text-card-foreground">{request.teacher_name}</h3>
@@ -356,6 +375,18 @@ export default function UnlockRequestsPage() {
                       <p className="text-xs text-muted-foreground mt-2">
                         {new Date(request.created_at).toLocaleString()}
                       </p>
+                    </div>
+                    {canDelete && (
+                      <Button
+                        size="sm"
+                        variant="outline"
+                        className="shrink-0"
+                        onClick={() => handleDelete(request)}
+                        disabled={deletingId === request.id}
+                      >
+                        {deletingId === request.id ? <Loader2 className="w-4 h-4 animate-spin" /> : <Trash2 className="w-4 h-4" />}
+                      </Button>
+                    )}
                     </div>
                   </div>
                 ))}
