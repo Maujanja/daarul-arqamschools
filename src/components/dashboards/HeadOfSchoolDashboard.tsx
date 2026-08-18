@@ -151,6 +151,8 @@ export function HeadOfSchoolDashboard() {
       if (!selectedYear || !user) return [];
       const result = await secureQuery('marks_unlock_requests', user.role, user.id, {
         filters: { academic_year: selectedYear },
+        orderBy: { column: 'created_at', ascending: false },
+        limit: 500,
       });
       if (!result?.success) return [];
       return (result.data || []).filter((r: any) => isClassInSection(r.class, myBaseClasses));
