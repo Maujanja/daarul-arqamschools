@@ -5,7 +5,7 @@ import { useAuth } from '@/contexts/AuthContext';
 import { useToast } from '@/hooks/use-toast';
 import { useSecureQuery } from '@/hooks/useSecureQuery';
 import { useSecureData } from '@/hooks/useSecureData';
-import { Loader2, Unlock, Lock, CheckCircle, XCircle, Bell, Clock } from 'lucide-react';
+import { Loader2, Unlock, Lock, CheckCircle, XCircle, Bell, Clock, Trash2 } from 'lucide-react';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import { Textarea } from '@/components/ui/textarea';
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from '@/components/ui/dialog';
@@ -40,6 +40,8 @@ export default function UnlockRequestsPage() {
   const [requests, setRequests] = useState<UnlockRequest[]>([]);
   const [isLoading, setIsLoading] = useState(true);
   const [processingId, setProcessingId] = useState<string | null>(null);
+  const [deletingId, setDeletingId] = useState<string | null>(null);
+  const [isPurging, setIsPurging] = useState(false);
   const [showNoteDialog, setShowNoteDialog] = useState(false);
   const [selectedRequest, setSelectedRequest] = useState<UnlockRequest | null>(null);
   const [adminNote, setAdminNote] = useState('');
@@ -48,6 +50,7 @@ export default function UnlockRequestsPage() {
   const isAdmin = user?.role === 'admin';
   const isHeadOfSchool = user?.role?.startsWith('head_') || false;
   const canApprove = isAdmin || isHeadOfSchool;
+  const canDelete = isAdmin || isHeadOfSchool;
   const isTeacher = user?.role === 'teacher';
 
   const loadRequestsCb = useCallback(() => {
@@ -68,18 +71,65 @@ export default function UnlockRequestsPage() {
   const loadRequests = async () => {
     if (!user) return;
     setIsLoading(true);
-    
-    const data = await fetchTable<UnlockRequest>('marks_unlock_requests');
-    
+
+    // Fetch pending separately so a large backlog of processed rows can never
+    // push new teacher requests out of the response window.
+    const [pending, processed] = await Promise.all([
+      fetchTable<UnlockRequest>('marks_unlock_requests', { status: 'pending' }, {
+        orderBy: { column: 'created_at', ascending: false },
+        limit: 500,
+      }),
+      fetchTable<UnlockRequest>('marks_unlock_requests', undefined, {
+        orderBy: { column: 'created_at', ascending: false },
+        limit: 300,
+      }),
+    ]);
+
+    const byId = new Map<string, UnlockRequest>();
+    [...pending, ...processed.filter(r => r.status !== 'pending')].forEach(r => byId.set(r.id, r));
+    let all = Array.from(byId.values());
+
     // For teachers, filter to only their requests
-    const filtered = isTeacher 
-      ? data.filter(r => r.teacher_id === user.id)
-      : data;
-    
-    // Sort by created_at descending
-    filtered.sort((a, b) => new Date(b.created_at).getTime() - new Date(a.created_at).getTime());
-    setRequests(filtered);
+    if (isTeacher) all = all.filter(r => r.teacher_id === user.id);
+
+    all.sort((a, b) => new Date(b.created_at).getTime() - new Date(a.created_at).getTime());
+    setRequests(all);
     setIsLoading(false);
+  };
+
+  const handleDelete = async (request: UnlockRequest) => {
+    setDeletingId(request.id);
+    const result = await remove('marks_unlock_requests', { id: request.id });
+    setDeletingId(null);
+    if (result.success) {
+      toast({ title: 'Deleted', description: 'Request has been removed.' });
+      await loadRequests();
+    } else {
+      toast({ title: 'Error', description: result.error || 'Failed to delete.', variant: 'destructive' });
+    }
+  };
+
+  const handlePurgeOld = async () => {
+    const cutoff = Date.now() - 30 * 24 * 60 * 60 * 1000;
+    const oldIds = requests
+      .filter(r => r.status !== 'pending' && new Date(r.created_at).getTime() < cutoff)
+      .map(r => r.id);
+
+    if (oldIds.length === 0) {
+      toast({ title: 'Nothing to clean', description: 'No processed requests older than 30 days.' });
+      return;
+    }
+
+    setIsPurging(true);
+    let deleted = 0;
+    for (let i = 0; i < oldIds.length; i += 50) {
+      const batch = oldIds.slice(i, i + 50);
+      const result = await remove('marks_unlock_requests', { id: batch });
+      if (result.success) deleted += batch.length;
+    }
+    setIsPurging(false);
+    toast({ title: 'Cleaned up', description: `${deleted} old processed request(s) deleted.` });
+    await loadRequests();
   };
 
   const handleAction = (request: UnlockRequest, action: 'approved' | 'rejected') => {
