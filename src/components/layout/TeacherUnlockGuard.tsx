@@ -78,10 +78,25 @@ export function TeacherUnlockGuard() {
   const refresh = useCallback(async () => {
     if (!isTeacher || !user) return;
     const data = await fetchTable<UnlockRequest>('marks_unlock_requests');
-    const mine = data.filter(
+    let mine = data.filter(
       (r) => r.teacher_id === user.id && r.status === 'approved'
     );
+
+    // Ignore approvals whose student has since been removed from the system —
+    // the teacher can no longer act on them, so they must not block anything.
+    if (mine.some((r) => r.student_id)) {
+      const classes = Array.from(new Set(mine.map((r) => r.class).filter(Boolean)));
+      const rosters = await Promise.all(
+        classes.map((c) =>
+          fetchTable<{ id: string }>('students', { class: c }, { select: 'id' })
+        )
+      );
+      const existing = new Set(rosters.flat().map((s) => s.id));
+      mine = mine.filter((r) => !r.student_id || existing.has(r.student_id));
+    }
+
     setPendingApproved(mine);
+
 
     // Toast brand-new approvals once per approval
     const notified = loadNotified(user.id);
