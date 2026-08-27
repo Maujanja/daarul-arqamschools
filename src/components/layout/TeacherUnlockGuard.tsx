@@ -23,6 +23,7 @@ interface UnlockRequest {
   subject_name: string;
   class: string;
   term: string;
+  student_id: string | null;
   student_name: string | null;
   updated_at: string;
   admin_note?: string | null;
