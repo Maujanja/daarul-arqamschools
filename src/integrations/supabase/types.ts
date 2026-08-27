@@ -511,6 +511,48 @@ export type Database = {
           },
         ]
       }
+      marks_entry_windows: {
+        Row: {
+          academic_year: string
+          class: string
+          closed_at: string | null
+          created_at: string
+          id: string
+          is_open: boolean
+          notes: string | null
+          opened_at: string | null
+          opened_by: string | null
+          term: string
+          updated_at: string
+        }
+        Insert: {
+          academic_year: string
+          class: string
+          closed_at?: string | null
+          created_at?: string
+          id?: string
+          is_open?: boolean
+          notes?: string | null
+          opened_at?: string | null
+          opened_by?: string | null
+          term: string
+          updated_at?: string
+        }
+        Update: {
+          academic_year?: string
+          class?: string
+          closed_at?: string | null
+          created_at?: string
+          id?: string
+          is_open?: boolean
+          notes?: string | null
+          opened_at?: string | null
+          opened_by?: string | null
+          term?: string
+          updated_at?: string
+        }
+        Relationships: []
+      }
       marks_unlock_requests: {
         Row: {
           academic_year: string
@@ -568,6 +610,48 @@ export type Database = {
           teacher_name?: string
           term?: string
           updated_at?: string
+        }
+        Relationships: []
+      }
+      parent_login_events: {
+        Row: {
+          class: string
+          created_at: string
+          id: string
+          logged_in_at: string
+          month_key: string
+          parent_id: string | null
+          parent_name: string | null
+          roll_number: string | null
+          stream: string | null
+          student_id: string | null
+          student_name: string
+        }
+        Insert: {
+          class: string
+          created_at?: string
+          id?: string
+          logged_in_at?: string
+          month_key: string
+          parent_id?: string | null
+          parent_name?: string | null
+          roll_number?: string | null
+          stream?: string | null
+          student_id?: string | null
+          student_name: string
+        }
+        Update: {
+          class?: string
+          created_at?: string
+          id?: string
+          logged_in_at?: string
+          month_key?: string
+          parent_id?: string | null
+          parent_name?: string | null
+          roll_number?: string | null
+          stream?: string | null
+          student_id?: string | null
+          student_name?: string
         }
         Relationships: []
       }
