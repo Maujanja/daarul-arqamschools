@@ -31,7 +31,8 @@ type AllowedTable =
   | "family_group_members"
   | "family_group_installments"
   | "result_release_statuses"
-  | "system_alerts";
+  | "system_alerts"
+  | "marks_entry_windows";
 
 type AllowedOperation = "insert" | "update" | "delete" | "upsert";
 
@@ -71,6 +72,7 @@ const permissions: Record<string, Record<AllowedTable, AllowedOperation[]>> = {
     family_group_installments: ["insert", "update", "delete"],
     result_release_statuses: ["insert", "update", "delete"],
     system_alerts: ["update", "delete"],
+    marks_entry_windows: ["insert", "update", "delete", "upsert"],
   },
   teacher: {
     students: [],
@@ -98,6 +100,7 @@ const permissions: Record<string, Record<AllowedTable, AllowedOperation[]>> = {
     family_group_installments: [],
     result_release_statuses: [],
     system_alerts: [],
+    marks_entry_windows: [],
   },
   secretary: {
     students: ["insert", "update", "delete"],
@@ -125,6 +128,7 @@ const permissions: Record<string, Record<AllowedTable, AllowedOperation[]>> = {
     family_group_installments: [],
     result_release_statuses: [],
     system_alerts: [],
+    marks_entry_windows: [],
   },
   accountant: {
     students: [],
@@ -152,6 +156,7 @@ const permissions: Record<string, Record<AllowedTable, AllowedOperation[]>> = {
     family_group_installments: ["insert", "update", "delete"],
     result_release_statuses: [],
     system_alerts: ["update"],
+    marks_entry_windows: [],
   },
   parent: {
     students: [],
@@ -179,6 +184,7 @@ const permissions: Record<string, Record<AllowedTable, AllowedOperation[]>> = {
     family_group_installments: [],
     result_release_statuses: [],
     system_alerts: [],
+    marks_entry_windows: [],
   },
   head_nursery: {
     students: [],
@@ -206,6 +212,7 @@ const permissions: Record<string, Record<AllowedTable, AllowedOperation[]>> = {
     family_group_installments: [],
     result_release_statuses: ["insert", "update", "delete"],
     system_alerts: [],
+    marks_entry_windows: ["insert", "update", "delete", "upsert"],
   },
   head_primary: {
     students: [],
@@ -233,6 +240,7 @@ const permissions: Record<string, Record<AllowedTable, AllowedOperation[]>> = {
     family_group_installments: [],
     result_release_statuses: ["insert", "update", "delete"],
     system_alerts: [],
+    marks_entry_windows: ["insert", "update", "delete", "upsert"],
   },
   head_secondary: {
     students: [],
@@ -260,6 +268,7 @@ const permissions: Record<string, Record<AllowedTable, AllowedOperation[]>> = {
     family_group_installments: [],
     result_release_statuses: ["insert", "update", "delete"],
     system_alerts: [],
+    marks_entry_windows: ["insert", "update", "delete", "upsert"],
   },
 };
 
@@ -386,6 +395,44 @@ serve(async (req) => {
 
       return scopedQuery;
     };
+
+    // Series-level gate: teachers can only write marks when Admin/Head has opened that series
+    if (table === "marks" && userRole === "teacher" && ["insert", "update", "upsert"].includes(operation)) {
+      const records = Array.isArray(data) ? data : data ? [data] : [];
+      const combos = new Map<string, { class: string; term: string; academic_year: string }>();
+
+      for (const record of records) {
+        const cls = typeof record.class === "string" ? record.class : "";
+        const rawTerm = typeof record.term === "string" ? record.term : "";
+        const term = rawTerm.replace(/^Test\s+/i, "Series ");
+        const year = typeof record.academic_year === "string" ? record.academic_year : "";
+        if (cls && term && year) {
+          combos.set(`${cls}|${term}|${year}`, { class: cls, term, academic_year: year });
+        }
+      }
+
+      for (const combo of combos.values()) {
+        const { data: windowRow, error: windowError } = await supabase
+          .from("marks_entry_windows")
+          .select("is_open")
+          .eq("class", combo.class)
+          .eq("term", combo.term)
+          .eq("academic_year", combo.academic_year)
+          .maybeSingle();
+
+        if (windowError) throw windowError;
+
+        if (!windowRow || windowRow.is_open !== true) {
+          return new Response(
+            JSON.stringify({
+              success: false,
+              error: `${combo.term} for ${combo.class} (${combo.academic_year}) is not open yet. Please wait for Admin or Head of School to open it.`,
+            }),
+            { status: 403, headers: { ...corsHeaders, "Content-Type": "application/json" } }
+          );
+        }
+      }
+    }
 
     let result;
 
