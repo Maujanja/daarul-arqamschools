@@ -35,7 +35,9 @@ type AllowedTable =
   | "family_group_members"
   | "family_group_installments"
   | "result_release_statuses"
-  | "system_alerts";
+  | "system_alerts"
+  | "marks_entry_windows"
+  | "parent_login_events";
 
 interface QueryRequest {
   table: AllowedTable;
@@ -63,13 +65,13 @@ const readPermissions: Record<string, AllowedTable[]> = {
     "marks_unlock_requests",
     "family_groups", "family_group_members", "family_group_installments",
     "result_release_statuses",
-    "system_alerts"
+    "system_alerts", "marks_entry_windows", "parent_login_events"
   ],
   teacher: [
     "students", "marks", "teacher_assignments", "teacher_class_students",
     "subjects", "academic_years", "announcements", "feedback", "teachers_public", "teachers",
     "marks_unlock_requests",
-    "result_release_statuses"
+    "result_release_statuses", "marks_entry_windows"
   ],
   secretary: [
     "students", "parents", "subjects", "academic_years", "announcements", "feedback",
@@ -96,19 +98,19 @@ const readPermissions: Record<string, AllowedTable[]> = {
     "students", "marks", "teacher_assignments", "teacher_class_students",
     "subjects", "academic_years", "announcements", "feedback", "teachers_public", "teachers",
     "marks_unlock_requests", "result_release_statuses",
-    "head_of_school_credentials_public"
+    "head_of_school_credentials_public", "marks_entry_windows", "parent_login_events"
   ],
   head_primary: [
     "students", "marks", "teacher_assignments", "teacher_class_students",
     "subjects", "academic_years", "announcements", "feedback", "teachers_public", "teachers",
     "marks_unlock_requests", "result_release_statuses",
-    "head_of_school_credentials_public"
+    "head_of_school_credentials_public", "marks_entry_windows", "parent_login_events"
   ],
   head_secondary: [
     "students", "marks", "teacher_assignments", "teacher_class_students",
     "subjects", "academic_years", "announcements", "feedback", "teachers_public", "teachers",
     "marks_unlock_requests", "result_release_statuses",
-    "head_of_school_credentials_public"
+    "head_of_school_credentials_public", "marks_entry_windows", "parent_login_events"
   ],
 };
 

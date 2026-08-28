@@ -173,6 +173,9 @@ export default function MarksEntryPage() {
   const [unlockReason, setUnlockReason] = useState('');
   const [isRequestingUnlock, setIsRequestingUnlock] = useState(false);
   const [unlockTargetStudent, setUnlockTargetStudent] = useState<StudentMark | null>(null);
+  // Series-level opening: Admin/Head must open a series before teachers can enter marks
+  const [seriesOpen, setSeriesOpen] = useState<boolean | null>(null);
+  const [checkingSeriesWindow, setCheckingSeriesWindow] = useState(false);
   // Delete student from subject
   const [showDeleteDialog, setShowDeleteDialog] = useState(false);
   const [deleteTargetStudent, setDeleteTargetStudent] = useState<StudentMark | null>(null);
@@ -587,6 +590,36 @@ export default function MarksEntryPage() {
     return unlockRequests.find(r => r.student_id === studentId && r.status !== 'used');
   };
 
+  // Load whether the selected series has been opened by Admin/Head
+  const loadSeriesWindow = useCallback(async () => {
+    if (!selectedClass || !selectedTerm || !selectedYear) {
+      setSeriesOpen(null);
+      return;
+    }
+    setCheckingSeriesWindow(true);
+    const normalizedTerm = selectedTerm.replace(/^Test\s+/i, 'Series ');
+    const rows = await fetchTable<{ is_open: boolean }>('marks_entry_windows', {
+      class: selectedClass,
+      term: normalizedTerm,
+      academic_year: selectedYear,
+    }, { limit: 1 });
+    setSeriesOpen(rows.length > 0 ? rows[0].is_open === true : false);
+    setCheckingSeriesWindow(false);
+  }, [selectedClass, selectedTerm, selectedYear, fetchTable]);
+
+  useEffect(() => {
+    loadSeriesWindow();
+  }, [loadSeriesWindow]);
+
+  useRealtimeSubscription({
+    table: 'marks_entry_windows',
+    onUpdate: loadSeriesWindow,
+    enabled: !!selectedClass,
+  });
+
+  // Teachers cannot type or save anything until the series is opened
+  const isSeriesClosed = isTeacher && seriesOpen !== true;
+
   // Check if a specific student is locked for teacher
   const isStudentLocked = (studentId: string): boolean => {
     if (!isTeacher) return false;
@@ -859,6 +892,15 @@ export default function MarksEntryPage() {
   };
 
   const handleSubmit = async () => {
+    if (isSeriesClosed) {
+      toast({
+        title: "Series Not Open",
+        description: `${selectedTerm} for ${selectedClass} is not open yet. Please wait for Admin or Head of School to open it.`,
+        variant: "destructive",
+      });
+      return;
+    }
+
     // Only save marks that have been filled in AND are not locked
     // Allow "-" (saves as 0 with grade "-") and numeric values
     const filledMarks = marks.filter(m => {
@@ -1119,6 +1161,20 @@ export default function MarksEntryPage() {
           </div>
         </div>
 
+        {isSeriesClosed && !checkingSeriesWindow && selectedClass && (
+          <div className="rounded-lg p-4 animate-fade-in border border-destructive/30 bg-destructive/10">
+            <div className="flex items-center gap-3">
+              <Lock className="w-5 h-5 text-destructive shrink-0" />
+              <div>
+                <p className="font-semibold text-destructive">Series Imefungwa</p>
+                <p className="text-sm text-muted-foreground">
+                  {selectedClass ? getTestDisplayName(selectedTerm, selectedClass) : selectedTerm} ya {selectedClass} ({selectedYear}) haijafunguliwa. Subiri Admin au Head of School aifungue kabla ya kuingiza maksi.
+                </p>
+              </div>
+            </div>
+          </div>
+        )}
+
         {/* Top notification: Per-student unlock status summary */}
         {isTeacher && approvedStudentIds.size > 0 && (
           <div className="rounded-lg p-4 animate-fade-in border border-success/30 bg-success/10">
@@ -1267,7 +1323,7 @@ export default function MarksEntryPage() {
                     <p className="text-sm text-muted-foreground">{marks.length} students • {selectedClass ? getTestDisplayName(selectedTerm, selectedClass) : selectedTerm} • {selectedYear}</p>
                   </div>
                   <div className="flex items-center gap-2 flex-wrap">
-                    {hasUnlockedStudentsToSave && (
+                    {hasUnlockedStudentsToSave && !isSeriesClosed && (
                       <Button 
                         className="btn-gradient"
                         onClick={handleSubmit}
@@ -1319,6 +1375,7 @@ export default function MarksEntryPage() {
                     <tbody>
                       {marks.map((mark, index) => {
                         const locked = isStudentLocked(mark.studentId);
+                        const inputDisabled = locked || isSeriesClosed;
                         return (
                           <tr 
                             key={mark.studentId} 
@@ -1339,9 +1396,9 @@ export default function MarksEntryPage() {
                                     updateMark(mark.studentId, val);
                                   }
                                 }}
-                                className={`w-24 text-center mx-auto ${getInputClass(mark.exam)} ${locked ? 'opacity-60 cursor-not-allowed' : ''}`}
+                                className={`w-24 text-center mx-auto ${getInputClass(mark.exam)} ${inputDisabled ? 'opacity-60 cursor-not-allowed' : ''}`}
                                 placeholder="-"
-                                disabled={locked}
+                                disabled={inputDisabled}
                               />
                             </td>
                             <td className="py-4 px-4 text-center">

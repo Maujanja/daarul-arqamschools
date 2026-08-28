@@ -19,6 +19,8 @@ import AnnouncementsPage from "./pages/AnnouncementsPage";
 import MyClassStudentsPage from "./pages/MyClassStudentsPage";
 import AcademicYearsPage from "./pages/AcademicYearsPage";
 import UnlockRequestsPage from "./pages/UnlockRequestsPage";
+import MarksWindowsPage from "./pages/MarksWindowsPage";
+import ParentLoginsPage from "./pages/ParentLoginsPage";
 import NotFound from "./pages/NotFound";
 import InstallPWA from "./components/InstallPWA";
 import EnableNotifications from "./components/EnableNotifications";
@@ -59,6 +61,8 @@ const App = () => (
             <Route path="/my-class-students" element={<MyClassStudentsPage />} />
             <Route path="/academic-years" element={<AcademicYearsPage />} />
             <Route path="/unlock-requests" element={<UnlockRequestsPage />} />
+            <Route path="/series-control" element={<MarksWindowsPage />} />
+            <Route path="/parent-logins" element={<ParentLoginsPage />} />
             {/* ADD ALL CUSTOM ROUTES ABOVE THE CATCH-ALL "*" ROUTE */}
             <Route path="*" element={<NotFound />} />
           </Routes>
