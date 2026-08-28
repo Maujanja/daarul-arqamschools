@@ -25,7 +25,8 @@ type AllowedTable =
   | "family_group_members"
   | "family_group_installments"
   | "result_release_statuses"
-  | "system_alerts";
+  | "system_alerts"
+  | "marks_entry_windows";
 
 type AllowedOperation = "insert" | "update" | "delete" | "upsert";
 

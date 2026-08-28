@@ -128,7 +128,7 @@ serve(async (req) => {
 
         const { data: rollMatches, error } = await supabase
           .from("students")
-          .select("id, full_name, roll_number, parent_id")
+          .select("id, full_name, roll_number, parent_id, class, stream")
           .range(0, 4999);
 
         const student = rollMatches?.find((s: any) => 
@@ -154,6 +154,25 @@ serve(async (req) => {
             parentId = parent.id;
             parentName = parent.full_name;
           }
+        }
+
+        // Log the parent login so Admin/Head can see monthly dashboard visits
+        try {
+          const now = new Date();
+          const monthKey = `${now.getUTCFullYear()}-${String(now.getUTCMonth() + 1).padStart(2, "0")}`;
+          await supabase.from("parent_login_events").insert({
+            parent_id: student.parent_id || null,
+            parent_name: parentName,
+            student_id: student.id,
+            student_name: student.full_name,
+            class: student.class,
+            stream: student.stream || null,
+            roll_number: student.roll_number,
+            month_key: monthKey,
+            logged_in_at: now.toISOString(),
+          });
+        } catch (logError) {
+          console.warn("Parent login logging failed (non-fatal):", logError);
         }
 
         response = {
