@@ -6,7 +6,6 @@ import dasLogo from '@/assets/das-logo.png';
 import bgAdmin from '@/assets/bg-admin.jpg';
 import bgGeneral from '@/assets/bg-general.jpg';
 import { NotificationBell } from './NotificationBell';
-import { TeacherUnlockGuard } from './TeacherUnlockGuard';
 import { ScrollReveal } from './ScrollReveal';
 import { Button } from '@/components/ui/button';
 import { RefreshCw } from 'lucide-react';
