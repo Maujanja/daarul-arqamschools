@@ -181,13 +181,14 @@ export default function MarksWindowsPage() {
                   </tr>
                 </thead>
                 <tbody>
-                  {seriesList.map((term) => {
+                  {seriesList.map((series) => {
+                    const term = series.value;
                     const win = windowFor(term);
                     const open = win?.is_open === true;
                     return (
                       <tr key={term} className="border-b border-border/50">
                         <td className="py-4 px-4 font-medium text-card-foreground">
-                          {getTestDisplayName(term, selectedClass)}
+                          {series.label}
                         </td>
                         <td className="py-4 px-4">
                           {open ? (
