@@ -39,7 +39,7 @@ const navItems: NavItem[] = [
   { label: 'Teachers', icon: Users, href: '/teachers', roles: ['admin', 'head_nursery', 'head_primary', 'head_secondary'] },
   { label: 'Subjects', icon: BookOpen, href: '/subjects', roles: ['admin', 'head_nursery', 'head_primary', 'head_secondary'] },
   { label: 'Marks Entry', icon: ClipboardList, href: '/marks-entry', roles: ['teacher'] },
-  { label: 'Unlock Requests', icon: Unlock, href: '/unlock-requests', roles: ['admin', 'teacher', 'head_nursery', 'head_primary', 'head_secondary'] },
+  { label: 'Unlock Requests', icon: Unlock, href: '/unlock-requests', roles: ['admin', 'head_nursery', 'head_primary', 'head_secondary'] },
   { label: 'Series Control', icon: ToggleLeft, href: '/series-control', roles: ['admin', 'head_nursery', 'head_primary', 'head_secondary'] },
   { label: 'Parent Logins', icon: UserCheck, href: '/parent-logins', roles: ['admin', 'head_nursery', 'head_primary', 'head_secondary'] },
   { label: 'Reports', icon: BarChart3, href: '/reports', roles: ['admin', 'teacher', 'head_nursery', 'head_primary', 'head_secondary'] },
