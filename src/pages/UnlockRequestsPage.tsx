@@ -210,6 +210,10 @@ export default function UnlockRequestsPage() {
     }
   };
 
+  if (isTeacher) {
+    return <Navigate to="/dashboard" replace />;
+  }
+
   if (isLoading) {
     return (
       <DashboardLayout>
