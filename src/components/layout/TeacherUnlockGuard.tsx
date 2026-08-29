@@ -23,6 +23,8 @@ interface UnlockRequest {
   subject_name: string;
   class: string;
   term: string;
+  subject_id: string;
+  academic_year: string;
   student_id: string | null;
   student_name: string | null;
   updated_at: string;
@@ -83,17 +85,28 @@ export function TeacherUnlockGuard() {
       (r) => r.teacher_id === user.id && r.status === 'approved'
     );
 
-    // Ignore approvals whose student has since been removed from the system —
-    // the teacher can no longer act on them, so they must not block anything.
+    // An approved request only remains actionable while that student is still
+    // on this teacher's roster for the same subject, class and academic year.
+    // Removing a student from the roster must immediately release the teacher.
     if (mine.some((r) => r.student_id)) {
-      const classes = Array.from(new Set(mine.map((r) => r.class).filter(Boolean)));
-      const rosters = await Promise.all(
-        classes.map((c) =>
-          fetchTable<{ id: string }>('students', { class: c }, { select: 'id' })
+      const roster = await fetchTable<{
+        student_id: string;
+        subject_id: string;
+        class: string;
+        academic_year: string;
+      }>('teacher_class_students', { teacher_id: user.id }, {
+        select: 'student_id,subject_id,class,academic_year',
+      });
+      const actionable = new Set(
+        roster.map((row) =>
+          `${row.student_id}|${row.subject_id}|${row.class}|${row.academic_year}`
         )
       );
-      const existing = new Set(rosters.flat().map((s) => s.id));
-      mine = mine.filter((r) => !r.student_id || existing.has(r.student_id));
+      mine = mine.filter((r) =>
+        !r.student_id || actionable.has(
+          `${r.student_id}|${r.subject_id}|${r.class}|${r.academic_year}`
+        )
+      );
     }
 
     setPendingApproved(mine);

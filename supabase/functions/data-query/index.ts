@@ -398,6 +398,35 @@ serve(async (req) => {
       });
     }
 
+    // Approved unlocks cease to be actionable when the student is removed
+    // from this teacher's subject roster. Never return those stale approvals
+    // to a teacher, otherwise the global guard would lock their dashboard for
+    // an edit that can no longer be completed.
+    if (table === "marks_unlock_requests" && userRole === "teacher" && Array.isArray(data)) {
+      const approvedRows = data.filter((row: any) => row.status === "approved" && row.student_id);
+      if (approvedRows.length > 0) {
+        const studentIds = Array.from(new Set(approvedRows.map((row: any) => row.student_id)));
+        const teacherIds = resolvedTeacherIds.length > 0 ? resolvedTeacherIds : (userId ? [userId] : []);
+        const { data: rosterRows, error: rosterError } = await supabase
+          .from("teacher_class_students")
+          .select("teacher_id,student_id,subject_id,class,academic_year")
+          .in("teacher_id", teacherIds)
+          .in("student_id", studentIds);
+
+        if (rosterError) throw rosterError;
+
+        const actionable = new Set((rosterRows || []).map((row) =>
+          `${row.teacher_id}|${row.student_id}|${row.subject_id}|${row.class}|${row.academic_year}`
+        ));
+        sanitizedData = data.filter((row: any) => {
+          if (row.status !== "approved" || !row.student_id) return true;
+          return teacherIds.some((teacherId) => actionable.has(
+            `${teacherId}|${row.student_id}|${row.subject_id}|${row.class}|${row.academic_year}`
+          ));
+        });
+      }
+    }
+
     return new Response(
       JSON.stringify({ success: true, data: sanitizedData }),
       { headers: { ...corsHeaders, "Content-Type": "application/json" } }
