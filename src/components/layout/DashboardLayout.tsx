@@ -6,7 +6,6 @@ import dasLogo from '@/assets/das-logo.png';
 import bgAdmin from '@/assets/bg-admin.jpg';
 import bgGeneral from '@/assets/bg-general.jpg';
 import { NotificationBell } from './NotificationBell';
-import { TeacherUnlockGuard } from './TeacherUnlockGuard';
 import { ScrollReveal } from './ScrollReveal';
 import { Button } from '@/components/ui/button';
 import { RefreshCw } from 'lucide-react';
@@ -139,7 +138,7 @@ export function DashboardLayout({ children }: DashboardLayoutProps) {
             </div>
           )}
           <div className="p-4 sm:p-6 lg:p-8 pt-16 lg:pt-6 pb-24 lg:pb-10">
-            <TeacherUnlockGuard />
+            
             <ScrollReveal>{children}</ScrollReveal>
           </div>
         </main>
