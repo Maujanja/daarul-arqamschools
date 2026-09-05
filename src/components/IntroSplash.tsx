@@ -1,41 +1,46 @@
-import { useEffect, useRef, useState } from 'react';
-const INTRO_SRC = '/intro.mp4';
+import { useCallback, useEffect, useRef, useState } from 'react';
 
-const SEEN_KEY = 'intro-splash-seen';
+const INTRO_SRC = '/intro.mp4?v=20260905-2';
 
 export default function IntroSplash() {
-  const [visible, setVisible] = useState(() => {
-    if (typeof window === 'undefined') return false;
-    return sessionStorage.getItem(SEEN_KEY) !== '1';
-  });
+  const [visible, setVisible] = useState(true);
   const [fading, setFading] = useState(false);
   const videoRef = useRef<HTMLVideoElement | null>(null);
+  const finishingRef = useRef(false);
 
-  const finish = () => {
+  const finish = useCallback(() => {
+    if (finishingRef.current) return;
+    finishingRef.current = true;
     setFading(true);
     window.setTimeout(() => {
-      sessionStorage.setItem(SEEN_KEY, '1');
       setVisible(false);
     }, 350);
-  };
+  }, []);
+
+  const startPlayback = useCallback(() => {
+    const video = videoRef.current;
+    if (!video || finishingRef.current) return;
+    video.muted = true;
+    void video.play().catch(() => {
+      // Some Android WebViews reject an early autoplay request. Keep the
+      // splash visible and retry when the media reports that it can play.
+    });
+  }, []);
 
   useEffect(() => {
     if (!visible) return;
-    const video = videoRef.current;
-    if (!video) return;
-    video.play().catch(() => finish());
-    // Safety timeout in case the video stalls
-    const timer = window.setTimeout(finish, 9000);
+    startPlayback();
+    const timer = window.setTimeout(finish, 15000);
     return () => window.clearTimeout(timer);
-  }, [visible]);
+  }, [finish, startPlayback, visible]);
 
   if (!visible) return null;
 
   return (
     <div
-      className="fixed inset-0 z-[100000] bg-black flex items-center justify-center"
+      className="fixed inset-0 z-[100000] flex items-center justify-center bg-background"
       style={{ opacity: fading ? 0 : 1, transition: 'opacity 350ms ease' }}
-      onClick={finish}
+      onClick={startPlayback}
     >
       <div className="h-full w-full md:h-[92vh] md:w-auto md:aspect-[3/4] overflow-hidden">
         <video
@@ -46,9 +51,10 @@ export default function IntroSplash() {
           playsInline
           preload="auto"
           disablePictureInPicture
+          onLoadedData={startPlayback}
+          onCanPlay={startPlayback}
           onEnded={finish}
-          onError={finish}
-          className="h-full w-full object-cover"
+          className="h-full w-full bg-background object-cover md:object-contain"
         />
       </div>
     </div>
