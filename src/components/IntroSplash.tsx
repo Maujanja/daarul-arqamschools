@@ -1,5 +1,5 @@
 import { useEffect, useRef, useState } from 'react';
-import introAsset from '@/assets/intro.mp4.asset.json';
+const INTRO_SRC = '/intro.mp4';
 
 const SEEN_KEY = 'intro-splash-seen';
 
@@ -40,7 +40,7 @@ export default function IntroSplash() {
       <div className="h-full w-full md:h-[92vh] md:w-auto md:aspect-[3/4] overflow-hidden">
         <video
           ref={videoRef}
-          src={introAsset.url}
+          src={INTRO_SRC}
           muted
           autoPlay
           playsInline
