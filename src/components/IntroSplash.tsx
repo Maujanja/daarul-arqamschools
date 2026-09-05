@@ -1,5 +1,5 @@
 import { useEffect, useRef, useState } from 'react';
-import introAsset from '@/assets/intro.mp4.asset.json';
+const INTRO_SRC = '/intro.mp4';
 
 const SEEN_KEY = 'intro-splash-seen';
 
