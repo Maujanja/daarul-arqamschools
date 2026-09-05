@@ -23,6 +23,7 @@ import MarksWindowsPage from "./pages/MarksWindowsPage";
 import ParentLoginsPage from "./pages/ParentLoginsPage";
 import NotFound from "./pages/NotFound";
 import InstallPWA from "./components/InstallPWA";
+import IntroSplash from "./components/IntroSplash";
 import EnableNotifications from "./components/EnableNotifications";
 
 const queryClient = new QueryClient({
@@ -40,6 +41,7 @@ const App = () => (
       <TooltipProvider>
         <Toaster />
         <Sonner />
+        <IntroSplash />
         <InstallPWA />
         <EnableNotifications />
         <BrowserRouter>
