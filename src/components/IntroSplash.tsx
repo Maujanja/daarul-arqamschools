@@ -37,18 +37,20 @@ export default function IntroSplash() {
       style={{ opacity: fading ? 0 : 1, transition: 'opacity 350ms ease' }}
       onClick={finish}
     >
-      <video
-        ref={videoRef}
-        src={introAsset.url}
-        muted
-        autoPlay
-        playsInline
-        preload="auto"
-        disablePictureInPicture
-        onEnded={finish}
-        onError={finish}
-        className="h-full w-auto max-w-full object-contain md:h-auto md:w-auto md:max-h-[92vh] md:aspect-[3/4]"
-      />
+      <div className="h-full w-full md:h-[92vh] md:w-auto md:aspect-[3/4] overflow-hidden">
+        <video
+          ref={videoRef}
+          src={introAsset.url}
+          muted
+          autoPlay
+          playsInline
+          preload="auto"
+          disablePictureInPicture
+          onEnded={finish}
+          onError={finish}
+          className="h-full w-full object-cover"
+        />
+      </div>
     </div>
   );
 }
