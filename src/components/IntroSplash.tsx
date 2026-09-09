@@ -1,6 +1,7 @@
 import { useCallback, useEffect, useRef, useState } from 'react';
 
-const INTRO_SRC = '/intro.mp4?v=20260905-2';
+const INTRO_MP4_SRC = '/intro.mp4?v=20260905-3';
+const INTRO_WEBM_SRC = '/intro.webm?v=20260905-3';
 
 export default function IntroSplash() {
   const [visible, setVisible] = useState(true);
@@ -45,17 +46,20 @@ export default function IntroSplash() {
       <div className="h-full w-full md:h-[92vh] md:w-auto md:aspect-[3/4] overflow-hidden">
         <video
           ref={videoRef}
-          src={INTRO_SRC}
           muted
           autoPlay
           playsInline
           preload="auto"
+          poster="/intro-poster.jpg?v=20260905-3"
           disablePictureInPicture
           onLoadedData={startPlayback}
           onCanPlay={startPlayback}
           onEnded={finish}
           className="h-full w-full bg-background object-cover md:object-contain"
-        />
+        >
+          <source src={INTRO_MP4_SRC} type="video/mp4" />
+          <source src={INTRO_WEBM_SRC} type="video/webm" />
+        </video>
       </div>
     </div>
   );
