@@ -57,8 +57,8 @@ export default function IntroSplash() {
           onEnded={finish}
           className="h-full w-full bg-background object-cover md:object-contain"
         >
-          <source src={INTRO_MP4_SRC} type="video/mp4" />
           <source src={INTRO_WEBM_SRC} type="video/webm" />
+          <source src={INTRO_MP4_SRC} type="video/mp4" />
         </video>
       </div>
     </div>
