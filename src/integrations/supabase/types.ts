@@ -134,6 +134,98 @@ export type Database = {
         }
         Relationships: []
       }
+      bulk_sms_campaigns: {
+        Row: {
+          balance_after: number | null
+          created_at: string
+          created_by: string | null
+          created_by_role: string | null
+          failed_count: number
+          id: string
+          message: string
+          sent_count: number
+          source: string
+          title: string | null
+          total_recipients: number
+        }
+        Insert: {
+          balance_after?: number | null
+          created_at?: string
+          created_by?: string | null
+          created_by_role?: string | null
+          failed_count?: number
+          id?: string
+          message: string
+          sent_count?: number
+          source?: string
+          title?: string | null
+          total_recipients?: number
+        }
+        Update: {
+          balance_after?: number | null
+          created_at?: string
+          created_by?: string | null
+          created_by_role?: string | null
+          failed_count?: number
+          id?: string
+          message?: string
+          sent_count?: number
+          source?: string
+          title?: string | null
+          total_recipients?: number
+        }
+        Relationships: []
+      }
+      bulk_sms_recipients: {
+        Row: {
+          beem_request_id: string | null
+          campaign_id: string
+          created_at: string
+          delivery_checked_at: string | null
+          delivery_status: string | null
+          error: string | null
+          id: string
+          name: string | null
+          phone: string
+          raw_phone: string | null
+          status: string
+        }
+        Insert: {
+          beem_request_id?: string | null
+          campaign_id: string
+          created_at?: string
+          delivery_checked_at?: string | null
+          delivery_status?: string | null
+          error?: string | null
+          id?: string
+          name?: string | null
+          phone: string
+          raw_phone?: string | null
+          status?: string
+        }
+        Update: {
+          beem_request_id?: string | null
+          campaign_id?: string
+          created_at?: string
+          delivery_checked_at?: string | null
+          delivery_status?: string | null
+          error?: string | null
+          id?: string
+          name?: string | null
+          phone?: string
+          raw_phone?: string | null
+          status?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "bulk_sms_recipients_campaign_id_fkey"
+            columns: ["campaign_id"]
+            isOneToOne: false
+            referencedRelation: "bulk_sms_campaigns"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       family_group_installments: {
         Row: {
           academic_year: string
