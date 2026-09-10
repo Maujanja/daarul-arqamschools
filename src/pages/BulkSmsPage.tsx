@@ -84,7 +84,7 @@ export default function BulkSmsPage() {
   const call = useCallback(
     async (payload: Record<string, unknown>) => {
       const { data, error } = await supabase.functions.invoke('bulk-sms', {
-        body: { ...payload, userRole: role, userName: user?.name || user?.username || null },
+        body: { ...payload, userRole: role, userName: user?.name || null },
       });
       if (error) throw new Error(error.message);
       if (!data?.success) throw new Error(data?.error || 'Request failed');
