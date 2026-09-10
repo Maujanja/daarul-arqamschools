@@ -123,18 +123,23 @@ export default function BulkSmsPage() {
     loadCampaigns();
   }, [canView, loadBalance, loadCampaigns]);
 
+  // Normalize every entered/pasted number immediately to the 255... form Beem requires.
   const manualList = useMemo(
     () =>
       manualText
-        .split(/[\s,;\n]+/)
+        .split(/[\s,;|/\\\n\r\t]+/)
         .map((s) => s.trim())
-        .filter(Boolean),
+        .filter(Boolean)
+        .map((s) => normalizePreview(s) || s),
     [manualText]
   );
 
   const allRecipients = useMemo(() => {
     const map = new Map<string, { phone: string; name: string | null }>();
-    for (const r of fileRecipients) map.set(r.phone.trim(), r);
+    for (const r of fileRecipients) {
+      const norm = normalizePreview(r.phone) || r.phone.trim();
+      if (!map.has(norm)) map.set(norm, { phone: norm, name: r.name });
+    }
     for (const p of manualList) if (!map.has(p)) map.set(p, { phone: p, name: null });
     return Array.from(map.values());
   }, [fileRecipients, manualList]);
