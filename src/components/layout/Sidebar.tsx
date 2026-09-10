@@ -19,7 +19,7 @@ import {
   Calendar,
   Unlock,
   ToggleLeft,
-  UserCheck,,
+  UserCheck,
   Send
 } from 'lucide-react';
 import { cn } from '@/lib/utils';
