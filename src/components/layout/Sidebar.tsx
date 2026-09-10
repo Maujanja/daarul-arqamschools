@@ -19,7 +19,8 @@ import {
   Calendar,
   Unlock,
   ToggleLeft,
-  UserCheck,
+  UserCheck,,
+  Send
 } from 'lucide-react';
 import { cn } from '@/lib/utils';
 import { Button } from '@/components/ui/button';
@@ -42,6 +43,7 @@ const navItems: NavItem[] = [
   { label: 'Unlock Requests', icon: Unlock, href: '/unlock-requests', roles: ['admin', 'head_nursery', 'head_primary', 'head_secondary'] },
   { label: 'Series Control', icon: ToggleLeft, href: '/series-control', roles: ['admin', 'head_nursery', 'head_primary', 'head_secondary'] },
   { label: 'Parent Logins', icon: UserCheck, href: '/parent-logins', roles: ['admin', 'head_nursery', 'head_primary', 'head_secondary'] },
+  { label: 'Bulk SMS', icon: Send, href: '/bulk-sms', roles: ['admin', 'accountant', 'head_nursery', 'head_primary', 'head_secondary'] },
   { label: 'Reports', icon: BarChart3, href: '/reports', roles: ['admin', 'teacher', 'head_nursery', 'head_primary', 'head_secondary'] },
   { label: 'Feedback', icon: MessageSquare, href: '/feedback', roles: ['admin', 'parent', 'teacher', 'secretary', 'accountant', 'head_nursery', 'head_primary', 'head_secondary'] },
   { label: 'Announcements', icon: FileText, href: '/announcements', roles: ['admin', 'head_nursery', 'head_primary', 'head_secondary'] },
