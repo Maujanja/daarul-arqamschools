@@ -1362,6 +1362,148 @@ export type Database = {
         }
         Relationships: []
       }
+      voice_campaigns: {
+        Row: {
+          audio_mime: string | null
+          audio_path: string | null
+          balance_after: number | null
+          created_at: string
+          created_by: string | null
+          created_by_role: string | null
+          failed_count: number
+          id: string
+          seconds_used: number
+          sent_count: number
+          source: string
+          title: string | null
+          total_recipients: number
+          updated_at: string
+        }
+        Insert: {
+          audio_mime?: string | null
+          audio_path?: string | null
+          balance_after?: number | null
+          created_at?: string
+          created_by?: string | null
+          created_by_role?: string | null
+          failed_count?: number
+          id?: string
+          seconds_used?: number
+          sent_count?: number
+          source?: string
+          title?: string | null
+          total_recipients?: number
+          updated_at?: string
+        }
+        Update: {
+          audio_mime?: string | null
+          audio_path?: string | null
+          balance_after?: number | null
+          created_at?: string
+          created_by?: string | null
+          created_by_role?: string | null
+          failed_count?: number
+          id?: string
+          seconds_used?: number
+          sent_count?: number
+          source?: string
+          title?: string | null
+          total_recipients?: number
+          updated_at?: string
+        }
+        Relationships: []
+      }
+      voice_credit_ledger: {
+        Row: {
+          campaign_id: string | null
+          created_at: string
+          created_by: string | null
+          id: string
+          reason: string
+          reference: string | null
+          seconds_delta: number
+        }
+        Insert: {
+          campaign_id?: string | null
+          created_at?: string
+          created_by?: string | null
+          id?: string
+          reason: string
+          reference?: string | null
+          seconds_delta: number
+        }
+        Update: {
+          campaign_id?: string | null
+          created_at?: string
+          created_by?: string | null
+          id?: string
+          reason?: string
+          reference?: string | null
+          seconds_delta?: number
+        }
+        Relationships: [
+          {
+            foreignKeyName: "voice_credit_ledger_campaign_id_fkey"
+            columns: ["campaign_id"]
+            isOneToOne: false
+            referencedRelation: "voice_campaigns"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      voice_recipients: {
+        Row: {
+          campaign_id: string
+          created_at: string
+          delivery_checked_at: string | null
+          delivery_status: string | null
+          duration_seconds: number | null
+          error: string | null
+          id: string
+          name: string | null
+          phone: string
+          provider_call_id: string | null
+          raw_phone: string | null
+          status: string
+        }
+        Insert: {
+          campaign_id: string
+          created_at?: string
+          delivery_checked_at?: string | null
+          delivery_status?: string | null
+          duration_seconds?: number | null
+          error?: string | null
+          id?: string
+          name?: string | null
+          phone: string
+          provider_call_id?: string | null
+          raw_phone?: string | null
+          status?: string
+        }
+        Update: {
+          campaign_id?: string
+          created_at?: string
+          delivery_checked_at?: string | null
+          delivery_status?: string | null
+          duration_seconds?: number | null
+          error?: string | null
+          id?: string
+          name?: string | null
+          phone?: string
+          provider_call_id?: string | null
+          raw_phone?: string | null
+          status?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "voice_recipients_campaign_id_fkey"
+            columns: ["campaign_id"]
+            isOneToOne: false
+            referencedRelation: "voice_campaigns"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
     }
     Views: {
       accountant_credentials_public: {
