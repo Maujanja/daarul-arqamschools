@@ -552,8 +552,19 @@ serve(async (req) => {
         }
       }
     } else {
-      // Balance is healthy — record a recovery marker so a future dip
+      // Balance is healthy — clear any stale credit alerts so users stop
+      // seeing "credits exhausted" notifications after a top-up.
+      try {
+        await supabase
+          .from("system_alerts")
+          .delete()
+          .in("alert_type", ["zero_credit", "low_credit"]);
+      } catch (e) {
+        console.error("clearing stale credit alerts failed", e);
+      }
+      // Record a recovery marker so a future dip
       // counts as a new cycle and pushes again. Insert at most once per day.
+
       const recoveryKeyToday = `beem_credit_recovery_${today}`;
       const recordedToday = await alreadySent(
         supabase,
