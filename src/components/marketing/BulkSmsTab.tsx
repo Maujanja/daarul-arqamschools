@@ -46,8 +46,6 @@ interface Campaign {
   balance_after: number | null;
 }
 
-const ALLOWED = ['admin', 'accountant', 'head_nursery', 'head_primary', 'head_secondary'];
-
 function normalizePreview(raw: string): string | null {
   let p = raw.trim().replace(/[^0-9+]/g, '');
   if (p.startsWith('+')) p = p.slice(1);
@@ -57,10 +55,11 @@ function normalizePreview(raw: string): string | null {
   return /^255\d{9}$/.test(p) ? p : null;
 }
 
-export default function BulkSmsPage() {
+export default function BulkSmsTab() {
   const { user } = useAuth();
   const role = user?.role || '';
-  const canView = ALLOWED.includes(role);
+  const canView = true;
+
 
   const [manualText, setManualText] = useState('');
   const [fileRecipients, setFileRecipients] = useState<{ phone: string; name: string | null }[]>([]);
@@ -268,22 +267,20 @@ export default function BulkSmsPage() {
     }
   };
 
-  if (!canView) return <Navigate to="/dashboard" replace />;
-
   const smsParts = Math.max(1, Math.ceil(message.length / 160));
 
   return (
-    <DashboardLayout>
-      <div className="space-y-6">
-        <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-3">
+    <div className="space-y-6">
+      <div className="flex flex-col sm:flex-row sm:items-start sm:justify-between gap-3">
           <div>
-            <h1 className="text-2xl font-bold flex items-center gap-2">
-              <MessageSquare className="w-6 h-6" /> Bulk SMS
-            </h1>
+            <h2 className="text-lg font-semibold flex items-center gap-2">
+              <MessageSquare className="w-5 h-5" /> Bulk SMS
+            </h2>
             <p className="text-sm text-muted-foreground">
               Tuma SMS kwa namba nyingi kwa mkono au kwa kupakia faili la Excel.
             </p>
           </div>
+
           <Card className="p-3 flex items-center gap-3">
             <div>
               <p className="text-xs uppercase text-muted-foreground">Salio la Beem</p>
@@ -503,7 +500,7 @@ export default function BulkSmsPage() {
             ))}
           </div>
         </Card>
-      </div>
-    </DashboardLayout>
+    </div>
+
   );
 }
