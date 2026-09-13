@@ -500,7 +500,7 @@ export default function BulkSmsTab() {
             ))}
           </div>
         </Card>
-      </div>
-    </DashboardLayout>
+    </div>
+
   );
 }
