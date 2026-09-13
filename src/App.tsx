@@ -21,7 +21,7 @@ import AcademicYearsPage from "./pages/AcademicYearsPage";
 import UnlockRequestsPage from "./pages/UnlockRequestsPage";
 import MarksWindowsPage from "./pages/MarksWindowsPage";
 import ParentLoginsPage from "./pages/ParentLoginsPage";
-import BulkSmsPage from "./pages/BulkSmsPage";
+import MarketingPage from "./pages/MarketingPage";
 import NotFound from "./pages/NotFound";
 import InstallPWA from "./components/InstallPWA";
 import IntroSplash from "./components/IntroSplash";
@@ -66,7 +66,8 @@ const App = () => (
             <Route path="/unlock-requests" element={<UnlockRequestsPage />} />
             <Route path="/series-control" element={<MarksWindowsPage />} />
             <Route path="/parent-logins" element={<ParentLoginsPage />} />
-            <Route path="/bulk-sms" element={<BulkSmsPage />} />
+            <Route path="/marketing" element={<MarketingPage />} />
+            <Route path="/bulk-sms" element={<Navigate to="/marketing" replace />} />
             {/* ADD ALL CUSTOM ROUTES ABOVE THE CATCH-ALL "*" ROUTE */}
             <Route path="*" element={<NotFound />} />
           </Routes>

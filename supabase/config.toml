@@ -26,3 +26,6 @@ verify_jwt = false
 
 [functions.bulk-sms]
 verify_jwt = false
+
+[functions.voice-campaign]
+verify_jwt = false
