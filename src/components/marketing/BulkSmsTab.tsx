@@ -267,22 +267,20 @@ export default function BulkSmsTab() {
     }
   };
 
-  if (!canView) return <Navigate to="/dashboard" replace />;
-
   const smsParts = Math.max(1, Math.ceil(message.length / 160));
 
   return (
-    <DashboardLayout>
-      <div className="space-y-6">
-        <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-3">
+    <div className="space-y-6">
+      <div className="flex flex-col sm:flex-row sm:items-start sm:justify-between gap-3">
           <div>
-            <h1 className="text-2xl font-bold flex items-center gap-2">
-              <MessageSquare className="w-6 h-6" /> Bulk SMS
-            </h1>
+            <h2 className="text-lg font-semibold flex items-center gap-2">
+              <MessageSquare className="w-5 h-5" /> Bulk SMS
+            </h2>
             <p className="text-sm text-muted-foreground">
               Tuma SMS kwa namba nyingi kwa mkono au kwa kupakia faili la Excel.
             </p>
           </div>
+
           <Card className="p-3 flex items-center gap-3">
             <div>
               <p className="text-xs uppercase text-muted-foreground">Salio la Beem</p>
