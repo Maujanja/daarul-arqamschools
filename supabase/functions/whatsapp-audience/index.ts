@@ -124,6 +124,13 @@ serve(async (req) => {
     if (!prompt) return json({ success: false, error: "Prompt is required" }, 400);
     if (prompt.length > 20000) return json({ success: false, error: "Prompt too long" }, 400);
 
+    if (/\d+(?:\.\d+)?e\+\d+/i.test(prompt)) {
+      return json({
+        success: false,
+        error: "Namba hizi zimefupishwa na Excel na tarakimu zake za mwisho hazipo kwenye maandiko uliyocopy. Tumia kitufe cha Upload Excel yenye namba ili mfumo usome namba kamili moja kwa moja.",
+      }, 400);
+    }
+
     // Numbers come ONLY from the user's text — the AI never produces them.
     const { phones: allowed, invalid } = extractPhones(prompt);
     const phones = allowed.slice(0, 2000);

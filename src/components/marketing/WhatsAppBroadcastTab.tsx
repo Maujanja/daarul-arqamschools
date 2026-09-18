@@ -8,7 +8,7 @@ import { Textarea } from '@/components/ui/textarea';
 import { Badge } from '@/components/ui/badge';
 import { ScrollArea } from '@/components/ui/scroll-area';
 import { useToast } from '@/hooks/use-toast';
-import { Bot, Download, ExternalLink, Loader2, MessageCircle, Send, User } from 'lucide-react';
+import { Bot, Download, ExternalLink, Loader2, MessageCircle, Send, Upload, User } from 'lucide-react';
 
 type Recipient = { name: string; phone: string; generated: boolean };
 type ChatMsg = { role: 'user' | 'ai'; text: string; count?: number };
@@ -30,11 +30,12 @@ export default function WhatsAppBroadcastTab() {
   ]);
   const [recipients, setRecipients] = useState<Recipient[]>([]);
   const scrollRef = useRef<HTMLDivElement>(null);
+  const fileRef = useRef<HTMLInputElement>(null);
 
-  const ask = async () => {
-    const text = prompt.trim();
+  const buildAudience = async (rawText: string, displayText = rawText) => {
+    const text = rawText.trim();
     if (!text || loading) return;
-    setMessages((m) => [...m, { role: 'user', text }]);
+    setMessages((m) => [...m, { role: 'user', text: displayText }]);
     setPrompt('');
     setLoading(true);
     try {
@@ -62,6 +63,45 @@ export default function WhatsAppBroadcastTab() {
     } finally {
       setLoading(false);
       setTimeout(() => scrollRef.current?.scrollTo({ top: 9e9 }), 50);
+    }
+  };
+
+  const ask = () => buildAudience(prompt);
+
+  const uploadExcel = async (event: React.ChangeEvent<HTMLInputElement>) => {
+    const file = event.target.files?.[0];
+    event.target.value = '';
+    if (!file || loading) return;
+
+    try {
+      const workbook = XLSX.read(await file.arrayBuffer(), { type: 'array' });
+      const sheetName = workbook.SheetNames[0];
+      const sheet = sheetName ? workbook.Sheets[sheetName] : undefined;
+      if (!sheet) throw new Error('Excel file haina taarifa.');
+
+      const rows = XLSX.utils.sheet_to_json<Array<string | number | boolean | null>>(sheet, {
+        header: 1,
+        raw: true,
+        defval: '',
+      });
+      const text = rows
+        .map((row) =>
+          row
+            .map((cell) => {
+              if (typeof cell === 'number' && Number.isFinite(cell)) return cell.toFixed(0);
+              return String(cell ?? '').trim();
+            })
+            .filter(Boolean)
+            .join(' | '),
+        )
+        .filter(Boolean)
+        .join('\n');
+
+      if (!text) throw new Error('Excel file haina taarifa.');
+      await buildAudience(text, `Excel: ${file.name}`);
+    } catch (error) {
+      const message = error instanceof Error ? error.message : 'Excel imeshindwa kusomwa.';
+      setMessages((current) => [...current, { role: 'ai', text: `Samahani, hitilafu: ${message}` }]);
     }
   };
 
@@ -136,6 +176,23 @@ export default function WhatsAppBroadcastTab() {
           <Button onClick={ask} disabled={loading || !prompt.trim()} className="gap-1 sm:self-end">
             {loading ? <Loader2 className="w-4 h-4 animate-spin" /> : <Send className="w-4 h-4" />}
             Tuma
+          </Button>
+        </div>
+        <div>
+          <input
+            ref={fileRef}
+            type="file"
+            accept=".xlsx,.xls,.csv"
+            className="hidden"
+            onChange={uploadExcel}
+          />
+          <Button
+            type="button"
+            variant="outline"
+            onClick={() => fileRef.current?.click()}
+            disabled={loading}
+          >
+            <Upload className="w-4 h-4" /> Upload Excel yenye namba
           </Button>
         </div>
       </Card>
