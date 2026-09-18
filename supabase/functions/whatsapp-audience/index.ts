@@ -56,6 +56,17 @@ function extractPhones(text: string): { phones: string[]; invalid: string[] } {
         push(part);
         continue;
       }
+      // One long run of digits with no separators: cut it into numbers.
+      if (part.length > 12) {
+        buf = "";
+        for (let i = 0; i < part.length; ) {
+          const len = part.startsWith("255", i) ? 12 : part[i] === "0" ? 10 : 9;
+          push(part.slice(i, i + len));
+          i += len;
+        }
+        continue;
+      }
+
       buf += part;
       if (normalizePhone(buf)) {
         push(buf);
