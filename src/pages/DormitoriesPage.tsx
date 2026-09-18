@@ -64,6 +64,7 @@ export default function DormitoriesPage() {
 
   const [search, setSearch] = useState('');
   const [dormFilter, setDormFilter] = useState('all');
+  const [viewDorm, setViewDorm] = useState<Dormitory | null>(null);
 
   useEffect(() => {
     if (!selectedYear && currentYear) setSelectedYear(currentYear);
