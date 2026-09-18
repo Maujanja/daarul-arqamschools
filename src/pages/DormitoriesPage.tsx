@@ -238,22 +238,30 @@ export default function DormitoriesPage() {
 
   /* ---------------- excel ---------------- */
 
+  const bedLabel = (bed?: DormBed) => bed?.bed_code || (bed ? `Bed ${bed.bed_number}` : '-');
+
   const exportExcel = () => {
     const rows = assignments
       .map((a) => {
         const student = studentById.get(a.student_id);
+        const bed = bedById.get(a.bed_id);
         return {
-          'Student Name': student?.full_name || '',
-          'Roll Number': student?.roll_number || '',
-          Class: student?.class || '',
-          Stream: student?.stream || '',
-          Gender: student?.gender || '',
-          Dormitory: dormById.get(a.dormitory_id)?.name || '',
-          'Bed Number': bedById.get(a.bed_id)?.bed_number ?? '',
-          'Academic Year': a.academic_year,
+          'STUDENT NAME': student?.full_name || '',
+          'ROLL NUMBER': student?.roll_number || '',
+          CLASS: student?.class || '',
+          STREAM: student?.stream || '',
+          SEX: (student?.gender || '').toUpperCase().slice(0, 1),
+          'DORMITORY NAME': dormById.get(a.dormitory_id)?.name || '',
+          'ROOM NUMBER': bed?.room_number ?? '',
+          'BED NUMBER': bed?.bed_code || bed?.bed_number || '',
+          'ACADEMIC YEAR': a.academic_year,
         };
       })
-      .sort((a, b) => a.Dormitory.localeCompare(b.Dormitory) || Number(a['Bed Number']) - Number(b['Bed Number']));
+      .sort(
+        (a, b) =>
+          a['DORMITORY NAME'].localeCompare(b['DORMITORY NAME']) ||
+          String(a['BED NUMBER']).localeCompare(String(b['BED NUMBER'])),
+      );
 
     const summary = dorms.map((d) => ({
       Dormitory: d.name,
@@ -269,6 +277,24 @@ export default function DormitoriesPage() {
     XLSX.writeFile(wb, `dormitories-${selectedYear}.xlsx`);
   };
 
+  const downloadTemplate = () => {
+    const rows = [
+      {
+        'S/N': '001',
+        SEX: 'M',
+        'FIRST NAME': 'AKBAR',
+        'MIDDLE NAME': 'OTHMAN',
+        'SUR NAME': 'JUMA',
+        'DORMITORY NAME': "LOWER BOY'S APPARTMENT",
+        'ROOM NUMBER': 1,
+        'BED NUMBER': 'DAS/PR/BOYS/001',
+      },
+    ];
+    const wb = XLSX.utils.book_new();
+    XLSX.utils.book_append_sheet(wb, XLSX.utils.json_to_sheet(rows), 'Dormitory');
+    XLSX.writeFile(wb, 'dormitory-template.xlsx');
+  };
+
   const pick = (row: Record<string, unknown>, keys: string[]): string => {
     for (const key of Object.keys(row)) {
       const k = key.trim().toLowerCase();
@@ -278,6 +304,15 @@ export default function DormitoriesPage() {
       }
     }
     return '';
+  };
+
+  const normName = (value: string) => value.replace(/[^a-z ]/gi, ' ').replace(/\s+/g, ' ').trim().toLowerCase();
+
+  const dormGenderFromName = (name: string): 'male' | 'female' | null => {
+    const n = name.toLowerCase();
+    if (/(girl|female|wasichana|ladies|women)/.test(n)) return 'female';
+    if (/(boy|male|wavulana|men|gents)/.test(n)) return 'male';
+    return null;
   };
 
   const handleImport = async (file: File) => {
@@ -294,95 +329,146 @@ export default function DormitoriesPage() {
       }
 
       const byRoll = new Map(students.map((s) => [s.roll_number.trim().toLowerCase(), s]));
-      const byName = new Map(students.map((s) => [s.full_name.trim().toLowerCase(), s]));
+      const byFullName = new Map<string, StudentRow>();
+      const byShortName = new Map<string, StudentRow>();
+      students.forEach((s) => {
+        const parts = normName(s.full_name).split(' ').filter(Boolean);
+        byFullName.set(parts.join(' '), s);
+        if (parts.length >= 2) byShortName.set(`${parts[0]} ${parts[parts.length - 1]}`, s);
+      });
 
-      // 1. Work out dormitories and how many beds each one needs
-      const dormNeeds = new Map<string, { gender: 'male' | 'female'; maxBed: number }>();
-      const parsed: { student: StudentRow; dormName: string; bedNumber: number }[] = [];
+      type Parsed = {
+        student: StudentRow;
+        dormName: string;
+        bedNumber: number;
+        bedCode: string;
+        roomNumber: number | null;
+        gender: 'male' | 'female';
+      };
+      const dormNeeds = new Map<string, { gender: 'male' | 'female'; maxBed: number; display: string }>();
+      const parsed: Parsed[] = [];
       const skipped: string[] = [];
 
       for (const row of rows) {
         const roll = pick(row, ['roll', 'namba ya usajili']);
-        const name = pick(row, ['name', 'jina']);
+        const first = pick(row, ['first name', 'jina la kwanza']);
+        const middle = pick(row, ['middle name', 'jina la kati']);
+        const sur = pick(row, ['sur name', 'surname', 'last name', 'jina la ukoo']);
+        const single = pick(row, ['student name', 'full name', 'jina kamili']);
+        const composed = single || [first, middle, sur].filter(Boolean).join(' ');
         const dormName = pick(row, ['dorm', 'bweni', 'hostel']);
-        const bedRaw = pick(row, ['bed', 'kitanda']);
-        const bedNumber = Number(String(bedRaw).replace(/[^0-9]/g, ''));
+        const bedCode = pick(row, ['bed', 'kitanda']);
+        const roomRaw = pick(row, ['room', 'chumba']);
+        const sexRaw = pick(row, ['sex', 'gender', 'jinsia']);
+        const bedDigits = String(bedCode).match(/(\d+)\s*$/)?.[1] || String(bedCode).replace(/[^0-9]/g, '');
+        const bedNumber = Number(bedDigits);
+        const roomNumber = Number(String(roomRaw).replace(/[^0-9]/g, ''));
 
+        const key = normName(composed);
+        const parts = key.split(' ').filter(Boolean);
         const student =
-          (roll && byRoll.get(roll.toLowerCase())) || (name && byName.get(name.toLowerCase())) || null;
+          (roll && byRoll.get(roll.toLowerCase())) ||
+          byFullName.get(key) ||
+          (parts.length >= 2 ? byShortName.get(`${parts[0]} ${parts[parts.length - 1]}`) : undefined) ||
+          null;
 
         if (!student) {
-          skipped.push(name || roll || '(blank row)');
+          skipped.push(`${composed || roll || '(blank row)'} — student not found`);
           continue;
         }
         if (!dormName || !Number.isFinite(bedNumber) || bedNumber < 1) {
-          skipped.push(student.full_name);
+          skipped.push(`${student.full_name} — dormitory or bed number missing`);
           continue;
         }
 
-        const key = dormName.trim().toLowerCase();
-        const gender = normalizeGender(student.gender) || 'male';
-        const need = dormNeeds.get(key);
-        dormNeeds.set(key, {
+        const dormKey = dormName.trim().toLowerCase();
+        const gender =
+          dormGenderFromName(dormName) ||
+          normalizeGender(sexRaw) ||
+          normalizeGender(student.gender) ||
+          'male';
+        const studentGender = normalizeGender(student.gender);
+        if (studentGender && studentGender !== gender) {
+          skipped.push(`${student.full_name} — recorded as ${studentGender}, dormitory is for ${gender}`);
+          continue;
+        }
+
+        const need = dormNeeds.get(dormKey);
+        dormNeeds.set(dormKey, {
           gender: need?.gender || gender,
           maxBed: Math.max(need?.maxBed || 0, bedNumber),
+          display: need?.display || dormName.trim(),
         });
-        parsed.push({ student, dormName: dormName.trim(), bedNumber });
+        parsed.push({
+          student,
+          dormName: dormName.trim(),
+          bedNumber,
+          bedCode: String(bedCode).trim(),
+          roomNumber: Number.isFinite(roomNumber) && roomNumber > 0 ? roomNumber : null,
+          gender,
+        });
       }
 
       if (parsed.length === 0) {
         toast.error('No matching students were found in the file');
+        if (skipped.length) console.warn('Skipped rows:', skipped);
         return;
       }
 
-      // 2. Create missing dormitories / grow their bed count
+      // Create missing dormitories / grow their bed count
       const dormByName = new Map(dorms.map((d) => [d.name.trim().toLowerCase(), d]));
       for (const [key, need] of dormNeeds) {
         const existing = dormByName.get(key);
-        const displayName = parsed.find((p) => p.dormName.toLowerCase() === key)?.dormName || key;
         if (!existing) {
           const res = await insert('dormitories', {
-            name: displayName,
+            name: need.display,
             gender: need.gender,
             capacity: need.maxBed,
           });
-          if (!res.success) throw new Error(res.error || `Failed to create dormitory ${displayName}`);
+          if (!res.success) throw new Error(res.error || `Failed to create dormitory ${need.display}`);
         } else if (existing.capacity < need.maxBed) {
           const res = await update('dormitories', { capacity: need.maxBed }, { id: existing.id });
-          if (!res.success) throw new Error(res.error || `Failed to expand dormitory ${displayName}`);
+          if (!res.success) throw new Error(res.error || `Failed to expand dormitory ${need.display}`);
         }
       }
 
-      // 3. Reload dormitories + beds so the new bed ids are known
+      // Reload dormitories + beds so the new bed ids are known
       const [freshDorms, freshBeds] = await Promise.all([
         fetchTable<Dormitory>('dormitories'),
         fetchTable<DormBed>('dorm_beds'),
       ]);
       const freshDormByName = new Map(freshDorms.map((d) => [d.name.trim().toLowerCase(), d]));
-      const bedLookup = new Map(freshBeds.map((b) => [`${b.dormitory_id}|${b.bed_number}`, b.id]));
+      const bedLookup = new Map(freshBeds.map((b) => [`${b.dormitory_id}|${b.bed_number}`, b]));
 
-      // 4. Build assignment rows
       const existingByStudent = new Map(assignments.map((a) => [a.student_id, a]));
       const inserts: Record<string, unknown>[] = [];
       const updates: { id: string; payload: Record<string, unknown> }[] = [];
+      const bedMeta: { id: string; payload: Record<string, unknown> }[] = [];
 
       for (const item of parsed) {
         const dorm = freshDormByName.get(item.dormName.toLowerCase());
-        const bedId = dorm ? bedLookup.get(`${dorm.id}|${item.bedNumber}`) : undefined;
-        if (!dorm || !bedId) {
-          skipped.push(item.student.full_name);
+        const bed = dorm ? bedLookup.get(`${dorm.id}|${item.bedNumber}`) : undefined;
+        if (!dorm || !bed) {
+          skipped.push(`${item.student.full_name} — bed ${item.bedNumber} not available`);
           continue;
+        }
+        if (bed.bed_code !== item.bedCode || (bed.room_number ?? null) !== item.roomNumber) {
+          bedMeta.push({ id: bed.id, payload: { bed_code: item.bedCode, room_number: item.roomNumber } });
         }
         const payload = {
           student_id: item.student.id,
           dormitory_id: dorm.id,
-          bed_id: bedId,
+          bed_id: bed.id,
           academic_year: selectedYear,
           assigned_by: user?.name || null,
         };
         const existing = existingByStudent.get(item.student.id);
         if (existing) updates.push({ id: existing.id, payload });
         else inserts.push(payload);
+      }
+
+      for (const meta of bedMeta) {
+        await update('dorm_beds', meta.payload, { id: meta.id });
       }
 
       let failed = 0;
