@@ -26,34 +26,50 @@ function normalizePhone(raw: unknown): string | null {
 
 /** Pull every phone number out of free text, deterministically. AI never invents numbers. */
 function extractPhones(text: string): { phones: string[]; invalid: string[] } {
-  const tokens = text.match(/(?:\+?\d[\d\s\-().]{6,}\d)/g) ?? [];
+  // Join digits split by spaces/dashes inside one number (0754 123 456) but keep
+  // separate numbers apart: only glue when the run stays plausible in length.
+  const cleaned = text.replace(/(\d)[\s\-().]+(?=\d)/g, "$1|");
+  const groups = cleaned.match(/\+?[\d|]+/g) ?? [];
   const phones: string[] = [];
   const invalid: string[] = [];
   const seen = new Set<string>();
-  for (const t of tokens) {
-    const compact = t.replace(/[^0-9+]/g, "");
-    // A blob like "0754123456 0789112233" collapses; split long digit runs too.
-    const candidates: string[] = [];
-    if (/^\+?\d+$/.test(compact) && compact.replace("+", "").length > 12) {
-      const digits = compact.replace("+", "");
-      for (let i = 0; i < digits.length; ) {
-        if (digits.startsWith("255", i)) { candidates.push(digits.slice(i, i + 12)); i += 12; }
-        else if (digits[i] === "0") { candidates.push(digits.slice(i, i + 10)); i += 10; }
-        else { candidates.push(digits.slice(i, i + 9)); i += 9; }
+
+  const push = (raw: string) => {
+    const p = normalizePhone(raw);
+    if (!p) {
+      if (raw.replace(/\D/g, "").length >= 9) invalid.push(raw);
+      return;
+    }
+    if (seen.has(p)) return;
+    seen.add(p);
+    phones.push(p);
+  };
+
+  for (const g of groups) {
+    const plus = g.startsWith("+");
+    const parts = g.replace("+", "").split("|").filter(Boolean);
+    // Greedily build numbers from the digit parts.
+    let buf = "";
+    const flush = () => {
+      if (buf) push((plus && phones.length === 0 ? "+" : "") + buf);
+      buf = "";
+    };
+    for (const part of parts) {
+      buf += part;
+      const target = buf.startsWith("255") ? 12 : buf.startsWith("0") ? 10 : 9;
+      if (buf.length >= target) {
+        const head = buf.slice(0, target);
+        const rest = buf.slice(target);
+        buf = head;
+        flush();
+        buf = rest;
       }
-    } else {
-      candidates.push(compact);
     }
-    for (const c of candidates) {
-      const p = normalizePhone(c);
-      if (!p) { if (c.length >= 7) invalid.push(c); continue; }
-      if (seen.has(p)) continue;
-      seen.add(p);
-      phones.push(p);
-    }
+    flush();
   }
   return { phones, invalid };
 }
+
 
 const TZ_FIRST = ["Asha", "Juma", "Neema", "Hamisi", "Zawadi", "Salma", "Rashid", "Amina", "Baraka", "Fatuma", "Yusuf", "Halima", "Said", "Mwanaidi", "Ibrahim", "Rehema"];
 const TZ_MID = ["Juma", "Ally", "Hassan", "Mussa", "Shabani", "Omary", "Kassim", "Mohamed"];
