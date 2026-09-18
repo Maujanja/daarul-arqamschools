@@ -7,6 +7,7 @@ import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import { Badge } from '@/components/ui/badge';
 import BulkSmsTab from '@/components/marketing/BulkSmsTab';
 import VoiceMarketingTab from '@/components/marketing/VoiceMarketingTab';
+import WhatsAppBroadcastTab from '@/components/marketing/WhatsAppBroadcastTab';
 import { MessageSquare, PhoneCall, MessageCircle, Wallet, Megaphone } from 'lucide-react';
 
 const ALLOWED = ['admin', 'accountant', 'head_nursery', 'head_primary', 'head_secondary'];
