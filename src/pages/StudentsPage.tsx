@@ -33,6 +33,7 @@ import { useSecureQuery } from '@/hooks/useSecureQuery';
 import { useSecureData } from '@/hooks/useSecureData';
 import { StudentAvatarUpload } from '@/components/StudentAvatarUpload';
 import { DormBedPicker } from '@/components/dorms/DormBedPicker';
+import { StudentProfileDialog } from '@/components/dashboard/StudentProfileDialog';
 import { DormAssignment } from '@/types/dorm';
 import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar';
 
@@ -131,6 +132,7 @@ export default function StudentsPage() {
   const [showAddDialog, setShowAddDialog] = useState(false);
   const [showBulkTransferDialog, setShowBulkTransferDialog] = useState(false);
   const [showEditDialog, setShowEditDialog] = useState(false);
+  const [profileStudent, setProfileStudent] = useState<StudentWithMarks | null>(null);
   const [editingStudent, setEditingStudent] = useState<StudentWithMarks | null>(null);
   const [saving, setSaving] = useState(false);
   const [newStudent, setNewStudent] = useState({
@@ -721,7 +723,7 @@ export default function StudentsPage() {
                       <DropdownMenuItem 
                         onClick={(e) => {
                           e.stopPropagation();
-                          toast.info(`Profile: ${student.full_name}`);
+                          setProfileStudent(student);
                         }}
                       >
                         View Profile
