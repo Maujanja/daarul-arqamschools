@@ -46,27 +46,27 @@ function extractPhones(text: string): { phones: string[]; invalid: string[] } {
   };
 
   for (const g of groups) {
-    const plus = g.startsWith("+");
     const parts = g.replace("+", "").split("|").filter(Boolean);
-    // Greedily build numbers from the digit parts.
     let buf = "";
-    const flush = () => {
-      if (buf) push((plus && phones.length === 0 ? "+" : "") + buf);
-      buf = "";
-    };
     for (const part of parts) {
+      // A part that is already a whole number stands alone (stray digits like
+      // "Primary 3" are simply dropped instead of corrupting the next number).
+      if (normalizePhone(part)) {
+        buf = "";
+        push(part);
+        continue;
+      }
       buf += part;
-      const target = buf.startsWith("255") ? 12 : buf.startsWith("0") ? 10 : 9;
-      if (buf.length >= target) {
-        const head = buf.slice(0, target);
-        const rest = buf.slice(target);
-        buf = head;
-        flush();
-        buf = rest;
+      if (normalizePhone(buf)) {
+        push(buf);
+        buf = "";
+      } else if (buf.length > 12) {
+        buf = part.length > 12 ? "" : part;
       }
     }
-    flush();
+    if (buf.length >= 9) push(buf);
   }
+
   return { phones, invalid };
 }
 
