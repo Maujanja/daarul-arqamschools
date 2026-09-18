@@ -113,6 +113,19 @@ serve(async (req) => {
     if (!prompt) return json({ success: false, error: "Prompt is required" }, 400);
     if (prompt.length > 20000) return json({ success: false, error: "Prompt too long" }, 400);
 
+    // Numbers come ONLY from the user's text — the AI never produces them.
+    const { phones: allowed, invalid } = extractPhones(prompt);
+    const phones = allowed.slice(0, 2000);
+    if (!phones.length) {
+      return json({
+        success: false,
+        error: "Sikuona namba yoyote sahihi kwenye maandiko yako. Weka namba kama 0754123456, 255754123456 au 754123456.",
+      }, 400);
+    }
+
+    const nameByPhone = new Map<string, { name: string; generated: boolean }>();
+    let reply = "";
+
     const res = await fetch("https://ai.gateway.lovable.dev/v1/responses", {
       method: "POST",
       headers: {
@@ -124,7 +137,17 @@ serve(async (req) => {
         model: "openai/gpt-6-astra",
         stream: true,
         instructions: SYSTEM,
-        input: [{ role: "user", content: [{ type: "input_text", text: prompt }] }],
+        input: [
+          {
+            role: "user",
+            content: [
+              {
+                type: "input_text",
+                text: `EXACT PHONE NUMBERS (use these only, unchanged):\n${phones.join("\n")}\n\nORIGINAL TEXT:\n${prompt}`,
+              },
+            ],
+          },
+        ],
         reasoning: { effort: "low", summary: "auto" },
         store: false,
         text: {
@@ -146,69 +169,79 @@ serve(async (req) => {
       if (res.status === 429) {
         return json({ success: false, error: "Maombi ni mengi kwa sasa, jaribu tena baada ya sekunde kadhaa." }, 429);
       }
-      return json({ success: false, error: `AI error [${res.status}] ${errText.slice(0, 400)}` }, 500);
-    }
-
-    // Read the SSE stream and accumulate the output text.
-    const reader = res.body.getReader();
-    const decoder = new TextDecoder();
-    let buffer = "";
-    let text = "";
-    while (true) {
-      const { done, value } = await reader.read();
-      if (done) break;
-      buffer += decoder.decode(value, { stream: true });
-      const lines = buffer.split("\n");
-      buffer = lines.pop() ?? "";
-      for (const line of lines) {
-        if (!line.startsWith("data:")) continue;
-        const payload = line.slice(5).trim();
-        if (!payload || payload === "[DONE]") continue;
-        try {
-          const evt = JSON.parse(payload);
-          if (evt?.type === "response.output_text.delta" && typeof evt.delta === "string") {
-            text += evt.delta;
-          } else if (evt?.type === "response.completed" && !text) {
-            text = String(evt?.response?.output_text ?? "");
+      console.error(`AI gateway failed [${res.status}]: ${errText.slice(0, 400)}`);
+    } else {
+      // Read the SSE stream and accumulate the output text.
+      const reader = res.body.getReader();
+      const decoder = new TextDecoder();
+      let buffer = "";
+      let text = "";
+      while (true) {
+        const { done, value } = await reader.read();
+        if (done) break;
+        buffer += decoder.decode(value, { stream: true });
+        const lines = buffer.split("\n");
+        buffer = lines.pop() ?? "";
+        for (const line of lines) {
+          if (!line.startsWith("data:")) continue;
+          const payload = line.slice(5).trim();
+          if (!payload || payload === "[DONE]") continue;
+          try {
+            const evt = JSON.parse(payload);
+            if (evt?.type === "response.output_text.delta" && typeof evt.delta === "string") {
+              text += evt.delta;
+            } else if (evt?.type === "response.completed" && !text) {
+              text = String(evt?.response?.output_text ?? "");
+            }
+          } catch {
+            // ignore non-JSON keepalives
           }
-        } catch {
-          // ignore non-JSON keepalives
         }
       }
-    }
 
-    let parsed: { reply?: string; recipients?: Array<{ name?: string; phone?: string; name_generated?: boolean }> } = {};
-    try {
-      parsed = JSON.parse(text);
-    } catch {
-      return json({ success: false, error: "AI haikutoa majibu yanayoeleweka. Jaribu tena." }, 500);
-    }
-
-    const seen = new Set<string>();
-    const recipients: Array<{ name: string; phone: string; generated: boolean }> = [];
-    const invalid: string[] = [];
-    for (const r of parsed.recipients ?? []) {
-      const phone = normalizePhone(r?.phone);
-      if (!phone) {
-        if (r?.phone) invalid.push(String(r.phone));
-        continue;
+      try {
+        const parsed = JSON.parse(text) as {
+          reply?: string;
+          recipients?: Array<{ name?: string; phone?: string; name_generated?: boolean }>;
+        };
+        reply = String(parsed.reply || "");
+        for (const r of parsed.recipients ?? []) {
+          const phone = normalizePhone(r?.phone);
+          // Hard guard: ignore anything the model made up.
+          if (!phone || !phones.includes(phone) || nameByPhone.has(phone)) continue;
+          const name = String(r?.name || "").trim().slice(0, 120);
+          if (!name) continue;
+          nameByPhone.set(phone, { name, generated: Boolean(r?.name_generated) });
+        }
+      } catch {
+        console.error("AI returned unparsable JSON; using fallback names.");
       }
-      if (seen.has(phone)) continue;
-      seen.add(phone);
-      recipients.push({
-        name: String(r?.name || "").trim().slice(0, 120) || "Mteja",
-        phone,
-        generated: Boolean(r?.name_generated),
-      });
-      if (recipients.length >= 2000) break;
     }
+
+    const usedNames = new Set(Array.from(nameByPhone.values()).map((v) => v.name.toLowerCase()));
+    const recipients = phones.map((phone, i) => {
+      const hit = nameByPhone.get(phone);
+      if (hit) return { name: hit.name, phone, generated: hit.generated };
+      let name = fallbackName(i);
+      let k = i;
+      while (usedNames.has(name.toLowerCase())) name = fallbackName(++k + 17);
+      usedNames.add(name.toLowerCase());
+      return { name, phone, generated: true };
+    });
+
+    const generatedCount = recipients.filter((r) => r.generated).length;
 
     return json({
       success: true,
-      reply: String(parsed.reply || "").slice(0, 2000),
+      reply:
+        reply.slice(0, 2000) ||
+        `Nimepata namba ${recipients.length} kutoka kwenye maandiko yako${
+          generatedCount ? `, na ${generatedCount} zimetungiwa majina` : ""
+        }.`,
       recipients,
       invalid,
     });
+
   } catch (e) {
     return json({ success: false, error: e instanceof Error ? e.message : String(e) }, 500);
   }
