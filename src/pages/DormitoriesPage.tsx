@@ -468,6 +468,14 @@ export default function DormitoriesPage() {
         else inserts.push(payload);
       }
 
+      // Anyone listed in a dormitory file is a boarding student
+      const toBoarding = [...new Set(
+        parsed.filter((p) => (p.student.boarding_type || 'day') !== 'boarding').map((p) => p.student.id),
+      )];
+      for (const id of toBoarding) {
+        await update('students', { boarding_type: 'boarding' }, { id });
+      }
+
       for (const meta of bedMeta) {
         await update('dorm_beds', meta.payload, { id: meta.id });
       }
