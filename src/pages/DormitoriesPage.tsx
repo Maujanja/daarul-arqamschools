@@ -718,6 +718,9 @@ export default function DormitoriesPage() {
                         </p>
                       </div>
                       <div className="flex gap-1">
+                        <Button size="icon" variant="ghost" title="View occupants" onClick={() => setViewDorm(d)}>
+                          <Eye className="w-4 h-4" />
+                        </Button>
                         <Button size="icon" variant="ghost" onClick={() => openDormDialog(d)}>
                           <Pencil className="w-4 h-4" />
                         </Button>
