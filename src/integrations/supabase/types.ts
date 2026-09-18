@@ -286,22 +286,28 @@ export type Database = {
       }
       dorm_beds: {
         Row: {
+          bed_code: string | null
           bed_number: number
           created_at: string
           dormitory_id: string
           id: string
+          room_number: number | null
         }
         Insert: {
+          bed_code?: string | null
           bed_number: number
           created_at?: string
           dormitory_id: string
           id?: string
+          room_number?: number | null
         }
         Update: {
+          bed_code?: string | null
           bed_number?: number
           created_at?: string
           dormitory_id?: string
           id?: string
+          room_number?: number | null
         }
         Relationships: [
           {
