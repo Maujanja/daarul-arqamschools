@@ -1,0 +1,1 @@
+REVOKE ALL ON FUNCTION public.recalc_dorm_rooms(uuid) FROM anon, authenticated;
