@@ -26,13 +26,14 @@ function normalizePhone(raw: unknown): string | null {
 
 const SYSTEM = `You prepare WhatsApp broadcast audience lists for a Tanzanian school.
 
-From the user's instruction, extract every phone number and, when present, the matching full name.
+You are given the EXACT list of phone numbers already extracted from the user's text, plus the original text.
 Rules:
-- Return numbers in the 255XXXXXXXXX format (convert 0XXXXXXXXX, +255..., or bare 7XXXXXXXX / 6XXXXXXXX).
-- If a number has no name, invent a plausible Tanzanian full name (two or three words, e.g. "Asha Juma Mwinyi"). Never leave a name empty and never reuse the same invented name twice.
-- Keep the order given by the user and remove duplicate numbers.
-- Ignore text that is not a phone number or a name.
+- NEVER invent, guess, complete, correct or alter a phone number. Use only the numbers in the provided list, digit for digit.
+- Do not add extra numbers and do not drop any number from the list.
+- Match a name from the user's text to a number when the text pairs them.
+- If a number has no name in the text, invent a plausible Tanzanian full name (two or three words, e.g. "Asha Juma Mwinyi") and set name_generated true. Never reuse the same invented name twice.
 - "reply" is a short friendly answer in Swahili summarising what you built (count of recipients, how many names were invented).`;
+
 
 const SCHEMA = {
   type: "object",
