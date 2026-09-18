@@ -29,3 +29,6 @@ verify_jwt = false
 
 [functions.voice-campaign]
 verify_jwt = false
+
+[functions.whatsapp-audience]
+verify_jwt = false
