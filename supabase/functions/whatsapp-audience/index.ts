@@ -26,34 +26,61 @@ function normalizePhone(raw: unknown): string | null {
 
 /** Pull every phone number out of free text, deterministically. AI never invents numbers. */
 function extractPhones(text: string): { phones: string[]; invalid: string[] } {
-  const tokens = text.match(/(?:\+?\d[\d\s\-().]{6,}\d)/g) ?? [];
+  // Join digits split by spaces/dashes inside one number (0754 123 456) but keep
+  // separate numbers apart: only glue when the run stays plausible in length.
+  const cleaned = text.replace(/(\d)[\s\-().]+(?=\d)/g, "$1|");
+  const groups = cleaned.match(/\+?[\d|]+/g) ?? [];
   const phones: string[] = [];
   const invalid: string[] = [];
   const seen = new Set<string>();
-  for (const t of tokens) {
-    const compact = t.replace(/[^0-9+]/g, "");
-    // A blob like "0754123456 0789112233" collapses; split long digit runs too.
-    const candidates: string[] = [];
-    if (/^\+?\d+$/.test(compact) && compact.replace("+", "").length > 12) {
-      const digits = compact.replace("+", "");
-      for (let i = 0; i < digits.length; ) {
-        if (digits.startsWith("255", i)) { candidates.push(digits.slice(i, i + 12)); i += 12; }
-        else if (digits[i] === "0") { candidates.push(digits.slice(i, i + 10)); i += 10; }
-        else { candidates.push(digits.slice(i, i + 9)); i += 9; }
+
+  const push = (raw: string) => {
+    const p = normalizePhone(raw);
+    if (!p) {
+      if (raw.replace(/\D/g, "").length >= 9) invalid.push(raw);
+      return;
+    }
+    if (seen.has(p)) return;
+    seen.add(p);
+    phones.push(p);
+  };
+
+  for (const g of groups) {
+    const parts = g.replace("+", "").split("|").filter(Boolean);
+    let buf = "";
+    for (const part of parts) {
+      // A part that is already a whole number stands alone (stray digits like
+      // "Primary 3" are simply dropped instead of corrupting the next number).
+      if (normalizePhone(part)) {
+        buf = "";
+        push(part);
+        continue;
       }
-    } else {
-      candidates.push(compact);
+      // One long run of digits with no separators: cut it into numbers.
+      if (part.length > 12) {
+        buf = "";
+        for (let i = 0; i < part.length; ) {
+          const len = part.startsWith("255", i) ? 12 : part[i] === "0" ? 10 : 9;
+          push(part.slice(i, i + len));
+          i += len;
+        }
+        continue;
+      }
+
+      buf += part;
+      if (normalizePhone(buf)) {
+        push(buf);
+        buf = "";
+      } else if (buf.length > 12) {
+        buf = part.length > 12 ? "" : part;
+      }
     }
-    for (const c of candidates) {
-      const p = normalizePhone(c);
-      if (!p) { if (c.length >= 7) invalid.push(c); continue; }
-      if (seen.has(p)) continue;
-      seen.add(p);
-      phones.push(p);
-    }
+    if (buf.length >= 9) push(buf);
   }
+
   return { phones, invalid };
 }
+
 
 const TZ_FIRST = ["Asha", "Juma", "Neema", "Hamisi", "Zawadi", "Salma", "Rashid", "Amina", "Baraka", "Fatuma", "Yusuf", "Halima", "Said", "Mwanaidi", "Ibrahim", "Rehema"];
 const TZ_MID = ["Juma", "Ally", "Hassan", "Mussa", "Shabani", "Omary", "Kassim", "Mohamed"];
