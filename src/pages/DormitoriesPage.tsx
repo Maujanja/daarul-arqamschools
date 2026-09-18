@@ -543,6 +543,9 @@ export default function DormitoriesPage() {
                 ))}
               </SelectContent>
             </Select>
+            <Button variant="outline" onClick={downloadTemplate}>
+              <Download className="w-4 h-4 mr-2" /> Template
+            </Button>
             <Button variant="outline" onClick={exportExcel} disabled={assignments.length === 0}>
               <Download className="w-4 h-4 mr-2" /> Excel
             </Button>
