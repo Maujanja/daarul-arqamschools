@@ -10,6 +10,8 @@ export interface DormBed {
   id: string;
   dormitory_id: string;
   bed_number: number;
+  room_number?: number | null;
+  bed_code?: string | null;
 }
 
 export interface DormAssignment {
