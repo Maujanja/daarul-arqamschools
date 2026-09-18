@@ -26,56 +26,24 @@ function normalizePhone(raw: unknown): string | null {
 
 /** Pull every phone number out of free text, deterministically. AI never invents numbers. */
 function extractPhones(text: string): { phones: string[]; invalid: string[] } {
-  // Join digits split by spaces/dashes inside one number (0754 123 456) but keep
-  // separate numbers apart: only glue when the run stays plausible in length.
-  const cleaned = text.replace(/(\d)[\s\-().]+(?=\d)/g, "$1|");
-  const groups = cleaned.match(/\+?[\d|]+/g) ?? [];
   const phones: string[] = [];
   const invalid: string[] = [];
   const seen = new Set<string>();
 
-  const push = (raw: string) => {
-    const p = normalizePhone(raw);
-    if (!p) {
-      if (raw.replace(/\D/g, "").length >= 9) invalid.push(raw);
-      return;
+  // Each run of digits (separators inside a number are removed) is scanned for
+  // Tanzanian mobile patterns; stray digits like "Primary 3" simply never match.
+  const runs = text.replace(/[\s\-+().]/g, "").match(/\d+/g) ?? [];
+  for (const run of runs) {
+    let matched = false;
+    for (const m of run.matchAll(/(?:255|0)?[67]\d{8}/g)) {
+      const p = normalizePhone(m[0]);
+      if (!p) continue;
+      matched = true;
+      if (seen.has(p)) continue;
+      seen.add(p);
+      phones.push(p);
     }
-    if (seen.has(p)) return;
-    seen.add(p);
-    phones.push(p);
-  };
-
-  for (const g of groups) {
-    const parts = g.replace("+", "").split("|").filter(Boolean);
-    let buf = "";
-    for (const part of parts) {
-      // A part that is already a whole number stands alone (stray digits like
-      // "Primary 3" are simply dropped instead of corrupting the next number).
-      if (normalizePhone(part)) {
-        buf = "";
-        push(part);
-        continue;
-      }
-      // One long run of digits with no separators: cut it into numbers.
-      if (part.length > 12) {
-        buf = "";
-        for (let i = 0; i < part.length; ) {
-          const len = part.startsWith("255", i) ? 12 : part[i] === "0" ? 10 : 9;
-          push(part.slice(i, i + len));
-          i += len;
-        }
-        continue;
-      }
-
-      buf += part;
-      if (normalizePhone(buf)) {
-        push(buf);
-        buf = "";
-      } else if (buf.length > 12) {
-        buf = part.length > 12 ? "" : part;
-      }
-    }
-    if (buf.length >= 9) push(buf);
+    if (!matched && run.length >= 9) invalid.push(run);
   }
 
   return { phones, invalid };
