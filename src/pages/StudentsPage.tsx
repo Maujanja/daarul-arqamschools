@@ -221,46 +221,76 @@ export default function StudentsPage() {
         });
       }
 
-      // Get marks - filter by teacher's subjects if teacher (paginated to handle >1000 rows)
-      let marksData: Mark[] = [];
-      if (isTeacher && teacherSubjectIds.length > 0) {
-        marksData = await fetchAllPaginated<Mark>('marks', { subject_id: teacherSubjectIds });
-      } else {
-        marksData = await fetchAllPaginated<Mark>('marks');
-      }
+      // Show the list immediately, then enrich with averages in the background
+      const baseStudents: StudentWithMarks[] = (studentsData || []).map(student => ({
+        ...student,
+        boarding_type: student.boarding_type || 'day',
+        averageMarks: 0,
+        grade: calculateGrade(0),
+      }));
 
-      // Build subject id → name lookup for exclusion filtering
-      const allSubjectsList = await fetchTable<Subject>('subjects');
-      const subjectNameById: Record<string, string> = {};
-      (allSubjectsList || []).forEach((s: any) => { subjectNameById[s.id] = s.name; });
-
-      const studentsWithMarks: StudentWithMarks[] = (studentsData || []).map(student => {
-        const studentMarks = marksData?.filter(m => m.student_id === student.id) || [];
-        const averagingMarks = studentMarks.filter(m => !isExcludedFromPrimaryAverage(subjectNameById[m.subject_id], student.class));
-        const averageMarks = averagingMarks.length > 0
-          ? Math.round(averagingMarks.reduce((sum, m) => sum + m.total, 0) / averagingMarks.length)
-          : 0;
-        const grade = calculateGrade(averageMarks);
-
-        return {
-          ...student,
-          boarding_type: student.boarding_type || 'day',
-          averageMarks,
-          grade
-        };
-      });
-
-      setStudents(studentsWithMarks);
-
+      setStudents(baseStudents);
       const uniqueClasses = [...new Set(studentsData?.map(s => s.class) || [])].sort();
       setClasses(['all', ...uniqueClasses]);
+      setLoading(false);
+
+      // Background: load marks (large dataset) and compute averages
+      (async () => {
+        try {
+          const marksFilters = isTeacher && teacherSubjectIds.length > 0
+            ? { subject_id: teacherSubjectIds }
+            : undefined;
+
+          const pageSize = 2000;
+          const marksData: Mark[] = [];
+          let page = 0;
+          let hasMore = true;
+          while (hasMore) {
+            const result = await query<Mark>('marks', {
+              filters: marksFilters,
+              select: 'student_id,total,subject_id',
+              range: { from: page * pageSize, to: (page + 1) * pageSize - 1 },
+              orderBy: { column: 'id', ascending: true },
+            });
+            if (result.success && result.data && result.data.length > 0) {
+              marksData.push(...result.data);
+              hasMore = result.data.length === pageSize;
+              page++;
+            } else {
+              hasMore = false;
+            }
+          }
+
+          const allSubjectsList = await fetchTable<Subject>('subjects');
+          const subjectNameById: Record<string, string> = {};
+          (allSubjectsList || []).forEach((s: any) => { subjectNameById[s.id] = s.name; });
+
+          const marksByStudent = new Map<string, Mark[]>();
+          marksData.forEach(m => {
+            const list = marksByStudent.get(m.student_id);
+            if (list) list.push(m);
+            else marksByStudent.set(m.student_id, [m]);
+          });
+
+          setStudents(prev => prev.map(student => {
+            const studentMarks = marksByStudent.get(student.id) || [];
+            const averagingMarks = studentMarks.filter(m => !isExcludedFromPrimaryAverage(subjectNameById[m.subject_id], student.class));
+            const averageMarks = averagingMarks.length > 0
+              ? Math.round(averagingMarks.reduce((sum, m) => sum + m.total, 0) / averagingMarks.length)
+              : 0;
+            return { ...student, averageMarks, grade: calculateGrade(averageMarks) };
+          }));
+        } catch (bgError) {
+          console.error('Error loading marks averages:', bgError);
+        }
+      })();
 
     } catch (error) {
       console.error('Error fetching students:', error);
-    } finally {
       setLoading(false);
     }
-  }, [user, isTeacher, fetchTable, query, fetchAllPaginated]);
+  }, [user, isTeacher, fetchTable, query]);
+
 
   useEffect(() => {
     fetchStudents();

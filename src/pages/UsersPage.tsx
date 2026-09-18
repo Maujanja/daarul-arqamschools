@@ -216,7 +216,7 @@ export default function UsersPage() {
         full_name: newStudent.full_name,
         class: newStudent.class,
         roll_number: newStudent.roll_number,
-        parent_id: newStudent.parent_id || null,
+        parent_id: newStudent.parent_id && newStudent.parent_id !== 'none' ? newStudent.parent_id : null,
       });
 
       if (!result.success) throw new Error(result.error);
@@ -1008,7 +1008,7 @@ export default function UsersPage() {
                   <SelectValue placeholder="Select parent..." />
                 </SelectTrigger>
                 <SelectContent>
-                  <SelectItem value="">None</SelectItem>
+                  <SelectItem value="none">None</SelectItem>
                   {parents.map((parent) => (
                     <SelectItem key={parent.id} value={parent.id}>
                       {parent.full_name}

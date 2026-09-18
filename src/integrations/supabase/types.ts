@@ -1760,6 +1760,7 @@ export type Database = {
         Returns: boolean
       }
       normalize_marks_streams: { Args: never; Returns: undefined }
+      recalc_dorm_rooms: { Args: { _dormitory_id: string }; Returns: undefined }
     }
     Enums: {
       app_role:
