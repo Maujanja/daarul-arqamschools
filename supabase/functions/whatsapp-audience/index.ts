@@ -24,6 +24,45 @@ function normalizePhone(raw: unknown): string | null {
   return /^255\d{9}$/.test(p) ? p : null;
 }
 
+/** Pull every phone number out of free text, deterministically. AI never invents numbers. */
+function extractPhones(text: string): { phones: string[]; invalid: string[] } {
+  const tokens = text.match(/(?:\+?\d[\d\s\-().]{6,}\d)/g) ?? [];
+  const phones: string[] = [];
+  const invalid: string[] = [];
+  const seen = new Set<string>();
+  for (const t of tokens) {
+    const compact = t.replace(/[^0-9+]/g, "");
+    // A blob like "0754123456 0789112233" collapses; split long digit runs too.
+    const candidates: string[] = [];
+    if (/^\+?\d+$/.test(compact) && compact.replace("+", "").length > 12) {
+      const digits = compact.replace("+", "");
+      for (let i = 0; i < digits.length; ) {
+        if (digits.startsWith("255", i)) { candidates.push(digits.slice(i, i + 12)); i += 12; }
+        else if (digits[i] === "0") { candidates.push(digits.slice(i, i + 10)); i += 10; }
+        else { candidates.push(digits.slice(i, i + 9)); i += 9; }
+      }
+    } else {
+      candidates.push(compact);
+    }
+    for (const c of candidates) {
+      const p = normalizePhone(c);
+      if (!p) { if (c.length >= 7) invalid.push(c); continue; }
+      if (seen.has(p)) continue;
+      seen.add(p);
+      phones.push(p);
+    }
+  }
+  return { phones, invalid };
+}
+
+const TZ_FIRST = ["Asha", "Juma", "Neema", "Hamisi", "Zawadi", "Salma", "Rashid", "Amina", "Baraka", "Fatuma", "Yusuf", "Halima", "Said", "Mwanaidi", "Ibrahim", "Rehema"];
+const TZ_MID = ["Juma", "Ally", "Hassan", "Mussa", "Shabani", "Omary", "Kassim", "Mohamed"];
+const TZ_LAST = ["Mwinyi", "Mkwawa", "Ndugu", "Kimaro", "Mlowe", "Mbwana", "Chande", "Nyerere", "Mkapa", "Kileo"];
+
+function fallbackName(i: number): string {
+  return `${TZ_FIRST[i % TZ_FIRST.length]} ${TZ_MID[(i * 3) % TZ_MID.length]} ${TZ_LAST[(i * 7) % TZ_LAST.length]}`;
+}
+
 const SYSTEM = `You prepare WhatsApp broadcast audience lists for a Tanzanian school.
 
 You are given the EXACT list of phone numbers already extracted from the user's text, plus the original text.
