@@ -56,17 +56,7 @@ export default function MarketingPage() {
           </TabsContent>
 
           <TabsContent value="whatsapp">
-            <Card className="p-6 space-y-2">
-              <div className="flex items-center gap-2">
-                <MessageCircle className="w-5 h-5" />
-                <h2 className="text-lg font-semibold">WhatsApp Marketing</h2>
-                <Badge variant="secondary">Inakuja hivi karibuni</Badge>
-              </div>
-              <p className="text-sm text-muted-foreground">
-                Kipengele hiki kitawezesha kutuma ujumbe wa WhatsApp kwa wingi. Kitafunguliwa baada ya
-                huduma ya WhatsApp Business kuunganishwa.
-              </p>
-            </Card>
+            <WhatsAppBroadcastTab />
           </TabsContent>
 
           <TabsContent value="topup">
