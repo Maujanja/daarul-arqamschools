@@ -21,7 +21,7 @@ import {
 import { DormBedPicker } from '@/components/dorms/DormBedPicker';
 import { Dormitory, DormBed, DormAssignment, normalizeGender } from '@/types/dorm';
 import { toast } from 'sonner';
-import { BedDouble, Download, Loader2, Plus, Trash2, Upload, Search, Pencil } from 'lucide-react';
+import { BedDouble, Download, Eye, Loader2, Plus, Trash2, Upload, Search, Pencil } from 'lucide-react';
 
 interface StudentRow {
   id: string;
@@ -743,6 +743,40 @@ export default function DormitoriesPage() {
           </TabsContent>
         </Tabs>
       </div>
+
+      {/* View dormitory occupants dialog */}
+      <Dialog open={!!viewDorm} onOpenChange={(open) => !open && setViewDorm(null)}>
+        <DialogContent className="max-w-lg">
+          <DialogHeader>
+            <DialogTitle>{viewDorm?.name}</DialogTitle>
+            <DialogDescription>
+              {viewDorm
+                ? `${viewDorm.gender === 'male' ? 'Boys' : 'Girls'} dormitory • ${viewDormRows.length}/${viewDorm.capacity} beds occupied • ${viewDorm.capacity - viewDormRows.length} free`
+                : ''}
+            </DialogDescription>
+          </DialogHeader>
+          <div className="max-h-[60vh] overflow-y-auto space-y-2">
+            {viewDormRows.length === 0 && (
+              <p className="text-sm text-muted-foreground">No students assigned to this dormitory yet.</p>
+            )}
+            {viewDormRows.map((r) => (
+              <div key={r.id} className="flex items-center justify-between gap-2 rounded-md border border-border/50 px-3 py-2">
+                <div>
+                  <p className="text-sm font-medium">{r.name}</p>
+                  <p className="text-xs text-muted-foreground">{r.roll} • {r.cls}</p>
+                </div>
+                <div className="text-right text-xs text-muted-foreground">
+                  <p className="font-medium text-foreground">{r.bedLabel}</p>
+                  {r.room != null && <p>Room {r.room}</p>}
+                </div>
+              </div>
+            ))}
+          </div>
+          <DialogFooter>
+            <Button variant="outline" onClick={() => setViewDorm(null)}>Close</Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
 
       {/* Dormitory dialog */}
       <Dialog open={showDormDialog} onOpenChange={setShowDormDialog}>
