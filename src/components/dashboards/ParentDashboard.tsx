@@ -1031,13 +1031,24 @@ export function ParentDashboard() {
               Class {childClass}{childStream ? ` ${childStream}` : ''} • {childBoardingType === 'boarding' ? 'Boarding' : 'Day'} Student
             </p>
             {childBoardingType === 'boarding' && (
-              <p className="mt-2 inline-flex items-center gap-2 px-3 py-1.5 rounded-full bg-primary/10 text-sm text-primary font-medium">
-                <BedDouble className="w-4 h-4" />
-                {dormInfo
-                  ? `${dormInfo.dormitory}${dormInfo.room !== null ? ` • Room ${dormInfo.room}` : ''}${dormInfo.bed ? ` • ${dormInfo.bed}` : ''}`
-                  : 'Dormitory not assigned yet'}
-              </p>
+              <div className="mt-3 flex flex-wrap items-center justify-center gap-2">
+                <span className="inline-flex items-center gap-2 px-3 py-1.5 rounded-full bg-primary/10 text-sm text-primary font-medium">
+                  <BedDouble className="w-4 h-4" />
+                  {dormInfo ? `Dormitory: ${dormInfo.dormitory}` : 'Dormitory not assigned yet'}
+                </span>
+                {dormInfo?.room !== null && dormInfo?.room !== undefined && (
+                  <span className="inline-flex items-center px-3 py-1.5 rounded-full bg-primary/10 text-sm text-primary font-medium">
+                    Room: {dormInfo.room}
+                  </span>
+                )}
+                {dormInfo?.bed && (
+                  <span className="inline-flex items-center px-3 py-1.5 rounded-full bg-primary/10 text-sm text-primary font-medium">
+                    Bed: {dormInfo.bed}
+                  </span>
+                )}
+              </div>
             )}
+
           </div>
           
           {/* Overall Average Badge */}
