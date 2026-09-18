@@ -121,7 +121,7 @@ export function ParentDashboard() {
   const [childStream, setChildStream] = useState<string | null>(null);
   const [studentId, setStudentId] = useState('');
   const [studentAvatarUrl, setStudentAvatarUrl] = useState<string | null>(null);
-  const [dormInfo, setDormInfo] = useState<{ dormitory: string; bed: number | null } | null>(null);
+  const [dormInfo, setDormInfo] = useState<{ dormitory: string; bed: string | null; room: number | null } | null>(null);
   const [studentMarks, setStudentMarks] = useState<StudentMark[]>([]);
   const [allMarks, setAllMarks] = useState<StudentMark[]>([]);
   const [overallAverage, setOverallAverage] = useState(0);

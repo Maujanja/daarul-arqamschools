@@ -111,7 +111,8 @@ export function DormBedPicker({
           <SelectContent>
             {availableBeds.map((b) => (
               <SelectItem key={b.id} value={b.id}>
-                Bed {b.bed_number}
+                {b.bed_code || `Bed ${b.bed_number}`}
+                {b.room_number ? ` • Room ${b.room_number}` : ''}
               </SelectItem>
             ))}
           </SelectContent>
