@@ -5,7 +5,7 @@ import { GradeBadge } from '@/components/dashboard/GradeBadge';
 import { SeriesSummaryTable } from '@/components/dashboard/SeriesSummaryTable';
 import { SeriesPerformanceChart } from '@/components/dashboard/SeriesPerformanceChart';
 import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar';
-import { BookOpen, Award, Download, MessageSquare, Loader2, DollarSign, AlertTriangle, TrendingUp, TrendingDown, Megaphone, User, Calendar, FileDown, Trophy, Users, Target } from 'lucide-react';
+import { BookOpen, Award, Download, MessageSquare, Loader2, DollarSign, AlertTriangle, TrendingUp, TrendingDown, Megaphone, User, Calendar, FileDown, Trophy, Users, Target, BedDouble } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { supabase } from '@/integrations/supabase/client';
@@ -121,6 +121,7 @@ export function ParentDashboard() {
   const [childStream, setChildStream] = useState<string | null>(null);
   const [studentId, setStudentId] = useState('');
   const [studentAvatarUrl, setStudentAvatarUrl] = useState<string | null>(null);
+  const [dormInfo, setDormInfo] = useState<{ dormitory: string; bed: number | null } | null>(null);
   const [studentMarks, setStudentMarks] = useState<StudentMark[]>([]);
   const [allMarks, setAllMarks] = useState<StudentMark[]>([]);
   const [overallAverage, setOverallAverage] = useState(0);
@@ -373,6 +374,26 @@ export function ParentDashboard() {
         setChildBoardingType(studentData.boarding_type || 'day');
         setStudentId(studentData.id);
         setStudentAvatarUrl(studentData.avatar_url || null);
+
+        // Dormitory & bed details (boarding students only)
+        if ((studentData.boarding_type || 'day') === 'boarding') {
+          const dormAssignments = await fetchTable<any>('dorm_assignments', { student_id: studentData.id });
+          const assignment = dormAssignments?.[0];
+          if (assignment) {
+            const [dormRows, bedRows] = await Promise.all([
+              fetchTable<any>('dormitories', { id: assignment.dormitory_id }),
+              fetchTable<any>('dorm_beds', { id: assignment.bed_id }),
+            ]);
+            setDormInfo({
+              dormitory: dormRows?.[0]?.name || 'Dormitory',
+              bed: bedRows?.[0]?.bed_number ?? null,
+            });
+          } else {
+            setDormInfo(null);
+          }
+        } else {
+          setDormInfo(null);
+        }
         
         // Get marks for this student using secure query
         const marksData = await fetchTable<any>('marks', { student_id: studentData.id });
@@ -1007,6 +1028,14 @@ export function ParentDashboard() {
             <p className="text-muted-foreground mt-1">
               Class {childClass}{childStream ? ` ${childStream}` : ''} • {childBoardingType === 'boarding' ? 'Boarding' : 'Day'} Student
             </p>
+            {childBoardingType === 'boarding' && (
+              <p className="mt-2 inline-flex items-center gap-2 px-3 py-1.5 rounded-full bg-primary/10 text-sm text-primary font-medium">
+                <BedDouble className="w-4 h-4" />
+                {dormInfo
+                  ? `${dormInfo.dormitory}${dormInfo.bed !== null ? ` • Bed ${dormInfo.bed}` : ''}`
+                  : 'Dormitory not assigned yet'}
+              </p>
+            )}
           </div>
           
           {/* Overall Average Badge */}

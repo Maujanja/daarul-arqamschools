@@ -29,7 +29,10 @@ type AllowedTable =
   | "result_release_statuses"
   | "system_alerts"
   | "marks_entry_windows"
-  | "parent_login_events";
+  | "parent_login_events"
+  | "dormitories"
+  | "dorm_beds"
+  | "dorm_assignments";
 
 interface QueryFilters {
   [key: string]: unknown;

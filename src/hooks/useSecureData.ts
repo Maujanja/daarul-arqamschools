@@ -26,7 +26,10 @@ type AllowedTable =
   | "family_group_installments"
   | "result_release_statuses"
   | "system_alerts"
-  | "marks_entry_windows";
+  | "marks_entry_windows"
+  | "dormitories"
+  | "dorm_beds"
+  | "dorm_assignments";
 
 type AllowedOperation = "insert" | "update" | "delete" | "upsert";
 
