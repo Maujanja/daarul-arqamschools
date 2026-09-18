@@ -240,7 +240,6 @@ export default function DormitoriesPage() {
 
   /* ---------------- excel ---------------- */
 
-  const bedLabel = (bed?: DormBed) => bed?.bed_code || (bed ? `Bed ${bed.bed_number}` : '-');
 
   const exportExcel = () => {
     const rows = assignments
