@@ -32,6 +32,8 @@ import { useAuth } from '@/contexts/AuthContext';
 import { useSecureQuery } from '@/hooks/useSecureQuery';
 import { useSecureData } from '@/hooks/useSecureData';
 import { StudentAvatarUpload } from '@/components/StudentAvatarUpload';
+import { DormBedPicker } from '@/components/dorms/DormBedPicker';
+import { DormAssignment } from '@/types/dorm';
 import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar';
 
 interface Student {
@@ -143,6 +145,9 @@ export default function StudentsPage() {
     parent_phone: '',
   });
   const [tempAvatarUrl, setTempAvatarUrl] = useState<string | null>(null);
+  const [newDorm, setNewDorm] = useState({ dormitoryId: '', bedId: '' });
+  const [editDorm, setEditDorm] = useState({ dormitoryId: '', bedId: '' });
+  const [editAssignment, setEditAssignment] = useState<DormAssignment | null>(null);
   const [newStudentTempId] = useState(() => `temp-${Date.now()}`);
   
   // Bulk transfer state
@@ -289,6 +294,20 @@ export default function StudentsPage() {
 
       if (!result.success) throw new Error(result.error);
 
+      const createdId = Array.isArray(result.data) ? (result.data[0] as any)?.id : (result.data as any)?.id;
+      if (newStudent.boarding_type === 'boarding' && newDorm.bedId && createdId) {
+        const dormResult = await insert('dorm_assignments', {
+          student_id: createdId,
+          dormitory_id: newDorm.dormitoryId,
+          bed_id: newDorm.bedId,
+          academic_year: currentYear,
+          assigned_by: user?.name || null,
+        });
+        if (!dormResult.success) {
+          toast.error(dormResult.error || 'Student saved but the bed could not be assigned');
+        }
+      }
+
       toast.success('Student added successfully!');
       setShowAddDialog(false);
       setNewStudent({
@@ -303,6 +322,7 @@ export default function StudentsPage() {
         parent_phone: '',
       });
       setTempAvatarUrl(null);
+      setNewDorm({ dormitoryId: '', bedId: '' });
       fetchStudents();
     } catch (error: any) {
       console.error('Error adding student:', error);
@@ -312,9 +332,19 @@ export default function StudentsPage() {
     }
   };
 
-  const openEditDialog = (student: StudentWithMarks) => {
+  const openEditDialog = async (student: StudentWithMarks) => {
     setEditingStudent(student);
+    setEditAssignment(null);
+    setEditDorm({ dormitoryId: '', bedId: '' });
     setShowEditDialog(true);
+    const rows = await fetchTable<DormAssignment>('dorm_assignments', {
+      student_id: student.id,
+      academic_year: currentYear,
+    });
+    if (rows.length > 0) {
+      setEditAssignment(rows[0]);
+      setEditDorm({ dormitoryId: rows[0].dormitory_id, bedId: rows[0].bed_id });
+    }
   };
 
   const handleUpdateStudent = async () => {
@@ -340,6 +370,24 @@ export default function StudentsPage() {
       }, { id: editingStudent.id });
 
       if (!result.success) throw new Error(result.error);
+
+      if (editingStudent.boarding_type === 'boarding' && editDorm.bedId) {
+        const payload = {
+          student_id: editingStudent.id,
+          dormitory_id: editDorm.dormitoryId,
+          bed_id: editDorm.bedId,
+          academic_year: currentYear,
+          assigned_by: user?.name || null,
+        };
+        const dormResult = editAssignment
+          ? await update('dorm_assignments', payload, { id: editAssignment.id })
+          : await insert('dorm_assignments', payload);
+        if (!dormResult.success) {
+          toast.error(dormResult.error || 'Student saved but the bed could not be assigned');
+        }
+      } else if (editingStudent.boarding_type !== 'boarding' && editAssignment) {
+        await remove('dorm_assignments', { id: editAssignment.id });
+      }
 
       toast.success('Student updated successfully!');
       setShowEditDialog(false);
@@ -843,6 +891,18 @@ export default function StudentsPage() {
                 <p className="text-xs text-muted-foreground">Nursery students are day students only</p>
               )}
             </div>
+            {newStudent.boarding_type === 'boarding' && (
+              <div className="space-y-2 md:col-span-2">
+                <Label>Dormitory &amp; Bed</Label>
+                <DormBedPicker
+                  gender={newStudent.gender}
+                  academicYear={currentYear}
+                  dormitoryId={newDorm.dormitoryId}
+                  bedId={newDorm.bedId}
+                  onChange={(dormitoryId, bedId) => setNewDorm({ dormitoryId, bedId })}
+                />
+              </div>
+            )}
             <div className="space-y-2">
               <Label htmlFor="gender">Gender</Label>
               <Select value={newStudent.gender} onValueChange={(v) => setNewStudent({ ...newStudent, gender: v })}>
@@ -1068,6 +1128,19 @@ export default function StudentsPage() {
                   </SelectContent>
                 </Select>
               </div>
+              {editingStudent.boarding_type === 'boarding' && (
+                <div className="space-y-2 md:col-span-2">
+                  <Label>Dormitory &amp; Bed</Label>
+                  <DormBedPicker
+                    gender={editingStudent.gender || 'Male'}
+                    academicYear={currentYear}
+                    dormitoryId={editDorm.dormitoryId}
+                    bedId={editDorm.bedId}
+                    currentBedId={editAssignment?.bed_id || null}
+                    onChange={(dormitoryId, bedId) => setEditDorm({ dormitoryId, bedId })}
+                  />
+                </div>
+              )}
               <div className="space-y-2">
                 <Label>Gender</Label>
                 <Select 

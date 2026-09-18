@@ -32,7 +32,10 @@ type AllowedTable =
   | "family_group_installments"
   | "result_release_statuses"
   | "system_alerts"
-  | "marks_entry_windows";
+  | "marks_entry_windows"
+  | "dormitories"
+  | "dorm_beds"
+  | "dorm_assignments";
 
 type AllowedOperation = "insert" | "update" | "delete" | "upsert";
 
@@ -73,6 +76,9 @@ const permissions: Record<string, Record<AllowedTable, AllowedOperation[]>> = {
     result_release_statuses: ["insert", "update", "delete"],
     system_alerts: ["update", "delete"],
     marks_entry_windows: ["insert", "update", "delete", "upsert"],
+    dormitories: ["insert", "update", "delete"],
+    dorm_beds: ["insert", "update", "delete"],
+    dorm_assignments: ["insert", "update", "delete", "upsert"],
   },
   teacher: {
     students: [],
@@ -101,6 +107,9 @@ const permissions: Record<string, Record<AllowedTable, AllowedOperation[]>> = {
     result_release_statuses: [],
     system_alerts: [],
     marks_entry_windows: [],
+    dormitories: [],
+    dorm_beds: [],
+    dorm_assignments: [],
   },
   secretary: {
     students: ["insert", "update", "delete"],
@@ -129,6 +138,9 @@ const permissions: Record<string, Record<AllowedTable, AllowedOperation[]>> = {
     result_release_statuses: [],
     system_alerts: [],
     marks_entry_windows: [],
+    dormitories: ["insert", "update", "delete"],
+    dorm_beds: [],
+    dorm_assignments: ["insert", "update", "delete", "upsert"],
   },
   accountant: {
     students: [],
@@ -157,6 +169,9 @@ const permissions: Record<string, Record<AllowedTable, AllowedOperation[]>> = {
     result_release_statuses: [],
     system_alerts: ["update"],
     marks_entry_windows: [],
+    dormitories: [],
+    dorm_beds: [],
+    dorm_assignments: [],
   },
   parent: {
     students: [],
@@ -185,6 +200,9 @@ const permissions: Record<string, Record<AllowedTable, AllowedOperation[]>> = {
     result_release_statuses: [],
     system_alerts: [],
     marks_entry_windows: [],
+    dormitories: [],
+    dorm_beds: [],
+    dorm_assignments: [],
   },
   head_nursery: {
     students: [],
@@ -213,6 +231,9 @@ const permissions: Record<string, Record<AllowedTable, AllowedOperation[]>> = {
     result_release_statuses: ["insert", "update", "delete"],
     system_alerts: [],
     marks_entry_windows: ["insert", "update", "delete", "upsert"],
+    dormitories: [],
+    dorm_beds: [],
+    dorm_assignments: [],
   },
   head_primary: {
     students: [],
@@ -241,6 +262,9 @@ const permissions: Record<string, Record<AllowedTable, AllowedOperation[]>> = {
     result_release_statuses: ["insert", "update", "delete"],
     system_alerts: [],
     marks_entry_windows: ["insert", "update", "delete", "upsert"],
+    dormitories: [],
+    dorm_beds: [],
+    dorm_assignments: [],
   },
   head_secondary: {
     students: [],
@@ -269,6 +293,9 @@ const permissions: Record<string, Record<AllowedTable, AllowedOperation[]>> = {
     result_release_statuses: ["insert", "update", "delete"],
     system_alerts: [],
     marks_entry_windows: ["insert", "update", "delete", "upsert"],
+    dormitories: [],
+    dorm_beds: [],
+    dorm_assignments: [],
   },
 };
 

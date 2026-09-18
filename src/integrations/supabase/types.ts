@@ -226,6 +226,123 @@ export type Database = {
           },
         ]
       }
+      dorm_assignments: {
+        Row: {
+          academic_year: string
+          assigned_by: string | null
+          bed_id: string
+          created_at: string
+          dormitory_id: string
+          id: string
+          notes: string | null
+          student_id: string
+          updated_at: string
+        }
+        Insert: {
+          academic_year?: string
+          assigned_by?: string | null
+          bed_id: string
+          created_at?: string
+          dormitory_id: string
+          id?: string
+          notes?: string | null
+          student_id: string
+          updated_at?: string
+        }
+        Update: {
+          academic_year?: string
+          assigned_by?: string | null
+          bed_id?: string
+          created_at?: string
+          dormitory_id?: string
+          id?: string
+          notes?: string | null
+          student_id?: string
+          updated_at?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "dorm_assignments_bed_id_fkey"
+            columns: ["bed_id"]
+            isOneToOne: false
+            referencedRelation: "dorm_beds"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "dorm_assignments_dormitory_id_fkey"
+            columns: ["dormitory_id"]
+            isOneToOne: false
+            referencedRelation: "dormitories"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "dorm_assignments_student_id_fkey"
+            columns: ["student_id"]
+            isOneToOne: false
+            referencedRelation: "students"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      dorm_beds: {
+        Row: {
+          bed_number: number
+          created_at: string
+          dormitory_id: string
+          id: string
+        }
+        Insert: {
+          bed_number: number
+          created_at?: string
+          dormitory_id: string
+          id?: string
+        }
+        Update: {
+          bed_number?: number
+          created_at?: string
+          dormitory_id?: string
+          id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "dorm_beds_dormitory_id_fkey"
+            columns: ["dormitory_id"]
+            isOneToOne: false
+            referencedRelation: "dormitories"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      dormitories: {
+        Row: {
+          capacity: number
+          created_at: string
+          gender: string
+          id: string
+          name: string
+          notes: string | null
+          updated_at: string
+        }
+        Insert: {
+          capacity?: number
+          created_at?: string
+          gender?: string
+          id?: string
+          name: string
+          notes?: string | null
+          updated_at?: string
+        }
+        Update: {
+          capacity?: number
+          created_at?: string
+          gender?: string
+          id?: string
+          name?: string
+          notes?: string | null
+          updated_at?: string
+        }
+        Relationships: []
+      }
       family_group_installments: {
         Row: {
           academic_year: string

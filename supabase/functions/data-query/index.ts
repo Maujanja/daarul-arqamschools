@@ -37,7 +37,10 @@ type AllowedTable =
   | "result_release_statuses"
   | "system_alerts"
   | "marks_entry_windows"
-  | "parent_login_events";
+  | "parent_login_events"
+  | "dormitories"
+  | "dorm_beds"
+  | "dorm_assignments";
 
 interface QueryRequest {
   table: AllowedTable;
@@ -65,7 +68,8 @@ const readPermissions: Record<string, AllowedTable[]> = {
     "marks_unlock_requests",
     "family_groups", "family_group_members", "family_group_installments",
     "result_release_statuses",
-    "system_alerts", "marks_entry_windows", "parent_login_events"
+    "system_alerts", "marks_entry_windows", "parent_login_events",
+    "dormitories", "dorm_beds", "dorm_assignments"
   ],
   teacher: [
     "students", "marks", "teacher_assignments", "teacher_class_students",
@@ -76,7 +80,8 @@ const readPermissions: Record<string, AllowedTable[]> = {
   secretary: [
     "students", "parents", "subjects", "academic_years", "announcements", "feedback",
     "teachers_public", "secretary_credentials_public",
-    "result_release_statuses"
+    "result_release_statuses",
+    "dormitories", "dorm_beds", "dorm_assignments"
   ],
   accountant: [
     "students", "marks", "fee_payments", "fee_structure", "fee_installments",
@@ -92,25 +97,29 @@ const readPermissions: Record<string, AllowedTable[]> = {
     "student_custom_installments", "student_debt_history",
     "subjects", "academic_years", "announcements", "feedback", "parents",
     "family_groups", "family_group_members", "family_group_installments",
-    "result_release_statuses"
+    "result_release_statuses",
+    "dormitories", "dorm_beds", "dorm_assignments"
   ],
   head_nursery: [
     "students", "marks", "teacher_assignments", "teacher_class_students",
     "subjects", "academic_years", "announcements", "feedback", "teachers_public", "teachers",
     "marks_unlock_requests", "result_release_statuses",
-    "head_of_school_credentials_public", "marks_entry_windows", "parent_login_events"
+    "head_of_school_credentials_public", "marks_entry_windows", "parent_login_events",
+    "dormitories", "dorm_beds", "dorm_assignments"
   ],
   head_primary: [
     "students", "marks", "teacher_assignments", "teacher_class_students",
     "subjects", "academic_years", "announcements", "feedback", "teachers_public", "teachers",
     "marks_unlock_requests", "result_release_statuses",
-    "head_of_school_credentials_public", "marks_entry_windows", "parent_login_events"
+    "head_of_school_credentials_public", "marks_entry_windows", "parent_login_events",
+    "dormitories", "dorm_beds", "dorm_assignments"
   ],
   head_secondary: [
     "students", "marks", "teacher_assignments", "teacher_class_students",
     "subjects", "academic_years", "announcements", "feedback", "teachers_public", "teachers",
     "marks_unlock_requests", "result_release_statuses",
-    "head_of_school_credentials_public", "marks_entry_windows", "parent_login_events"
+    "head_of_school_credentials_public", "marks_entry_windows", "parent_login_events",
+    "dormitories", "dorm_beds", "dorm_assignments"
   ],
 };
 
@@ -223,7 +232,7 @@ serve(async (req) => {
           const ids = await resolveIds();
           if (ids.length > 0) { countQuery = countQuery.in("id", ids); }
           else { return new Response(JSON.stringify({ success: true, count: 0 }), { headers: { ...corsHeaders, "Content-Type": "application/json" } }); }
-        } else if (table === "marks" || table === "fee_payments" || table === "student_debt_history") {
+        } else if (table === "marks" || table === "fee_payments" || table === "student_debt_history" || table === "dorm_assignments") {
           const ids = await resolveIds();
           if (ids.length > 0) { countQuery = countQuery.in("student_id", ids); }
           else { return new Response(JSON.stringify({ success: true, count: 0 }), { headers: { ...corsHeaders, "Content-Type": "application/json" } }); }
@@ -319,7 +328,7 @@ serve(async (req) => {
           }
         }
         // When class filter IS present, don't restrict by student - allows ranking calculation
-      } else if (table === "fee_payments" || table === "student_debt_history") {
+      } else if (table === "fee_payments" || table === "student_debt_history" || table === "dorm_assignments") {
         const studentIds = await resolveStudentIds();
         if (studentIds.length > 0) {
           query = query.in("student_id", studentIds);

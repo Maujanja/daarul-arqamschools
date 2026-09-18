@@ -20,7 +20,8 @@ import {
   Unlock,
   ToggleLeft,
   UserCheck,
-  Megaphone
+  Megaphone,
+  BedDouble
 } from 'lucide-react';
 import { cn } from '@/lib/utils';
 import { Button } from '@/components/ui/button';
@@ -37,6 +38,7 @@ const navItems: NavItem[] = [
   { label: 'Dashboard', icon: LayoutDashboard, href: '/dashboard', roles: ['admin', 'teacher', 'parent', 'secretary', 'accountant', 'head_nursery', 'head_primary', 'head_secondary'] },
   { label: 'Students', icon: GraduationCap, href: '/students', roles: ['admin', 'teacher', 'secretary'] },
   { label: 'My Class Students', icon: Users, href: '/my-class-students', roles: ['teacher'] },
+  { label: 'Dormitories', icon: BedDouble, href: '/dormitories', roles: ['admin', 'secretary'] },
   { label: 'Teachers', icon: Users, href: '/teachers', roles: ['admin', 'head_nursery', 'head_primary', 'head_secondary'] },
   { label: 'Subjects', icon: BookOpen, href: '/subjects', roles: ['admin', 'head_nursery', 'head_primary', 'head_secondary'] },
   { label: 'Marks Entry', icon: ClipboardList, href: '/marks-entry', roles: ['teacher'] },
