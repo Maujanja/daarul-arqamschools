@@ -123,7 +123,9 @@ export default function DormitoriesPage() {
         class: student ? `${student.class}${student.stream ? ` ${student.stream}` : ''}` : '-',
         gender: student?.gender || '-',
         dorm: dorm?.name || '-',
-        bed: bed?.bed_number ?? '-',
+        bed: bed?.bed_number ?? 0,
+        bedLabel: bed?.bed_code || (bed ? `Bed ${bed.bed_number}` : '-'),
+        room: bed?.room_number ?? null,
       };
     });
     const term = search.trim().toLowerCase();
@@ -610,6 +612,7 @@ export default function DormitoriesPage() {
                       <th className="text-left p-3">Roll No.</th>
                       <th className="text-left p-3">Class</th>
                       <th className="text-left p-3">Dormitory</th>
+                      <th className="text-left p-3">Room</th>
                       <th className="text-left p-3">Bed</th>
                       <th className="p-3" />
                     </tr>
@@ -621,7 +624,8 @@ export default function DormitoriesPage() {
                         <td className="p-3 text-muted-foreground">{row.roll}</td>
                         <td className="p-3 text-muted-foreground">{row.class}</td>
                         <td className="p-3">{row.dorm}</td>
-                        <td className="p-3">Bed {row.bed}</td>
+                        <td className="p-3 text-muted-foreground">{row.room ?? '-'}</td>
+                        <td className="p-3">{row.bedLabel}</td>
                         <td className="p-3 text-right">
                           <Button size="sm" variant="ghost" onClick={() => unassign(row.assignment)}>
                             <Trash2 className="w-4 h-4 text-destructive" />
@@ -631,7 +635,7 @@ export default function DormitoriesPage() {
                     ))}
                     {assignmentRows.length === 0 && (
                       <tr>
-                        <td colSpan={6} className="p-8 text-center text-muted-foreground">
+                        <td colSpan={7} className="p-8 text-center text-muted-foreground">
                           No bed assignments yet.
                         </td>
                       </tr>
