@@ -30,20 +30,36 @@ function extractPhones(text: string): { phones: string[]; invalid: string[] } {
   const invalid: string[] = [];
   const seen = new Set<string>();
 
-  // Each run of digits (separators inside a number are removed) is scanned for
-  // Tanzanian mobile patterns; stray digits like "Primary 3" simply never match.
-  const runs = text.replace(/[\s\-+().]/g, "").match(/\d+/g) ?? [];
-  for (const run of runs) {
-    let matched = false;
-    for (const m of run.matchAll(/(?:255|0)?[67]\d{8}/g)) {
-      const p = normalizePhone(m[0]);
-      if (!p) continue;
-      matched = true;
-      if (seen.has(p)) continue;
-      seen.add(p);
-      phones.push(p);
+  // Match one Tanzanian number at a time. Separators are allowed inside a
+  // number, but whitespace between two complete numbers must never join them.
+  const candidatePattern = /(?<!\d)(?:(?:\+|00)?255[\s().-]*|0[\s().-]*)?[67](?:[\s().-]*\d){8}(?!\d)/g;
+  for (const match of text.matchAll(candidatePattern)) {
+    const phone = normalizePhone(match[0]);
+    if (!phone || seen.has(phone)) continue;
+    seen.add(phone);
+    phones.push(phone);
+  }
+
+  // Also support numbers pasted without any delimiter, for example
+  // 07541234560789112233 or 255754123456255789112233.
+  const digitRuns = text.match(/\d{9,}/g) ?? [];
+  for (const run of digitRuns) {
+    let cursor = 0;
+    let foundInRun = false;
+    while (cursor < run.length) {
+      const rest = run.slice(cursor);
+      const size = rest.startsWith("255") ? 12 : rest.startsWith("0") ? 10 : 9;
+      const chunk = rest.slice(0, size);
+      const phone = chunk.length === size ? normalizePhone(chunk) : null;
+      if (!phone) break;
+      foundInRun = true;
+      if (!seen.has(phone)) {
+        seen.add(phone);
+        phones.push(phone);
+      }
+      cursor += size;
     }
-    if (!matched && run.length >= 9) invalid.push(run);
+    if (!foundInRun && normalizePhone(run) === null) invalid.push(run);
   }
 
   return { phones, invalid };
