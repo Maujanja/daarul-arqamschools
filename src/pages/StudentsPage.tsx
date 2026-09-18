@@ -980,6 +980,14 @@ export default function StudentsPage() {
         </DialogContent>
       </Dialog>
 
+      {/* Student Profile Dialog */}
+      <StudentProfileDialog
+        open={!!profileStudent}
+        onOpenChange={(open) => { if (!open) setProfileStudent(null); }}
+        student={profileStudent}
+        academicYear={currentYear}
+      />
+
       {/* Bulk Transfer Dialog */}
       <Dialog open={showBulkTransferDialog} onOpenChange={setShowBulkTransferDialog}>
         <DialogContent className="max-w-2xl">
