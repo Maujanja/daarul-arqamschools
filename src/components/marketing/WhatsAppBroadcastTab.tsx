@@ -210,12 +210,10 @@ export default function WhatsAppBroadcastTab() {
               <Button onClick={downloadExcel} className="gap-1">
                 <Download className="w-4 h-4" /> Download Excel
               </Button>
-              <Button
-                variant="secondary"
-                className="gap-1"
-                onClick={() => window.open('https://web.whatsapp.com', '_blank', 'noopener')}
-              >
-                <ExternalLink className="w-4 h-4" /> Fungua WhatsApp Web
+              <Button variant="secondary" className="gap-1" asChild>
+                <a href="https://web.whatsapp.com" target="_blank" rel="noopener noreferrer">
+                  <ExternalLink className="w-4 h-4" /> Fungua WhatsApp Web
+                </a>
               </Button>
             </div>
           </div>
