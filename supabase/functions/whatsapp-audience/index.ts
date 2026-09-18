@@ -24,15 +24,55 @@ function normalizePhone(raw: unknown): string | null {
   return /^255\d{9}$/.test(p) ? p : null;
 }
 
+/** Pull every phone number out of free text, deterministically. AI never invents numbers. */
+function extractPhones(text: string): { phones: string[]; invalid: string[] } {
+  const tokens = text.match(/(?:\+?\d[\d\s\-().]{6,}\d)/g) ?? [];
+  const phones: string[] = [];
+  const invalid: string[] = [];
+  const seen = new Set<string>();
+  for (const t of tokens) {
+    const compact = t.replace(/[^0-9+]/g, "");
+    // A blob like "0754123456 0789112233" collapses; split long digit runs too.
+    const candidates: string[] = [];
+    if (/^\+?\d+$/.test(compact) && compact.replace("+", "").length > 12) {
+      const digits = compact.replace("+", "");
+      for (let i = 0; i < digits.length; ) {
+        if (digits.startsWith("255", i)) { candidates.push(digits.slice(i, i + 12)); i += 12; }
+        else if (digits[i] === "0") { candidates.push(digits.slice(i, i + 10)); i += 10; }
+        else { candidates.push(digits.slice(i, i + 9)); i += 9; }
+      }
+    } else {
+      candidates.push(compact);
+    }
+    for (const c of candidates) {
+      const p = normalizePhone(c);
+      if (!p) { if (c.length >= 7) invalid.push(c); continue; }
+      if (seen.has(p)) continue;
+      seen.add(p);
+      phones.push(p);
+    }
+  }
+  return { phones, invalid };
+}
+
+const TZ_FIRST = ["Asha", "Juma", "Neema", "Hamisi", "Zawadi", "Salma", "Rashid", "Amina", "Baraka", "Fatuma", "Yusuf", "Halima", "Said", "Mwanaidi", "Ibrahim", "Rehema"];
+const TZ_MID = ["Juma", "Ally", "Hassan", "Mussa", "Shabani", "Omary", "Kassim", "Mohamed"];
+const TZ_LAST = ["Mwinyi", "Mkwawa", "Ndugu", "Kimaro", "Mlowe", "Mbwana", "Chande", "Nyerere", "Mkapa", "Kileo"];
+
+function fallbackName(i: number): string {
+  return `${TZ_FIRST[i % TZ_FIRST.length]} ${TZ_MID[(i * 3) % TZ_MID.length]} ${TZ_LAST[(i * 7) % TZ_LAST.length]}`;
+}
+
 const SYSTEM = `You prepare WhatsApp broadcast audience lists for a Tanzanian school.
 
-From the user's instruction, extract every phone number and, when present, the matching full name.
+You are given the EXACT list of phone numbers already extracted from the user's text, plus the original text.
 Rules:
-- Return numbers in the 255XXXXXXXXX format (convert 0XXXXXXXXX, +255..., or bare 7XXXXXXXX / 6XXXXXXXX).
-- If a number has no name, invent a plausible Tanzanian full name (two or three words, e.g. "Asha Juma Mwinyi"). Never leave a name empty and never reuse the same invented name twice.
-- Keep the order given by the user and remove duplicate numbers.
-- Ignore text that is not a phone number or a name.
+- NEVER invent, guess, complete, correct or alter a phone number. Use only the numbers in the provided list, digit for digit.
+- Do not add extra numbers and do not drop any number from the list.
+- Match a name from the user's text to a number when the text pairs them.
+- If a number has no name in the text, invent a plausible Tanzanian full name (two or three words, e.g. "Asha Juma Mwinyi") and set name_generated true. Never reuse the same invented name twice.
 - "reply" is a short friendly answer in Swahili summarising what you built (count of recipients, how many names were invented).`;
+
 
 const SCHEMA = {
   type: "object",
@@ -73,6 +113,19 @@ serve(async (req) => {
     if (!prompt) return json({ success: false, error: "Prompt is required" }, 400);
     if (prompt.length > 20000) return json({ success: false, error: "Prompt too long" }, 400);
 
+    // Numbers come ONLY from the user's text — the AI never produces them.
+    const { phones: allowed, invalid } = extractPhones(prompt);
+    const phones = allowed.slice(0, 2000);
+    if (!phones.length) {
+      return json({
+        success: false,
+        error: "Sikuona namba yoyote sahihi kwenye maandiko yako. Weka namba kama 0754123456, 255754123456 au 754123456.",
+      }, 400);
+    }
+
+    const nameByPhone = new Map<string, { name: string; generated: boolean }>();
+    let reply = "";
+
     const res = await fetch("https://ai.gateway.lovable.dev/v1/responses", {
       method: "POST",
       headers: {
@@ -84,7 +137,17 @@ serve(async (req) => {
         model: "openai/gpt-6-astra",
         stream: true,
         instructions: SYSTEM,
-        input: [{ role: "user", content: [{ type: "input_text", text: prompt }] }],
+        input: [
+          {
+            role: "user",
+            content: [
+              {
+                type: "input_text",
+                text: `EXACT PHONE NUMBERS (use these only, unchanged):\n${phones.join("\n")}\n\nORIGINAL TEXT:\n${prompt}`,
+              },
+            ],
+          },
+        ],
         reasoning: { effort: "low", summary: "auto" },
         store: false,
         text: {
@@ -106,69 +169,79 @@ serve(async (req) => {
       if (res.status === 429) {
         return json({ success: false, error: "Maombi ni mengi kwa sasa, jaribu tena baada ya sekunde kadhaa." }, 429);
       }
-      return json({ success: false, error: `AI error [${res.status}] ${errText.slice(0, 400)}` }, 500);
-    }
-
-    // Read the SSE stream and accumulate the output text.
-    const reader = res.body.getReader();
-    const decoder = new TextDecoder();
-    let buffer = "";
-    let text = "";
-    while (true) {
-      const { done, value } = await reader.read();
-      if (done) break;
-      buffer += decoder.decode(value, { stream: true });
-      const lines = buffer.split("\n");
-      buffer = lines.pop() ?? "";
-      for (const line of lines) {
-        if (!line.startsWith("data:")) continue;
-        const payload = line.slice(5).trim();
-        if (!payload || payload === "[DONE]") continue;
-        try {
-          const evt = JSON.parse(payload);
-          if (evt?.type === "response.output_text.delta" && typeof evt.delta === "string") {
-            text += evt.delta;
-          } else if (evt?.type === "response.completed" && !text) {
-            text = String(evt?.response?.output_text ?? "");
+      console.error(`AI gateway failed [${res.status}]: ${errText.slice(0, 400)}`);
+    } else {
+      // Read the SSE stream and accumulate the output text.
+      const reader = res.body.getReader();
+      const decoder = new TextDecoder();
+      let buffer = "";
+      let text = "";
+      while (true) {
+        const { done, value } = await reader.read();
+        if (done) break;
+        buffer += decoder.decode(value, { stream: true });
+        const lines = buffer.split("\n");
+        buffer = lines.pop() ?? "";
+        for (const line of lines) {
+          if (!line.startsWith("data:")) continue;
+          const payload = line.slice(5).trim();
+          if (!payload || payload === "[DONE]") continue;
+          try {
+            const evt = JSON.parse(payload);
+            if (evt?.type === "response.output_text.delta" && typeof evt.delta === "string") {
+              text += evt.delta;
+            } else if (evt?.type === "response.completed" && !text) {
+              text = String(evt?.response?.output_text ?? "");
+            }
+          } catch {
+            // ignore non-JSON keepalives
           }
-        } catch {
-          // ignore non-JSON keepalives
         }
       }
-    }
 
-    let parsed: { reply?: string; recipients?: Array<{ name?: string; phone?: string; name_generated?: boolean }> } = {};
-    try {
-      parsed = JSON.parse(text);
-    } catch {
-      return json({ success: false, error: "AI haikutoa majibu yanayoeleweka. Jaribu tena." }, 500);
-    }
-
-    const seen = new Set<string>();
-    const recipients: Array<{ name: string; phone: string; generated: boolean }> = [];
-    const invalid: string[] = [];
-    for (const r of parsed.recipients ?? []) {
-      const phone = normalizePhone(r?.phone);
-      if (!phone) {
-        if (r?.phone) invalid.push(String(r.phone));
-        continue;
+      try {
+        const parsed = JSON.parse(text) as {
+          reply?: string;
+          recipients?: Array<{ name?: string; phone?: string; name_generated?: boolean }>;
+        };
+        reply = String(parsed.reply || "");
+        for (const r of parsed.recipients ?? []) {
+          const phone = normalizePhone(r?.phone);
+          // Hard guard: ignore anything the model made up.
+          if (!phone || !phones.includes(phone) || nameByPhone.has(phone)) continue;
+          const name = String(r?.name || "").trim().slice(0, 120);
+          if (!name) continue;
+          nameByPhone.set(phone, { name, generated: Boolean(r?.name_generated) });
+        }
+      } catch {
+        console.error("AI returned unparsable JSON; using fallback names.");
       }
-      if (seen.has(phone)) continue;
-      seen.add(phone);
-      recipients.push({
-        name: String(r?.name || "").trim().slice(0, 120) || "Mteja",
-        phone,
-        generated: Boolean(r?.name_generated),
-      });
-      if (recipients.length >= 2000) break;
     }
+
+    const usedNames = new Set(Array.from(nameByPhone.values()).map((v) => v.name.toLowerCase()));
+    const recipients = phones.map((phone, i) => {
+      const hit = nameByPhone.get(phone);
+      if (hit) return { name: hit.name, phone, generated: hit.generated };
+      let name = fallbackName(i);
+      let k = i;
+      while (usedNames.has(name.toLowerCase())) name = fallbackName(++k + 17);
+      usedNames.add(name.toLowerCase());
+      return { name, phone, generated: true };
+    });
+
+    const generatedCount = recipients.filter((r) => r.generated).length;
 
     return json({
       success: true,
-      reply: String(parsed.reply || "").slice(0, 2000),
+      reply:
+        reply.slice(0, 2000) ||
+        `Nimepata namba ${recipients.length} kutoka kwenye maandiko yako${
+          generatedCount ? `, na ${generatedCount} zimetungiwa majina` : ""
+        }.`,
       recipients,
       invalid,
     });
+
   } catch (e) {
     return json({ success: false, error: e instanceof Error ? e.message : String(e) }, 500);
   }
