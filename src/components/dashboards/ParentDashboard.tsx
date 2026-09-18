@@ -121,7 +121,7 @@ export function ParentDashboard() {
   const [childStream, setChildStream] = useState<string | null>(null);
   const [studentId, setStudentId] = useState('');
   const [studentAvatarUrl, setStudentAvatarUrl] = useState<string | null>(null);
-  const [dormInfo, setDormInfo] = useState<{ dormitory: string; bed: number | null } | null>(null);
+  const [dormInfo, setDormInfo] = useState<{ dormitory: string; bed: string | null; room: number | null } | null>(null);
   const [studentMarks, setStudentMarks] = useState<StudentMark[]>([]);
   const [allMarks, setAllMarks] = useState<StudentMark[]>([]);
   const [overallAverage, setOverallAverage] = useState(0);
@@ -384,9 +384,11 @@ export function ParentDashboard() {
               fetchTable<any>('dormitories', { id: assignment.dormitory_id }),
               fetchTable<any>('dorm_beds', { id: assignment.bed_id }),
             ]);
+            const bedRow = bedRows?.[0];
             setDormInfo({
               dormitory: dormRows?.[0]?.name || 'Dormitory',
-              bed: bedRows?.[0]?.bed_number ?? null,
+              bed: bedRow ? bedRow.bed_code || `Bed ${bedRow.bed_number}` : null,
+              room: bedRow?.room_number ?? null,
             });
           } else {
             setDormInfo(null);
@@ -1032,7 +1034,7 @@ export function ParentDashboard() {
               <p className="mt-2 inline-flex items-center gap-2 px-3 py-1.5 rounded-full bg-primary/10 text-sm text-primary font-medium">
                 <BedDouble className="w-4 h-4" />
                 {dormInfo
-                  ? `${dormInfo.dormitory}${dormInfo.bed !== null ? ` • Bed ${dormInfo.bed}` : ''}`
+                  ? `${dormInfo.dormitory}${dormInfo.room !== null ? ` • Room ${dormInfo.room}` : ''}${dormInfo.bed ? ` • ${dormInfo.bed}` : ''}`
                   : 'Dormitory not assigned yet'}
               </p>
             )}

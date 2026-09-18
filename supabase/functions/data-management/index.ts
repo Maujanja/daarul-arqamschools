@@ -139,7 +139,7 @@ const permissions: Record<string, Record<AllowedTable, AllowedOperation[]>> = {
     system_alerts: [],
     marks_entry_windows: [],
     dormitories: ["insert", "update", "delete"],
-    dorm_beds: [],
+    dorm_beds: ["insert", "update"],
     dorm_assignments: ["insert", "update", "delete", "upsert"],
   },
   accountant: {
