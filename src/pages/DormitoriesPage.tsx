@@ -142,6 +142,26 @@ export default function DormitoriesPage() {
       .sort((a, b) => a.dorm.localeCompare(b.dorm) || Number(a.bed) - Number(b.bed));
   }, [assignments, studentById, bedById, dormById, search, dormFilter]);
 
+  const viewDormRows = useMemo(() => {
+    if (!viewDorm) return [];
+    return assignments
+      .filter((a) => a.dormitory_id === viewDorm.id)
+      .map((a) => {
+        const student = studentById.get(a.student_id);
+        const bed = bedById.get(a.bed_id);
+        return {
+          id: a.id,
+          name: student?.full_name || 'Unknown student',
+          roll: student?.roll_number || '-',
+          cls: student ? `${student.class}${student.stream ? ` ${student.stream}` : ''}` : '-',
+          bed: bed?.bed_number ?? 0,
+          bedLabel: bed?.bed_code || (bed ? `Bed ${bed.bed_number}` : '-'),
+          room: bed?.room_number ?? null,
+        };
+      })
+      .sort((a, b) => a.bed - b.bed);
+  }, [viewDorm, assignments, studentById, bedById]);
+
   /* ---------------- dormitory CRUD ---------------- */
 
   const openDormDialog = (dorm?: Dormitory) => {
