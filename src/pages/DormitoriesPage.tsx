@@ -33,7 +33,7 @@ interface StudentRow {
   boarding_type: string | null;
 }
 
-const emptyDormForm = { id: '', name: '', gender: 'male', capacity: '20', notes: '' };
+const emptyDormForm = { id: '', name: '', section: 'primary', gender: 'male', rooms: '11', bedsPerRoom: '8', notes: '' };
 
 export default function DormitoriesPage() {
   const { user } = useAuth();
@@ -167,26 +167,46 @@ export default function DormitoriesPage() {
   const openDormDialog = (dorm?: Dormitory) => {
     setDormForm(
       dorm
-        ? { id: dorm.id, name: dorm.name, gender: dorm.gender, capacity: String(dorm.capacity), notes: dorm.notes || '' }
+        ? {
+            id: dorm.id,
+            name: dorm.name,
+            section: dorm.section || 'primary',
+            gender: dorm.gender,
+            rooms: String(dorm.room_count || 11),
+            bedsPerRoom: String(Math.max(1, Math.ceil(dorm.capacity / (dorm.room_count || 11)))),
+            notes: dorm.notes || '',
+          }
         : emptyDormForm,
     );
     setShowDormDialog(true);
   };
 
   const saveDorm = async () => {
-    const capacity = Number(dormForm.capacity);
+    const rooms = Number(dormForm.rooms);
+    const bedsPerRoom = Number(dormForm.bedsPerRoom);
+    const capacity = rooms * bedsPerRoom;
     if (!dormForm.name.trim()) {
       toast.error('Enter the dormitory name');
       return;
     }
-    if (!Number.isFinite(capacity) || capacity < 1 || capacity > 500) {
-      toast.error('Number of beds must be between 1 and 500');
+    if (!Number.isFinite(rooms) || rooms < 1 || rooms > 100) {
+      toast.error('Rooms must be between 1 and 100');
+      return;
+    }
+    if (!Number.isFinite(bedsPerRoom) || bedsPerRoom < 1 || bedsPerRoom > 50) {
+      toast.error('Beds per room must be between 1 and 50');
+      return;
+    }
+    if (capacity > 500) {
+      toast.error('Total beds (rooms × beds per room) cannot exceed 500');
       return;
     }
     setSaving(true);
     const payload = {
       name: dormForm.name.trim(),
+      section: dormForm.section,
       gender: dormForm.gender,
+      room_count: rooms,
       capacity,
       notes: dormForm.notes.trim() || null,
     };
@@ -713,8 +733,8 @@ export default function DormitoriesPage() {
                     <div className="flex items-start justify-between gap-2">
                       <div>
                         <h3 className="font-semibold">{d.name}</h3>
-                        <p className="text-xs text-muted-foreground">
-                          {d.gender === 'male' ? 'Boys' : 'Girls'} dormitory
+                        <p className="text-xs text-muted-foreground capitalize">
+                          {d.section || 'primary'} • {d.gender === 'male' ? 'Boys' : 'Girls'} dormitory • {d.room_count || 11} rooms
                         </p>
                       </div>
                       <div className="flex gap-1">
@@ -783,7 +803,7 @@ export default function DormitoriesPage() {
         <DialogContent>
           <DialogHeader>
             <DialogTitle>{dormForm.id ? 'Edit Dormitory' : 'New Dormitory'}</DialogTitle>
-            <DialogDescription>Beds are numbered automatically from 1 up to the number you set.</DialogDescription>
+<DialogDescription>Set the section, gender, rooms and beds per room — beds are created automatically across the rooms.</DialogDescription>
           </DialogHeader>
           <div className="space-y-4">
             <div className="space-y-2">
@@ -796,6 +816,19 @@ export default function DormitoriesPage() {
             </div>
             <div className="grid grid-cols-2 gap-4">
               <div className="space-y-2">
+                <Label>Section</Label>
+                <Select value={dormForm.section} onValueChange={(v) => setDormForm({ ...dormForm, section: v })}>
+                  <SelectTrigger>
+                    <SelectValue />
+                  </SelectTrigger>
+                  <SelectContent>
+                    <SelectItem value="nursery">Nursery</SelectItem>
+                    <SelectItem value="primary">Primary</SelectItem>
+                    <SelectItem value="secondary">Secondary</SelectItem>
+                  </SelectContent>
+                </Select>
+              </div>
+              <div className="space-y-2">
                 <Label>For</Label>
                 <Select value={dormForm.gender} onValueChange={(v) => setDormForm({ ...dormForm, gender: v })}>
                   <SelectTrigger>
@@ -807,17 +840,32 @@ export default function DormitoriesPage() {
                   </SelectContent>
                 </Select>
               </div>
+            </div>
+            <div className="grid grid-cols-2 gap-4">
               <div className="space-y-2">
-                <Label>Number of beds</Label>
+                <Label>Number of rooms</Label>
                 <Input
                   type="number"
                   min={1}
-                  max={500}
-                  value={dormForm.capacity}
-                  onChange={(e) => setDormForm({ ...dormForm, capacity: e.target.value })}
+                  max={100}
+                  value={dormForm.rooms}
+                  onChange={(e) => setDormForm({ ...dormForm, rooms: e.target.value })}
+                />
+              </div>
+              <div className="space-y-2">
+                <Label>Beds per room</Label>
+                <Input
+                  type="number"
+                  min={1}
+                  max={50}
+                  value={dormForm.bedsPerRoom}
+                  onChange={(e) => setDormForm({ ...dormForm, bedsPerRoom: e.target.value })}
                 />
               </div>
             </div>
+            <p className="text-xs text-muted-foreground">
+              Total beds: {(Number(dormForm.rooms) || 0) * (Number(dormForm.bedsPerRoom) || 0)} — beds are created automatically across {Number(dormForm.rooms) || 0} rooms.
+            </p>
             <div className="space-y-2">
               <Label>Notes (optional)</Label>
               <Input
