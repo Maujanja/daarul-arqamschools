@@ -27,7 +27,7 @@ function readScrollDebugEnabled() {
 }
 
 export function DashboardLayout({ children }: DashboardLayoutProps) {
-  const { isAuthenticated, user } = useAuth();
+  const { isAuthenticated, isLoading, user } = useAuth();
   const [scrollDebugEnabled, setScrollDebugEnabled] = useState(readScrollDebugEnabled);
   const [lastScrollDebug, setLastScrollDebug] = useState<ScrollDebugEntry | null>(null);
 
@@ -49,6 +49,14 @@ export function DashboardLayout({ children }: DashboardLayoutProps) {
       window.removeEventListener(SCROLL_DEBUG_EVENT_NAME, handleDebug);
     };
   }, []);
+
+  if (isLoading) {
+    return (
+      <div className="fixed inset-0 flex items-center justify-center bg-background text-muted-foreground">
+        Loading...
+      </div>
+    );
+  }
 
   if (!isAuthenticated) {
     return <Navigate to="/login" replace />;
