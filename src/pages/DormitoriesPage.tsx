@@ -167,7 +167,15 @@ export default function DormitoriesPage() {
   const openDormDialog = (dorm?: Dormitory) => {
     setDormForm(
       dorm
-        ? { id: dorm.id, name: dorm.name, gender: dorm.gender, capacity: String(dorm.capacity), notes: dorm.notes || '' }
+        ? {
+            id: dorm.id,
+            name: dorm.name,
+            section: dorm.section || 'primary',
+            gender: dorm.gender,
+            rooms: String(dorm.room_count || 11),
+            bedsPerRoom: String(Math.max(1, Math.ceil(dorm.capacity / (dorm.room_count || 11)))),
+            notes: dorm.notes || '',
+          }
         : emptyDormForm,
     );
     setShowDormDialog(true);
