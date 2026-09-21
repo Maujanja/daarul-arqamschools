@@ -105,8 +105,8 @@ export default function PerformanceLettersPage() {
             <Select value={className} onValueChange={setClassName}><SelectTrigger><SelectValue /></SelectTrigger><SelectContent><SelectItem value="all">All classes</SelectItem>{classOptions.map((item) => <SelectItem key={item} value={item}>{item}</SelectItem>)}</SelectContent></Select>
           </div>
           <div>
-            <label className="mb-2 block text-sm font-medium">Series Test</label>
-            <Select value={term} onValueChange={setTerm}><SelectTrigger><SelectValue /></SelectTrigger><SelectContent>{SERIES.map((item) => <SelectItem key={item} value={item}>{item}</SelectItem>)}</SelectContent></Select>
+            <label className="mb-2 block text-sm font-medium">Examination</label>
+            <Select value={term} onValueChange={setTerm}><SelectTrigger><SelectValue /></SelectTrigger><SelectContent>{termOptions.map((option) => <SelectItem key={option.value} value={option.value}>{option.label}</SelectItem>)}</SelectContent></Select>
           </div>
           {!isTeacher && (
             <div>
