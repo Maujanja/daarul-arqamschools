@@ -32,3 +32,6 @@ verify_jwt = false
 
 [functions.whatsapp-audience]
 verify_jwt = false
+
+[functions.teacher-performance-letters]
+verify_jwt = false

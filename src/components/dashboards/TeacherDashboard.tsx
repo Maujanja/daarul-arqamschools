@@ -13,6 +13,7 @@ import { SeriesPerformanceChart } from '@/components/dashboard/SeriesPerformance
 import { getTestDisplayName, getTestsForClass, getFilterLabel, calculateGradeForClass, isPrimaryClass, getSeriesCountForClass, usesCATSeries, getSeriesLabel } from '@/utils/seniorGrading';
 import { isExcludedFromPrimaryAverage } from '@/utils/averageExclusions';
 import { extractUniqueBaseClasses } from '@/utils/classStreams';
+import { TeacherLetterSummary } from '@/components/teacher-performance/TeacherLetterSummary';
 
 interface TeacherInfo {
   id: string;
@@ -452,6 +453,9 @@ export function TeacherDashboard() {
           </div>
         </div>
       )}
+
+      {/* Students Needing Support */}
+      <TeacherLetterSummary term={selectedTerm} />
 
       {/* Students Needing Support */}
       <Card>
