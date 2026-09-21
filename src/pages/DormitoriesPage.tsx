@@ -182,19 +182,31 @@ export default function DormitoriesPage() {
   };
 
   const saveDorm = async () => {
-    const capacity = Number(dormForm.capacity);
+    const rooms = Number(dormForm.rooms);
+    const bedsPerRoom = Number(dormForm.bedsPerRoom);
+    const capacity = rooms * bedsPerRoom;
     if (!dormForm.name.trim()) {
       toast.error('Enter the dormitory name');
       return;
     }
-    if (!Number.isFinite(capacity) || capacity < 1 || capacity > 500) {
-      toast.error('Number of beds must be between 1 and 500');
+    if (!Number.isFinite(rooms) || rooms < 1 || rooms > 100) {
+      toast.error('Rooms must be between 1 and 100');
+      return;
+    }
+    if (!Number.isFinite(bedsPerRoom) || bedsPerRoom < 1 || bedsPerRoom > 50) {
+      toast.error('Beds per room must be between 1 and 50');
+      return;
+    }
+    if (capacity > 500) {
+      toast.error('Total beds (rooms × beds per room) cannot exceed 500');
       return;
     }
     setSaving(true);
     const payload = {
       name: dormForm.name.trim(),
+      section: dormForm.section,
       gender: dormForm.gender,
+      room_count: rooms,
       capacity,
       notes: dormForm.notes.trim() || null,
     };
