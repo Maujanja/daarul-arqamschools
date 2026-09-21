@@ -803,7 +803,7 @@ export default function DormitoriesPage() {
         <DialogContent>
           <DialogHeader>
             <DialogTitle>{dormForm.id ? 'Edit Dormitory' : 'New Dormitory'}</DialogTitle>
-            <DialogDescription>Beds are numbered automatically from 1 up to the number you set.</DialogDescription>
+<DialogDescription>Set the section, gender, rooms and beds per room — beds are created automatically across the rooms.</DialogDescription>
           </DialogHeader>
           <div className="space-y-4">
             <div className="space-y-2">
