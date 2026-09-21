@@ -41,13 +41,29 @@ export default function PerformanceLettersPage() {
     return ['nursery', 'primary', 'secondary'];
   }, [user?.role]);
 
-  const classOptions = useMemo(() => {
-    const allowed = section === 'all'
-      ? sectionOptions.flatMap((key) => SECTIONS[key])
-      : SECTIONS[section] || [];
-    const present = new Set(letters.flatMap((letter) => letter.classes.map(baseClass)));
-    return allowed.filter((item) => present.has(item));
-  }, [letters, section, sectionOptions]);
+  const classOptions = useMemo(() => (section === 'all'
+    ? sectionOptions.flatMap((key) => SECTIONS[key])
+    : SECTIONS[section] || []), [section, sectionOptions]);
+
+  // Some classes use CAT/TERMINAL/ANNUAL names instead of Series numbers
+  const termOptions = useMemo(() => {
+    const classes = className !== 'all' ? [className] : classOptions;
+    const labels = new Map<string, Set<string>>();
+    classes.forEach((item) => getTestsForClass(item).forEach(({ value, label }) => {
+      const set = labels.get(value) || new Set<string>();
+      set.add(label);
+      labels.set(value, set);
+    }));
+    return [...labels.entries()]
+      .sort((a, b) => (parseInt(a[0].replace(/\D/g, ''), 10) || 0) - (parseInt(b[0].replace(/\D/g, ''), 10) || 0))
+      .map(([value, set]) => ({ value, label: set.size === 1 ? [...set][0] : value }));
+  }, [className, classOptions]);
+
+  useEffect(() => {
+    if (termOptions.length > 0 && !termOptions.some((option) => option.value === term)) {
+      setTerm(termOptions[0].value);
+    }
+  }, [termOptions, term]);
 
   const teacherOptions = useMemo(() => {
     const map = new Map<string, string>();
@@ -89,8 +105,8 @@ export default function PerformanceLettersPage() {
             <Select value={className} onValueChange={setClassName}><SelectTrigger><SelectValue /></SelectTrigger><SelectContent><SelectItem value="all">All classes</SelectItem>{classOptions.map((item) => <SelectItem key={item} value={item}>{item}</SelectItem>)}</SelectContent></Select>
           </div>
           <div>
-            <label className="mb-2 block text-sm font-medium">Series Test</label>
-            <Select value={term} onValueChange={setTerm}><SelectTrigger><SelectValue /></SelectTrigger><SelectContent>{SERIES.map((item) => <SelectItem key={item} value={item}>{item}</SelectItem>)}</SelectContent></Select>
+            <label className="mb-2 block text-sm font-medium">Examination</label>
+            <Select value={term} onValueChange={setTerm}><SelectTrigger><SelectValue /></SelectTrigger><SelectContent>{termOptions.map((option) => <SelectItem key={option.value} value={option.value}>{option.label}</SelectItem>)}</SelectContent></Select>
           </div>
           {!isTeacher && (
             <div>
