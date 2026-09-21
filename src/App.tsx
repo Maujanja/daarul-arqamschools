@@ -23,6 +23,7 @@ import MarksWindowsPage from "./pages/MarksWindowsPage";
 import ParentLoginsPage from "./pages/ParentLoginsPage";
 import MarketingPage from "./pages/MarketingPage";
 import DormitoriesPage from "./pages/DormitoriesPage";
+import PerformanceLettersPage from "./pages/PerformanceLettersPage";
 import NotFound from "./pages/NotFound";
 import InstallPWA from "./components/InstallPWA";
 import IntroSplash from "./components/IntroSplash";
@@ -69,6 +70,7 @@ const App = () => (
             <Route path="/parent-logins" element={<ParentLoginsPage />} />
             <Route path="/marketing" element={<MarketingPage />} />
             <Route path="/dormitories" element={<DormitoriesPage />} />
+            <Route path="/performance-letters" element={<PerformanceLettersPage />} />
             <Route path="/bulk-sms" element={<Navigate to="/marketing" replace />} />
             {/* ADD ALL CUSTOM ROUTES ABOVE THE CATCH-ALL "*" ROUTE */}
             <Route path="*" element={<NotFound />} />
