@@ -10,7 +10,7 @@ import { Switch } from '@/components/ui/switch';
 import { useToast } from '@/hooks/use-toast';
 import { classes as ALL_CLASSES } from '@/data/mockData';
 import { getTestsForClass, getTestDisplayName, getFilterLabel } from '@/utils/seniorGrading';
-import { Lock, Unlock, Loader2, ShieldCheck } from 'lucide-react';
+import { CalendarDays, Lock, Unlock, Loader2, ShieldCheck } from 'lucide-react';
 
 interface MarksWindow {
   id: string;
@@ -21,6 +21,7 @@ interface MarksWindow {
   opened_by: string | null;
   opened_at: string | null;
   closed_at: string | null;
+  exam_date: string | null;
 }
 
 const SECTION_BASE_CLASSES: Record<string, string[]> = {
@@ -48,6 +49,7 @@ export default function MarksWindowsPage() {
   const [windows, setWindows] = useState<MarksWindow[]>([]);
   const [isLoading, setIsLoading] = useState(false);
   const [savingTerm, setSavingTerm] = useState<string | null>(null);
+  const [dateDrafts, setDateDrafts] = useState<Record<string, string>>({});
 
   useEffect(() => {
     if (!selectedClass && allowedClasses.length > 0) setSelectedClass(allowedClasses[0]);
@@ -65,6 +67,7 @@ export default function MarksWindowsPage() {
       academic_year: selectedYear,
     }, { limit: 200 });
     setWindows(rows);
+    setDateDrafts(Object.fromEntries(rows.map((row) => [row.term, row.exam_date || ''])));
     setIsLoading(false);
   }, [selectedClass, selectedYear, fetchTable]);
 
@@ -83,12 +86,18 @@ export default function MarksWindowsPage() {
     setSavingTerm(term);
     try {
       const existing = windowFor(term);
+      const examDate = dateDrafts[term] || existing?.exam_date || '';
+      if (open && !examDate) {
+        toast({ title: 'Examination date required', description: `Set the date for ${getTestDisplayName(term, selectedClass)} before opening it.`, variant: 'destructive' });
+        return;
+      }
       const now = new Date().toISOString();
       const payload = {
         is_open: open,
         opened_by: user?.name || role,
         opened_at: open ? now : existing?.opened_at || null,
         closed_at: open ? null : now,
+        exam_date: examDate || null,
       };
 
       const result = existing
@@ -118,6 +127,28 @@ export default function MarksWindowsPage() {
     }
   };
 
+  const saveSeriesDate = async (term: string) => {
+    const examDate = dateDrafts[term];
+    if (!examDate) {
+      toast({ title: 'Examination date required', description: 'Choose the date when this Series was or will be held.', variant: 'destructive' });
+      return;
+    }
+    setSavingTerm(term);
+    try {
+      const existing = windowFor(term);
+      const result = existing
+        ? await update('marks_entry_windows', { exam_date: examDate }, { id: existing.id })
+        : await insert('marks_entry_windows', { class: selectedClass, term, academic_year: selectedYear, is_open: false, exam_date: examDate });
+      if (!result.success) throw new Error(result.error || 'Unable to save date');
+      toast({ title: 'Examination date saved', description: `${getTestDisplayName(term, selectedClass)} — ${new Date(`${examDate}T12:00:00`).toLocaleDateString('en-GB')}` });
+      await loadWindows();
+    } catch (error: unknown) {
+      toast({ title: 'Error', description: error instanceof Error ? error.message : 'Unable to save date', variant: 'destructive' });
+    } finally {
+      setSavingTerm(null);
+    }
+  };
+
   if (!canManage) {
     return (
       <DashboardLayout>
@@ -134,9 +165,7 @@ export default function MarksWindowsPage() {
       <div className="space-y-6">
         <div>
           <h1 className="text-2xl font-display font-bold text-card-foreground">Series Control</h1>
-          <p className="text-muted-foreground">
-            Fungua au funga {selectedClass ? getFilterLabel(selectedClass).toLowerCase() : 'series'} ili walimu waweze kuingiza maksi.
-          </p>
+          <p className="text-muted-foreground">Set the examination date, then open or close {selectedClass ? getFilterLabel(selectedClass).toLowerCase() : 'series'} for marks entry.</p>
         </div>
 
         <div className="card-elevated p-6 grid grid-cols-1 sm:grid-cols-2 gap-4">
@@ -176,6 +205,7 @@ export default function MarksWindowsPage() {
                   <tr className="bg-muted/50">
                     <th className="text-left py-3 px-4 text-sm font-medium text-muted-foreground">Series</th>
                     <th className="text-left py-3 px-4 text-sm font-medium text-muted-foreground">Status</th>
+                     <th className="text-left py-3 px-4 text-sm font-medium text-muted-foreground">Examination Date</th>
                     <th className="text-left py-3 px-4 text-sm font-medium text-muted-foreground">Opened By</th>
                     <th className="text-center py-3 px-4 text-sm font-medium text-muted-foreground">Open / Close</th>
                   </tr>
@@ -201,6 +231,20 @@ export default function MarksWindowsPage() {
                             </span>
                           )}
                         </td>
+                         <td className="py-4 px-4">
+                           <div className="flex min-w-[190px] items-center gap-2">
+                             <input
+                               type="date"
+                               value={dateDrafts[term] || ''}
+                               onChange={(event) => setDateDrafts((current) => ({ ...current, [term]: event.target.value }))}
+                               className="h-9 min-w-0 flex-1 rounded-md border border-input bg-background px-3 text-sm text-foreground"
+                               aria-label={`${series.label} examination date`}
+                             />
+                             <Button size="icon" variant="outline" onClick={() => void saveSeriesDate(term)} disabled={savingTerm === term} title="Save examination date">
+                               {savingTerm === term ? <Loader2 className="h-4 w-4 animate-spin" /> : <CalendarDays className="h-4 w-4" />}
+                             </Button>
+                           </div>
+                         </td>
                         <td className="py-4 px-4 text-sm text-muted-foreground">{win?.opened_by || '—'}</td>
                         <td className="py-4 px-4 text-center">
                           {savingTerm === term ? (

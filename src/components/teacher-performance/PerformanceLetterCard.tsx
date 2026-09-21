@@ -10,6 +10,11 @@ import dasLogo from '@/assets/das-logo.png';
 
 const icons = { green: Award, yellow: TrendingUp, red: AlertTriangle };
 
+function formatLetterDate(value: string | null) {
+  if (!value) return 'Date not set';
+  return new Date(`${value}T12:00:00`).toLocaleDateString('en-GB', { day: 'numeric', month: 'long', year: 'numeric' });
+}
+
 function Preview({ letter }: { letter: TeacherPerformanceLetter }) {
   const details = tapeDetails[letter.tape];
   const lowNames = letter.lowestStudents.map((student) => student.name).join(', ');
@@ -20,7 +25,7 @@ function Preview({ letter }: { letter: TeacherPerformanceLetter }) {
         <h2 className="mt-2 text-xl sm:text-2xl font-bold">DAARUL-ARQAM ISLAMIC SCHOOLS</h2>
         <p className="mt-1 text-xs sm:text-sm font-semibold underline">P.O BOX 80059 Email: darqamschool@gmail.com Tel: +255718999777, +255715250026</p>
       </div>
-      <p className="mt-6 text-right text-sm font-semibold">Date: {new Date().toLocaleDateString('en-GB', { day: 'numeric', month: 'long', year: 'numeric' })}</p>
+      <p className="mt-6 text-right text-sm font-semibold">Date: {formatLetterDate(letter.examDate)}</p>
       <p className="mt-6 font-semibold">To: {letter.teacherName}</p>
       <p className="mt-2 font-bold underline">SUBJECT: {details.summary.toUpperCase()} – PLACEMENT ON {details.label.toUpperCase()}.</p>
       <div className="mt-5 space-y-4 text-sm leading-6">
@@ -68,7 +73,7 @@ export function PerformanceLetterCard({ letter }: { letter: TeacherPerformanceLe
               <Icon className={`h-5 w-5 ${letter.tape === 'green' ? 'text-success' : letter.tape === 'yellow' ? 'text-warning' : 'text-destructive'}`} />
               <h3 className="font-semibold truncate">{letter.teacherName}</h3>
             </div>
-            <p className="mt-1 text-sm text-muted-foreground">{letter.term} · {letter.academicYear}</p>
+            <p className="mt-1 text-sm text-muted-foreground">{letter.term} · {letter.academicYear} · {formatLetterDate(letter.examDate)}</p>
           </div>
           <Badge variant="outline" className={details.className}>{details.label}</Badge>
         </div>
