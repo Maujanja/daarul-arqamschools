@@ -136,6 +136,11 @@ serve(async (req) => {
     return new Response(JSON.stringify({ success: true, data: letters }), { headers: { ...corsHeaders, "Content-Type": "application/json" } });
   } catch (error) {
     console.error("teacher-performance-letters error", error);
-    return new Response(JSON.stringify({ success: false, error: error instanceof Error ? error.message : "Unable to calculate performance letters" }), { status: 500, headers: { ...corsHeaders, "Content-Type": "application/json" } });
+    const message = error instanceof Error
+      ? error.message
+      : typeof error === "object" && error !== null && "message" in error
+        ? String(error.message)
+        : "Unable to calculate performance letters";
+    return new Response(JSON.stringify({ success: false, error: message }), { status: 500, headers: { ...corsHeaders, "Content-Type": "application/json" } });
   }
 });
