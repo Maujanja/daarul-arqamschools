@@ -816,6 +816,19 @@ export default function DormitoriesPage() {
             </div>
             <div className="grid grid-cols-2 gap-4">
               <div className="space-y-2">
+                <Label>Section</Label>
+                <Select value={dormForm.section} onValueChange={(v) => setDormForm({ ...dormForm, section: v })}>
+                  <SelectTrigger>
+                    <SelectValue />
+                  </SelectTrigger>
+                  <SelectContent>
+                    <SelectItem value="nursery">Nursery</SelectItem>
+                    <SelectItem value="primary">Primary</SelectItem>
+                    <SelectItem value="secondary">Secondary</SelectItem>
+                  </SelectContent>
+                </Select>
+              </div>
+              <div className="space-y-2">
                 <Label>For</Label>
                 <Select value={dormForm.gender} onValueChange={(v) => setDormForm({ ...dormForm, gender: v })}>
                   <SelectTrigger>
@@ -827,17 +840,32 @@ export default function DormitoriesPage() {
                   </SelectContent>
                 </Select>
               </div>
+            </div>
+            <div className="grid grid-cols-2 gap-4">
               <div className="space-y-2">
-                <Label>Number of beds</Label>
+                <Label>Number of rooms</Label>
                 <Input
                   type="number"
                   min={1}
-                  max={500}
-                  value={dormForm.capacity}
-                  onChange={(e) => setDormForm({ ...dormForm, capacity: e.target.value })}
+                  max={100}
+                  value={dormForm.rooms}
+                  onChange={(e) => setDormForm({ ...dormForm, rooms: e.target.value })}
+                />
+              </div>
+              <div className="space-y-2">
+                <Label>Beds per room</Label>
+                <Input
+                  type="number"
+                  min={1}
+                  max={50}
+                  value={dormForm.bedsPerRoom}
+                  onChange={(e) => setDormForm({ ...dormForm, bedsPerRoom: e.target.value })}
                 />
               </div>
             </div>
+            <p className="text-xs text-muted-foreground">
+              Total beds: {(Number(dormForm.rooms) || 0) * (Number(dormForm.bedsPerRoom) || 0)} — beds are created automatically across {Number(dormForm.rooms) || 0} rooms.
+            </p>
             <div className="space-y-2">
               <Label>Notes (optional)</Label>
               <Input
