@@ -8,6 +8,11 @@ const TAPE_RGB: Record<PerformanceTape, [number, number, number]> = {
   red: [220, 38, 38],
 };
 
+function formatLetterDate(value: string | null) {
+  if (!value) return 'Date not set';
+  return new Date(`${value}T12:00:00`).toLocaleDateString('en-GB', { day: 'numeric', month: 'long', year: 'numeric' });
+}
+
 async function loadImageData(url: string): Promise<string | null> {
   return new Promise((resolve) => {
     const image = new Image();
@@ -78,7 +83,7 @@ export async function generateTeacherPerformancePDF(letter: TeacherPerformanceLe
   doc.line(margin, 49, pageWidth - margin, 49);
 
   doc.setFontSize(10.5);
-  doc.text(`Date: ${new Date().toLocaleDateString('en-GB', { day: 'numeric', month: 'long', year: 'numeric' })}`, pageWidth - margin, 60, { align: 'right' });
+  doc.text(`Date: ${formatLetterDate(letter.examDate)}`, pageWidth - margin, 60, { align: 'right' });
   doc.text(`To: ${letter.teacherName}`, margin, 72);
   doc.setFontSize(10);
   doc.text(copy.subject, margin, 81);

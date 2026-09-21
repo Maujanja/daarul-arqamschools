@@ -16,6 +16,7 @@ const EXCLUDED_PRIMARY_SUBJECTS = new Set(["e.d.k", "edk", "edk nursery", "arabi
 
 type Assignment = { teacher_id: string; class: string; stream: string | null; subject_id: string };
 type Mark = { teacher_id: string | null; student_id: string; subject_id: string; class: string; stream: string | null; total: number; students: { full_name: string } | null };
+type MarksWindow = { class: string; exam_date: string | null };
 
 const baseClass = (value: string) => value.trim().replace(/\s+[A-B](?:[1-2])?$/i, "");
 const isPrimary = (value: string) => /^Primary\s+[1-7]$/i.test(baseClass(value));
@@ -68,12 +69,15 @@ serve(async (req) => {
     const teacherIds = [...new Set(assignments.map((row) => row.teacher_id))];
     if (teacherIds.length === 0) return new Response(JSON.stringify({ success: true, data: [] }), { headers: { ...corsHeaders, "Content-Type": "application/json" } });
 
-    const [{ data: teachers, error: teacherError }, { data: subjects, error: subjectError }] = await Promise.all([
+    const assignmentClasses = [...new Set(assignments.map((row) => baseClass(row.class)))];
+    const [{ data: teachers, error: teacherError }, { data: subjects, error: subjectError }, { data: windowRows, error: windowError }] = await Promise.all([
       client.from("teachers").select("id,full_name").in("id", teacherIds),
       client.from("subjects").select("id,name"),
+      client.from("marks_entry_windows").select("class,exam_date").eq("academic_year", academicYear).eq("term", term).in("class", assignmentClasses),
     ]);
     if (teacherError) throw teacherError;
     if (subjectError) throw subjectError;
+    if (windowError) throw windowError;
 
     const marks: Mark[] = [];
     for (let from = 0; from < 50000; from += 1000) {
@@ -106,6 +110,11 @@ serve(async (req) => {
       const normalizedScores = teacherMarks.map((mark) => Math.max(0, Math.min(100, (Number(mark.total) / maxMarks(mark.class)) * 100)));
       const average = Math.round((normalizedScores.reduce((sum, value) => sum + value, 0) / normalizedScores.length) * 10) / 10;
       const classes = [...new Set(teacherAssignments.map((row) => baseClass(row.class)))].sort();
+      const examDates = ((windowRows || []) as MarksWindow[])
+        .filter((window) => classes.includes(baseClass(window.class)) && window.exam_date)
+        .map((window) => window.exam_date as string)
+        .sort();
+      const examDate = examDates.at(-1) || null;
       const grade = gradeForPercentage(average, classes);
       const studentScores = new Map<string, number[]>();
       teacherMarks.forEach((mark, index) => {
@@ -122,7 +131,7 @@ serve(async (req) => {
         stream: row.stream,
         subjectName: subjectName.get(row.subject_id) || "Subject",
       }));
-      return [{ teacherId, teacherName: teacherName.get(teacherId) || "Teacher", academicYear, term, average, grade, tape: tapeForGrade(grade), markCount: teacherMarks.length, classes, contexts, lowestStudents }];
+      return [{ teacherId, teacherName: teacherName.get(teacherId) || "Teacher", academicYear, term, examDate, average, grade, tape: tapeForGrade(grade), markCount: teacherMarks.length, classes, contexts, lowestStudents }];
     }).sort((a, b) => a.teacherName.localeCompare(b.teacherName));
 
     return new Response(JSON.stringify({ success: true, data: letters }), { headers: { ...corsHeaders, "Content-Type": "application/json" } });

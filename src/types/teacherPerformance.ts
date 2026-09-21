@@ -11,6 +11,7 @@ export interface TeacherPerformanceLetter {
   teacherName: string;
   academicYear: string;
   term: string;
+  examDate: string | null;
   average: number;
   grade: string;
   tape: PerformanceTape;

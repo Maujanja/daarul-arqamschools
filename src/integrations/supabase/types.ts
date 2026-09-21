@@ -732,6 +732,7 @@ export type Database = {
           class: string
           closed_at: string | null
           created_at: string
+          exam_date: string | null
           id: string
           is_open: boolean
           notes: string | null
@@ -745,6 +746,7 @@ export type Database = {
           class: string
           closed_at?: string | null
           created_at?: string
+          exam_date?: string | null
           id?: string
           is_open?: boolean
           notes?: string | null
@@ -758,6 +760,7 @@ export type Database = {
           class?: string
           closed_at?: string | null
           created_at?: string
+          exam_date?: string | null
           id?: string
           is_open?: boolean
           notes?: string | null

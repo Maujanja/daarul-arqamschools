@@ -6,3 +6,5 @@
 - [x] Add letter preview and branded PDF download.
 - [x] Add the latest selected-series letter to the Teacher Dashboard.
 - [x] Deploy and verify the performance-letter service and interface.
+- [x] Store historical and future examination dates for every class and Series.
+- [x] Use the applicable examination date in letter previews and PDFs.
