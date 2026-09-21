@@ -15,7 +15,7 @@ const SECTION_CLASSES: Record<string, string[]> = {
 const EXCLUDED_PRIMARY_SUBJECTS = new Set(["e.d.k", "edk", "edk nursery", "arabic", "arabic language", "arabic nursery", "quran"]);
 
 type Assignment = { teacher_id: string; class: string; stream: string | null; subject_id: string };
-type Mark = { teacher_id: string | null; student_id: string; subject_id: string; class: string; stream: string | null; total: number };
+type Mark = { teacher_id: string | null; student_id: string; subject_id: string; class: string; stream: string | null; total: number; students: { full_name: string } | null };
 
 const baseClass = (value: string) => value.trim().replace(/\s+[A-B](?:[1-2])?$/i, "");
 const isPrimary = (value: string) => /^Primary\s+[1-7]$/i.test(baseClass(value));
@@ -78,7 +78,7 @@ serve(async (req) => {
     const marks: Mark[] = [];
     for (let from = 0; from < 50000; from += 1000) {
       const { data, error } = await client.from("marks")
-        .select("teacher_id,student_id,subject_id,class,stream,total")
+        .select("teacher_id,student_id,subject_id,class,stream,total,students(full_name)")
         .in("teacher_id", teacherIds)
         .eq("academic_year", academicYear)
         .eq("term", term)
@@ -87,14 +87,6 @@ serve(async (req) => {
       const page = (data || []) as Mark[];
       marks.push(...page);
       if (page.length < 1000) break;
-    }
-
-    const studentIds = [...new Set(marks.map((mark) => mark.student_id))];
-    const studentName = new Map<string, string>();
-    for (let index = 0; index < studentIds.length; index += 500) {
-      const { data, error } = await client.from("students").select("id,full_name").in("id", studentIds.slice(index, index + 500));
-      if (error) throw error;
-      (data || []).forEach((student) => studentName.set(student.id, student.full_name));
     }
 
     const subjectName = new Map((subjects || []).map((subject) => [subject.id, subject.name]));
@@ -122,7 +114,7 @@ serve(async (req) => {
         studentScores.set(mark.student_id, values);
       });
       const lowestStudents = [...studentScores.entries()]
-        .map(([studentId, values]) => ({ name: studentName.get(studentId) || "Student", average: Math.round((values.reduce((a, b) => a + b, 0) / values.length) * 10) / 10 }))
+        .map(([studentId, values]) => ({ name: teacherMarks.find((mark) => mark.student_id === studentId)?.students?.full_name || "Student", average: Math.round((values.reduce((a, b) => a + b, 0) / values.length) * 10) / 10 }))
         .sort((a, b) => a.average - b.average)
         .slice(0, 4);
       const contexts = teacherAssignments.map((row) => ({
