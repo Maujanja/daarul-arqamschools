@@ -7,8 +7,7 @@ import { useAuth } from '@/contexts/AuthContext';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { Button } from '@/components/ui/button';
 import { Loader2, FileBadge, RefreshCw } from 'lucide-react';
-
-const SERIES = Array.from({ length: 50 }, (_, index) => `Series ${index + 1}`);
+import { getTestsForClass } from '@/utils/seniorGrading';
 
 const SECTIONS: Record<string, string[]> = {
   nursery: ['Baby Class', 'Kindergarten I', 'Kindergarten II'],
