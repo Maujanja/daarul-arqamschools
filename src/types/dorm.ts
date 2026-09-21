@@ -3,6 +3,8 @@ export interface Dormitory {
   name: string;
   gender: 'male' | 'female';
   capacity: number;
+  section?: 'nursery' | 'primary' | 'secondary';
+  room_count?: number;
   notes: string | null;
 }
 

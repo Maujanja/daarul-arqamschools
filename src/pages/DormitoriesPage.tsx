@@ -33,7 +33,7 @@ interface StudentRow {
   boarding_type: string | null;
 }
 
-const emptyDormForm = { id: '', name: '', gender: 'male', capacity: '20', notes: '' };
+const emptyDormForm = { id: '', name: '', section: 'primary', gender: 'male', rooms: '11', bedsPerRoom: '8', notes: '' };
 
 export default function DormitoriesPage() {
   const { user } = useAuth();
