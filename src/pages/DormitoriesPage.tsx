@@ -733,8 +733,8 @@ export default function DormitoriesPage() {
                     <div className="flex items-start justify-between gap-2">
                       <div>
                         <h3 className="font-semibold">{d.name}</h3>
-                        <p className="text-xs text-muted-foreground">
-                          {d.gender === 'male' ? 'Boys' : 'Girls'} dormitory
+                        <p className="text-xs text-muted-foreground capitalize">
+                          {d.section || 'primary'} • {d.gender === 'male' ? 'Boys' : 'Girls'} dormitory • {d.room_count || 11} rooms
                         </p>
                       </div>
                       <div className="flex gap-1">
