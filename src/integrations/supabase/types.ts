@@ -1074,6 +1074,51 @@ export type Database = {
         }
         Relationships: []
       }
+      sms_topups: {
+        Row: {
+          amount: number
+          callback_payload: Json | null
+          created_at: string
+          created_by: string | null
+          created_by_role: string | null
+          id: string
+          msisdn: string | null
+          paid_at: string | null
+          reference: string
+          secure_token: string | null
+          status: string
+          transaction_id: string
+        }
+        Insert: {
+          amount: number
+          callback_payload?: Json | null
+          created_at?: string
+          created_by?: string | null
+          created_by_role?: string | null
+          id?: string
+          msisdn?: string | null
+          paid_at?: string | null
+          reference: string
+          secure_token?: string | null
+          status?: string
+          transaction_id: string
+        }
+        Update: {
+          amount?: number
+          callback_payload?: Json | null
+          created_at?: string
+          created_by?: string | null
+          created_by_role?: string | null
+          id?: string
+          msisdn?: string | null
+          paid_at?: string | null
+          reference?: string
+          secure_token?: string | null
+          status?: string
+          transaction_id?: string
+        }
+        Relationships: []
+      }
       sso_used_jtis: {
         Row: {
           expires_at: string
