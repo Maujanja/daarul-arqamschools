@@ -39,11 +39,13 @@ function BedSpace({
   data,
   selected,
   onSelect,
+  compact = false,
 }: {
   bed: DormBed;
   data: DormData;
   selected: boolean;
   onSelect: () => void;
+  compact?: boolean;
 }) {
   const assignment = data.assignmentByBed.get(bed.id);
   const student = assignment ? data.studentById.get(assignment.student_id) : undefined;
@@ -58,7 +60,8 @@ function BedSpace({
       aria-label={`${bed.bed_code || `Bed ${bed.bed_number}`}, ${position}, ${BED_STATUS_LABEL[status]}${student ? `, ${student.full_name}` : ''}`}
       onClick={onSelect}
       className={cn(
-        'relative h-[76px] w-full min-w-0 flex-col items-stretch justify-between gap-1 overflow-hidden border px-2 py-2 text-left whitespace-normal transition-transform duration-200 motion-safe:hover:-translate-y-0.5',
+        'relative w-full min-w-0 flex-col items-stretch justify-between gap-1 overflow-hidden border px-2 text-left whitespace-normal transition-transform duration-200 motion-safe:hover:-translate-y-0.5',
+        compact ? 'h-[52px] py-1' : 'h-[76px] py-2',
         SPACE_STYLE[status],
         selected && 'ring-2 ring-ring ring-offset-2 ring-offset-background',
       )}
@@ -80,12 +83,14 @@ function BunkUnit({
   data,
   selectedBedId,
   onSelect,
+  compact = false,
 }: {
   bunkNumber: number;
   beds: DormBed[];
   data: DormData;
   selectedBedId: string;
   onSelect: (bed: DormBed) => void;
+  compact?: boolean;
 }) {
   const ordered = [...beds].sort((a, b) => {
     const rank = { upper: 0, single: 0, lower: 1 };
@@ -94,7 +99,7 @@ function BunkUnit({
 
   return (
     <div className="overflow-hidden rounded-md border border-border bg-card">
-      <div className="flex h-8 items-center justify-between border-b border-border bg-muted/60 px-2">
+      <div className={cn('flex items-center justify-between border-b border-border bg-muted/60 px-2', compact ? 'h-6' : 'h-8')}>
         <span className="flex items-center gap-1.5 text-xs font-semibold text-foreground">
           <BedDouble className="h-3.5 w-3.5 text-muted-foreground" />
           B{String(bunkNumber).padStart(2, '0')}
@@ -109,6 +114,7 @@ function BunkUnit({
             data={data}
             selected={selectedBedId === bed.id}
             onSelect={() => onSelect(bed)}
+            compact={compact}
           />
         ))}
       </div>
@@ -144,18 +150,19 @@ function PartitionedRoomMap({
         </div>
         <div className="grid grid-cols-3 items-start gap-3">
           {half.map(([bunk, beds], index) => (
-            <div key={bunk} className={cn('min-w-0 space-y-1.5', index === 1 && 'flex min-h-[230px] flex-col')}>
+            <div key={bunk} className={cn('min-w-0 space-y-1.5', index === 1 && 'flex min-h-[190px] flex-col')}>
               <p className="truncate text-center text-[10px] font-medium text-muted-foreground">
                 {positions[index]}
               </p>
-              <div className={cn(index === 1 && 'flex flex-1 items-center justify-center')}>
-                <div className={cn(index === 1 && 'w-[190px] rotate-90')}>
+              <div className={cn(index === 1 && 'flex h-[150px] items-start justify-center overflow-visible pt-1')}>
+                <div className={cn(index === 1 && 'w-[118px] origin-top rotate-90')}>
                   <BunkUnit
                     bunkNumber={bunk}
                     beds={beds}
                     data={data}
                     selectedBedId={selectedBedId}
                     onSelect={onSelect}
+                    compact={index === 1}
                   />
                 </div>
               </div>
