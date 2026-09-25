@@ -22,8 +22,6 @@ import {
 } from 'lucide-react';
 import { BeemTopupCard } from './BeemTopupCard';
 
-const LOW_BALANCE = 10;
-
 interface Recipient {
   id: string;
   name: string | null;
