@@ -3,19 +3,13 @@ import { createClient } from "https://esm.sh/@supabase/supabase-js@2.89.0";
 
 const corsHeaders = {
   "Access-Control-Allow-Origin": "*",
-  "Access-Control-Allow-Headers": "authorization, x-client-info, apikey, content-type, beem-secure-token",
+  "Access-Control-Allow-Headers": "authorization, x-client-info, apikey, content-type",
 };
 
-const BEEM_API_KEY = Deno.env.get("BEEM_API_KEY") || "";
-const BEEM_SECRET_KEY = Deno.env.get("BEEM_SECRET_KEY") || "";
 const SUPABASE_URL = Deno.env.get("SUPABASE_URL")!;
 const SERVICE_KEY = Deno.env.get("SUPABASE_SERVICE_ROLE_KEY")!;
 
 const ALLOWED_ROLES = ["admin", "accountant", "head_nursery", "head_primary", "head_secondary"];
-
-function basicAuth() {
-  return "Basic " + btoa(`${BEEM_API_KEY}:${BEEM_SECRET_KEY}`);
-}
 
 function json(body: unknown, status = 200) {
   return new Response(JSON.stringify(body), {
@@ -43,77 +37,60 @@ serve(async (req) => {
     const body = await req.json().catch(() => ({}));
     const action = String(body?.action || "");
 
-    // ---- Public webhook: Bpay POSTs payment status here ----
-    if (action === "callback") {
-      const token = req.headers.get("beem-secure-token") || "";
-      const reference = String(body?.referenceNumber || "");
-      const transactionId = String(body?.transactionID || "");
-      const status = String(body?.status || "");
-      const amount = String(body?.amount || "");
-      const msisdn = String(body?.msisdn || "");
+    // ---- Public webhook: Bpay Collection POSTs payment details here ----
+    // Beem collection payload: transaction_id, amount_collected, source_currency,
+    // target_currency, subscriber_msisdn, reference_number, paybill_number,
+    // timestamp, mcc_network, mnc_network, network_name
+    // We must reply: { transaction_id, successful: "true" | "false" }
+    if (action === "callback" || body?.reference_number) {
+      const transactionId = String(body?.transaction_id || "");
+      const reference = String(body?.reference_number || "").trim();
+      const amountCollected = Number(body?.amount_collected || 0);
+      const msisdn = String(body?.subscriber_msisdn || "");
 
-      if (!reference && !transactionId) {
-        return json({ success: false, error: "referenceNumber or transactionID required" }, 400);
+      if (!reference || !transactionId) {
+        return json({ transaction_id: transactionId, successful: "false" }, 400);
       }
 
-      const q = supabase.from("sms_topups").select("*").limit(1);
-      const { data: rows } = transactionId
-        ? await q.eq("transaction_id", transactionId)
-        : await q.eq("reference", reference);
+      const { data: rows } = await supabase
+        .from("sms_topups")
+        .select("*")
+        .eq("reference", reference)
+        .limit(1);
       const topup = rows?.[0];
 
-      if (!topup) {
-        return json({ success: false, error: "Unknown transaction" }, 404);
-      }
-      if (topup.secure_token && token !== topup.secure_token) {
-        return json({ success: false, error: "Invalid secure token" }, 403);
+      // Unknown reference or already processed -> decline so funds are refunded
+      if (!topup || topup.status === "success") {
+        return json({ transaction_id: transactionId, successful: "false" });
       }
 
-      const newStatus = status === "success" ? "success" : "failed";
+      // Amount must match what was requested (allow tiny float drift)
+      if (Math.abs(Number(topup.amount) - amountCollected) > 1) {
+        await supabase
+          .from("sms_topups")
+          .update({ status: "failed", callback_payload: body })
+          .eq("id", topup.id);
+        return json({ transaction_id: transactionId, successful: "false" });
+      }
+
       await supabase
         .from("sms_topups")
         .update({
-          status: newStatus,
+          status: "success",
+          transaction_id: transactionId,
           msisdn: msisdn || topup.msisdn,
-          paid_at: status === "success" ? new Date().toISOString() : null,
+          paid_at: new Date().toISOString(),
           callback_payload: body,
         })
         .eq("id", topup.id);
 
-      // Bpay expects this exact acknowledgement shape
-      return json({
-        amount,
-        status: status === "success",
-        referenceNumber: reference,
-        statusMessage: status === "success" ? "Payment was successful!" : "Payment failed",
-        transactionID: transactionId,
-      });
+      return json({ transaction_id: transactionId, successful: "true" });
     }
 
-    // ---- Everything below requires Beem credentials + an allowed role ----
-    if (!BEEM_API_KEY || !BEEM_SECRET_KEY) {
-      return json({ success: false, error: "Beem credentials not configured" }, 500);
-    }
+    // ---- Everything below requires an allowed role ----
     const userRole = String(body?.userRole || "");
     if (!ALLOWED_ROLES.includes(userRole)) {
       return json({ success: false, error: "Not allowed for this role" }, 403);
-    }
-
-    if (action === "whitelist") {
-      const website = String(body?.website || "").trim();
-      if (!/^https:\/\//.test(website)) {
-        return json({ success: false, error: "Website must be an https:// URL" }, 400);
-      }
-      const res = await fetch("https://checkout.beem.africa/v1/whitelist/add-to-list", {
-        method: "POST",
-        headers: { "Content-Type": "application/json", Authorization: basicAuth() },
-        body: JSON.stringify({ website }),
-      });
-      const data = await res.json().catch(() => ({}));
-      if (!res.ok) {
-        return json({ success: false, error: `Beem whitelist ${res.status}: ${JSON.stringify(data)}` }, 502);
-      }
-      return json({ success: true, result: data });
     }
 
     if (action === "create") {
@@ -129,14 +106,12 @@ serve(async (req) => {
         return json({ success: false, error: "Namba ya simu si sahihi" }, 400);
       }
 
-      const transactionId = crypto.randomUUID();
-      const reference = "SMS-" + Math.random().toString(36).slice(2, 8).toUpperCase();
-      const secureToken = crypto.randomUUID().replace(/-/g, "");
+      const reference = "SMS" + Math.random().toString(36).slice(2, 8).toUpperCase();
 
       const { error } = await supabase.from("sms_topups").insert({
         reference,
-        transaction_id: transactionId,
-        secure_token: secureToken,
+        transaction_id: crypto.randomUUID(),
+        secure_token: null,
         amount,
         msisdn: mobile,
         status: "pending",
@@ -145,16 +120,16 @@ serve(async (req) => {
       });
       if (error) throw error;
 
-      return json({ success: true, reference, transactionId, secureToken, amount, mobile });
+      return json({ success: true, reference, amount, mobile });
     }
 
     if (action === "status") {
-      const transactionId = String(body?.transactionId || "");
-      if (!transactionId) return json({ success: false, error: "transactionId required" }, 400);
+      const reference = String(body?.reference || "");
+      if (!reference) return json({ success: false, error: "reference required" }, 400);
       const { data, error } = await supabase
         .from("sms_topups")
         .select("status, amount, reference, paid_at")
-        .eq("transaction_id", transactionId)
+        .eq("reference", reference)
         .limit(1);
       if (error) throw error;
       return json({ success: true, topup: data?.[0] ?? null });
