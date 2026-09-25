@@ -35,3 +35,6 @@ verify_jwt = false
 
 [functions.teacher-performance-letters]
 verify_jwt = false
+
+[functions.beem-topup]
+verify_jwt = false

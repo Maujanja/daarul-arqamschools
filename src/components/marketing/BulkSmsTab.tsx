@@ -19,12 +19,8 @@ import {
   XCircle,
   Trash2,
   Users,
-  Wallet,
-  ExternalLink,
-  AlertTriangle,
 } from 'lucide-react';
-
-const LOW_BALANCE = 10;
+import { BeemTopupCard } from './BeemTopupCard';
 
 interface Recipient {
   id: string;
@@ -304,59 +300,7 @@ export default function BulkSmsTab() {
           </Card>
         </div>
 
-        <Card className="p-4 space-y-3">
-          <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-3">
-            <div className="flex items-start gap-3 min-w-0">
-              <div
-                className={`w-10 h-10 rounded-lg flex items-center justify-center shrink-0 ${
-                  balance !== null && balance <= 0
-                    ? 'bg-destructive/15 text-destructive'
-                    : balance !== null && balance < LOW_BALANCE
-                    ? 'bg-warning/15 text-warning'
-                    : 'bg-primary/10 text-primary'
-                }`}
-              >
-                {balance !== null && balance < LOW_BALANCE ? (
-                  <AlertTriangle className="w-5 h-5" />
-                ) : (
-                  <Wallet className="w-5 h-5" />
-                )}
-              </div>
-              <div className="min-w-0">
-                <h2 className="font-semibold">Nunua salio la Bulk SMS</h2>
-                <p className="text-sm text-muted-foreground">
-                  Ununuzi wa credits hufanyika moja kwa moja kwenye akaunti yako ya Beem (kwa
-                  mobile money au benki). Baada ya malipo, credits zinaingia mara moja na salio
-                  hapa linaonyeshwa kwenye kadi ya juu.
-                </p>
-                {balance !== null && balance <= 0 && (
-                  <p className="text-xs text-destructive mt-1 font-medium">
-                    Salio limeisha. SMS hazitatumwa hadi uweke credits.
-                  </p>
-                )}
-                {balance !== null && balance > 0 && balance < LOW_BALANCE && (
-                  <p className="text-xs text-warning mt-1 font-medium">
-                    Salio linakaribia kuisha. Weka credits hivi karibuni.
-                  </p>
-                )}
-              </div>
-            </div>
-            <Button
-              variant={balance !== null && balance < LOW_BALANCE ? 'default' : 'outline'}
-              asChild
-              className="shrink-0"
-            >
-              <a
-                href="https://login.beem.africa/"
-                target="_blank"
-                rel="noopener noreferrer"
-                className="inline-flex items-center gap-1"
-              >
-                Nunua salio Beem <ExternalLink className="w-3.5 h-3.5" />
-              </a>
-            </Button>
-          </div>
-        </Card>
+        <BeemTopupCard balance={balance} onBalanceRefresh={loadBalance} />
 
         <Card className="p-4 space-y-4">
           <div className="grid gap-4 md:grid-cols-2">
