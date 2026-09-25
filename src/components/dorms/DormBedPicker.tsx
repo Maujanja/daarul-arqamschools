@@ -2,11 +2,12 @@ import { useEffect, useMemo, useState } from 'react';
 import { Label } from '@/components/ui/label';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { useSecureQuery } from '@/hooks/useSecureQuery';
-import { Dormitory, DormBed, DormAssignment, normalizeGender } from '@/types/dorm';
+import { Dormitory, DormBed, DormAssignment, normalizeGender, sectionOfClass, POSITION_LABEL, NO_SPACE_MESSAGE } from '@/types/dorm';
 import { Loader2 } from 'lucide-react';
 
 interface DormBedPickerProps {
   gender?: string | null;
+  studentClass?: string | null;
   academicYear: string;
   dormitoryId: string;
   bedId: string;
@@ -17,6 +18,7 @@ interface DormBedPickerProps {
 
 export function DormBedPicker({
   gender,
+  studentClass,
   academicYear,
   dormitoryId,
   bedId,
@@ -52,15 +54,24 @@ export function DormBedPicker({
 
   const studentGender = normalizeGender(gender);
   const visibleDorms = useMemo(
-    () => (studentGender ? dorms.filter((d) => d.gender === studentGender) : dorms),
-    [dorms, studentGender],
+    () =>
+      dorms.filter(
+        (d) =>
+          d.is_active !== false &&
+          (!studentGender || d.gender === studentGender) &&
+          (!studentClass || (d.section || 'primary') === sectionOfClass(studentClass)),
+      ),
+    [dorms, studentGender, studentClass],
   );
 
   const takenBedIds = useMemo(() => {
     const taken = new Set(assignments.map((a) => a.bed_id));
+    beds.forEach((b) => {
+      if (b.status && b.status !== 'available') taken.add(b.id);
+    });
     if (currentBedId) taken.delete(currentBedId);
     return taken;
-  }, [assignments, currentBedId]);
+  }, [assignments, beds, currentBedId]);
 
   const freeBedsByDorm = useMemo(() => {
     const map = new Map<string, number>();
@@ -177,13 +188,16 @@ export function DormBedPicker({
               {availableBeds.map((b) => (
                 <SelectItem key={b.id} value={b.id}>
                   {b.bed_code || `Bed ${b.bed_number}`}
-                  {b.room_number ? ` • Room ${b.room_number}` : ''}
+                  {b.bed_position && b.bed_position !== 'single' ? ` • ${POSITION_LABEL[b.bed_position]}` : ''}
                 </SelectItem>
               ))}
             </SelectContent>
           </Select>
           {dormitoryId && availableBeds.length === 0 && (
             <p className="text-xs text-destructive">No free beds here. Choose another room or dormitory.</p>
+          )}
+          {!dormitoryId && visibleDorms.every((d) => !(freeBedsByDorm.get(d.id) || 0)) && (
+            <p className="text-xs text-destructive">{NO_SPACE_MESSAGE}</p>
           )}
         </div>
       </div>
