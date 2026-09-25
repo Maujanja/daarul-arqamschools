@@ -928,6 +928,7 @@ export default function StudentsPage() {
                 <Label>Dormitory &amp; Bed</Label>
                 <DormBedPicker
                   gender={newStudent.gender}
+                  studentClass={newStudent.class}
                   academicYear={currentYear}
                   dormitoryId={newDorm.dormitoryId}
                   bedId={newDorm.bedId}
@@ -1173,6 +1174,7 @@ export default function StudentsPage() {
                   <Label>Dormitory &amp; Bed</Label>
                   <DormBedPicker
                     gender={editingStudent.gender || 'Male'}
+                    studentClass={editingStudent.class}
                     academicYear={currentYear}
                     dormitoryId={editDorm.dormitoryId}
                     bedId={editDorm.bedId}
