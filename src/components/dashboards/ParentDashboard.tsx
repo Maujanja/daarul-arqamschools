@@ -387,7 +387,7 @@ export function ParentDashboard() {
             const bedRow = bedRows?.[0];
             setDormInfo({
               dormitory: dormRows?.[0]?.name || 'Dormitory',
-              bed: bedRow ? bedRow.bed_code || `Bed ${bedRow.bed_number}` : null,
+              bed: bedRow ? `${bedRow.bed_code || `Bed ${bedRow.bed_number}`}${bedRow.bed_position === 'upper' ? ' (Upper)' : bedRow.bed_position === 'lower' ? ' (Lower)' : ''}` : null,
               room: bedRow?.room_number ?? null,
             });
           } else {
