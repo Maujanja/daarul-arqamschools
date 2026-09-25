@@ -1,119 +1,385 @@
 import { useEffect, useMemo, useState } from 'react';
+import { BedDouble, Check, DoorOpen, UserRound, X } from 'lucide-react';
+import { Button } from '@/components/ui/button';
+import { Label } from '@/components/ui/label';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { useSecureData } from '@/hooks/useSecureData';
+import { cn } from '@/lib/utils';
 import { toast } from 'sonner';
 import { DormData } from './dormContext';
-import { BED_STATUS_LABEL, BedStatus, POSITION_LABEL } from '@/types/dorm';
+import {
+  BED_STATUS_LABEL,
+  BedStatus,
+  DormBed,
+  POSITION_LABEL,
+  isBoarding,
+  isEligible,
+} from '@/types/dorm';
 
-const STATUS_STYLE: Record<string, string> = {
-  available: 'bg-primary/10 text-primary',
-  occupied: 'bg-accent/20 text-accent-foreground',
-  reserved: 'bg-warning/20 text-warning',
-  maintenance: 'bg-destructive/15 text-destructive',
-  out_of_service: 'bg-muted text-muted-foreground',
+type DisplayStatus = BedStatus | 'occupied';
+
+const SPACE_STYLE: Record<DisplayStatus, string> = {
+  available: 'border-success/50 bg-success/10 text-success hover:bg-success/20',
+  occupied: 'border-primary/60 bg-primary/15 text-primary hover:bg-primary/25',
+  reserved: 'border-warning/60 bg-warning/15 text-warning hover:bg-warning/25',
+  maintenance: 'border-destructive/60 bg-destructive/15 text-destructive hover:bg-destructive/25',
+  out_of_service: 'border-muted-foreground/35 bg-muted text-muted-foreground hover:bg-muted',
 };
 
+const LEGEND_DOT: Record<DisplayStatus, string> = {
+  available: 'bg-success',
+  occupied: 'bg-primary',
+  reserved: 'bg-warning',
+  maintenance: 'bg-destructive',
+  out_of_service: 'bg-muted-foreground',
+};
+
+function BedSpace({
+  bed,
+  data,
+  selected,
+  onSelect,
+}: {
+  bed: DormBed;
+  data: DormData;
+  selected: boolean;
+  onSelect: () => void;
+}) {
+  const assignment = data.assignmentByBed.get(bed.id);
+  const student = assignment ? data.studentById.get(assignment.student_id) : undefined;
+  const status: DisplayStatus = assignment ? 'occupied' : bed.status || 'available';
+  const position = POSITION_LABEL[bed.bed_position || 'single'];
+
+  return (
+    <Button
+      type="button"
+      variant="outline"
+      aria-pressed={selected}
+      aria-label={`${bed.bed_code || `Bed ${bed.bed_number}`}, ${position}, ${BED_STATUS_LABEL[status]}${student ? `, ${student.full_name}` : ''}`}
+      onClick={onSelect}
+      className={cn(
+        'relative h-[76px] w-full min-w-0 flex-col items-stretch justify-between gap-1 overflow-hidden border px-2 py-2 text-left whitespace-normal transition-transform duration-200 motion-safe:hover:-translate-y-0.5',
+        SPACE_STYLE[status],
+        selected && 'ring-2 ring-ring ring-offset-2 ring-offset-background',
+      )}
+    >
+      <span className="flex w-full items-center justify-between gap-1 text-[10px] font-semibold uppercase">
+        <span>{position}</span>
+        {selected && <Check className="h-3.5 w-3.5" />}
+      </span>
+      <span className="w-full truncate text-xs font-semibold text-foreground">
+        {student?.full_name || BED_STATUS_LABEL[status]}
+      </span>
+    </Button>
+  );
+}
+
+function BunkUnit({
+  bunkNumber,
+  beds,
+  data,
+  selectedBedId,
+  onSelect,
+}: {
+  bunkNumber: number;
+  beds: DormBed[];
+  data: DormData;
+  selectedBedId: string;
+  onSelect: (bed: DormBed) => void;
+}) {
+  const ordered = [...beds].sort((a, b) => {
+    const rank = { upper: 0, single: 0, lower: 1 };
+    return rank[a.bed_position || 'single'] - rank[b.bed_position || 'single'];
+  });
+
+  return (
+    <div className="overflow-hidden rounded-md border border-border bg-card">
+      <div className="flex h-8 items-center justify-between border-b border-border bg-muted/60 px-2">
+        <span className="flex items-center gap-1.5 text-xs font-semibold text-foreground">
+          <BedDouble className="h-3.5 w-3.5 text-muted-foreground" />
+          B{String(bunkNumber).padStart(2, '0')}
+        </span>
+        <span className="text-[10px] text-muted-foreground">{ordered.length > 1 ? 'Bunk bed' : 'Single bed'}</span>
+      </div>
+      <div className="grid gap-1 p-1.5">
+        {ordered.map((bed) => (
+          <BedSpace
+            key={bed.id}
+            bed={bed}
+            data={data}
+            selected={selectedBedId === bed.id}
+            onSelect={() => onSelect(bed)}
+          />
+        ))}
+      </div>
+    </div>
+  );
+}
+
 export function RoomsTab({ data }: { data: DormData }) {
-  const { update } = useSecureData();
+  const { insert, update } = useSecureData();
   const [dormId, setDormId] = useState('');
+  const [roomNumber, setRoomNumber] = useState('');
+  const [selectedBedId, setSelectedBedId] = useState('');
+  const [studentId, setStudentId] = useState('');
+  const [saving, setSaving] = useState(false);
 
   useEffect(() => {
     if (!dormId && data.dorms[0]) setDormId(data.dorms[0].id);
   }, [data.dorms, dormId]);
 
+  const selectedDorm = data.dormById.get(dormId);
+
   const rooms = useMemo(() => {
-    const map = new Map<number, typeof data.beds>();
+    const map = new Map<number, DormBed[]>();
     data.beds
-      .filter((b) => b.dormitory_id === dormId)
+      .filter((bed) => bed.dormitory_id === dormId)
+      .forEach((bed) => {
+        const room = bed.room_number || 0;
+        map.set(room, [...(map.get(room) || []), bed]);
+      });
+    return [...map.entries()]
+      .map(([number, beds]) => ({
+        number,
+        beds,
+        occupied: beds.filter((bed) => data.assignmentByBed.has(bed.id)).length,
+        available: beds.filter(
+          (bed) => !data.assignmentByBed.has(bed.id) && (bed.status || 'available') === 'available',
+        ).length,
+      }))
+      .sort((a, b) => a.number - b.number);
+  }, [data.assignmentByBed, data.beds, dormId]);
+
+  useEffect(() => {
+    if (!rooms.length) {
+      setRoomNumber('');
+      return;
+    }
+    if (!rooms.some((room) => String(room.number) === roomNumber)) setRoomNumber(String(rooms[0].number));
+  }, [rooms, roomNumber]);
+
+  useEffect(() => {
+    setSelectedBedId('');
+    setStudentId('');
+  }, [dormId, roomNumber]);
+
+  const selectedRoom = rooms.find((room) => String(room.number) === roomNumber);
+  const selectedBed = selectedRoom?.beds.find((bed) => bed.id === selectedBedId);
+  const selectedAssignment = selectedBed ? data.assignmentByBed.get(selectedBed.id) : undefined;
+  const selectedStudent = selectedAssignment ? data.studentById.get(selectedAssignment.student_id) : undefined;
+  const selectedStatus: DisplayStatus = selectedAssignment ? 'occupied' : selectedBed?.status || 'available';
+
+  const bunks = useMemo(() => {
+    const map = new Map<number, DormBed[]>();
+    (selectedRoom?.beds || [])
       .sort((a, b) => a.bed_number - b.bed_number)
-      .forEach((b) => {
-        const r = b.room_number || 0;
-        map.set(r, [...(map.get(r) || []), b]);
+      .forEach((bed) => {
+        const bunk = bed.bunk_number || bed.bed_number;
+        map.set(bunk, [...(map.get(bunk) || []), bed]);
       });
     return [...map.entries()].sort((a, b) => a[0] - b[0]);
-  }, [data.beds, dormId]);
+  }, [selectedRoom]);
 
-  const setStatus = async (bedId: string, status: BedStatus) => {
-    const res = await update('dorm_beds', { status }, { id: bedId });
-    if (!res.success) return toast.error(res.error || 'Failed to update bed');
+  const leftBunks = bunks.filter((_, index) => index % 2 === 0);
+  const rightBunks = bunks.filter((_, index) => index % 2 === 1);
+
+  const assignedStudentIds = useMemo(
+    () => new Set(data.assignments.map((assignment) => assignment.student_id)),
+    [data.assignments],
+  );
+
+  const eligibleStudents = useMemo(
+    () =>
+      data.students
+        .filter((student) => !assignedStudentIds.has(student.id))
+        .filter((student) => isBoarding(student))
+        .filter((student) => (selectedDorm ? isEligible(student, selectedDorm) : false))
+        .sort((a, b) => a.full_name.localeCompare(b.full_name)),
+    [assignedStudentIds, data.students, selectedDorm],
+  );
+
+  const setStatus = async (status: BedStatus) => {
+    if (!selectedBed) return;
+    setSaving(true);
+    const result = await update('dorm_beds', { status }, { id: selectedBed.id });
+    setSaving(false);
+    if (!result.success) return toast.error(result.error || 'Failed to update bed');
     toast.success('Bed status updated');
     data.reload();
   };
 
-  return (
-    <div className="space-y-4">
-      <Select value={dormId} onValueChange={setDormId}>
-        <SelectTrigger className="w-full sm:w-[320px]">
-          <SelectValue placeholder="Select dormitory" />
-        </SelectTrigger>
-        <SelectContent>
-          {data.dorms.map((d) => (
-            <SelectItem key={d.id} value={d.id}>
-              {d.name}
-            </SelectItem>
-          ))}
-        </SelectContent>
-      </Select>
+  const assignStudent = async () => {
+    if (!selectedBed || !studentId || selectedStatus !== 'available') return;
+    setSaving(true);
+    const result = await insert('dorm_assignments', {
+      student_id: studentId,
+      dormitory_id: dormId,
+      bed_id: selectedBed.id,
+      academic_year: data.selectedYear,
+      assigned_by: data.userName || null,
+      notes: 'Assigned from room map',
+    });
+    setSaving(false);
+    if (!result.success) return toast.error(result.error || 'Failed to assign bed');
+    toast.success('Student assigned to the selected bed space');
+    setStudentId('');
+    setSelectedBedId('');
+    data.reload();
+  };
 
-      <div className="grid grid-cols-1 lg:grid-cols-2 gap-4">
-        {rooms.map(([room, beds]) => {
-          const occupied = beds.filter((b) => data.assignmentByBed.has(b.id)).length;
-          return (
-            <div key={room} className="card-elevated p-4">
-              <div className="flex justify-between mb-2">
-                <h3 className="font-semibold">Room {String(room).padStart(2, '0')}</h3>
-                <span className="text-xs text-muted-foreground">
-                  Capacity {beds.length} • {occupied} occupied • {beds.length - occupied} free
-                </span>
-              </div>
-              <table className="w-full text-sm">
-                <thead>
-                  <tr className="text-xs text-muted-foreground">
-                    <th className="text-left py-1">Bed</th>
-                    <th className="text-left py-1">Position</th>
-                    <th className="text-left py-1">Status</th>
-                    <th className="text-left py-1">Student</th>
-                  </tr>
-                </thead>
-                <tbody>
-                  {beds.map((b) => {
-                    const a = data.assignmentByBed.get(b.id);
-                    const student = a ? data.studentById.get(a.student_id) : undefined;
-                    const status = a ? 'occupied' : b.status || 'available';
-                    return (
-                      <tr key={b.id} className="border-t border-border">
-                        <td className="py-1.5">B{String(b.bunk_number || b.bed_number).padStart(2, '0')}</td>
-                        <td className="py-1.5">{POSITION_LABEL[b.bed_position || 'single']}</td>
-                        <td className="py-1.5">
-                          {data.canManage && !a ? (
-                            <Select value={status} onValueChange={(v) => setStatus(b.id, v as BedStatus)}>
-                              <SelectTrigger className={`h-7 text-xs w-[130px] ${STATUS_STYLE[status]}`}>
-                                <SelectValue />
-                              </SelectTrigger>
-                              <SelectContent>
-                                {(['available', 'reserved', 'maintenance', 'out_of_service'] as BedStatus[]).map((s) => (
-                                  <SelectItem key={s} value={s}>
-                                    {BED_STATUS_LABEL[s]}
-                                  </SelectItem>
-                                ))}
-                              </SelectContent>
-                            </Select>
-                          ) : (
-                            <span className={`px-2 py-0.5 rounded-full text-xs ${STATUS_STYLE[status]}`}>
-                              {BED_STATUS_LABEL[status as BedStatus]}
-                            </span>
-                          )}
-                        </td>
-                        <td className="py-1.5">{student ? student.full_name : '—'}</td>
-                      </tr>
-                    );
-                  })}
-                </tbody>
-              </table>
-            </div>
-          );
-        })}
+  return (
+    <div className="space-y-5">
+      <div className="grid grid-cols-1 gap-3 sm:grid-cols-2">
+        <div className="space-y-2">
+          <Label>Dormitory</Label>
+          <Select value={dormId} onValueChange={setDormId}>
+            <SelectTrigger><SelectValue placeholder="Select dormitory" /></SelectTrigger>
+            <SelectContent>
+              {data.dorms.map((dorm) => <SelectItem key={dorm.id} value={dorm.id}>{dorm.name}</SelectItem>)}
+            </SelectContent>
+          </Select>
+        </div>
+        <div className="space-y-2">
+          <Label>Room</Label>
+          <Select value={roomNumber} onValueChange={setRoomNumber} disabled={!rooms.length}>
+            <SelectTrigger><SelectValue placeholder="Select room" /></SelectTrigger>
+            <SelectContent>
+              {rooms.map((room) => (
+                <SelectItem key={room.number} value={String(room.number)}>
+                  Room {String(room.number).padStart(2, '0')} — {room.available} spaces available
+                </SelectItem>
+              ))}
+            </SelectContent>
+          </Select>
+        </div>
       </div>
+
+      <div className="flex flex-wrap items-center gap-x-4 gap-y-2 border-y border-border py-3">
+        {(Object.keys(LEGEND_DOT) as DisplayStatus[]).map((status) => (
+          <span key={status} className="flex items-center gap-1.5 text-xs text-muted-foreground">
+            <span className={cn('h-2.5 w-2.5 rounded-full', LEGEND_DOT[status])} />
+            {BED_STATUS_LABEL[status]}
+          </span>
+        ))}
+      </div>
+
+      {selectedRoom ? (
+        <div className="grid gap-5 xl:grid-cols-[minmax(0,1fr)_300px]">
+          <div className="min-w-0 overflow-x-auto pb-2">
+            <div className="min-w-[560px] rounded-md border border-border bg-muted/20 p-3 sm:p-5">
+              <div className="mb-5 flex items-center justify-between border-b border-border pb-3">
+                <div>
+                  <h3 className="font-semibold">Room {String(selectedRoom.number).padStart(2, '0')} layout</h3>
+                  <p className="text-xs text-muted-foreground">Select a bed space to view or allocate it</p>
+                </div>
+                <div className="text-right text-xs text-muted-foreground">
+                  <p>{selectedRoom.occupied}/{selectedRoom.beds.length} occupied</p>
+                  <p>{selectedRoom.available} available</p>
+                </div>
+              </div>
+
+              <div className="grid grid-cols-[minmax(0,1fr)_72px_minmax(0,1fr)] gap-3 sm:gap-5">
+                <div className="grid content-start gap-3">
+                  {leftBunks.map(([bunk, beds]) => (
+                    <BunkUnit key={bunk} bunkNumber={bunk} beds={beds} data={data} selectedBedId={selectedBedId} onSelect={(bed) => setSelectedBedId(bed.id)} />
+                  ))}
+                </div>
+                <div className="flex min-h-[280px] flex-col items-center">
+                  <div className="flex w-full items-center justify-center gap-1 rounded-md border border-dashed border-border bg-background py-2 text-[10px] font-semibold uppercase text-muted-foreground">
+                    <DoorOpen className="h-3.5 w-3.5" /> Door
+                  </div>
+                  <div className="my-2 h-full w-px flex-1 border-l border-dashed border-border" />
+                  <span className="[writing-mode:vertical-rl] rotate-180 text-[10px] font-semibold uppercase text-muted-foreground">Central aisle</span>
+                  <div className="my-2 h-full w-px flex-1 border-l border-dashed border-border" />
+                </div>
+                <div className="grid content-start gap-3">
+                  {rightBunks.map(([bunk, beds]) => (
+                    <BunkUnit key={bunk} bunkNumber={bunk} beds={beds} data={data} selectedBedId={selectedBedId} onSelect={(bed) => setSelectedBedId(bed.id)} />
+                  ))}
+                </div>
+              </div>
+            </div>
+          </div>
+
+          <aside className="min-h-[300px] border-l-0 border-border xl:border-l xl:pl-5">
+            {selectedBed ? (
+              <div className="space-y-5">
+                <div className="flex items-start justify-between gap-3">
+                  <div>
+                    <p className="text-xs font-medium uppercase text-muted-foreground">Selected space</p>
+                    <h3 className="mt-1 text-lg font-semibold">{selectedBed.bed_code || `Bed ${selectedBed.bed_number}`}</h3>
+                    <p className="text-sm text-muted-foreground">B{String(selectedBed.bunk_number || selectedBed.bed_number).padStart(2, '0')} • {POSITION_LABEL[selectedBed.bed_position || 'single']}</p>
+                  </div>
+                  <Button type="button" variant="ghost" size="icon" aria-label="Close selected bed" onClick={() => setSelectedBedId('')}>
+                    <X className="h-4 w-4" />
+                  </Button>
+                </div>
+
+                <div className={cn('rounded-md border px-3 py-2 text-sm font-semibold', SPACE_STYLE[selectedStatus])}>
+                  {BED_STATUS_LABEL[selectedStatus]}
+                </div>
+
+                {selectedStudent && (
+                  <div className="flex gap-3 border-y border-border py-4">
+                    <UserRound className="mt-0.5 h-5 w-5 text-primary" />
+                    <div className="min-w-0">
+                      <p className="font-semibold">{selectedStudent.full_name}</p>
+                      <p className="text-sm text-muted-foreground">{selectedStudent.roll_number}</p>
+                      <p className="text-sm text-muted-foreground">{selectedStudent.class}{selectedStudent.stream ? ` ${selectedStudent.stream}` : ''}</p>
+                    </div>
+                  </div>
+                )}
+
+                {data.canManage && !selectedAssignment && (
+                  <div className="space-y-4">
+                    <div className="space-y-2">
+                      <Label>Bed status</Label>
+                      <Select value={selectedBed.status || 'available'} onValueChange={(value) => setStatus(value as BedStatus)} disabled={saving}>
+                        <SelectTrigger><SelectValue /></SelectTrigger>
+                        <SelectContent>
+                          {(['available', 'reserved', 'maintenance', 'out_of_service'] as BedStatus[]).map((status) => (
+                            <SelectItem key={status} value={status}>{BED_STATUS_LABEL[status]}</SelectItem>
+                          ))}
+                        </SelectContent>
+                      </Select>
+                    </div>
+
+                    {selectedStatus === 'available' && (
+                      <div className="space-y-3 border-t border-border pt-4">
+                        <div className="space-y-2">
+                          <Label>Assign boarding student</Label>
+                          <Select value={studentId} onValueChange={setStudentId}>
+                            <SelectTrigger><SelectValue placeholder="Select eligible student" /></SelectTrigger>
+                            <SelectContent>
+                              {eligibleStudents.map((student) => (
+                                <SelectItem key={student.id} value={student.id}>
+                                  {student.full_name} — {student.class}{student.stream ? ` ${student.stream}` : ''}
+                                </SelectItem>
+                              ))}
+                            </SelectContent>
+                          </Select>
+                          {!eligibleStudents.length && <p className="text-xs text-muted-foreground">No eligible unallocated boarding students.</p>}
+                        </div>
+                        <Button type="button" className="w-full" disabled={!studentId || saving} onClick={assignStudent}>
+                          <BedDouble className="h-4 w-4" /> Assign this space
+                        </Button>
+                      </div>
+                    )}
+                  </div>
+                )}
+              </div>
+            ) : (
+              <div className="flex min-h-[300px] flex-col items-center justify-center border-y border-dashed border-border px-5 text-center">
+                <BedDouble className="mb-3 h-8 w-8 text-muted-foreground" />
+                <h3 className="font-semibold">Select a bed space</h3>
+                <p className="mt-1 text-sm text-muted-foreground">Tap any Upper, Lower or Single space on the room map.</p>
+              </div>
+            )}
+          </aside>
+        </div>
+      ) : (
+        <div className="py-12 text-center text-sm text-muted-foreground">No rooms found in this dormitory.</div>
+      )}
     </div>
   );
 }
