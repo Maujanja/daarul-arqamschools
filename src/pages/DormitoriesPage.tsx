@@ -19,9 +19,17 @@ import {
   DialogTitle,
 } from '@/components/ui/dialog';
 import { DormBedPicker } from '@/components/dorms/DormBedPicker';
-import { Dormitory, DormBed, DormAssignment, normalizeGender } from '@/types/dorm';
+import { Dormitory, DormBed, DormAssignment, DormHistory, DormWaiting, normalizeGender, sectionOfClass, SECTION_LABEL, POSITION_LABEL, NO_SPACE_MESSAGE } from '@/types/dorm';
+import { DormData } from '@/components/dorms/dormContext';
+import { DormDashboardTab } from '@/components/dorms/DormDashboardTab';
+import { RoomsTab } from '@/components/dorms/RoomsTab';
+import { AutoAllocateTab } from '@/components/dorms/AutoAllocateTab';
+import { WaitingListTab } from '@/components/dorms/WaitingListTab';
+import { NewYearTab } from '@/components/dorms/NewYearTab';
+import { ReportsTab } from '@/components/dorms/ReportsTab';
+import { TransferDialog } from '@/components/dorms/TransferDialog';
 import { toast } from 'sonner';
-import { BedDouble, Download, Eye, Loader2, Plus, Trash2, Upload, Search, Pencil } from 'lucide-react';
+import { ArrowRightLeft, BedDouble, Download, Eye, Loader2, Plus, Trash2, Upload, Search, Pencil } from 'lucide-react';
 
 interface StudentRow {
   id: string;
@@ -31,9 +39,11 @@ interface StudentRow {
   stream: string | null;
   gender: string | null;
   boarding_type: string | null;
+  parent_name?: string | null;
+  parent_phone?: string | null;
 }
 
-const emptyDormForm = { id: '', name: '', section: 'primary', gender: 'male', rooms: '11', bedsPerRoom: '8', notes: '' };
+const emptyDormForm = { id: '', name: '', code: '', section: 'primary', gender: 'male', rooms: '8', bedsPerRoom: '6', bedType: 'double', partitions: false, active: true, notes: '' };
 
 export default function DormitoriesPage() {
   const { user } = useAuth();
@@ -43,6 +53,8 @@ export default function DormitoriesPage() {
 
   const role = user?.role || '';
   const canManage = role === 'admin' || role === 'secretary';
+  const canView = canManage || role === 'accountant' || role.startsWith('head_');
+  const isAdmin = role === 'admin';
 
   const [selectedYear, setSelectedYear] = useState('');
   const [dorms, setDorms] = useState<Dormitory[]>([]);
@@ -65,6 +77,12 @@ export default function DormitoriesPage() {
   const [search, setSearch] = useState('');
   const [dormFilter, setDormFilter] = useState('all');
   const [viewDorm, setViewDorm] = useState<Dormitory | null>(null);
+  const [history, setHistory] = useState<DormHistory[]>([]);
+  const [waiting, setWaiting] = useState<DormWaiting[]>([]);
+  const [genderFilter, setGenderFilter] = useState('all');
+  const [sectionFilter, setSectionFilter] = useState('all');
+  const [transferAssignment, setTransferAssignment] = useState<DormAssignment | null>(null);
+  const [tab, setTab] = useState('dashboard');
 
   useEffect(() => {
     if (!selectedYear && currentYear) setSelectedYear(currentYear);
@@ -73,12 +91,16 @@ export default function DormitoriesPage() {
   const loadData = useCallback(async () => {
     if (!selectedYear) return;
     setLoading(true);
-    const [dormRows, bedRows, assignmentRows, studentRows] = await Promise.all([
+    const [dormRows, bedRows, assignmentRows, studentRows, historyRows, waitingRows] = await Promise.all([
       fetchTable<Dormitory>('dormitories', undefined, { orderBy: { column: 'name', ascending: true } }),
       fetchTable<DormBed>('dorm_beds'),
       fetchTable<DormAssignment>('dorm_assignments', { academic_year: selectedYear }),
       fetchTable<StudentRow>('students', undefined, { orderBy: { column: 'full_name', ascending: true } }),
+      fetchTable<DormHistory>('dorm_allocation_history', undefined, { orderBy: { column: 'created_at', ascending: false }, limit: 1000 }),
+      fetchTable<DormWaiting>('dorm_waiting_list', { academic_year: selectedYear }),
     ]);
+    setHistory(historyRows);
+    setWaiting(waitingRows);
     setDorms(dormRows);
     setBeds(bedRows);
     setAssignments(assignmentRows);
@@ -127,20 +149,28 @@ export default function DormitoriesPage() {
         bed: bed?.bed_number ?? 0,
         bedLabel: bed?.bed_code || (bed ? `Bed ${bed.bed_number}` : '-'),
         room: bed?.room_number ?? null,
+        position: bed?.bed_position || 'single',
+        allocated: a.allocated_at || '',
+        sgender: normalizeGender(student?.gender),
+        section: sectionOfClass(student?.class),
       };
     });
     const term = search.trim().toLowerCase();
     return rows
       .filter((r) => (dormFilter === 'all' ? true : r.assignment.dormitory_id === dormFilter))
+      .filter((r) => (genderFilter === 'all' ? true : r.sgender === genderFilter))
+      .filter((r) => (sectionFilter === 'all' ? true : r.section === sectionFilter))
       .filter((r) =>
         term
           ? r.name.toLowerCase().includes(term) ||
             r.roll.toLowerCase().includes(term) ||
-            r.dorm.toLowerCase().includes(term)
+            r.dorm.toLowerCase().includes(term) ||
+            r.class.toLowerCase().includes(term) ||
+            r.bedLabel.toLowerCase().includes(term)
           : true,
       )
       .sort((a, b) => a.dorm.localeCompare(b.dorm) || Number(a.bed) - Number(b.bed));
-  }, [assignments, studentById, bedById, dormById, search, dormFilter]);
+  }, [assignments, studentById, bedById, dormById, search, dormFilter, genderFilter, sectionFilter]);
 
   const viewDormRows = useMemo(() => {
     if (!viewDorm) return [];
@@ -170,10 +200,14 @@ export default function DormitoriesPage() {
         ? {
             id: dorm.id,
             name: dorm.name,
+            code: dorm.code || '',
             section: dorm.section || 'primary',
             gender: dorm.gender,
-            rooms: String(dorm.room_count || 11),
-            bedsPerRoom: String(Math.max(1, Math.ceil(dorm.capacity / (dorm.room_count || 11)))),
+            rooms: String(dorm.room_count || 1),
+            bedsPerRoom: String(dorm.beds_per_room || 1),
+            bedType: dorm.bed_type || 'double',
+            partitions: !!dorm.partitions_enabled,
+            active: dorm.is_active !== false,
             notes: dorm.notes || '',
           }
         : emptyDormForm,
@@ -184,7 +218,7 @@ export default function DormitoriesPage() {
   const saveDorm = async () => {
     const rooms = Number(dormForm.rooms);
     const bedsPerRoom = Number(dormForm.bedsPerRoom);
-    const capacity = rooms * bedsPerRoom;
+    const capacity = rooms * bedsPerRoom * (dormForm.bedType === 'double' ? 2 : 1);
     if (!dormForm.name.trim()) {
       toast.error('Enter the dormitory name');
       return;
@@ -197,8 +231,8 @@ export default function DormitoriesPage() {
       toast.error('Beds per room must be between 1 and 50');
       return;
     }
-    if (capacity > 500) {
-      toast.error('Total beds (rooms × beds per room) cannot exceed 500');
+    if (capacity > 2000) {
+      toast.error('Total bed spaces cannot exceed 2000');
       return;
     }
     setSaving(true);
@@ -207,6 +241,11 @@ export default function DormitoriesPage() {
       section: dormForm.section,
       gender: dormForm.gender,
       room_count: rooms,
+      beds_per_room: bedsPerRoom,
+      bed_type: dormForm.bedType,
+      code: dormForm.code.trim().toUpperCase() || null,
+      partitions_enabled: dormForm.partitions,
+      is_active: dormForm.active,
       capacity,
       notes: dormForm.notes.trim() || null,
     };
@@ -252,6 +291,7 @@ export default function DormitoriesPage() {
       bed_id: assignBedId,
       academic_year: selectedYear,
       assigned_by: user?.name || null,
+      notes: existing ? 'Changed from allocation screen' : null,
     };
     const result = existing
       ? await update('dorm_assignments', payload, { id: existing.id })
@@ -262,6 +302,8 @@ export default function DormitoriesPage() {
       return;
     }
     toast.success('Bed assigned');
+    const w = waiting.find((x) => x.student_id === assignStudentId && x.status === 'waiting');
+    if (w) await update('dorm_waiting_list', { status: 'allocated' }, { id: w.id });
     setShowAssignDialog(false);
     setAssignStudentId('');
     setAssignDormId('');
@@ -553,12 +595,27 @@ export default function DormitoriesPage() {
     }
   };
 
-  if (!canManage) {
+  const dormData: DormData = {
+    dorms, beds, assignments, students, history, waiting, selectedYear, canManage,
+    userName: user?.name || '',
+    reload: loadData,
+    studentById, bedById, dormById,
+    assignmentByBed: new Map(assignments.map((a) => [a.bed_id, a])),
+  };
+
+  const openAllocate = (studentId: string) => {
+    setAssignStudentId(studentId);
+    setAssignDormId('');
+    setAssignBedId('');
+    setShowAssignDialog(true);
+  };
+
+  if (!canView) {
     return (
       <DashboardLayout>
         <div className="card-elevated p-8 text-center">
           <h1 className="text-xl font-semibold">Access denied</h1>
-          <p className="text-muted-foreground mt-2">Only Admin and Secretary can manage dormitories.</p>
+          <p className="text-muted-foreground mt-2">You do not have access to dormitories.</p>
         </div>
       </DashboardLayout>
     );
@@ -592,20 +649,71 @@ export default function DormitoriesPage() {
                 ))}
               </SelectContent>
             </Select>
-            <Button variant="outline" onClick={downloadTemplate}>
+            {canManage && <Button variant="outline" onClick={downloadTemplate}>
               <Download className="w-4 h-4 mr-2" /> Template
-            </Button>
+            </Button>}
             <Button variant="outline" onClick={exportExcel} disabled={assignments.length === 0}>
               <Download className="w-4 h-4 mr-2" /> Excel
             </Button>
           </div>
         </div>
 
-        <Tabs defaultValue="assignments">
-          <TabsList>
-            <TabsTrigger value="assignments">Bed Assignments</TabsTrigger>
-            <TabsTrigger value="dorms">Dormitories</TabsTrigger>
+        <Tabs value={tab} onValueChange={setTab}>
+          <TabsList className="flex flex-wrap h-auto">
+            <TabsTrigger value="dashboard">Dashboard</TabsTrigger>
+            <TabsTrigger value="assignments">Allocation</TabsTrigger>
+            {canManage && <TabsTrigger value="auto">Auto Allocate</TabsTrigger>}
+            <TabsTrigger value="rooms">Rooms</TabsTrigger>
+            <TabsTrigger value="waiting">Waiting List</TabsTrigger>
+            <TabsTrigger value="history">History</TabsTrigger>
+            {canManage && <TabsTrigger value="year">New Year</TabsTrigger>}
+            <TabsTrigger value="reports">Reports</TabsTrigger>
+            <TabsTrigger value="dorms">Configuration</TabsTrigger>
           </TabsList>
+
+          <TabsContent value="dashboard"><DormDashboardTab data={dormData} /></TabsContent>
+          <TabsContent value="auto"><AutoAllocateTab data={dormData} /></TabsContent>
+          <TabsContent value="rooms"><RoomsTab data={dormData} /></TabsContent>
+          <TabsContent value="waiting">
+            <WaitingListTab data={dormData} onAllocate={(id) => { setTab('assignments'); openAllocate(id); }} />
+          </TabsContent>
+          <TabsContent value="year"><NewYearTab data={dormData} years={academicYears} /></TabsContent>
+          <TabsContent value="reports"><ReportsTab data={dormData} /></TabsContent>
+          <TabsContent value="history">
+            <div className="card-elevated overflow-x-auto">
+              <table className="w-full text-sm">
+                <thead className="bg-muted/40">
+                  <tr>
+                    <th className="text-left p-3">Date</th>
+                    <th className="text-left p-3">Student</th>
+                    <th className="text-left p-3">Year</th>
+                    <th className="text-left p-3">Action</th>
+                    <th className="text-left p-3">From</th>
+                    <th className="text-left p-3">To</th>
+                    <th className="text-left p-3">Reason</th>
+                    <th className="text-left p-3">By</th>
+                  </tr>
+                </thead>
+                <tbody>
+                  {history.map((h) => (
+                    <tr key={h.id} className="border-t border-border">
+                      <td className="p-3 whitespace-nowrap">{new Date(h.created_at).toLocaleDateString('en-GB')}</td>
+                      <td className="p-3">{studentById.get(h.student_id)?.full_name || '-'}</td>
+                      <td className="p-3">{h.academic_year}</td>
+                      <td className="p-3 capitalize">{h.action}</td>
+                      <td className="p-3 text-muted-foreground">{h.from_dormitory ? `${h.from_dormitory} • ${h.from_bed}` : '-'}</td>
+                      <td className="p-3">{h.to_dormitory ? `${h.to_dormitory} • ${h.to_bed}` : '-'}</td>
+                      <td className="p-3 text-muted-foreground">{h.reason || '-'}</td>
+                      <td className="p-3 text-muted-foreground">{h.performed_by || '-'}</td>
+                    </tr>
+                  ))}
+                  {history.length === 0 && (
+                    <tr><td colSpan={8} className="p-8 text-center text-muted-foreground">No history yet.</td></tr>
+                  )}
+                </tbody>
+              </table>
+            </div>
+          </TabsContent>
 
           <TabsContent value="assignments" className="space-y-4">
             <div className="flex flex-col sm:flex-row gap-2">
@@ -631,7 +739,24 @@ export default function DormitoriesPage() {
                   ))}
                 </SelectContent>
               </Select>
-              <Button onClick={() => setShowAssignDialog(true)}>
+              <Select value={genderFilter} onValueChange={setGenderFilter}>
+                <SelectTrigger className="w-full sm:w-[130px]"><SelectValue /></SelectTrigger>
+                <SelectContent>
+                  <SelectItem value="all">All genders</SelectItem>
+                  <SelectItem value="male">Boys</SelectItem>
+                  <SelectItem value="female">Girls</SelectItem>
+                </SelectContent>
+              </Select>
+              <Select value={sectionFilter} onValueChange={setSectionFilter}>
+                <SelectTrigger className="w-full sm:w-[140px]"><SelectValue /></SelectTrigger>
+                <SelectContent>
+                  <SelectItem value="all">All sections</SelectItem>
+                  <SelectItem value="primary">Primary</SelectItem>
+                  <SelectItem value="secondary">Senior</SelectItem>
+                  <SelectItem value="nursery">Nursery</SelectItem>
+                </SelectContent>
+              </Select>
+              {canManage && <><Button onClick={() => setShowAssignDialog(true)}>
                 <Plus className="w-4 h-4 mr-2" /> Assign Bed
               </Button>
               <Button variant="outline" onClick={() => fileInputRef.current?.click()} disabled={importing}>
@@ -647,7 +772,7 @@ export default function DormitoriesPage() {
                   const file = e.target.files?.[0];
                   if (file) handleImport(file);
                 }}
-              />
+              /></>}
             </div>
 
             {loading ? (
@@ -665,6 +790,8 @@ export default function DormitoriesPage() {
                       <th className="text-left p-3">Dormitory</th>
                       <th className="text-left p-3">Room</th>
                       <th className="text-left p-3">Bed</th>
+                      <th className="text-left p-3">Position</th>
+                      <th className="text-left p-3">Allocated</th>
                       <th className="p-3" />
                     </tr>
                   </thead>
@@ -677,16 +804,25 @@ export default function DormitoriesPage() {
                         <td className="p-3">{row.dorm}</td>
                         <td className="p-3 text-muted-foreground">{row.room ?? '-'}</td>
                         <td className="p-3">{row.bedLabel}</td>
-                        <td className="p-3 text-right">
-                          <Button size="sm" variant="ghost" onClick={() => unassign(row.assignment)}>
-                            <Trash2 className="w-4 h-4 text-destructive" />
-                          </Button>
+                        <td className="p-3">{POSITION_LABEL[row.position]}</td>
+                        <td className="p-3 text-muted-foreground">{row.allocated ? new Date(row.allocated).toLocaleDateString('en-GB') : '-'}</td>
+                        <td className="p-3 text-right whitespace-nowrap">
+                          {canManage && (
+                            <>
+                              <Button size="sm" variant="ghost" title="Transfer" onClick={() => setTransferAssignment(row.assignment)}>
+                                <ArrowRightLeft className="w-4 h-4" />
+                              </Button>
+                              <Button size="sm" variant="ghost" onClick={() => unassign(row.assignment)}>
+                                <Trash2 className="w-4 h-4 text-destructive" />
+                              </Button>
+                            </>
+                          )}
                         </td>
                       </tr>
                     ))}
                     {assignmentRows.length === 0 && (
                       <tr>
-                        <td colSpan={7} className="p-8 text-center text-muted-foreground">
+                        <td colSpan={9} className="p-8 text-center text-muted-foreground">
                           No bed assignments yet.
                         </td>
                       </tr>
@@ -703,12 +839,8 @@ export default function DormitoriesPage() {
                   {unassignedBoarders.map((s) => (
                     <button
                       key={s.id}
-                      onClick={() => {
-                        setAssignStudentId(s.id);
-                        setAssignDormId('');
-                        setAssignBedId('');
-                        setShowAssignDialog(true);
-                      }}
+                      disabled={!canManage}
+                      onClick={() => openAllocate(s.id)}
                       className="px-3 py-1 rounded-full bg-muted text-xs hover:bg-primary/10"
                     >
                       {s.full_name} • {s.class}
@@ -721,7 +853,7 @@ export default function DormitoriesPage() {
 
           <TabsContent value="dorms" className="space-y-4">
             <div className="flex justify-end">
-              <Button onClick={() => openDormDialog()}>
+              <Button onClick={() => openDormDialog()} disabled={!isAdmin}>
                 <Plus className="w-4 h-4 mr-2" /> New Dormitory
               </Button>
             </div>
@@ -734,23 +866,27 @@ export default function DormitoriesPage() {
                       <div>
                         <h3 className="font-semibold">{d.name}</h3>
                         <p className="text-xs text-muted-foreground capitalize">
-                          {d.section || 'primary'} • {d.gender === 'male' ? 'Boys' : 'Girls'} dormitory • {d.room_count || 11} rooms
+                          {d.code ? `${d.code} • ` : ''}{SECTION_LABEL[d.section || 'primary']} • {d.gender === 'male' ? 'Boys' : 'Girls'} • {d.room_count} rooms × {d.beds_per_room} {d.bed_type === 'double' ? 'bunk beds (upper + lower)' : 'single beds'}{d.is_active === false ? ' • INACTIVE' : ''}
                         </p>
                       </div>
                       <div className="flex gap-1">
                         <Button size="icon" variant="ghost" title="View occupants" onClick={() => setViewDorm(d)}>
                           <Eye className="w-4 h-4" />
                         </Button>
-                        <Button size="icon" variant="ghost" onClick={() => openDormDialog(d)}>
-                          <Pencil className="w-4 h-4" />
-                        </Button>
-                        <Button size="icon" variant="ghost" onClick={() => deleteDorm(d)}>
-                          <Trash2 className="w-4 h-4 text-destructive" />
-                        </Button>
+                        {isAdmin && (
+                          <>
+                            <Button size="icon" variant="ghost" onClick={() => openDormDialog(d)}>
+                              <Pencil className="w-4 h-4" />
+                            </Button>
+                            <Button size="icon" variant="ghost" onClick={() => deleteDorm(d)}>
+                              <Trash2 className="w-4 h-4 text-destructive" />
+                            </Button>
+                          </>
+                        )}
                       </div>
                     </div>
                     <p className="text-sm">
-                      {used}/{d.capacity} beds occupied • {d.capacity - used} free
+                      {used}/{d.capacity} spaces occupied • {d.capacity - used} free
                     </p>
                     {d.notes && <p className="text-xs text-muted-foreground">{d.notes}</p>}
                   </div>
@@ -824,7 +960,7 @@ export default function DormitoriesPage() {
                   <SelectContent>
                     <SelectItem value="nursery">Nursery</SelectItem>
                     <SelectItem value="primary">Primary</SelectItem>
-                    <SelectItem value="secondary">Secondary</SelectItem>
+                    <SelectItem value="secondary">Senior</SelectItem>
                   </SelectContent>
                 </Select>
               </div>
@@ -853,7 +989,7 @@ export default function DormitoriesPage() {
                 />
               </div>
               <div className="space-y-2">
-                <Label>Beds per room</Label>
+                <Label>{dormForm.bedType === 'double' ? 'Bunk beds per room' : 'Beds per room'}</Label>
                 <Input
                   type="number"
                   min={1}
@@ -863,9 +999,40 @@ export default function DormitoriesPage() {
                 />
               </div>
             </div>
-            <p className="text-xs text-muted-foreground">
-              Total beds: {(Number(dormForm.rooms) || 0) * (Number(dormForm.bedsPerRoom) || 0)} — beds are created automatically across {Number(dormForm.rooms) || 0} rooms.
-            </p>
+            <div className="grid grid-cols-2 gap-4">
+              <div className="space-y-2">
+                <Label>Bed type</Label>
+                <Select value={dormForm.bedType} onValueChange={(v) => setDormForm({ ...dormForm, bedType: v })}>
+                  <SelectTrigger><SelectValue /></SelectTrigger>
+                  <SelectContent>
+                    <SelectItem value="double">Double Decker (upper + lower)</SelectItem>
+                    <SelectItem value="single">Single Bed</SelectItem>
+                  </SelectContent>
+                </Select>
+              </div>
+              <div className="space-y-2">
+                <Label>Short code (for bed codes)</Label>
+                <Input value={dormForm.code} onChange={(e) => setDormForm({ ...dormForm, code: e.target.value })} placeholder="e.g. PM" />
+              </div>
+            </div>
+            <div className="flex flex-wrap gap-6 text-sm">
+              <label className="flex items-center gap-2">
+                <input type="checkbox" checked={dormForm.active} onChange={(e) => setDormForm({ ...dormForm, active: e.target.checked })} /> Active
+              </label>
+              <label className="flex items-center gap-2">
+                <input type="checkbox" checked={dormForm.partitions} onChange={(e) => setDormForm({ ...dormForm, partitions: e.target.checked })} /> Rooms have partitions
+              </label>
+            </div>
+            {(() => {
+              const r = Number(dormForm.rooms) || 0;
+              const b = Number(dormForm.bedsPerRoom) || 0;
+              const per = dormForm.bedType === 'double' ? 2 : 1;
+              return (
+                <p className="text-xs text-muted-foreground">
+                  {per === 2 ? `Upper spaces ${r * b} • Lower spaces ${r * b} • ` : ''}{b * per} per room • Total capacity {r * b * per}. Bed codes like {(dormForm.code || 'XX').toUpperCase()}-R01-B01{per === 2 ? '-U' : ''} are created automatically.
+                </p>
+              );
+            })()}
             <div className="space-y-2">
               <Label>Notes (optional)</Label>
               <Input
@@ -919,6 +1086,7 @@ export default function DormitoriesPage() {
             {assignStudentId && (
               <DormBedPicker
                 gender={studentById.get(assignStudentId)?.gender}
+                studentClass={studentById.get(assignStudentId)?.class}
                 academicYear={selectedYear}
                 dormitoryId={assignDormId}
                 bedId={assignBedId}
@@ -940,6 +1108,8 @@ export default function DormitoriesPage() {
           </DialogFooter>
         </DialogContent>
       </Dialog>
+
+      <TransferDialog data={dormData} assignment={transferAssignment} onClose={() => setTransferAssignment(null)} />
     </DashboardLayout>
   );
 }
