@@ -144,17 +144,21 @@ function PartitionedRoomMap({
         </div>
         <div className="grid grid-cols-3 items-start gap-3">
           {half.map(([bunk, beds], index) => (
-            <div key={bunk} className="min-w-0 space-y-1.5">
+            <div key={bunk} className={cn('min-w-0 space-y-1.5', index === 1 && 'flex min-h-[230px] flex-col')}>
               <p className="truncate text-center text-[10px] font-medium text-muted-foreground">
                 {positions[index]}
               </p>
-              <BunkUnit
-                bunkNumber={bunk}
-                beds={beds}
-                data={data}
-                selectedBedId={selectedBedId}
-                onSelect={onSelect}
-              />
+              <div className={cn(index === 1 && 'flex flex-1 items-center justify-center')}>
+                <div className={cn(index === 1 && 'w-[190px] rotate-90')}>
+                  <BunkUnit
+                    bunkNumber={bunk}
+                    beds={beds}
+                    data={data}
+                    selectedBedId={selectedBedId}
+                    onSelect={onSelect}
+                  />
+                </div>
+              </div>
             </div>
           ))}
         </div>
