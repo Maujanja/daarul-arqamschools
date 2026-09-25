@@ -19,10 +19,8 @@ import {
   XCircle,
   Trash2,
   Users,
-  Wallet,
-  ExternalLink,
-  AlertTriangle,
 } from 'lucide-react';
+import { BeemTopupCard } from './BeemTopupCard';
 
 const LOW_BALANCE = 10;
 
