@@ -39,7 +39,7 @@ const navItems: NavItem[] = [
   { label: 'Dashboard', icon: LayoutDashboard, href: '/dashboard', roles: ['admin', 'teacher', 'parent', 'secretary', 'accountant', 'head_nursery', 'head_primary', 'head_secondary'] },
   { label: 'Students', icon: GraduationCap, href: '/students', roles: ['admin', 'teacher', 'secretary'] },
   { label: 'My Class Students', icon: Users, href: '/my-class-students', roles: ['teacher'] },
-  { label: 'Dormitories', icon: BedDouble, href: '/dormitories', roles: ['admin', 'secretary'] },
+  { label: 'Dormitories', icon: BedDouble, href: '/dormitories', roles: ['admin', 'secretary', 'accountant', 'head_nursery', 'head_primary', 'head_secondary'] },
   { label: 'Teachers', icon: Users, href: '/teachers', roles: ['admin', 'head_nursery', 'head_primary', 'head_secondary'] },
   { label: 'Performance Letters', icon: FileBadge, href: '/performance-letters', roles: ['admin', 'teacher', 'head_nursery', 'head_primary', 'head_secondary'] },
   { label: 'Subjects', icon: BookOpen, href: '/subjects', roles: ['admin', 'head_nursery', 'head_primary', 'head_secondary'] },

@@ -1,0 +1,1 @@
+REVOKE EXECUTE ON FUNCTION public.log_dorm_assignment() FROM PUBLIC, anon, authenticated;

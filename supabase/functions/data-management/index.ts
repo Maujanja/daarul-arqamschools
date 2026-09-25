@@ -35,7 +35,8 @@ type AllowedTable =
   | "marks_entry_windows"
   | "dormitories"
   | "dorm_beds"
-  | "dorm_assignments";
+  | "dorm_assignments"
+  | "dorm_waiting_list";
 
 type AllowedOperation = "insert" | "update" | "delete" | "upsert";
 
@@ -79,6 +80,7 @@ const permissions: Record<string, Record<AllowedTable, AllowedOperation[]>> = {
     dormitories: ["insert", "update", "delete"],
     dorm_beds: ["insert", "update", "delete"],
     dorm_assignments: ["insert", "update", "delete", "upsert"],
+    dorm_waiting_list: ["insert", "update", "delete"],
   },
   teacher: {
     students: [],
@@ -110,6 +112,7 @@ const permissions: Record<string, Record<AllowedTable, AllowedOperation[]>> = {
     dormitories: [],
     dorm_beds: [],
     dorm_assignments: [],
+    dorm_waiting_list: [],
   },
   secretary: {
     students: ["insert", "update", "delete"],
@@ -141,6 +144,7 @@ const permissions: Record<string, Record<AllowedTable, AllowedOperation[]>> = {
     dormitories: ["insert", "update", "delete"],
     dorm_beds: ["insert", "update"],
     dorm_assignments: ["insert", "update", "delete", "upsert"],
+    dorm_waiting_list: ["insert", "update", "delete"],
   },
   accountant: {
     students: [],
@@ -172,6 +176,7 @@ const permissions: Record<string, Record<AllowedTable, AllowedOperation[]>> = {
     dormitories: [],
     dorm_beds: [],
     dorm_assignments: [],
+    dorm_waiting_list: [],
   },
   parent: {
     students: [],
@@ -203,6 +208,7 @@ const permissions: Record<string, Record<AllowedTable, AllowedOperation[]>> = {
     dormitories: [],
     dorm_beds: [],
     dorm_assignments: [],
+    dorm_waiting_list: [],
   },
   head_nursery: {
     students: [],
@@ -234,6 +240,7 @@ const permissions: Record<string, Record<AllowedTable, AllowedOperation[]>> = {
     dormitories: [],
     dorm_beds: [],
     dorm_assignments: [],
+    dorm_waiting_list: [],
   },
   head_primary: {
     students: [],
@@ -265,6 +272,7 @@ const permissions: Record<string, Record<AllowedTable, AllowedOperation[]>> = {
     dormitories: [],
     dorm_beds: [],
     dorm_assignments: [],
+    dorm_waiting_list: [],
   },
   head_secondary: {
     students: [],
@@ -296,6 +304,7 @@ const permissions: Record<string, Record<AllowedTable, AllowedOperation[]>> = {
     dormitories: [],
     dorm_beds: [],
     dorm_assignments: [],
+    dorm_waiting_list: [],
   },
 };
 

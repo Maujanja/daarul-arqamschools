@@ -226,9 +226,58 @@ export type Database = {
           },
         ]
       }
+      dorm_allocation_history: {
+        Row: {
+          academic_year: string
+          action: string
+          created_at: string
+          from_bed: string | null
+          from_dormitory: string | null
+          from_room: number | null
+          id: string
+          performed_by: string | null
+          reason: string | null
+          student_id: string
+          to_bed: string | null
+          to_dormitory: string | null
+          to_room: number | null
+        }
+        Insert: {
+          academic_year: string
+          action: string
+          created_at?: string
+          from_bed?: string | null
+          from_dormitory?: string | null
+          from_room?: number | null
+          id?: string
+          performed_by?: string | null
+          reason?: string | null
+          student_id: string
+          to_bed?: string | null
+          to_dormitory?: string | null
+          to_room?: number | null
+        }
+        Update: {
+          academic_year?: string
+          action?: string
+          created_at?: string
+          from_bed?: string | null
+          from_dormitory?: string | null
+          from_room?: number | null
+          id?: string
+          performed_by?: string | null
+          reason?: string | null
+          student_id?: string
+          to_bed?: string | null
+          to_dormitory?: string | null
+          to_room?: number | null
+        }
+        Relationships: []
+      }
       dorm_assignments: {
         Row: {
           academic_year: string
+          allocated_at: string
           assigned_by: string | null
           bed_id: string
           created_at: string
@@ -240,6 +289,7 @@ export type Database = {
         }
         Insert: {
           academic_year?: string
+          allocated_at?: string
           assigned_by?: string | null
           bed_id: string
           created_at?: string
@@ -251,6 +301,7 @@ export type Database = {
         }
         Update: {
           academic_year?: string
+          allocated_at?: string
           assigned_by?: string | null
           bed_id?: string
           created_at?: string
@@ -288,26 +339,38 @@ export type Database = {
         Row: {
           bed_code: string | null
           bed_number: number
+          bed_position: string
+          bunk_number: number | null
           created_at: string
           dormitory_id: string
           id: string
+          partition: string | null
           room_number: number | null
+          status: string
         }
         Insert: {
           bed_code?: string | null
           bed_number: number
+          bed_position?: string
+          bunk_number?: number | null
           created_at?: string
           dormitory_id: string
           id?: string
+          partition?: string | null
           room_number?: number | null
+          status?: string
         }
         Update: {
           bed_code?: string | null
           bed_number?: number
+          bed_position?: string
+          bunk_number?: number | null
           created_at?: string
           dormitory_id?: string
           id?: string
+          partition?: string | null
           room_number?: number | null
+          status?: string
         }
         Relationships: [
           {
@@ -319,36 +382,95 @@ export type Database = {
           },
         ]
       }
+      dorm_waiting_list: {
+        Row: {
+          academic_year: string
+          added_by: string | null
+          created_at: string
+          id: string
+          priority: number
+          reason: string | null
+          status: string
+          student_id: string
+          updated_at: string
+        }
+        Insert: {
+          academic_year: string
+          added_by?: string | null
+          created_at?: string
+          id?: string
+          priority?: number
+          reason?: string | null
+          status?: string
+          student_id: string
+          updated_at?: string
+        }
+        Update: {
+          academic_year?: string
+          added_by?: string | null
+          created_at?: string
+          id?: string
+          priority?: number
+          reason?: string | null
+          status?: string
+          student_id?: string
+          updated_at?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "dorm_waiting_list_student_id_fkey"
+            columns: ["student_id"]
+            isOneToOne: false
+            referencedRelation: "students"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       dormitories: {
         Row: {
+          bed_type: string
+          beds_per_room: number
           capacity: number
+          code: string | null
           created_at: string
           gender: string
           id: string
+          is_active: boolean
           name: string
           notes: string | null
+          partitions_enabled: boolean
           room_count: number
           section: string
           updated_at: string
         }
         Insert: {
+          bed_type?: string
+          beds_per_room?: number
           capacity?: number
+          code?: string | null
           created_at?: string
           gender?: string
           id?: string
+          is_active?: boolean
           name: string
           notes?: string | null
+          partitions_enabled?: boolean
           room_count?: number
           section?: string
           updated_at?: string
         }
         Update: {
+          bed_type?: string
+          beds_per_room?: number
           capacity?: number
+          code?: string | null
           created_at?: string
           gender?: string
           id?: string
+          is_active?: boolean
           name?: string
           notes?: string | null
+          partitions_enabled?: boolean
           room_count?: number
           section?: string
           updated_at?: string
@@ -1815,6 +1937,7 @@ export type Database = {
       }
       normalize_marks_streams: { Args: never; Returns: undefined }
       recalc_dorm_rooms: { Args: { _dormitory_id: string }; Returns: undefined }
+      student_section: { Args: { _class: string }; Returns: string }
     }
     Enums: {
       app_role:
