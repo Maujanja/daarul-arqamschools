@@ -40,7 +40,9 @@ type AllowedTable =
   | "parent_login_events"
   | "dormitories"
   | "dorm_beds"
-  | "dorm_assignments";
+  | "dorm_assignments"
+  | "dorm_allocation_history"
+  | "dorm_waiting_list";
 
 interface QueryRequest {
   table: AllowedTable;
@@ -69,7 +71,7 @@ const readPermissions: Record<string, AllowedTable[]> = {
     "family_groups", "family_group_members", "family_group_installments",
     "result_release_statuses",
     "system_alerts", "marks_entry_windows", "parent_login_events",
-    "dormitories", "dorm_beds", "dorm_assignments"
+    "dormitories", "dorm_beds", "dorm_assignments", "dorm_allocation_history", "dorm_waiting_list"
   ],
   teacher: [
     "students", "marks", "teacher_assignments", "teacher_class_students",
@@ -81,7 +83,7 @@ const readPermissions: Record<string, AllowedTable[]> = {
     "students", "parents", "subjects", "academic_years", "announcements", "feedback",
     "teachers_public", "secretary_credentials_public",
     "result_release_statuses",
-    "dormitories", "dorm_beds", "dorm_assignments"
+    "dormitories", "dorm_beds", "dorm_assignments", "dorm_allocation_history", "dorm_waiting_list"
   ],
   accountant: [
     "students", "marks", "fee_payments", "fee_structure", "fee_installments",
@@ -90,7 +92,8 @@ const readPermissions: Record<string, AllowedTable[]> = {
     "teachers_public", "accountant_credentials_public",
     "family_groups", "family_group_members", "family_group_installments",
     "result_release_statuses",
-    "system_alerts"
+    "system_alerts",
+    "dormitories", "dorm_beds", "dorm_assignments"
   ],
   parent: [
     "students", "marks", "fee_payments", "fee_structure", "fee_installments",
@@ -105,21 +108,21 @@ const readPermissions: Record<string, AllowedTable[]> = {
     "subjects", "academic_years", "announcements", "feedback", "teachers_public", "teachers",
     "marks_unlock_requests", "result_release_statuses",
     "head_of_school_credentials_public", "marks_entry_windows", "parent_login_events",
-    "dormitories", "dorm_beds", "dorm_assignments"
+    "dormitories", "dorm_beds", "dorm_assignments", "dorm_allocation_history", "dorm_waiting_list"
   ],
   head_primary: [
     "students", "marks", "teacher_assignments", "teacher_class_students",
     "subjects", "academic_years", "announcements", "feedback", "teachers_public", "teachers",
     "marks_unlock_requests", "result_release_statuses",
     "head_of_school_credentials_public", "marks_entry_windows", "parent_login_events",
-    "dormitories", "dorm_beds", "dorm_assignments"
+    "dormitories", "dorm_beds", "dorm_assignments", "dorm_allocation_history", "dorm_waiting_list"
   ],
   head_secondary: [
     "students", "marks", "teacher_assignments", "teacher_class_students",
     "subjects", "academic_years", "announcements", "feedback", "teachers_public", "teachers",
     "marks_unlock_requests", "result_release_statuses",
     "head_of_school_credentials_public", "marks_entry_windows", "parent_login_events",
-    "dormitories", "dorm_beds", "dorm_assignments"
+    "dormitories", "dorm_beds", "dorm_assignments", "dorm_allocation_history", "dorm_waiting_list"
   ],
 };
 
