@@ -144,16 +144,15 @@ function PartitionedRoomMap({
     const sideBunks = half.filter((_, index) => index !== 1);
 
     return (
-      <section className="relative min-w-0 bg-card/40 p-3 pt-9">
-        <div className="absolute inset-x-3 top-2 flex items-center justify-center gap-2 text-[10px] font-semibold uppercase text-muted-foreground">
+      <section className="relative min-w-0 bg-card/40 p-3 pt-8">
+        <div className="absolute inset-x-3 top-1 flex items-center justify-center gap-2 text-[10px] font-semibold uppercase text-muted-foreground">
           <span className="h-px flex-1 bg-border" />
           <span>Window</span>
           <span className="h-px flex-1 bg-border" />
         </div>
         {windowBunk && (
-          <div className="flex h-[145px] flex-col items-center overflow-hidden">
-            <p className="mb-1 text-center text-[10px] font-medium text-muted-foreground">Window side</p>
-            <div className="w-[118px] origin-center rotate-90">
+          <div className="absolute left-1/2 top-7 z-10 h-[92px] w-[112px] -translate-x-1/2 overflow-visible">
+            <div className="w-[104px] origin-center translate-x-1 rotate-90 scale-[0.68]">
               <BunkUnit
                 bunkNumber={windowBunk[0]}
                 beds={windowBunk[1]}
@@ -165,7 +164,7 @@ function PartitionedRoomMap({
             </div>
           </div>
         )}
-        <div className="grid grid-cols-2 items-start gap-4">
+        <div className="grid grid-cols-2 items-start gap-8 pt-[92px]">
           {sideBunks.map(([bunk, beds], index) => {
             const originalIndex = index === 0 ? 0 : 2;
             return (
@@ -179,6 +178,7 @@ function PartitionedRoomMap({
                   data={data}
                   selectedBedId={selectedBedId}
                   onSelect={onSelect}
+                  compact
                 />
               </div>
             );
@@ -277,12 +277,6 @@ export function RoomsTab({ data }: { data: DormData }) {
 
   const leftBunks = bunks.filter((_, index) => index % 2 === 0);
   const rightBunks = bunks.filter((_, index) => index % 2 === 1);
-  const selectedDormName = (selectedDorm?.name || '').toLowerCase().replace(/[^a-z0-9]+/g, ' ');
-  const hasSpecialPartitionLayout =
-    selectedDormName.includes('a h msuya') ||
-    (selectedDormName.includes('lower') && selectedDormName.includes('boy')) ||
-    selectedDormName.includes('maliki');
-
   const assignedStudentIds = useMemo(
     () => new Set(data.assignments.map((assignment) => assignment.student_id)),
     [data.assignments],
@@ -378,7 +372,7 @@ export function RoomsTab({ data }: { data: DormData }) {
                 </div>
               </div>
 
-              {hasSpecialPartitionLayout && bunks.length >= 6 ? (
+              {bunks.length >= 2 ? (
                 <PartitionedRoomMap
                   bunks={bunks}
                   data={data}
