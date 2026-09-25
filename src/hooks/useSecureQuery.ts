@@ -32,7 +32,9 @@ type AllowedTable =
   | "parent_login_events"
   | "dormitories"
   | "dorm_beds"
-  | "dorm_assignments";
+  | "dorm_assignments"
+  | "dorm_allocation_history"
+  | "dorm_waiting_list";
 
 interface QueryFilters {
   [key: string]: unknown;

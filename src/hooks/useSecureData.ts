@@ -29,7 +29,8 @@ type AllowedTable =
   | "marks_entry_windows"
   | "dormitories"
   | "dorm_beds"
-  | "dorm_assignments";
+  | "dorm_assignments"
+  | "dorm_waiting_list";
 
 type AllowedOperation = "insert" | "update" | "delete" | "upsert";
 
