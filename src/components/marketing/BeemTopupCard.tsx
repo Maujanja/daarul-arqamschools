@@ -7,10 +7,17 @@ import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { Badge } from '@/components/ui/badge';
 import { toast } from 'sonner';
-import { Loader2, Wallet, AlertTriangle, CheckCircle2, XCircle, Clock } from 'lucide-react';
+import {
+  Loader2,
+  Wallet,
+  AlertTriangle,
+  CheckCircle2,
+  XCircle,
+  Clock,
+  Copy,
+  Smartphone,
+} from 'lucide-react';
 
-const BPAY_JS = 'https://checkout.beem.africa/dist/0.1_alpha/bpay.min.js';
-const BPAY_CSS = 'https://checkout.beem.africa/dist/0.1_alpha/bpay.min.css';
 const LOW_BALANCE = 10;
 
 interface Topup {
@@ -24,38 +31,6 @@ interface Topup {
   paid_at: string | null;
 }
 
-declare global {
-  interface Window {
-    InitializeBeem?: () => void;
-  }
-}
-
-let bpayLoaded = false;
-function loadBpay(): Promise<void> {
-  return new Promise((resolve, reject) => {
-    if (bpayLoaded && window.InitializeBeem) return resolve();
-    if (!document.querySelector(`link[href="${BPAY_CSS}"]`)) {
-      const link = document.createElement('link');
-      link.rel = 'stylesheet';
-      link.href = BPAY_CSS;
-      document.head.appendChild(link);
-    }
-    const existing = document.querySelector(`script[src="${BPAY_JS}"]`) as HTMLScriptElement | null;
-    if (existing) {
-      bpayLoaded = true;
-      return resolve();
-    }
-    const s = document.createElement('script');
-    s.src = BPAY_JS;
-    s.onload = () => {
-      bpayLoaded = true;
-      resolve();
-    };
-    s.onerror = () => reject(new Error('Imeshindikana kupakia Beem checkout'));
-    document.body.appendChild(s);
-  });
-}
-
 export function BeemTopupCard({
   balance,
   onBalanceRefresh,
@@ -67,16 +42,8 @@ export function BeemTopupCard({
   const role = user?.role || '';
 
   const [amount, setAmount] = useState('');
-  const [mobile, setMobile] = useState('');
   const [creating, setCreating] = useState(false);
-  const [checkout, setCheckout] = useState<{
-    reference: string;
-    transactionId: string;
-    secureToken: string;
-    amount: number;
-    mobile: string | null;
-  } | null>(null);
-  const [checkoutReady, setCheckoutReady] = useState(false);
+  const [pending, setPending] = useState<{ reference: string; amount: number } | null>(null);
   const [paid, setPaid] = useState<'success' | 'failed' | null>(null);
   const [history, setHistory] = useState<Topup[]>([]);
   const pollRef = useRef<ReturnType<typeof setInterval> | null>(null);
@@ -106,34 +73,18 @@ export function BeemTopupCard({
     loadHistory();
   }, [loadHistory]);
 
-  // Once a checkout transaction exists, mount the Beem button + iframe container.
-  useEffect(() => {
-    if (!checkout) return;
-    let cancelled = false;
-    loadBpay()
-      .then(() => {
-        if (cancelled) return;
-        window.InitializeBeem?.();
-        setCheckoutReady(true);
-      })
-      .catch((e) => toast.error(e.message));
-    return () => {
-      cancelled = true;
-    };
-  }, [checkout]);
-
   // Poll payment status until success/failed.
   useEffect(() => {
-    if (!checkout || paid) return;
+    if (!pending || paid) return;
     pollRef.current = setInterval(async () => {
       try {
-        const d = await call({ action: 'status', transactionId: checkout.transactionId });
+        const d = await call({ action: 'status', reference: pending.reference });
         const st = d?.topup?.status;
         if (st === 'success' || st === 'failed') {
           setPaid(st);
           if (pollRef.current) clearInterval(pollRef.current);
           if (st === 'success') {
-            toast.success('Malipo yamekamilika! Salio linaongezwa.');
+            toast.success('Malipo yamepokelewa! Salio linaongezwa.');
             onBalanceRefresh();
           } else {
             toast.error('Malipo yameshindikana au yameghairiwa.');
@@ -147,9 +98,9 @@ export function BeemTopupCard({
     return () => {
       if (pollRef.current) clearInterval(pollRef.current);
     };
-  }, [checkout, paid, call, loadHistory, onBalanceRefresh]);
+  }, [pending, paid, call, loadHistory, onBalanceRefresh]);
 
-  const startCheckout = async () => {
+  const createReference = async () => {
     const amt = Math.floor(Number(amount));
     if (!Number.isFinite(amt) || amt < 100) {
       toast.error('Weka kiasi cha angalau TZS 100');
@@ -157,16 +108,9 @@ export function BeemTopupCard({
     }
     setCreating(true);
     setPaid(null);
-    setCheckoutReady(false);
     try {
-      const d = await call({ action: 'create', amount: amt, mobile: mobile.trim() || null });
-      setCheckout({
-        reference: d.reference,
-        transactionId: d.transactionId,
-        secureToken: d.secureToken,
-        amount: d.amount,
-        mobile: d.mobile,
-      });
+      const d = await call({ action: 'create', amount: amt });
+      setPending({ reference: d.reference, amount: d.amount });
     } catch (e: any) {
       toast.error(e.message);
     } finally {
@@ -174,12 +118,20 @@ export function BeemTopupCard({
     }
   };
 
+  const copyRef = async () => {
+    if (!pending) return;
+    try {
+      await navigator.clipboard.writeText(pending.reference);
+      toast.success('Namba ya kumbukumbu imekopwa');
+    } catch {
+      toast.error('Imeshindikana kukopi');
+    }
+  };
+
   const reset = () => {
-    setCheckout(null);
+    setPending(null);
     setPaid(null);
-    setCheckoutReady(false);
     setAmount('');
-    setMobile('');
   };
 
   return (
@@ -203,8 +155,8 @@ export function BeemTopupCard({
         <div className="min-w-0">
           <h2 className="font-semibold">Nunua salio la Bulk SMS</h2>
           <p className="text-sm text-muted-foreground">
-            Lipia moja kwa moja hapa ndani ya mfumo kwa mobile money — bila kutoka nje. Baada ya
-            malipo kukamilika, credits zinaingia kwenye akaunti yako ya Beem.
+            Pata namba ya kumbukumbu hapa, kisha lipia kwa M-Pesa, Mixx by Yas au mtandao mwingine
+            kwa kutumia namba hiyo. Malipo yanapopokelewa na Beem, salio linaongezwa moja kwa moja.
           </p>
           {balance !== null && balance <= 0 && (
             <p className="text-xs text-destructive mt-1 font-medium">
@@ -219,8 +171,8 @@ export function BeemTopupCard({
         </div>
       </div>
 
-      {!checkout && (
-        <div className="grid gap-3 sm:grid-cols-[1fr_1fr_auto] sm:items-end">
+      {!pending && (
+        <div className="grid gap-3 sm:grid-cols-[1fr_auto] sm:items-end">
           <div className="space-y-1">
             <Label>Kiasi (TZS)</Label>
             <Input
@@ -231,34 +183,25 @@ export function BeemTopupCard({
               placeholder="Mfano: 10000"
             />
           </div>
-          <div className="space-y-1">
-            <Label>Namba ya simu inayolipa (si lazima)</Label>
-            <Input
-              value={mobile}
-              onChange={(e) => setMobile(e.target.value)}
-              placeholder="0754 123 456"
-            />
-          </div>
-          <Button onClick={startCheckout} disabled={creating}>
+          <Button onClick={createReference} disabled={creating}>
             {creating ? (
               <>
                 <Loader2 className="w-4 h-4 animate-spin mr-1" /> Inaandaa...
               </>
             ) : (
-              'Lipa sasa'
+              'Pata namba ya kumbukumbu'
             )}
           </Button>
         </div>
       )}
 
-      {checkout && (
+      {pending && (
         <div className="space-y-3">
           <div className="flex flex-wrap items-center gap-2 text-sm">
-            <Badge variant="secondary">Ref: {checkout.reference}</Badge>
-            <Badge variant="secondary">TZS {checkout.amount.toLocaleString()}</Badge>
+            <Badge variant="secondary">TZS {pending.amount.toLocaleString()}</Badge>
             {paid === 'success' && (
               <Badge className="bg-emerald-600 hover:bg-emerald-600 gap-1">
-                <CheckCircle2 className="w-3 h-3" /> Malipo yamekamilika
+                <CheckCircle2 className="w-3 h-3" /> Malipo yamepokelewa
               </Badge>
             )}
             {paid === 'failed' && (
@@ -268,36 +211,37 @@ export function BeemTopupCard({
             )}
             {!paid && (
               <Badge variant="outline" className="gap-1">
-                <Clock className="w-3 h-3" /> Subiri malipo...
+                <Clock className="w-3 h-3" /> Inasubiri malipo...
               </Badge>
             )}
           </div>
 
           {!paid && (
-            <>
-              {/* Beem checkout button + iframe container (rendered by bpay library) */}
-              <div
-                id="beem-button"
-                data-price={String(checkout.amount)}
-                data-token={checkout.secureToken}
-                data-reference={checkout.reference}
-                data-transaction={checkout.transactionId}
-                {...(checkout.mobile ? { 'data-mobile': checkout.mobile } : {})}
-              />
-              <div id="beem-page" className="beem-page" />
-              {!checkoutReady && (
-                <p className="text-xs text-muted-foreground flex items-center gap-1">
-                  <Loader2 className="w-3 h-3 animate-spin" /> Inapakia kitufe cha malipo cha Beem...
-                </p>
-              )}
-            </>
+            <div className="rounded-lg border border-primary/30 bg-primary/5 p-4 space-y-2">
+              <p className="text-xs uppercase tracking-wide text-muted-foreground font-medium flex items-center gap-1">
+                <Smartphone className="w-3.5 h-3.5" /> Namba yako ya kumbukumbu
+              </p>
+              <div className="flex items-center gap-2 flex-wrap">
+                <span className="text-2xl font-bold tracking-widest">{pending.reference}</span>
+                <Button size="sm" variant="outline" onClick={copyRef} className="gap-1">
+                  <Copy className="w-3.5 h-3.5" /> Kopi
+                </Button>
+              </div>
+              <ol className="text-sm text-muted-foreground list-decimal list-inside space-y-1">
+                <li>Fungua M-Pesa, Mixx by Yas au mtandao wako wa simu.</li>
+                <li>Chagua Lipa kwa Simu / Lipa Namba ya Beem (Bpay).</li>
+                <li>
+                  Weka kumbukumbu namba <strong className="text-foreground">{pending.reference}</strong> na
+                  kiasi <strong className="text-foreground">TZS {pending.amount.toLocaleString()}</strong>.
+                </li>
+                <li>Kamilisha malipo — ukurasa huu utajisasisha mwenyewe malipo yakipokelewa.</li>
+              </ol>
+            </div>
           )}
 
-          {(paid || checkoutReady) && (
-            <Button size="sm" variant="ghost" onClick={reset}>
-              Anza malipo mapya
-            </Button>
-          )}
+          <Button size="sm" variant="ghost" onClick={reset}>
+            Anza malipo mapya
+          </Button>
         </div>
       )}
 
@@ -320,7 +264,7 @@ export function BeemTopupCard({
                   {t.status === 'success' ? (
                     <Badge className="bg-emerald-600 hover:bg-emerald-600">Imelipwa</Badge>
                   ) : t.status === 'failed' ? (
-                    <Badge variant="destructive">Imefeli</Badge>
+                      <Badge variant="destructive">Imefeli</Badge>
                   ) : (
                     <Badge variant="outline">Inasubiri</Badge>
                   )}
