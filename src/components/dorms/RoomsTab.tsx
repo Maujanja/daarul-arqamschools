@@ -39,11 +39,13 @@ function BedSpace({
   data,
   selected,
   onSelect,
+  compact = false,
 }: {
   bed: DormBed;
   data: DormData;
   selected: boolean;
   onSelect: () => void;
+  compact?: boolean;
 }) {
   const assignment = data.assignmentByBed.get(bed.id);
   const student = assignment ? data.studentById.get(assignment.student_id) : undefined;
@@ -58,7 +60,8 @@ function BedSpace({
       aria-label={`${bed.bed_code || `Bed ${bed.bed_number}`}, ${position}, ${BED_STATUS_LABEL[status]}${student ? `, ${student.full_name}` : ''}`}
       onClick={onSelect}
       className={cn(
-        'relative h-[76px] w-full min-w-0 flex-col items-stretch justify-between gap-1 overflow-hidden border px-2 py-2 text-left whitespace-normal transition-transform duration-200 motion-safe:hover:-translate-y-0.5',
+        'relative w-full min-w-0 flex-col items-stretch justify-between gap-1 overflow-hidden border px-2 text-left whitespace-normal transition-transform duration-200 motion-safe:hover:-translate-y-0.5',
+        compact ? 'h-[52px] py-1' : 'h-[76px] py-2',
         SPACE_STYLE[status],
         selected && 'ring-2 ring-ring ring-offset-2 ring-offset-background',
       )}
@@ -80,12 +83,14 @@ function BunkUnit({
   data,
   selectedBedId,
   onSelect,
+  compact = false,
 }: {
   bunkNumber: number;
   beds: DormBed[];
   data: DormData;
   selectedBedId: string;
   onSelect: (bed: DormBed) => void;
+  compact?: boolean;
 }) {
   const ordered = [...beds].sort((a, b) => {
     const rank = { upper: 0, single: 0, lower: 1 };
@@ -94,7 +99,7 @@ function BunkUnit({
 
   return (
     <div className="overflow-hidden rounded-md border border-border bg-card">
-      <div className="flex h-8 items-center justify-between border-b border-border bg-muted/60 px-2">
+      <div className={cn('flex items-center justify-between border-b border-border bg-muted/60 px-2', compact ? 'h-6' : 'h-8')}>
         <span className="flex items-center gap-1.5 text-xs font-semibold text-foreground">
           <BedDouble className="h-3.5 w-3.5 text-muted-foreground" />
           B{String(bunkNumber).padStart(2, '0')}
@@ -109,6 +114,7 @@ function BunkUnit({
             data={data}
             selected={selectedBedId === bed.id}
             onSelect={() => onSelect(bed)}
+            compact={compact}
           />
         ))}
       </div>
@@ -134,33 +140,49 @@ function PartitionedRoomMap({
     const positions = second
       ? ['Half-wall side', 'Window side', 'Shared wall side']
       : ['Shared wall side', 'Window side', 'Half-wall side'];
+    const windowBunk = half[1];
+    const sideBunks = half.filter((_, index) => index !== 1);
 
     return (
-      <section className="relative min-w-0 bg-card/40 p-3 pt-10">
+      <section className="relative min-w-0 bg-card/40 p-3 pt-9">
         <div className="absolute inset-x-3 top-2 flex items-center justify-center gap-2 text-[10px] font-semibold uppercase text-muted-foreground">
           <span className="h-px flex-1 bg-border" />
           <span>Window</span>
           <span className="h-px flex-1 bg-border" />
         </div>
-        <div className="grid grid-cols-3 items-start gap-3">
-          {half.map(([bunk, beds], index) => (
-            <div key={bunk} className={cn('min-w-0 space-y-1.5', index === 1 && 'flex min-h-[230px] flex-col')}>
-              <p className="truncate text-center text-[10px] font-medium text-muted-foreground">
-                {positions[index]}
-              </p>
-              <div className={cn(index === 1 && 'flex flex-1 items-center justify-center')}>
-                <div className={cn(index === 1 && 'w-[190px] rotate-90')}>
-                  <BunkUnit
-                    bunkNumber={bunk}
-                    beds={beds}
-                    data={data}
-                    selectedBedId={selectedBedId}
-                    onSelect={onSelect}
-                  />
-                </div>
-              </div>
+        {windowBunk && (
+          <div className="flex h-[145px] flex-col items-center overflow-hidden">
+            <p className="mb-1 text-center text-[10px] font-medium text-muted-foreground">Window side</p>
+            <div className="w-[118px] origin-center rotate-90">
+              <BunkUnit
+                bunkNumber={windowBunk[0]}
+                beds={windowBunk[1]}
+                data={data}
+                selectedBedId={selectedBedId}
+                onSelect={onSelect}
+                compact
+              />
             </div>
-          ))}
+          </div>
+        )}
+        <div className="grid grid-cols-2 items-start gap-4">
+          {sideBunks.map(([bunk, beds], index) => {
+            const originalIndex = index === 0 ? 0 : 2;
+            return (
+              <div key={bunk} className="min-w-0 space-y-1.5">
+                <p className="truncate text-center text-[10px] font-medium text-muted-foreground">
+                  {positions[originalIndex]}
+                </p>
+                <BunkUnit
+                  bunkNumber={bunk}
+                  beds={beds}
+                  data={data}
+                  selectedBedId={selectedBedId}
+                  onSelect={onSelect}
+                />
+              </div>
+            );
+          })}
         </div>
       </section>
     );
