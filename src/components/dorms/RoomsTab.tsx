@@ -140,34 +140,49 @@ function PartitionedRoomMap({
     const positions = second
       ? ['Half-wall side', 'Window side', 'Shared wall side']
       : ['Shared wall side', 'Window side', 'Half-wall side'];
+    const windowBunk = half[1];
+    const sideBunks = half.filter((_, index) => index !== 1);
 
     return (
-      <section className="relative min-w-0 bg-card/40 p-3 pt-10">
+      <section className="relative min-w-0 bg-card/40 p-3 pt-9">
         <div className="absolute inset-x-3 top-2 flex items-center justify-center gap-2 text-[10px] font-semibold uppercase text-muted-foreground">
           <span className="h-px flex-1 bg-border" />
           <span>Window</span>
           <span className="h-px flex-1 bg-border" />
         </div>
-        <div className="grid grid-cols-3 items-start gap-3">
-          {half.map(([bunk, beds], index) => (
-            <div key={bunk} className={cn('min-w-0 space-y-1.5', index === 1 && 'flex min-h-[190px] flex-col')}>
-              <p className="truncate text-center text-[10px] font-medium text-muted-foreground">
-                {positions[index]}
-              </p>
-              <div className={cn(index === 1 && 'flex h-[150px] items-start justify-center overflow-visible pt-1')}>
-                <div className={cn(index === 1 && 'w-[118px] origin-top rotate-90')}>
-                  <BunkUnit
-                    bunkNumber={bunk}
-                    beds={beds}
-                    data={data}
-                    selectedBedId={selectedBedId}
-                    onSelect={onSelect}
-                    compact={index === 1}
-                  />
-                </div>
-              </div>
+        {windowBunk && (
+          <div className="flex h-[145px] flex-col items-center overflow-hidden">
+            <p className="mb-1 text-center text-[10px] font-medium text-muted-foreground">Window side</p>
+            <div className="w-[118px] origin-center rotate-90">
+              <BunkUnit
+                bunkNumber={windowBunk[0]}
+                beds={windowBunk[1]}
+                data={data}
+                selectedBedId={selectedBedId}
+                onSelect={onSelect}
+                compact
+              />
             </div>
-          ))}
+          </div>
+        )}
+        <div className="grid grid-cols-2 items-start gap-4">
+          {sideBunks.map(([bunk, beds], index) => {
+            const originalIndex = index === 0 ? 0 : 2;
+            return (
+              <div key={bunk} className="min-w-0 space-y-1.5">
+                <p className="truncate text-center text-[10px] font-medium text-muted-foreground">
+                  {positions[originalIndex]}
+                </p>
+                <BunkUnit
+                  bunkNumber={bunk}
+                  beds={beds}
+                  data={data}
+                  selectedBedId={selectedBedId}
+                  onSelect={onSelect}
+                />
+              </div>
+            );
+          })}
         </div>
       </section>
     );
