@@ -116,6 +116,75 @@ function BunkUnit({
   );
 }
 
+function PartitionedRoomMap({
+  bunks,
+  data,
+  selectedBedId,
+  onSelect,
+}: {
+  bunks: [number, DormBed[]][];
+  data: DormData;
+  selectedBedId: string;
+  onSelect: (bed: DormBed) => void;
+}) {
+  const firstHalf = bunks.slice(0, 3);
+  const secondHalf = bunks.slice(3, 6);
+
+  const renderHalf = (half: [number, DormBed[]][], second = false) => {
+    const positions = second
+      ? ['Half-wall side', 'Window side', 'Shared wall side']
+      : ['Shared wall side', 'Window side', 'Half-wall side'];
+
+    return (
+      <section className="relative min-w-0 bg-card/40 p-3 pt-10">
+        <div className="absolute inset-x-3 top-2 flex items-center justify-center gap-2 text-[10px] font-semibold uppercase text-muted-foreground">
+          <span className="h-px flex-1 bg-border" />
+          <span>Window</span>
+          <span className="h-px flex-1 bg-border" />
+        </div>
+        <div className="grid grid-cols-3 items-start gap-3">
+          {half.map(([bunk, beds], index) => (
+            <div key={bunk} className="min-w-0 space-y-1.5">
+              <p className="truncate text-center text-[10px] font-medium text-muted-foreground">
+                {positions[index]}
+              </p>
+              <BunkUnit
+                bunkNumber={bunk}
+                beds={beds}
+                data={data}
+                selectedBedId={selectedBedId}
+                onSelect={onSelect}
+              />
+            </div>
+          ))}
+        </div>
+      </section>
+    );
+  };
+
+  return (
+    <div className="min-w-[860px] overflow-hidden rounded-md border-2 border-border bg-muted/20">
+      <div className="grid grid-cols-[minmax(0,1fr)_44px_minmax(0,1fr)]">
+        {renderHalf(firstHalf)}
+        <div className="relative flex min-h-[280px] flex-col items-center justify-center border-x-4 border-border bg-muted/70">
+          <span className="rounded-sm bg-background px-1 py-2 text-[10px] font-semibold uppercase text-muted-foreground [writing-mode:vertical-rl] rotate-180">
+            Half wall
+          </span>
+          <span className="absolute bottom-0 h-14 w-full border-t-2 border-dashed border-border bg-card" aria-label="Passage through half wall" />
+        </div>
+        {renderHalf(secondHalf, true)}
+      </div>
+      <div className="flex h-12 items-center border-t-2 border-border bg-card px-4">
+        <div className="flex w-28 items-center justify-center gap-1 rounded-t-md border-x-2 border-t-2 border-border bg-background py-2 text-[10px] font-semibold uppercase text-muted-foreground">
+          <DoorOpen className="h-3.5 w-3.5" /> Entrance
+        </div>
+        <p className="ml-4 text-xs text-muted-foreground">First half after entrance</p>
+        <p className="ml-auto text-xs text-muted-foreground">Second half</p>
+      </div>
+    </div>
+  );
+}
+
 export function RoomsTab({ data }: { data: DormData }) {
   const { insert, update } = useSecureData();
   const [dormId, setDormId] = useState('');
@@ -182,6 +251,11 @@ export function RoomsTab({ data }: { data: DormData }) {
 
   const leftBunks = bunks.filter((_, index) => index % 2 === 0);
   const rightBunks = bunks.filter((_, index) => index % 2 === 1);
+  const selectedDormName = (selectedDorm?.name || '').toLowerCase().replace(/[^a-z0-9]+/g, ' ');
+  const hasSpecialPartitionLayout =
+    selectedDormName.includes('a h msuya') ||
+    (selectedDormName.includes('lower') && selectedDormName.includes('boy')) ||
+    selectedDormName.includes('maliki');
 
   const assignedStudentIds = useMemo(
     () => new Set(data.assignments.map((assignment) => assignment.student_id)),
@@ -278,26 +352,35 @@ export function RoomsTab({ data }: { data: DormData }) {
                 </div>
               </div>
 
-              <div className="grid grid-cols-[minmax(0,1fr)_72px_minmax(0,1fr)] gap-3 sm:gap-5">
-                <div className="grid content-start gap-3">
-                  {leftBunks.map(([bunk, beds]) => (
-                    <BunkUnit key={bunk} bunkNumber={bunk} beds={beds} data={data} selectedBedId={selectedBedId} onSelect={(bed) => setSelectedBedId(bed.id)} />
-                  ))}
-                </div>
-                <div className="flex min-h-[280px] flex-col items-center">
-                  <div className="flex w-full items-center justify-center gap-1 rounded-md border border-dashed border-border bg-background py-2 text-[10px] font-semibold uppercase text-muted-foreground">
-                    <DoorOpen className="h-3.5 w-3.5" /> Door
+              {hasSpecialPartitionLayout && bunks.length >= 6 ? (
+                <PartitionedRoomMap
+                  bunks={bunks}
+                  data={data}
+                  selectedBedId={selectedBedId}
+                  onSelect={(bed) => setSelectedBedId(bed.id)}
+                />
+              ) : (
+                <div className="grid grid-cols-[minmax(0,1fr)_72px_minmax(0,1fr)] gap-3 sm:gap-5">
+                  <div className="grid content-start gap-3">
+                    {leftBunks.map(([bunk, beds]) => (
+                      <BunkUnit key={bunk} bunkNumber={bunk} beds={beds} data={data} selectedBedId={selectedBedId} onSelect={(bed) => setSelectedBedId(bed.id)} />
+                    ))}
                   </div>
-                  <div className="my-2 h-full w-px flex-1 border-l border-dashed border-border" />
-                  <span className="[writing-mode:vertical-rl] rotate-180 text-[10px] font-semibold uppercase text-muted-foreground">Central aisle</span>
-                  <div className="my-2 h-full w-px flex-1 border-l border-dashed border-border" />
+                  <div className="flex min-h-[280px] flex-col items-center">
+                    <div className="flex w-full items-center justify-center gap-1 rounded-md border border-dashed border-border bg-background py-2 text-[10px] font-semibold uppercase text-muted-foreground">
+                      <DoorOpen className="h-3.5 w-3.5" /> Door
+                    </div>
+                    <div className="my-2 h-full w-px flex-1 border-l border-dashed border-border" />
+                    <span className="[writing-mode:vertical-rl] rotate-180 text-[10px] font-semibold uppercase text-muted-foreground">Central aisle</span>
+                    <div className="my-2 h-full w-px flex-1 border-l border-dashed border-border" />
+                  </div>
+                  <div className="grid content-start gap-3">
+                    {rightBunks.map(([bunk, beds]) => (
+                      <BunkUnit key={bunk} bunkNumber={bunk} beds={beds} data={data} selectedBedId={selectedBedId} onSelect={(bed) => setSelectedBedId(bed.id)} />
+                    ))}
+                  </div>
                 </div>
-                <div className="grid content-start gap-3">
-                  {rightBunks.map(([bunk, beds]) => (
-                    <BunkUnit key={bunk} bunkNumber={bunk} beds={beds} data={data} selectedBedId={selectedBedId} onSelect={(bed) => setSelectedBedId(bed.id)} />
-                  ))}
-                </div>
-              </div>
+              )}
             </div>
           </div>
 
