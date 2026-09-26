@@ -122,6 +122,49 @@ function BunkUnit({
   );
 }
 
+function HorizontalBunk({
+  bunkNumber,
+  beds,
+  data,
+  selectedBedId,
+  onSelect,
+}: {
+  bunkNumber: number;
+  beds: DormBed[];
+  data: DormData;
+  selectedBedId: string;
+  onSelect: (bed: DormBed) => void;
+}) {
+  const ordered = [...beds].sort((a, b) => {
+    const rank = { upper: 0, single: 0, lower: 1 };
+    return rank[a.bed_position || 'single'] - rank[b.bed_position || 'single'];
+  });
+
+  return (
+    <div className="overflow-hidden rounded-md border border-border bg-card shadow-sm">
+      <div className="flex h-6 items-center justify-between border-b border-border bg-muted/60 px-2">
+        <span className="flex items-center gap-1.5 text-xs font-semibold text-foreground">
+          <BedDouble className="h-3.5 w-3.5 text-muted-foreground" />
+          B{String(bunkNumber).padStart(2, '0')}
+        </span>
+        <span className="text-[10px] text-muted-foreground">{ordered.length > 1 ? 'Bunk bed' : 'Single bed'}</span>
+      </div>
+      <div className="grid grid-cols-2 gap-1 p-1.5">
+        {ordered.map((bed) => (
+          <BedSpace
+            key={bed.id}
+            bed={bed}
+            data={data}
+            selected={selectedBedId === bed.id}
+            onSelect={() => onSelect(bed)}
+            compact
+          />
+        ))}
+      </div>
+    </div>
+  );
+}
+
 function PartitionedRoomMap({
   bunks,
   data,
@@ -151,20 +194,17 @@ function PartitionedRoomMap({
           <span className="h-px flex-1 bg-border" />
         </div>
         {windowBunk && (
-          <div className="absolute left-1/2 top-7 z-10 h-[92px] w-[112px] -translate-x-1/2 overflow-visible">
-            <div className="w-[104px] origin-center translate-x-1 rotate-90 scale-[0.68]">
-              <BunkUnit
-                bunkNumber={windowBunk[0]}
-                beds={windowBunk[1]}
-                data={data}
-                selectedBedId={selectedBedId}
-                onSelect={onSelect}
-                compact
-              />
-            </div>
+          <div className="absolute inset-x-3 top-7 z-10">
+            <HorizontalBunk
+              bunkNumber={windowBunk[0]}
+              beds={windowBunk[1]}
+              data={data}
+              selectedBedId={selectedBedId}
+              onSelect={onSelect}
+            />
           </div>
         )}
-        <div className="grid grid-cols-2 items-start gap-8 pt-[92px]">
+        <div className="grid grid-cols-2 items-start gap-8 pt-[128px]">
           {sideBunks.map(([bunk, beds], index) => {
             const originalIndex = index === 0 ? 0 : 2;
             return (
