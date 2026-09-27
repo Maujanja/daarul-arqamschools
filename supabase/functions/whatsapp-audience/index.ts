@@ -195,12 +195,6 @@ serve(async (req) => {
 
     if (!res.ok || !res.body) {
       const errText = await res.text().catch(() => "");
-      if (res.status === 402) {
-        return json({ success: false, error: "AI credits zimeisha. Ongeza credits kuendelea." }, 402);
-      }
-      if (res.status === 429) {
-        return json({ success: false, error: "Maombi ni mengi kwa sasa, jaribu tena baada ya sekunde kadhaa." }, 429);
-      }
       console.error(`AI gateway failed [${res.status}]: ${errText.slice(0, 400)}`);
     } else {
       // Read the SSE stream and accumulate the output text.
