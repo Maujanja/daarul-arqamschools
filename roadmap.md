@@ -8,5 +8,5 @@
 - [x] Deploy and verify the performance-letter service and interface.
 - [x] Store historical and future examination dates for every class and Series.
 - [x] Use the applicable examination date in letter previews and PDFs.
-- [x] Draw partitioned six-bunk room maps for A.H. Msuya, Lower Boys Apartment, and Prof Maliki.- [ ] WhatsApp broadcast paid credits (Snippe link, approver page, SMS alert)
+- [x] Draw partitioned six-bunk room maps for A.H. Msuya, Lower Boys Apartment, and Prof Maliki.- [x] WhatsApp broadcast paid credits (Snippe link, approver page, SMS alert)
 - [ ] Snippe API integration (deferred by user)
