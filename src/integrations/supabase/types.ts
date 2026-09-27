@@ -1803,6 +1803,105 @@ export type Database = {
           },
         ]
       }
+      wa_approver_access: {
+        Row: {
+          id: number
+          token: string
+        }
+        Insert: {
+          id?: number
+          token?: string
+        }
+        Update: {
+          id?: number
+          token?: string
+        }
+        Relationships: []
+      }
+      wa_credit_balances: {
+        Row: {
+          balance: number
+          updated_at: string
+          user_id: string
+          user_name: string | null
+          user_role: string | null
+        }
+        Insert: {
+          balance?: number
+          updated_at?: string
+          user_id: string
+          user_name?: string | null
+          user_role?: string | null
+        }
+        Update: {
+          balance?: number
+          updated_at?: string
+          user_id?: string
+          user_name?: string | null
+          user_role?: string | null
+        }
+        Relationships: []
+      }
+      wa_credit_purchases: {
+        Row: {
+          amount_tzs: number
+          created_at: string
+          credits: number
+          decided_at: string | null
+          id: string
+          status: string
+          user_id: string
+          user_name: string | null
+          user_role: string | null
+        }
+        Insert: {
+          amount_tzs?: number
+          created_at?: string
+          credits?: number
+          decided_at?: string | null
+          id?: string
+          status?: string
+          user_id: string
+          user_name?: string | null
+          user_role?: string | null
+        }
+        Update: {
+          amount_tzs?: number
+          created_at?: string
+          credits?: number
+          decided_at?: string | null
+          id?: string
+          status?: string
+          user_id?: string
+          user_name?: string | null
+          user_role?: string | null
+        }
+        Relationships: []
+      }
+      wa_credit_usage: {
+        Row: {
+          created_at: string
+          credits: number
+          id: string
+          numbers: number
+          user_id: string
+        }
+        Insert: {
+          created_at?: string
+          credits: number
+          id?: string
+          numbers: number
+          user_id: string
+        }
+        Update: {
+          created_at?: string
+          credits?: number
+          id?: string
+          numbers?: number
+          user_id?: string
+        }
+        Relationships: []
+      }
     }
     Views: {
       accountant_credentials_public: {
@@ -1938,6 +2037,11 @@ export type Database = {
       normalize_marks_streams: { Args: never; Returns: undefined }
       recalc_dorm_rooms: { Args: { _dormitory_id: string }; Returns: undefined }
       student_section: { Args: { _class: string }; Returns: string }
+      wa_approve_purchase: { Args: { _id: string }; Returns: boolean }
+      wa_consume_credits: {
+        Args: { _numbers: number; _user_id: string }
+        Returns: number
+      }
     }
     Enums: {
       app_role:

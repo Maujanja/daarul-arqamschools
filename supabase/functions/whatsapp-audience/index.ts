@@ -141,6 +141,20 @@ serve(async (req) => {
       }, 400);
     }
 
+    // Charge 1 credit (TZS 5) per phone number before building the list.
+    const userId = String(body?.userId || "").slice(0, 100);
+    if (!userId) return json({ success: false, error: "Not allowed" }, 403);
+    const db = createClient(Deno.env.get("SUPABASE_URL")!, Deno.env.get("SUPABASE_SERVICE_ROLE_KEY")!);
+    const { data: left, error: chargeErr } = await db.rpc("wa_consume_credits", { _user_id: userId, _numbers: phones.length });
+    if (chargeErr) throw chargeErr;
+    if (left === -1) {
+      return json({
+        success: false, code: "insufficient_credits",
+        error: `Credit hazitoshi: namba ${phones.length} zinahitaji credit ${phones.length} (TZS ${phones.length * 5}). Nunua credit kuendelea.`,
+      }, 402);
+    }
+    const creditsLeft = Number(left);
+
     const nameByPhone = new Map<string, { name: string; generated: boolean }>();
     let reply = "";
 
@@ -181,12 +195,6 @@ serve(async (req) => {
 
     if (!res.ok || !res.body) {
       const errText = await res.text().catch(() => "");
-      if (res.status === 402) {
-        return json({ success: false, error: "AI credits zimeisha. Ongeza credits kuendelea." }, 402);
-      }
-      if (res.status === 429) {
-        return json({ success: false, error: "Maombi ni mengi kwa sasa, jaribu tena baada ya sekunde kadhaa." }, 429);
-      }
       console.error(`AI gateway failed [${res.status}]: ${errText.slice(0, 400)}`);
     } else {
       // Read the SSE stream and accumulate the output text.
@@ -258,6 +266,7 @@ serve(async (req) => {
         }.`,
       recipients,
       invalid,
+      creditsLeft,
     });
 
   } catch (e) {

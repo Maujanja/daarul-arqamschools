@@ -6,6 +6,7 @@ import { BrowserRouter, Routes, Route, Navigate } from "react-router-dom";
 import { AuthProvider } from "@/contexts/AuthContext";
 import LoginPage from "./pages/LoginPage";
 import SsoPage from "./pages/SsoPage";
+import PaymentApprovalsPage from "./pages/PaymentApprovalsPage";
 import DashboardPage from "./pages/DashboardPage";
 import MarksEntryPage from "./pages/MarksEntryPage";
 import ReportsPage from "./pages/ReportsPage";
@@ -52,6 +53,7 @@ const App = () => (
             <Route path="/" element={<Navigate to="/login" replace />} />
             <Route path="/login" element={<LoginPage />} />
             <Route path="/sso" element={<SsoPage />} />
+            <Route path="/wa-approve" element={<PaymentApprovalsPage />} />
             <Route path="/dashboard" element={<DashboardPage />} />
             <Route path="/marks-entry" element={<MarksEntryPage />} />
             <Route path="/reports" element={<ReportsPage />} />
