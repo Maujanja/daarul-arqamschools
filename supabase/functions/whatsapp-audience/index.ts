@@ -266,6 +266,7 @@ serve(async (req) => {
         }.`,
       recipients,
       invalid,
+      creditsLeft,
     });
 
   } catch (e) {
