@@ -1,5 +1,6 @@
 import { serve } from "https://deno.land/std@0.168.0/http/server.ts";
 import { createClient } from "https://esm.sh/@supabase/supabase-js@2.89.0";
+import { issueParentSession } from "../_shared/parent-session.ts";
 
 const corsHeaders = {
   "Access-Control-Allow-Origin": "*",
@@ -25,6 +26,8 @@ interface AuthResponse {
     name: string;
     role: string;
     department?: string;
+    studentId?: string;
+    progressToken?: string;
   };
   error?: string;
 }
@@ -177,7 +180,8 @@ serve(async (req) => {
 
         response = {
           success: true,
-          user: { id: parentId, name: parentName, role: "parent" },
+          user: { id: parentId, name: parentName, role: "parent", studentId: student.id,
+            progressToken: await issueParentSession(student.id, parentId) },
         };
         break;
       }

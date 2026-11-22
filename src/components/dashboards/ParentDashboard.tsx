@@ -22,6 +22,7 @@ import autoTable from 'jspdf-autotable';
 import html2canvas from 'html2canvas';
 import { createSubjectNameLookup, resolveSubjectName } from '@/utils/subjectResolution';
 import { isExcludedFromPrimaryAverage } from '@/utils/averageExclusions';
+import { ChildProgress } from '@/components/dashboard/ChildProgress';
 
 interface StudentMark {
   subject: string;
@@ -345,7 +346,7 @@ export function ParentDashboard() {
         const studentsData = await fetchTable<any>('students');
         
         // Find the student - either by matching ID or parent_id
-        let studentData = studentsData?.find((s: any) => s.id === user.id);
+        let studentData = studentsData?.find((s: any) => s.id === (user.studentId || user.id));
         
         if (!studentData) {
           studentData = studentsData?.find((s: any) => s.parent_id === user.id);
@@ -1138,6 +1139,8 @@ export function ParentDashboard() {
           </div>
         </div>
       </div>
+
+      <ChildProgress token={user?.progressToken} studentId={studentId} year={selectedYear} selectedTerm={selectedTerm} />
 
       {/* Academic sections - always visible when student has marks */}
       {studentMarks.length > 0 ? (<>

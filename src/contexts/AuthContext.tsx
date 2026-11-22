@@ -7,6 +7,8 @@ interface AuthUser {
   name: string;
   role: UserRole;
   department?: string;
+  studentId?: string;
+  progressToken?: string;
 }
 
 interface AuthContextType {
