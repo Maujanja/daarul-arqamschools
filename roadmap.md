@@ -10,3 +10,6 @@
 - [x] Use the applicable examination date in letter previews and PDFs.
 - [x] Draw partitioned six-bunk room maps for A.H. Msuya, Lower Boys Apartment, and Prof Maliki.- [x] WhatsApp broadcast paid credits (Snippe link, approver page, SMS alert)
 - [ ] Snippe API integration (deferred by user)
+- [ ] Add approved-result child progress, subject trends and parent alerts.
+- [ ] Add private parent-authenticated Sauti TTS playback and replay.
+- [ ] Verify progress rules, privacy and the parent experience.
