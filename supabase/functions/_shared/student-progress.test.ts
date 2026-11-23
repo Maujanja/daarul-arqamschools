@@ -39,4 +39,19 @@ describe("child progress rules", () => {
     const p = run([mark("Series 1", 40), mark("Series 2", 40), mark("Series 2", 22, "English")], [release("Series 1"), release("Series 2")]);
     expect(p.averageDelta).toBe(0); expect(p.hasAlert).toBe(false);
   });
+  test("a ten-point drop triggers a subject alert even if the average improves", () => {
+    const p = run([mark("Series 1", 80, "Math", "Primary 3"), mark("Series 1", 50, "English", "Primary 3"), mark("Series 2", 70, "Math", "Primary 3"), mark("Series 2", 90, "English", "Primary 3")], [release("Series 1", "Primary 3"), release("Series 2", "Primary 3")]);
+    expect(p.averageDelta).toBe(15); expect(p.alerts.map(s => s.name)).toEqual(["Math"]);
+  });
+  test("nine points of subject decline does not meet the substantial threshold", () => {
+    const p = run([mark("Series 1", 80, "Math", "Primary 3"), mark("Series 2", 71, "Math", "Primary 3")], [release("Series 1", "Primary 3"), release("Series 2", "Primary 3")]);
+    expect(p.alerts.length).toBe(0); expect(p.hasAlert).toBe(true);
+  });
+  test("selected examination excludes future approved results", () => {
+    const p = buildStudentProgress([mark("Series 1", 45), mark("Series 2", 20)], [release("Series 1"), release("Series 2")], "2025-2026", undefined, "Series 1");
+    expect(p.latest).toBe("Series 1"); expect(p.hasAlert).toBe(false);
+  });
+  test("lowercase Series names match canonical approval aliases", () => {
+    expect(run([mark("series 1", 40)], [release("Test 1")]).subjects[0].score).toBe(40);
+  });
 });

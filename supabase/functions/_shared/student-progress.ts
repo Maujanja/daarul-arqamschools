@@ -5,7 +5,12 @@ export interface ProgressMark {
 export interface ProgressRelease {
   class_name: string; term: string; academic_year: string; approved_by_admin: boolean;
 }
-export const canonicalTerm = (term: string) => term.trim().replace(/^Test\s+/i, "Series ");
+export const canonicalTerm = (term: string) => {
+  const value = term.trim();
+  const numbered = value.match(/^(?:Test|Series)\s+(\d+)$/i);
+  return numbered ? `Series ${Number(numbered[1])}` : value.toUpperCase();
+};
+export const SUBSTANTIAL_DROP_POINTS = 10;
 export function examinationOrder(term: string): number {
   const numbered = canonicalTerm(term).match(/^Series\s+(\d+)$/i);
   if (numbered) return Number(numbered[1]);
@@ -44,8 +49,9 @@ export function buildStudentProgress(marks: ProgressMark[], releases: ProgressRe
       average: counted.length ? counted.reduce((sum, m) => sum + m.total / maximumForClass(cls) * 100, 0) / counted.length : null,
       subjects: unique.map(m => ({ id: m.subject_id, name: m.subject, score: m.total, percent: m.total / maximumForClass(cls) * 100 })) };
   });
-  const latest = series.at(-1);
-  const previous = series.at(-2)?.className === latest?.className ? series.at(-2) : undefined;
+  const latest = series[series.length - 1];
+  const earlier = series[series.length - 2];
+  const previous = earlier?.className === latest?.className ? earlier : undefined;
   const subjects = (latest?.subjects || []).map(s => {
     const before = previous?.subjects.find(p => p.id === s.id);
     return { ...s, previous: before?.score ?? null, delta: before ? s.percent - before.percent : null,
@@ -54,11 +60,11 @@ export function buildStudentProgress(marks: ProgressMark[], releases: ProgressRe
   // Overall comparisons use the same subject set in both examinations.
   const comparable = subjects.filter(s => s.delta !== null && countsForAverage({ subject: s.name, class_name: latest?.className || "" } as ProgressMark));
   const averageDelta = comparable.length ? comparable.reduce((sum, s) => sum + (s.delta || 0), 0) / comparable.length : null;
-  const alerts = subjects.filter(s => s.failed || (s.delta !== null && s.delta <= -10));
+  const alerts = subjects.filter(s => s.failed || (s.delta !== null && s.delta <= -SUBSTANTIAL_DROP_POINTS));
   const ranked = [...subjects].sort((a, b) => b.percent - a.percent);
   return { year, series, latest: latest?.term ?? null, className: latest?.className ?? className ?? "",
     subjects, average: latest?.average ?? null, averageDelta,
-    best: ranked[0] ?? null, weakest: ranked.at(-1) ?? null, alerts,
+    best: ranked[0] ?? null, weakest: ranked[ranked.length - 1] ?? null, alerts,
     hasAlert: alerts.length > 0 || (averageDelta !== null && averageDelta < 0) };
 }
 export type StudentProgress = ReturnType<typeof buildStudentProgress>;

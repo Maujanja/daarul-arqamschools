@@ -7,7 +7,7 @@ import { loadStudentProgress } from "../_shared/load-student-progress.ts";
 import { progressNarration } from "../_shared/student-progress.ts";
 
 const schema = z.object({
-  action: z.enum(["report", "speak"]), sessionToken: z.string().min(20).max(3000),
+  action: z.enum(["report", "speak", "test-voice"]), sessionToken: z.string().min(20).max(3000),
   year: z.string().regex(/^\d{4}-\d{4}$/),
   className: z.string().min(1).max(80).optional(),
   throughTerm: z.string().min(1).max(80).optional(),
@@ -31,9 +31,11 @@ serve(async req => {
     const db = createClient(url, key);
     const { student, progress } = await loadStudentProgress(db, session.studentId, year, className, throughTerm);
     if ((student.parent_id || student.id) !== session.parentId) return json({ error: "Please sign in again." }, 401);
-    const narration = progressNarration(student.full_name, progress);
+    const narration = action === "test-voice"
+      ? "Karibu DAARUL-ARQAM SCHOOLS. Hii ni sauti ya majaribio ya taarifa za maendeleo ya mtoto."
+      : progressNarration(student.full_name, progress);
     if (action === "report") return json({ progress, narration, studentName: student.full_name });
-    if (!progress.latest) return json({ error: "There are no approved results to read yet." }, 409);
+    if (action !== "test-voice" && !progress.latest) return json({ error: "There are no approved results to read yet." }, 409);
     const apiKey = Deno.env.get("SAUTI_TTS_API_KEY");
     if (!apiKey) return json({ error: "Voice reports are not configured yet." }, 503);
     const audio = await fetch("https://sauti-tts.vercel.app/api/tts", {

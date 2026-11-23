@@ -1,5 +1,7 @@
 import { serve } from "https://deno.land/std@0.168.0/http/server.ts";
 import { createClient } from "https://esm.sh/@supabase/supabase-js@2.89.0";
+import { buildStudentProgress, canonicalTerm, type ProgressMark } from "../_shared/student-progress.ts";
+import { makeProgressNotification } from "../_shared/progress-notification.ts";
 
 const corsHeaders = {
   "Access-Control-Allow-Origin": "*",
@@ -52,12 +54,6 @@ async function sendSms(phone: string, message: string) {
 serve(async (req) => {
   if (req.method === "OPTIONS") return new Response(null, { headers: corsHeaders });
 
-  if (!BEEM_API_KEY || !BEEM_SECRET_KEY) {
-    return new Response(JSON.stringify({ success: false, error: "Beem credentials not configured" }), {
-      status: 500, headers: { ...corsHeaders, "Content-Type": "application/json" },
-    });
-  }
-
   let body: any = {};
   try { body = await req.json(); } catch {}
   const { class_name, term, academic_year } = body || {};
@@ -69,6 +65,15 @@ serve(async (req) => {
 
   const supabase = createClient(SUPABASE_URL, SUPABASE_SERVICE_ROLE_KEY);
 
+  // Notifications can never disclose an examination that is not released.
+  const { data: releases, error: releaseError } = await supabase.from("result_release_statuses")
+    .select("class_name,term,academic_year,approved_by_admin").eq("class_name", class_name).eq("academic_year", academic_year);
+  if (releaseError || !releases?.some(r => r.approved_by_admin && canonicalTerm(r.term) === canonicalTerm(term))) {
+    return new Response(JSON.stringify({ success: false, error: "Results are not approved" }), {
+      status: 409, headers: { ...corsHeaders, "Content-Type": "application/json" },
+    });
+  }
+
   const { data: students } = await supabase
     .from("students")
     .select("id, full_name, class, parent_phone")
@@ -78,7 +83,7 @@ serve(async (req) => {
   const summary = { sent: 0, skipped: 0, failed: 0, errors: [] as string[] };
 
   for (const s of students ?? []) {
-    const phone = normalizePhone(s.parent_phone);
+    const phone = BEEM_API_KEY && BEEM_SECRET_KEY ? normalizePhone(s.parent_phone) : null;
     if (!phone) { summary.skipped++; continue; }
     const refKey = `${refKeyBase}:${s.id}`;
 
@@ -135,6 +140,39 @@ serve(async (req) => {
     }
   } catch (e) {
     console.error("push-send (results) failed", e);
+  }
+
+  // Subject alerts are sent individually, never to the whole class.
+  try {
+    const { data: subjects, error: subjectError } = await supabase.from("subjects").select("id,name");
+    if (subjectError) throw subjectError;
+    const names = new Map((subjects || []).map(s => [s.id, s.name]));
+    const marksByStudent = new Map<string, ProgressMark[]>();
+    for (let offset = 0; ; offset += 1000) {
+      const { data: rows, error } = await supabase.from("marks").select("id,student_id,subject_id,total,term,academic_year,class")
+        .eq("class", class_name).eq("academic_year", academic_year).order("id").range(offset, offset + 999);
+      if (error) throw error;
+      for (const row of rows || []) {
+        const marks = marksByStudent.get(row.student_id) || [];
+        marks.push({ ...row, subject: names.get(row.subject_id) || "Archived subject", class_name: row.class });
+        marksByStudent.set(row.student_id, marks);
+      }
+      if ((rows || []).length < 1000) break;
+    }
+    const ids = Array.from(marksByStudent.keys());
+    for (let offset = 0; offset < ids.length; offset += 100) {
+      const { data: children, error } = await supabase.from("students").select("id,full_name,parent_id").in("id", ids.slice(offset, offset + 100));
+      if (error) throw error;
+      await Promise.all((children || []).map(async child => {
+        const progress = buildStudentProgress(marksByStudent.get(child.id) || [], releases || [], academic_year, class_name, term);
+        const notification = makeProgressNotification(child, progress);
+        if (!notification || progress.latest !== canonicalTerm(term)) return;
+        const { error } = await supabase.functions.invoke("push-send", { body: notification });
+        if (error) throw error;
+      }));
+    }
+  } catch {
+    summary.errors.push("Some performance push notifications could not be sent.");
   }
 
   return new Response(JSON.stringify({ success: true, summary }), {

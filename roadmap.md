@@ -13,3 +13,4 @@
 - [ ] Add approved-result child progress, subject trends and parent alerts.
 - [ ] Add private parent-authenticated Sauti TTS playback and replay.
 - [ ] Verify progress rules, privacy and the parent experience.
+- [ ] Complete the voice-test view and fix MP3 playback and preview errors.
