@@ -9,6 +9,7 @@ interface AuthUser {
   department?: string;
   studentId?: string;
   progressToken?: string;
+  notificationToken?: string;
 }
 
 interface AuthContextType {

@@ -14,3 +14,4 @@
 - [ ] Add private parent-authenticated Sauti TTS playback and replay.
 - [ ] Verify progress rules, privacy and the parent experience.
 - [ ] Complete the voice-test view and fix MP3 playback and preview errors.
+- [ ] Create an isolated OMARY SIMBA student test account with low-performance alerts and verify login, progress, voice and replay.

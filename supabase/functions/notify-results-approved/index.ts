@@ -2,17 +2,18 @@ import { serve } from "https://deno.land/std@0.168.0/http/server.ts";
 import { createClient } from "https://esm.sh/@supabase/supabase-js@2.89.0";
 import { buildStudentProgress, canonicalTerm, type ProgressMark } from "../_shared/student-progress.ts";
 import { makeProgressNotification } from "../_shared/progress-notification.ts";
+import { verifyNotificationSession } from "../_shared/staff-notification-session.ts";
+import { corsHeaders } from "npm:@supabase/supabase-js@2/cors";
+import { z } from "https://esm.sh/zod@3.25.76";
 
-const corsHeaders = {
-  "Access-Control-Allow-Origin": "*",
-  "Access-Control-Allow-Headers": "authorization, x-client-info, apikey, content-type",
-};
+const input = z.object({ class_name: z.string().min(1).max(80), term: z.string().min(1).max(80),
+  academic_year: z.string().regex(/^\d{4}-\d{4}$/), sessionToken: z.string().min(20).max(3000) });
 
 const BEEM_API_KEY = Deno.env.get("BEEM_API_KEY") || "";
 const BEEM_SECRET_KEY = Deno.env.get("BEEM_SECRET_KEY") || "";
 const BEEM_SENDER_ID = Deno.env.get("BEEM_SENDER_ID") || "DAARUL";
-const SUPABASE_URL = Deno.env.get("SUPABASE_URL")!;
-const SUPABASE_SERVICE_ROLE_KEY = Deno.env.get("SUPABASE_SERVICE_ROLE_KEY")!;
+const SUPABASE_URL = Deno.env.get("SUPABASE_URL") || "";
+const SUPABASE_SERVICE_ROLE_KEY = Deno.env.get("SUPABASE_SERVICE_ROLE_KEY") || "";
 
 function basicAuth() {
   return "Basic " + btoa(`${BEEM_API_KEY}:${BEEM_SECRET_KEY}`);
@@ -56,12 +57,18 @@ serve(async (req) => {
 
   let body: any = {};
   try { body = await req.json(); } catch {}
-  const { class_name, term, academic_year } = body || {};
-  if (!class_name || !term || !academic_year) {
+  const parsed = input.safeParse(body);
+  if (!parsed.success) {
     return new Response(JSON.stringify({ success: false, error: "Missing class_name/term/academic_year" }), {
       status: 400, headers: { ...corsHeaders, "Content-Type": "application/json" },
     });
   }
+
+  const { class_name, term, academic_year, sessionToken } = parsed.data;
+  try { await verifyNotificationSession(sessionToken, class_name); }
+  catch { return new Response(JSON.stringify({ success: false, error: "Please sign in again. Notification access denied." }), {
+    status: 401, headers: { ...corsHeaders, "Content-Type": "application/json" },
+  }); }
 
   const supabase = createClient(SUPABASE_URL, SUPABASE_SERVICE_ROLE_KEY);
 
@@ -80,7 +87,7 @@ serve(async (req) => {
     .eq("class", class_name);
 
   const refKeyBase = `${class_name}:${term}:${academic_year}`;
-  const summary = { sent: 0, skipped: 0, failed: 0, errors: [] as string[] };
+  const summary = { sent: 0, skipped: 0, failed: 0, progressSent: 0, errors: [] as string[] };
 
   for (const s of students ?? []) {
     const phone = BEEM_API_KEY && BEEM_SECRET_KEY ? normalizePhone(s.parent_phone) : null;
@@ -167,8 +174,9 @@ serve(async (req) => {
         const progress = buildStudentProgress(marksByStudent.get(child.id) || [], releases || [], academic_year, class_name, term);
         const notification = makeProgressNotification(child, progress);
         if (!notification || progress.latest !== canonicalTerm(term)) return;
-        const { error } = await supabase.functions.invoke("push-send", { body: notification });
-        if (error) throw error;
+        const { data, error } = await supabase.functions.invoke("push-send", { body: notification });
+        if (error || !data?.success) throw error || new Error("Progress notification failed");
+        summary.progressSent += data.sent || 0;
       }));
     }
   } catch {

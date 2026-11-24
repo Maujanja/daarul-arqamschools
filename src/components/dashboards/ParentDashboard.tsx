@@ -331,7 +331,8 @@ export function ParentDashboard() {
   // Set initial year when academic years load
   useEffect(() => {
     if (currentYear) {
-      setSelectedYear(currentYear);
+      const notificationYear = new URLSearchParams(window.location.search).get('year');
+      setSelectedYear(notificationYear && /^\d{4}-\d{4}$/.test(notificationYear) ? notificationYear : currentYear);
     }
   }, [currentYear]);
 

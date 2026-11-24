@@ -29,12 +29,12 @@ serve(async req => {
     const key = Deno.env.get("SUPABASE_SERVICE_ROLE_KEY");
     if (!url || !key) return json({ error: "Progress service unavailable" }, 503);
     const db = createClient(url, key);
-    const { student, progress } = await loadStudentProgress(db, session.studentId, year, className, throughTerm);
+    const { student, progress, isDemo } = await loadStudentProgress(db, session.studentId, year, className, throughTerm);
     if ((student.parent_id || student.id) !== session.parentId) return json({ error: "Please sign in again." }, 401);
     const narration = action === "test-voice"
       ? "Karibu DAARUL-ARQAM SCHOOLS. Hii ni sauti ya majaribio ya taarifa za maendeleo ya mtoto."
       : progressNarration(student.full_name, progress);
-    if (action === "report") return json({ progress, narration, studentName: student.full_name });
+    if (action === "report") return json({ progress, narration, studentName: student.full_name, isDemo });
     if (action !== "test-voice" && !progress.latest) return json({ error: "There are no approved results to read yet." }, 409);
     const apiKey = Deno.env.get("SAUTI_TTS_API_KEY");
     if (!apiKey) return json({ error: "Voice reports are not configured yet." }, 503);

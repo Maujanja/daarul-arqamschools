@@ -1001,6 +1001,41 @@ export type Database = {
         }
         Relationships: []
       }
+      parent_progress_demo_accounts: {
+        Row: {
+          academic_year: string
+          created_at: string
+          marks: Json
+          password_hash: string
+          releases: Json
+          student_id: string
+        }
+        Insert: {
+          academic_year: string
+          created_at?: string
+          marks: Json
+          password_hash: string
+          releases: Json
+          student_id: string
+        }
+        Update: {
+          academic_year?: string
+          created_at?: string
+          marks?: Json
+          password_hash?: string
+          releases?: Json
+          student_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "parent_progress_demo_accounts_student_id_fkey"
+            columns: ["student_id"]
+            isOneToOne: true
+            referencedRelation: "students"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       parents: {
         Row: {
           created_at: string

@@ -51,6 +51,17 @@ serve(async (req) => {
       });
     }
 
+    // Child-performance messages are sent only by the trusted progress/release service.
+    if (payload.tag?.startsWith("progress-")) {
+      const serviceKey = Deno.env.get("SUPABASE_SERVICE_ROLE_KEY");
+      if (!serviceKey || req.headers.get("Authorization") !== `Bearer ${serviceKey}` ||
+        target?.role !== "parent" || !target.userIdentifiers?.length) {
+        return new Response(JSON.stringify({ error: "Progress notification access denied" }), {
+          status: 403, headers: { ...corsHeaders, "Content-Type": "application/json" },
+        });
+      }
+    }
+
     const supabase = createClient(
       Deno.env.get("SUPABASE_URL")!,
       Deno.env.get("SUPABASE_SERVICE_ROLE_KEY")!

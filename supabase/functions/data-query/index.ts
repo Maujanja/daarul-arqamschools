@@ -220,6 +220,7 @@ serve(async (req) => {
     // Handle count-only queries
     if (countOnly) {
       let countQuery = supabase.from(table).select("*", { count: "exact", head: true });
+      if (table === "students" && userRole !== "parent") countQuery = countQuery.neq("source", "progress_demo");
       
       // Apply role-based filtering for count queries
       if (userRole === "parent" && userId) {
@@ -277,6 +278,7 @@ serve(async (req) => {
 
     // Build regular query
     let query = supabase.from(table).select(select || "*");
+    if (table === "students" && userRole !== "parent") query = query.neq("source", "progress_demo");
 
     // Apply role-based data filtering for sensitive tables
     if (userRole === "parent" && userId) {

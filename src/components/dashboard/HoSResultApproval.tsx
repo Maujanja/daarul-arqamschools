@@ -263,12 +263,14 @@ export function HoSResultApproval({ selectedYear, filterClasses }: Props) {
       toast.success(`${selectedClass} - ${termLabel}: ${completionStats.isApproved ? 'Results hidden' : 'Results released'}`);
       if (!completionStats.isApproved) {
         try {
-          const { data: notifyData } = await supabase.functions.invoke('notify-results-approved', {
-            body: { class_name: selectedClass, term: selectedTerm, academic_year: selectedYear },
+          const { data: notifyData, error: notifyError } = await supabase.functions.invoke('notify-results-approved', {
+            body: { class_name: selectedClass, term: selectedTerm, academic_year: selectedYear, sessionToken: user?.notificationToken },
           });
+          if (notifyError || !notifyData?.success) throw new Error('Notification delivery failed');
           const sent = notifyData?.summary?.sent ?? 0;
           if (sent > 0) toast.success(`SMS notifications sent to ${sent} parent(s)`);
         } catch (e) {
+          toast.error('Results released, but notifications were not sent. Sign in again and retry notifications.');
           console.error('notify-results-approved failed', e);
         }
       }

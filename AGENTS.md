@@ -5,3 +5,5 @@
 - Progress includes only approved examinations for the requested academic year and compares consecutive examinations within the same historical class, avoiding unpublished results and promotion-scale mismatches.
 - Sauti audio is requested only by the parent progress Edge Function and returned as verified audio/mpeg; provider credentials never reach the browser.
 - Browser MP3 requests use native fetch rather than functions.invoke, which decodes audio/mpeg as text; report and voice-test views share cancellable audio playback with object-URL cleanup.
+- Demo progress and hashed demo login credentials stay in a service-only table, separate from real examination marks and approvals, to avoid changing school results.
+- Result notification authorization uses signed staff sessions issued after credential verification; heads may notify only their own section.

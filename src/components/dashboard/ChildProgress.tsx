@@ -11,7 +11,7 @@ import { LineChart, Line, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContai
 import type { StudentProgress } from '../../../supabase/functions/_shared/student-progress';
 
 interface Props { token?: string; studentId: string; year: string; selectedTerm: string }
-interface Report { progress: StudentProgress; narration: string; studentName: string }
+interface Report { progress: StudentProgress; narration: string; studentName: string; isDemo?: boolean }
 export function ChildProgress({ token, studentId, year, selectedTerm }: Props) {
   const [report, setReport] = useState<Report | null>(null);
   const [open, setOpen] = useState(false);
@@ -86,6 +86,7 @@ export function ChildProgress({ token, studentId, year, selectedTerm }: Props) {
       <TabsList className="w-full grid grid-cols-2"><TabsTrigger value="report">Progress & Alerts</TabsTrigger><TabsTrigger value="voice-test">Voice Test</TabsTrigger></TabsList>
       <TabsContent value="voice-test"><ProgressVoiceTest token={token} year={year} /></TabsContent>
       <TabsContent value="report" className="space-y-5">
+      {report?.isDemo && <p className="text-sm text-warning">Demonstration account · Sample results only</p>}
       <div className="grid gap-3 sm:grid-cols-2">
         <Select value={scope} onValueChange={setScope}><SelectTrigger aria-label="Progress period"><SelectValue /></SelectTrigger><SelectContent><SelectItem value="all">All approved examinations</SelectItem><SelectItem value="selected">Through selected examination</SelectItem></SelectContent></Select>
         <Select value={subject} onValueChange={setSubject}><SelectTrigger aria-label="Progress subject"><SelectValue /></SelectTrigger><SelectContent><SelectItem value="all">Overall average</SelectItem>{subjects.map(([id, name]) => <SelectItem key={id} value={id}>{name}</SelectItem>)}</SelectContent></Select>

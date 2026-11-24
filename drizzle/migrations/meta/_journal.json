@@ -1,0 +1,13 @@
+{
+  "version": "7",
+  "dialect": "postgresql",
+  "entries": [
+    {
+      "idx": 0,
+      "version": "7",
+      "when": 1795498816551,
+      "tag": "0000_parent_progress_demo_accounts",
+      "breakpoints": true
+    }
+  ]
+}

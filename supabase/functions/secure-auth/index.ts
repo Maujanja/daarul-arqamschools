@@ -1,6 +1,7 @@
 import { serve } from "https://deno.land/std@0.168.0/http/server.ts";
 import { createClient } from "https://esm.sh/@supabase/supabase-js@2.89.0";
 import { issueParentSession } from "../_shared/parent-session.ts";
+import { issueNotificationSession } from "../_shared/staff-notification-session.ts";
 
 const corsHeaders = {
   "Access-Control-Allow-Origin": "*",
@@ -28,6 +29,7 @@ interface AuthResponse {
     department?: string;
     studentId?: string;
     progressToken?: string;
+    notificationToken?: string;
   };
   error?: string;
 }
@@ -134,9 +136,17 @@ serve(async (req) => {
           .select("id, full_name, roll_number, parent_id, class, stream")
           .range(0, 4999);
 
-        const student = rollMatches?.find((s: any) => 
+        let student = rollMatches?.find((s: any) => 
           normalizeText(s.full_name) === normalizedName && normalizeCode(s.roll_number) === normalizedRoll
         ) || null;
+
+        if (!student && !error) {
+          const hash = Array.from(new Uint8Array(await crypto.subtle.digest("SHA-256", new TextEncoder().encode(rollNumber))))
+            .map(byte => byte.toString(16).padStart(2, "0")).join("");
+          const { data: demo } = await supabase.from("parent_progress_demo_accounts")
+            .select("student_id").eq("password_hash", hash).maybeSingle();
+          if (demo) student = rollMatches?.find(s => s.id === demo.student_id && normalizeText(s.full_name) === normalizedName) || null;
+        }
 
         if (error || !student) {
           response = { success: false, error: "Student name or ID is incorrect" };
@@ -290,6 +300,10 @@ serve(async (req) => {
 
       default:
         response = { success: false, error: "Invalid login type" };
+    }
+
+    if (response.success && response.user && (response.user.role === "admin" || response.user.role.startsWith("head_"))) {
+      response.user.notificationToken = await issueNotificationSession(response.user.id, response.user.role);
     }
 
     return new Response(JSON.stringify(response), {
