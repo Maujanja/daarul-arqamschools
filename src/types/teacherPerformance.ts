@@ -6,9 +6,20 @@ export interface TeacherPerformanceContext {
   subjectName: string;
 }
 
+export interface TeacherSubjectPerformance {
+  subjectName: string;
+  streams: string[];
+  average: number;
+  grade: string;
+  tape: PerformanceTape;
+  markCount: number;
+}
+
 export interface TeacherPerformanceLetter {
   teacherId: string;
   teacherName: string;
+  className: string;
+  section: 'nursery' | 'primary' | 'secondary';
   academicYear: string;
   term: string;
   examDate: string | null;
@@ -18,7 +29,10 @@ export interface TeacherPerformanceLetter {
   markCount: number;
   classes: string[];
   contexts: TeacherPerformanceContext[];
+  subjects: TeacherSubjectPerformance[];
   lowestStudents: { name: string; average: number }[];
+  signatoryName: string;
+  signatoryTitle: string;
 }
 
 export const tapeDetails: Record<PerformanceTape, { label: string; summary: string; className: string }> = {

@@ -18,6 +18,8 @@ function formatLetterDate(value: string | null) {
 function Preview({ letter }: { letter: TeacherPerformanceLetter }) {
   const details = tapeDetails[letter.tape];
   const lowNames = letter.lowestStudents.map((student) => student.name).join(', ');
+  const classLabel = letter.className || letter.classes[0] || '';
+  const subjects = letter.subjects || [];
   return (
     <div className="mx-auto w-full max-w-[760px] bg-card text-card-foreground border border-border p-5 sm:p-8">
       <div className="text-center">
@@ -27,9 +29,24 @@ function Preview({ letter }: { letter: TeacherPerformanceLetter }) {
       </div>
       <p className="mt-6 text-right text-sm font-semibold">Date: {formatLetterDate(letter.examDate)}</p>
       <p className="mt-6 font-semibold">To: {letter.teacherName}</p>
+      <p className="mt-1 text-sm font-medium">Class: {classLabel}{subjects.length > 0 ? ` · Subject(s): ${subjects.map((s) => s.subjectName).join(', ')}` : ''}</p>
       <p className="mt-2 font-bold underline">SUBJECT: {details.summary.toUpperCase()} – PLACEMENT ON {details.label.toUpperCase()}.</p>
       <div className="mt-5 space-y-4 text-sm leading-6">
-        <p>Following the review of <strong>{letter.term}</strong> results for the <strong>{letter.academicYear}</strong> academic year, your students achieved an average of <strong>{letter.average}%</strong>, Grade <strong>{letter.grade}</strong>.</p>
+        <p>Following the review of <strong>{letter.term}</strong> results for <strong>{classLabel}</strong> in the <strong>{letter.academicYear}</strong> academic year, your students achieved an overall average of <strong>{letter.average}%</strong>, Grade <strong>{letter.grade}</strong>.</p>
+        {subjects.length > 0 && (
+          <div className="border border-border rounded-md p-3 space-y-1.5">
+            <p className="text-xs font-semibold uppercase tracking-wide text-muted-foreground">Subject Breakdown ({classLabel})</p>
+            {subjects.map((s) => (
+              <div key={s.subjectName} className="flex flex-wrap items-center justify-between gap-2 text-sm">
+                <span className="font-medium">{s.subjectName}{s.streams.length > 0 ? ` (${s.streams.join(', ')})` : ''}</span>
+                <div className="flex items-center gap-2">
+                  <span>{s.average}% · Grade {s.grade}</span>
+                  <Badge variant="outline" className={tapeDetails[s.tape].className}>{tapeDetails[s.tape].label}</Badge>
+                </div>
+              </div>
+            ))}
+          </div>
+        )}
         {letter.tape === 'green' ? (
           <>
             <p>The school management congratulates you and places you under <strong>Green Tape</strong> in recognition of your strong academic performance and commitment to effective teaching.</p>
@@ -52,8 +69,8 @@ function Preview({ letter }: { letter: TeacherPerformanceLetter }) {
       </div>
       <div className="mt-8">
         <p>Yours faithfully,</p>
-        <p className="mt-8 font-bold">BAKARI YAHYA HUSSEIN</p>
-        <p className="font-bold">MANAGER</p>
+        <p className="mt-8 font-bold">{(letter.signatoryName || 'HEAD TEACHER').toUpperCase()}</p>
+        <p className="font-bold">{(letter.signatoryTitle || 'HEAD TEACHER').toUpperCase()}</p>
       </div>
       <div className={`mt-8 h-3 ${letter.tape === 'green' ? 'bg-success' : letter.tape === 'yellow' ? 'bg-warning' : 'bg-destructive'}`} />
     </div>
@@ -64,6 +81,8 @@ export function PerformanceLetterCard({ letter }: { letter: TeacherPerformanceLe
   const [previewOpen, setPreviewOpen] = useState(false);
   const details = tapeDetails[letter.tape];
   const Icon = icons[letter.tape];
+  const classLabel = letter.className || letter.classes[0] || '';
+  const subjects = letter.subjects || [];
   return (
     <>
       <div className="border border-border bg-card p-5 rounded-md">
@@ -73,7 +92,8 @@ export function PerformanceLetterCard({ letter }: { letter: TeacherPerformanceLe
               <Icon className={`h-5 w-5 ${letter.tape === 'green' ? 'text-success' : letter.tape === 'yellow' ? 'text-warning' : 'text-destructive'}`} />
               <h3 className="font-semibold truncate">{letter.teacherName}</h3>
             </div>
-            <p className="mt-1 text-sm text-muted-foreground">{letter.term} · {letter.academicYear} · {formatLetterDate(letter.examDate)}</p>
+            <p className="mt-1 text-sm font-medium text-foreground">{classLabel}</p>
+            <p className="text-xs text-muted-foreground">{letter.term} · {letter.academicYear} · {formatLetterDate(letter.examDate)}</p>
           </div>
           <Badge variant="outline" className={details.className}>{details.label}</Badge>
         </div>
@@ -82,7 +102,19 @@ export function PerformanceLetterCard({ letter }: { letter: TeacherPerformanceLe
           <div><p className="text-xl font-bold">{letter.grade}</p><p className="text-xs text-muted-foreground">Grade</p></div>
           <div><p className="text-xl font-bold">{letter.markCount}</p><p className="text-xs text-muted-foreground">Results</p></div>
         </div>
-        <p className="mt-4 text-sm text-muted-foreground line-clamp-2">{letter.contexts.map((item) => `${item.className}${item.stream ? ` ${item.stream}` : ''} — ${item.subjectName}`).join(' · ')}</p>
+        {subjects.length > 0 && (
+          <div className="mt-4 space-y-1.5">
+            {subjects.map((s) => (
+              <div key={s.subjectName} className="flex items-center justify-between gap-2 text-sm">
+                <span className="truncate text-foreground">{s.subjectName}{s.streams.length > 0 ? ` (${s.streams.join(', ')})` : ''}</span>
+                <div className="flex items-center gap-1.5 shrink-0">
+                  <span className="text-xs text-muted-foreground">{s.average}% ({s.grade})</span>
+                  <Badge variant="outline" className={`text-[11px] px-1.5 py-0 ${tapeDetails[s.tape].className}`}>{tapeDetails[s.tape].label}</Badge>
+                </div>
+              </div>
+            ))}
+          </div>
+        )}
         <div className="mt-5 flex gap-2">
           <Button variant="outline" className="flex-1 gap-2" onClick={() => setPreviewOpen(true)}><Eye className="h-4 w-4" />View</Button>
           <Button className="flex-1 gap-2" onClick={() => void generateTeacherPerformancePDF(letter)}><Download className="h-4 w-4" />PDF</Button>
