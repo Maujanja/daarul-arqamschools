@@ -17,6 +17,10 @@ const SECTION_TITLES: Record<string, string> = {
   primary: "HEAD TEACHER (PRIMARY)",
   secondary: "HEAD TEACHER (SECONDARY)",
 };
+const SECTION_SIGNATORIES: Record<string, string> = {
+  primary: "SADDAM MAHMOUD",
+  secondary: "JUMA JAFARI MWINGO",
+};
 const EXCLUDED_PRIMARY_SUBJECTS = new Set(["e.d.k", "edk", "edk nursery", "arabic", "arabic language", "arabic nursery", "quran"]);
 
 type Assignment = { teacher_id: string; class: string; stream: string | null; subject_id: string };
@@ -198,7 +202,7 @@ serve(async (req) => {
           }));
 
           const signatoryTitle = SECTION_TITLES[section] || "HEAD TEACHER";
-          const signatoryName = headBySection.get(section) || signatoryTitle;
+          const signatoryName = SECTION_SIGNATORIES[section] || headBySection.get(section) || signatoryTitle;
 
           return {
             teacherId,
