@@ -1,0 +1,299 @@
+import { useEffect, useMemo, useState } from 'react';
+import { Canvas, useFrame, useThree } from '@react-three/fiber';
+import { OrbitControls, Html, ContactShadows } from '@react-three/drei';
+import * as THREE from 'three';
+import { Label } from '@/components/ui/label';
+import { Button } from '@/components/ui/button';
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
+import { DormData } from './dormContext';
+import { BED_STATUS_LABEL, BedStatus, DormBed, POSITION_LABEL } from '@/types/dorm';
+
+type DisplayStatus = BedStatus | 'occupied';
+
+const STATUS_COLOR: Record<DisplayStatus, string> = {
+  available: '#3fae6a',
+  occupied: '#2563eb',
+  reserved: '#f59e0b',
+  maintenance: '#ef4444',
+  out_of_service: '#9ca3af',
+};
+
+const ROOM_W = 5.4;
+const WALL_H = 2.6;
+const GAP = 0.5;
+const BUNK_SPACING = 1.25;
+
+interface Bunk { upper?: DormBed; lower?: DormBed }
+interface RoomModel { number: number; bunks: Bunk[]; beds: DormBed[] }
+
+function buildRooms(beds: DormBed[]): RoomModel[] {
+  const rooms = new Map<number, DormBed[]>();
+  beds.forEach((b) => rooms.set(b.room_number || 0, [...(rooms.get(b.room_number || 0) || []), b]));
+  return [...rooms.entries()]
+    .sort((a, b) => a[0] - b[0])
+    .map(([number, rb]) => {
+      const sorted = [...rb].sort((a, b) => a.bed_number - b.bed_number);
+      const map = new Map<string, Bunk>();
+      sorted.forEach((bed, i) => {
+        const key = bed.bunk_number != null ? `b${bed.bunk_number}` : bed.bed_position === 'single' ? `s${i}` : `i${Math.floor(i / 2)}`;
+        const slot = map.get(key) || {};
+        if (bed.bed_position === 'upper') slot.upper = bed;
+        else slot.lower = bed; // lower + single sit on the floor level
+        map.set(key, slot);
+      });
+      return { number, beds: sorted, bunks: [...map.values()] };
+    });
+}
+
+interface SceneCtx {
+  data: DormData;
+  selectedBedId: string;
+  onSelectBed: (id: string) => void;
+}
+
+function BedMesh({ bed, y, flip, ctx }: { bed: DormBed; y: number; flip: boolean; ctx: SceneCtx }) {
+  const [hover, setHover] = useState(false);
+  const assignment = ctx.data.assignmentByBed.get(bed.id);
+  const student = assignment ? ctx.data.studentById.get(assignment.student_id) : undefined;
+  const status: DisplayStatus = assignment ? 'occupied' : bed.status || 'available';
+  const selected = ctx.selectedBedId === bed.id;
+  return (
+    <group
+      position={[0, y, 0]}
+      onClick={(e) => { e.stopPropagation(); ctx.onSelectBed(bed.id); }}
+      onPointerOver={(e) => { e.stopPropagation(); setHover(true); document.body.style.cursor = 'pointer'; }}
+      onPointerOut={() => { setHover(false); document.body.style.cursor = 'auto'; }}
+    >
+      <mesh castShadow receiveShadow>
+        <boxGeometry args={[1.9, 0.16, 0.85]} />
+        <meshStandardMaterial
+          color={STATUS_COLOR[status]}
+          emissive={selected ? '#ffffff' : hover ? '#ffffff' : '#000000'}
+          emissiveIntensity={selected ? 0.45 : hover ? 0.22 : 0}
+        />
+      </mesh>
+      <mesh position={[flip ? 0.7 : -0.7, 0.14, 0]} castShadow>
+        <boxGeometry args={[0.45, 0.12, 0.6]} />
+        <meshStandardMaterial color="#f3f0e8" />
+      </mesh>
+      {(hover || selected) && (
+        <Html center position={[0, 0.55, 0]} distanceFactor={8} zIndexRange={[20, 0]}>
+          <div style={{ background: 'rgba(15,23,42,.92)', color: '#fff', padding: '4px 8px', borderRadius: 6, fontSize: 12, whiteSpace: 'nowrap', pointerEvents: 'none' }}>
+            {bed.bed_code || `Bed ${bed.bed_number}`} · {POSITION_LABEL[bed.bed_position || 'single']} · {student?.full_name || BED_STATUS_LABEL[status]}
+          </div>
+        </Html>
+      )}
+    </group>
+  );
+}
+
+function BunkMesh({ bunk, position, flip, ctx }: { bunk: Bunk; position: [number, number, number]; flip: boolean; ctx: SceneCtx }) {
+  const double = !!bunk.upper;
+  const postH = double ? 1.6 : 0.5;
+  return (
+    <group position={position} rotation={[0, flip ? Math.PI : 0, 0]}>
+      {[-0.93, 0.93].flatMap((x) => [-0.42, 0.42].map((z) => (
+        <mesh key={`${x}${z}`} position={[x, postH / 2, z]} castShadow>
+          <boxGeometry args={[0.07, postH, 0.07]} />
+          <meshStandardMaterial color="#5b3a1e" />
+        </mesh>
+      )))}
+      {bunk.lower && <BedMesh bed={bunk.lower} y={0.35} flip={flip} ctx={ctx} />}
+      {bunk.upper && <BedMesh bed={bunk.upper} y={1.25} flip={flip} ctx={ctx} />}
+      {double && (
+        <>
+          <mesh position={[0.95, 0.8, 0.52]}>
+            <boxGeometry args={[0.05, 1.5, 0.05]} />
+            <meshStandardMaterial color="#8a6a45" />
+          </mesh>
+          {[0.3, 0.65, 1.0, 1.35].map((h) => (
+            <mesh key={h} position={[0.95, h, 0.52]}>
+              <boxGeometry args={[0.05, 0.04, 0.2]} />
+              <meshStandardMaterial color="#8a6a45" />
+            </mesh>
+          ))}
+        </>
+      )}
+    </group>
+  );
+}
+
+function RoomMesh({
+  room, depth, position, selected, dimmed, onSelectRoom, ctx,
+}: {
+  room: RoomModel; depth: number; position: [number, number, number];
+  selected: boolean; dimmed: boolean; onSelectRoom: () => void; ctx: SceneCtx;
+}) {
+  const opacity = dimmed ? 0.3 : 1;
+  const wallColor = selected ? '#eef3fa' : '#cfd8e3';
+  const wall = (pos: [number, number, number], size: [number, number, number]) => (
+    <mesh position={pos} castShadow receiveShadow>
+      <boxGeometry args={size} />
+      <meshStandardMaterial color={wallColor} transparent opacity={opacity} />
+    </mesh>
+  );
+  const occupied = room.beds.filter((b) => ctx.data.assignmentByBed.has(b.id)).length;
+  return (
+    <group position={position}>
+      <mesh position={[0, -0.05, 0]} receiveShadow onClick={(e) => { e.stopPropagation(); onSelectRoom(); }}>
+        <boxGeometry args={[ROOM_W, 0.1, depth]} />
+        <meshStandardMaterial color={selected ? '#f3e3c3' : '#d9c9a8'} />
+      </mesh>
+      {wall([0, WALL_H / 2, -depth / 2], [ROOM_W, WALL_H, 0.12])}
+      {wall([-ROOM_W / 2, WALL_H / 2, 0], [0.12, WALL_H, depth])}
+      {wall([ROOM_W / 2, WALL_H / 2, 0], [0.12, WALL_H, depth])}
+      {wall([0, 0.2, depth / 2], [ROOM_W, 0.4, 0.12])}
+      <mesh position={[0, 0.5, depth / 2 + 0.02]}>
+        <boxGeometry args={[0.9, 1, 0.05]} />
+        <meshStandardMaterial color="#7a5230" />
+      </mesh>
+      {room.bunks.map((bk, i) => {
+        const side = i % 2 === 0 ? -1 : 1;
+        const z = -depth / 2 + 1 + Math.floor(i / 2) * BUNK_SPACING;
+        return <BunkMesh key={i} bunk={bk} flip={side === 1} position={[side * (ROOM_W / 2 - 1.15), 0, z]} ctx={ctx} />;
+      })}
+      <Html position={[0, WALL_H + 0.4, 0]} center distanceFactor={14} zIndexRange={[10, 0]}>
+        <button
+          onClick={onSelectRoom}
+          style={{ background: selected ? '#1d4ed8' : 'rgba(15,23,42,.85)', color: '#fff', border: 0, padding: '4px 10px', borderRadius: 8, fontSize: 13, cursor: 'pointer', whiteSpace: 'nowrap' }}
+        >
+          Room {String(room.number).padStart(2, '0')} · {occupied}/{room.beds.length}
+        </button>
+      </Html>
+    </group>
+  );
+}
+
+function CameraRig({ target, camPos }: { target: THREE.Vector3; camPos: THREE.Vector3 }) {
+  const controls = useThree((s) => s.controls) as unknown as { target: THREE.Vector3; update: () => void; addEventListener: (t: string, f: () => void) => void; removeEventListener: (t: string, f: () => void) => void } | null;
+  const [active, setActive] = useState(true);
+  useEffect(() => setActive(true), [target, camPos]);
+  useEffect(() => {
+    if (!controls) return;
+    const stop = () => setActive(false);
+    controls.addEventListener('start', stop);
+    return () => controls.removeEventListener('start', stop);
+  }, [controls]);
+  useFrame(({ camera }) => {
+    if (!active || !controls) return;
+    camera.position.lerp(camPos, 0.08);
+    controls.target.lerp(target, 0.08);
+    controls.update();
+    if (camera.position.distanceTo(camPos) < 0.05) setActive(false);
+  });
+  return null;
+}
+
+export default function Dorm3DTab({ data }: { data: DormData }) {
+  const [dormId, setDormId] = useState('');
+  const [roomNo, setRoomNo] = useState<number | null>(null);
+  const [selectedBedId, setSelectedBedId] = useState('');
+  const [autoRotate, setAutoRotate] = useState(false);
+
+  useEffect(() => {
+    if (!dormId && data.dorms[0]) setDormId(data.dorms[0].id);
+  }, [data.dorms, dormId]);
+  useEffect(() => { setRoomNo(null); setSelectedBedId(''); }, [dormId]);
+
+  const rooms = useMemo(() => buildRooms(data.beds.filter((b) => b.dormitory_id === dormId)), [data.beds, dormId]);
+
+  const { positions, depth, size } = useMemo(() => {
+    const maxBunks = Math.max(1, ...rooms.map((r) => r.bunks.length));
+    const depth = Math.max(5, Math.ceil(maxBunks / 2) * BUNK_SPACING + 1.6);
+    const cols = Math.max(1, Math.ceil(Math.sqrt(rooms.length)));
+    const rowsCount = Math.max(1, Math.ceil(rooms.length / cols));
+    const positions = rooms.map((_, i) => [
+      ((i % cols) - (cols - 1) / 2) * (ROOM_W + GAP), 0,
+      (Math.floor(i / cols) - (rowsCount - 1) / 2) * (depth + GAP),
+    ] as [number, number, number]);
+    return { positions, depth, size: Math.max(cols * (ROOM_W + GAP), rowsCount * (depth + GAP), 8) };
+  }, [rooms]);
+
+  const idx = rooms.findIndex((r) => r.number === roomNo);
+  const { target, camPos } = useMemo(() => {
+    if (idx < 0) return { target: new THREE.Vector3(0, 0, 0), camPos: new THREE.Vector3(size * 0.7, size * 0.75 + 4, size * 0.9 + 4) };
+    const p = positions[idx];
+    return { target: new THREE.Vector3(p[0], 0.8, p[2]), camPos: new THREE.Vector3(p[0] + 4.5, 7.5, p[2] + depth * 0.9 + 2) };
+  }, [idx, positions, size, depth]);
+
+  const ctx: SceneCtx = { data, selectedBedId, onSelectBed: setSelectedBedId };
+  const bed = data.bedById.get(selectedBedId);
+  const assignment = bed ? data.assignmentByBed.get(bed.id) : undefined;
+  const student = assignment ? data.studentById.get(assignment.student_id) : undefined;
+  const status: DisplayStatus | null = bed ? (assignment ? 'occupied' : bed.status || 'available') : null;
+
+  return (
+    <div className="space-y-4">
+      <div className="grid grid-cols-1 gap-3 sm:grid-cols-2">
+        <div className="space-y-2">
+          <Label>Dormitory</Label>
+          <Select value={dormId} onValueChange={setDormId}>
+            <SelectTrigger><SelectValue placeholder="Select dormitory" /></SelectTrigger>
+            <SelectContent>
+              {data.dorms.map((d) => <SelectItem key={d.id} value={d.id}>{d.name}</SelectItem>)}
+            </SelectContent>
+          </Select>
+        </div>
+        <div className="flex items-end gap-2">
+          {roomNo !== null && <Button variant="outline" onClick={() => setRoomNo(null)}>← Whole building</Button>}
+          <Button variant="outline" onClick={() => setAutoRotate((v) => !v)}>{autoRotate ? 'Stop rotation' : 'Auto rotate'}</Button>
+        </div>
+      </div>
+
+      <div className="flex flex-wrap items-center gap-x-4 gap-y-2 border-y border-border py-3">
+        {(Object.keys(STATUS_COLOR) as DisplayStatus[]).map((s) => (
+          <span key={s} className="flex items-center gap-1.5 text-xs text-muted-foreground">
+            <span className="h-2.5 w-2.5 rounded-full" style={{ background: STATUS_COLOR[s] }} />
+            {BED_STATUS_LABEL[s]}
+          </span>
+        ))}
+        <span className="text-xs text-muted-foreground">Drag = rotate • Scroll/pinch = zoom • Right-click/2 fingers = pan • Click a room to enter</span>
+      </div>
+
+      <div className="grid gap-4 lg:grid-cols-[minmax(0,1fr)_280px]">
+        <div className="relative h-[560px] overflow-hidden rounded-md border border-border bg-muted/30">
+          {rooms.length === 0 ? (
+            <p className="p-8 text-center text-muted-foreground">This dormitory has no beds yet.</p>
+          ) : (
+            <Canvas shadows camera={{ fov: 45, position: [14, 14, 18] }} onPointerMissed={() => setSelectedBedId('')}>
+              <color attach="background" args={['#eaf0f7']} />
+              <ambientLight intensity={0.8} />
+              <directionalLight position={[10, 18, 8]} intensity={1.1} castShadow shadow-mapSize={[2048, 2048]}
+                shadow-camera-left={-size} shadow-camera-right={size} shadow-camera-top={size} shadow-camera-bottom={-size} />
+              {rooms.map((room, i) => (
+                <RoomMesh key={room.number} room={room} depth={depth} position={positions[i]}
+                  selected={room.number === roomNo} dimmed={roomNo !== null && room.number !== roomNo}
+                  onSelectRoom={() => setRoomNo(room.number)} ctx={ctx} />
+              ))}
+              <ContactShadows position={[0, -0.12, 0]} opacity={0.35} scale={size * 2} blur={2.5} far={6} />
+              <OrbitControls makeDefault enableDamping autoRotate={autoRotate} autoRotateSpeed={1.2}
+                minDistance={3} maxDistance={size * 3} maxPolarAngle={Math.PI / 2.05} />
+              <CameraRig target={target} camPos={camPos} />
+            </Canvas>
+          )}
+        </div>
+
+        <div className="card-elevated space-y-2 p-4 text-sm">
+          <h3 className="font-semibold">Bed details</h3>
+          {!bed || !status ? (
+            <p className="text-muted-foreground">Click a bed in the 3D view to see who sleeps there.</p>
+          ) : (
+            <>
+              <p><span className="text-muted-foreground">Bed:</span> {bed.bed_code || `Bed ${bed.bed_number}`}</p>
+              <p><span className="text-muted-foreground">Room:</span> {bed.room_number ?? '-'}</p>
+              <p><span className="text-muted-foreground">Position:</span> {POSITION_LABEL[bed.bed_position || 'single']}</p>
+              <p className="flex items-center gap-2"><span className="text-muted-foreground">Status:</span>
+                <span className="h-2.5 w-2.5 rounded-full" style={{ background: STATUS_COLOR[status] }} />{BED_STATUS_LABEL[status]}</p>
+              {student && (
+                <div className="mt-2 rounded-md border border-border p-2">
+                  <p className="font-medium">{student.full_name}</p>
+                  <p className="text-xs text-muted-foreground">{student.roll_number} • {student.class}{student.stream ? ` ${student.stream}` : ''}</p>
+                </div>
+              )}
+            </>
+          )}
+        </div>
+      </div>
+    </div>
+  );
+}

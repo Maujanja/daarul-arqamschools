@@ -1,5 +1,5 @@
-import { useEffect, useMemo, useState } from 'react';
-import { BedDouble, Check, DoorOpen, UserRound, X } from 'lucide-react';
+import { lazy, Suspense, useEffect, useMemo, useState } from 'react';
+import { BedDouble, Box, Check, DoorOpen, LayoutGrid, Loader2, UserRound, X } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Label } from '@/components/ui/label';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
@@ -251,7 +251,7 @@ function PartitionedRoomMap({
   );
 }
 
-export function RoomsTab({ data }: { data: DormData }) {
+function RoomsTab2D({ data }: { data: DormData }) {
   const { insert, update } = useSecureData();
   const [dormId, setDormId] = useState('');
   const [roomNumber, setRoomNumber] = useState('');
@@ -522,6 +522,31 @@ export function RoomsTab({ data }: { data: DormData }) {
         </div>
       ) : (
         <div className="py-12 text-center text-sm text-muted-foreground">No rooms found in this dormitory.</div>
+      )}
+    </div>
+  );
+}
+
+const Dorm3DTab = lazy(() => import('./Dorm3DTab'));
+
+export function RoomsTab({ data }: { data: DormData }) {
+  const [view, setView] = useState<'2d' | '3d'>('2d');
+  return (
+    <div className="space-y-4">
+      <div className="inline-flex rounded-md border border-border p-1">
+        <Button type="button" size="sm" variant={view === '2d' ? 'default' : 'ghost'} onClick={() => setView('2d')}>
+          <LayoutGrid className="mr-2 h-4 w-4" /> 2D
+        </Button>
+        <Button type="button" size="sm" variant={view === '3d' ? 'default' : 'ghost'} onClick={() => setView('3d')}>
+          <Box className="mr-2 h-4 w-4" /> 3D
+        </Button>
+      </div>
+      {view === '2d' ? (
+        <RoomsTab2D data={data} />
+      ) : (
+        <Suspense fallback={<div className="flex justify-center py-16"><Loader2 className="h-6 w-6 animate-spin text-primary" /></div>}>
+          <Dorm3DTab data={data} />
+        </Suspense>
       )}
     </div>
   );
