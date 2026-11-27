@@ -23,6 +23,7 @@ import html2canvas from 'html2canvas';
 import { createSubjectNameLookup, resolveSubjectName } from '@/utils/subjectResolution';
 import { isExcludedFromPrimaryAverage } from '@/utils/averageExclusions';
 import { ChildProgress } from '@/components/dashboard/ChildProgress';
+import { invokeProgress } from '@/lib/parentProgress';
 
 interface StudentMark {
   subject: string;
@@ -70,7 +71,9 @@ interface Announcement {
   expires_at: string | null;
   media_url?: string | null;
   media_type?: string | null;
+  media_name?: string | null;
   link_url?: string | null;
+  target_class?: string | null;
 }
 
 interface SubjectRanking {
@@ -599,19 +602,16 @@ export function ParentDashboard() {
           setHistoricalDebts([]);
         }
         
-        // Fetch announcements - uses publicly readable table
-        const now = new Date().toISOString();
-        const { data: announcementsData } = await supabase
-          .from('announcements')
-          .select('*')
-          .eq('is_active', true)
-          .eq('academic_year', selectedYear)
-          .or(`expires_at.is.null,expires_at.gt.${now}`)
-          .order('created_at', { ascending: false })
-          .limit(5);
-        
-        if (announcementsData) {
-          setAnnouncements(announcementsData);
+        // The parent session limits class-specific notices to this student's class.
+        if (user?.progressToken) {
+          const announcementResponse = await invokeProgress({
+            action: 'announcements',
+            sessionToken: user.progressToken,
+            year: selectedYear,
+          });
+          setAnnouncements((announcementResponse.announcements || []).slice(0, 5));
+        } else {
+          setAnnouncements([]);
         }
       } catch (error) {
         console.error('Error fetching data:', error);
@@ -1483,6 +1483,7 @@ export function ParentDashboard() {
                     <AnnouncementMedia
                       mediaUrl={announcement.media_url}
                       mediaType={announcement.media_type}
+                      mediaName={announcement.media_name}
                       linkUrl={announcement.link_url}
                       compact
                     />

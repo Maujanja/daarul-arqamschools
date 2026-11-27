@@ -70,7 +70,7 @@ function Preview({ letter }: { letter: TeacherPerformanceLetter }) {
       <div className="mt-8">
         <p>Yours faithfully,</p>
         <p className="mt-8 font-bold">{(letter.signatoryName || 'HEAD TEACHER').toUpperCase()}</p>
-        <p className="font-bold">{(letter.signatoryTitle || 'HEAD TEACHER').toUpperCase()}</p>
+        <p className="font-bold">{(letter.section === 'secondary' ? 'HEAD MASTER (SECONDARY)' : (letter.signatoryTitle || 'HEAD TEACHER')).toUpperCase()}</p>
       </div>
       <div className={`mt-8 h-3 ${letter.tape === 'green' ? 'bg-success' : letter.tape === 'yellow' ? 'bg-warning' : 'bg-destructive'}`} />
     </div>

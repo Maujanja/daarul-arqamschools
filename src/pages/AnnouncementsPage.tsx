@@ -15,6 +15,11 @@ import { useSecureQuery } from '@/hooks/useSecureQuery';
 import { useSecureData } from '@/hooks/useSecureData';
 import { supabase } from '@/integrations/supabase/client';
 import { AnnouncementMedia } from '@/components/AnnouncementMedia';
+import { classes } from '@/data/mockData';
+
+const MAX_ATTACHMENT_BYTES = 50 * 1024 * 1024;
+const ALLOWED_ATTACHMENT_EXTENSIONS = new Set(['pdf', 'doc', 'docx', 'png', 'jpg', 'jpeg', 'webp', 'gif', 'mp3', 'wav', 'ogg', 'm4a', 'aac', 'mp4', 'webm', 'mov', 'm4v']);
+const ATTACHMENT_ACCEPT = '.pdf,.doc,.docx,.png,.jpg,.jpeg,.webp,.gif,audio/*,video/*';
 
 interface Announcement {
   id: string;
@@ -29,7 +34,9 @@ interface Announcement {
   expires_at: string | null;
   media_url: string | null;
   media_type: string | null;
+  media_name: string | null;
   link_url: string | null;
+  target_class: string | null;
 }
 
 export default function AnnouncementsPage() {
@@ -48,10 +55,12 @@ export default function AnnouncementsPage() {
   const [title, setTitle] = useState('');
   const [content, setContent] = useState('');
   const [visibilityType, setVisibilityType] = useState('yearly');
+  const [targetClass, setTargetClass] = useState('all');
   const [linkUrl, setLinkUrl] = useState('');
   const [mediaFile, setMediaFile] = useState<File | null>(null);
   const [existingMediaUrl, setExistingMediaUrl] = useState<string | null>(null);
   const [existingMediaType, setExistingMediaType] = useState<string | null>(null);
+  const [existingMediaName, setExistingMediaName] = useState<string | null>(null);
   const [removeMedia, setRemoveMedia] = useState(false);
   
   const isAdmin = user?.role === 'admin';
@@ -110,8 +119,15 @@ export default function AnnouncementsPage() {
       // Handle file upload first if a new file is chosen
       let mediaUrl: string | null | undefined = undefined;
       let mediaType: string | null | undefined = undefined;
+      let mediaName: string | null | undefined = undefined;
       if (mediaFile) {
-        const ext = mediaFile.name.split('.').pop() || 'bin';
+        const ext = (mediaFile.name.split('.').pop() || '').toLowerCase();
+        if (!ALLOWED_ATTACHMENT_EXTENSIONS.has(ext)) {
+          throw new Error('Choose a PDF, Word document, image, audio, or video file.');
+        }
+        if (mediaFile.size > MAX_ATTACHMENT_BYTES) {
+          throw new Error('Attachment must be 50 MB or smaller.');
+        }
         const path = `announcements/${Date.now()}-${Math.random().toString(36).slice(2, 8)}.${ext}`;
         const { error: upErr } = await supabase.storage
           .from('announcement-media')
@@ -119,10 +135,12 @@ export default function AnnouncementsPage() {
         if (upErr) throw upErr;
         const { data: pub } = supabase.storage.from('announcement-media').getPublicUrl(path);
         mediaUrl = pub.publicUrl;
-        mediaType = mediaFile.type;
+        mediaType = mediaFile.type || `application/${ext}`;
+        mediaName = mediaFile.name;
       } else if (removeMedia) {
         mediaUrl = null;
         mediaType = null;
+        mediaName = null;
       }
 
       if (editingAnnouncement) {
@@ -130,11 +148,13 @@ export default function AnnouncementsPage() {
           title: title.trim(),
           content: content.trim(),
           visibility_type: visibilityType,
+          target_class: targetClass === 'all' ? null : targetClass,
           link_url: linkUrl.trim() || null,
         };
         if (mediaUrl !== undefined) {
           updatePayload.media_url = mediaUrl;
           updatePayload.media_type = mediaType;
+          updatePayload.media_name = mediaName;
         }
         const result = await update('announcements', updatePayload, { id: editingAnnouncement.id });
         
@@ -148,30 +168,34 @@ export default function AnnouncementsPage() {
           created_by: user?.name || 'Admin',
           academic_year: selectedYear,
           visibility_type: visibilityType,
+          target_class: targetClass === 'all' ? null : targetClass,
           link_url: linkUrl.trim() || null,
           media_url: mediaUrl ?? null,
           media_type: mediaType ?? null,
+          media_name: mediaName ?? null,
         });
         
         if (!result.success) throw new Error(result.error);
         
         toast({ title: "Success", description: "Announcement created successfully" });
 
-        // Send push notification to all subscribed devices
-        try {
-          await supabase.functions.invoke('push-send', {
-            body: {
-              payload: {
-                title: `📢 ${title.trim()}`,
-                body: content.trim().slice(0, 160),
-                url: '/announcements',
-                tag: 'announcement',
-                requireInteraction: false,
+        // General notices may notify every device; class notices stay inside the targeted dashboards.
+        if (targetClass === 'all') {
+          try {
+            await supabase.functions.invoke('push-send', {
+              body: {
+                payload: {
+                  title: `📢 ${title.trim()}`,
+                  body: content.trim().slice(0, 160),
+                  url: '/announcements',
+                  tag: 'announcement',
+                  requireInteraction: false,
+                },
               },
-            },
-          });
-        } catch (pushErr) {
-          console.error('Push notification failed:', pushErr);
+            });
+          } catch (pushErr) {
+            console.error('Push notification failed:', pushErr);
+          }
         }
       }
       
@@ -194,9 +218,11 @@ export default function AnnouncementsPage() {
     setTitle(announcement.title);
     setContent(announcement.content);
     setVisibilityType(announcement.visibility_type || 'yearly');
+    setTargetClass(announcement.target_class || 'all');
     setLinkUrl(announcement.link_url || '');
     setExistingMediaUrl(announcement.media_url || null);
     setExistingMediaType(announcement.media_type || null);
+    setExistingMediaName(announcement.media_name || null);
     setMediaFile(null);
     setRemoveMedia(false);
     setDialogOpen(true);
@@ -227,10 +253,12 @@ export default function AnnouncementsPage() {
     setTitle('');
     setContent('');
     setVisibilityType('yearly');
+    setTargetClass('all');
     setLinkUrl('');
     setMediaFile(null);
     setExistingMediaUrl(null);
     setExistingMediaType(null);
+    setExistingMediaName(null);
     setRemoveMedia(false);
   };
 
@@ -319,6 +347,20 @@ export default function AnnouncementsPage() {
                       </Select>
                     </div>
                     <div className="space-y-2">
+                      <Label htmlFor="audience">Send To Parents Of</Label>
+                      <Select value={targetClass} onValueChange={setTargetClass}>
+                        <SelectTrigger id="audience" className="input-enhanced">
+                          <SelectValue placeholder="Choose a class" />
+                        </SelectTrigger>
+                        <SelectContent>
+                          <SelectItem value="all">All Classes</SelectItem>
+                          {classes.map((className) => (
+                            <SelectItem key={className} value={className}>{className}</SelectItem>
+                          ))}
+                        </SelectContent>
+                      </Select>
+                    </div>
+                    <div className="space-y-2">
                       <Label htmlFor="content">Content</Label>
                       <Textarea
                         id="content"
@@ -341,11 +383,11 @@ export default function AnnouncementsPage() {
                       />
                     </div>
                     <div className="space-y-2">
-                      <Label htmlFor="media">Attachment (image, PDF, or video — optional)</Label>
+                      <Label htmlFor="media">Attachment (PDF, Word, PNG, audio, or video — optional, max 50 MB)</Label>
                       <Input
                         id="media"
                         type="file"
-                        accept="image/*,application/pdf,video/*"
+                        accept={ATTACHMENT_ACCEPT}
                         onChange={(e) => {
                           const f = e.target.files?.[0] || null;
                           setMediaFile(f);
@@ -357,7 +399,7 @@ export default function AnnouncementsPage() {
                         <div className="flex items-center justify-between gap-2 rounded-md border border-border/60 bg-muted/30 px-3 py-2 text-xs">
                           <span className="flex items-center gap-2 truncate">
                             <Paperclip className="w-3 h-3" />
-                            <span className="truncate">Current attachment kept</span>
+                            <span className="truncate">{existingMediaName || 'Current attachment kept'}</span>
                           </span>
                           <button
                             type="button"
@@ -429,6 +471,7 @@ export default function AnnouncementsPage() {
                     <AnnouncementMedia
                       mediaUrl={announcement.media_url}
                       mediaType={announcement.media_type}
+                      mediaName={announcement.media_name}
                       linkUrl={announcement.link_url}
                     />
                     <div className="flex flex-wrap items-center gap-2 sm:gap-4 mt-4 text-xs sm:text-sm text-muted-foreground">
@@ -447,6 +490,9 @@ export default function AnnouncementsPage() {
                       <span className="flex items-center gap-1">
                         <Clock className="w-4 h-4" />
                         {getVisibilityLabel(announcement.visibility_type)}
+                      </span>
+                      <span className="rounded-full bg-primary/10 px-2 py-0.5 font-medium text-primary">
+                        {announcement.target_class || 'All Classes'}
                       </span>
                     </div>
                   </div>

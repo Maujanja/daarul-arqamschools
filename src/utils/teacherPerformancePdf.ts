@@ -114,7 +114,7 @@ export async function generateTeacherPerformancePDF(letter: TeacherPerformanceLe
   doc.text('Yours faithfully,', margin, y);
   doc.setFont('helvetica', 'bold');
   doc.text((letter.signatoryName || 'HEAD TEACHER').toUpperCase(), margin, y + 18);
-  doc.text((letter.signatoryTitle || 'HEAD TEACHER').toUpperCase(), margin, y + 24);
+  doc.text((letter.section === 'secondary' ? 'HEAD MASTER (SECONDARY)' : (letter.signatoryTitle || 'HEAD TEACHER')).toUpperCase(), margin, y + 24);
 
   const color = TAPE_RGB[letter.tape];
   doc.setFillColor(...color);

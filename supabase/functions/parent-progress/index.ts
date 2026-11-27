@@ -5,9 +5,10 @@ import { z } from "https://esm.sh/zod@3.25.76";
 import { verifyParentSession } from "../_shared/parent-session.ts";
 import { loadStudentProgress } from "../_shared/load-student-progress.ts";
 import { progressNarration } from "../_shared/student-progress.ts";
+import { announcementMatchesClass } from "../_shared/announcements.ts";
 
 const schema = z.object({
-  action: z.enum(["report", "speak", "test-voice"]), sessionToken: z.string().min(20).max(3000),
+  action: z.enum(["report", "speak", "test-voice", "announcements"]), sessionToken: z.string().min(20).max(3000),
   year: z.string().regex(/^\d{4}-\d{4}$/),
   className: z.string().min(1).max(80).optional(),
   throughTerm: z.string().min(1).max(80).optional(),
@@ -29,6 +30,24 @@ serve(async req => {
     const key = Deno.env.get("SUPABASE_SERVICE_ROLE_KEY");
     if (!url || !key) return json({ error: "Progress service unavailable" }, 503);
     const db = createClient(url, key);
+    if (action === "announcements") {
+      const { data: student, error: studentError } = await db.from("students")
+        .select("id,parent_id,class").eq("id", session.studentId).maybeSingle();
+      if (studentError) throw studentError;
+      if (!student || (student.parent_id || student.id) !== session.parentId) {
+        return json({ error: "Please sign in again." }, 401);
+      }
+      const now = new Date().toISOString();
+      const { data, error } = await db.from("announcements")
+        .select("id,title,content,created_by,created_at,academic_year,visibility_type,expires_at,media_url,media_type,media_name,link_url,target_class")
+        .eq("is_active", true).eq("academic_year", year)
+        .or(`expires_at.is.null,expires_at.gt.${now}`)
+        .or(`target_class.is.null,target_class.eq.${student.class}`)
+        .order("created_at", { ascending: false }).limit(20);
+      if (error) throw error;
+      const announcements = (data || []).filter((item) => announcementMatchesClass(item.target_class, student.class));
+      return json({ announcements });
+    }
     const { student, progress, isDemo } = await loadStudentProgress(db, session.studentId, year, className, throughTerm);
     if ((student.parent_id || student.id) !== session.parentId) return json({ error: "Please sign in again." }, 401);
     const narration = action === "test-voice"

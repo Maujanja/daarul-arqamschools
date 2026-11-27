@@ -15,7 +15,7 @@ const SECTION_CLASSES: Record<string, string[]> = {
 const SECTION_TITLES: Record<string, string> = {
   nursery: "HEAD TEACHER (NURSERY)",
   primary: "HEAD TEACHER (PRIMARY)",
-  secondary: "HEAD TEACHER (SECONDARY)",
+  secondary: "HEAD MASTER (SECONDARY)",
 };
 const SECTION_SIGNATORIES: Record<string, string> = {
   primary: "SADDAM MAHMOUD",

@@ -96,8 +96,10 @@ export type Database = {
           id: string
           is_active: boolean
           link_url: string | null
+          media_name: string | null
           media_type: string | null
           media_url: string | null
+          target_class: string | null
           title: string
           updated_at: string
           visibility_type: string | null
@@ -111,8 +113,10 @@ export type Database = {
           id?: string
           is_active?: boolean
           link_url?: string | null
+          media_name?: string | null
           media_type?: string | null
           media_url?: string | null
+          target_class?: string | null
           title: string
           updated_at?: string
           visibility_type?: string | null
@@ -126,8 +130,10 @@ export type Database = {
           id?: string
           is_active?: boolean
           link_url?: string | null
+          media_name?: string | null
           media_type?: string | null
           media_url?: string | null
+          target_class?: string | null
           title?: string
           updated_at?: string
           visibility_type?: string | null

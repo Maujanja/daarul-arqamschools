@@ -6,3 +6,7 @@
 - [x] Performance Letters: tenganisha barua kwa kila darasa la mwalimu na onesha darasa wazi
 - [x] Performance Letters: badilisha sahihi ya chini kutoka Manager kwenda jina la Mkuu wa Shule husika (Primary / Secondary / Nursery)
 - [x] Kagua mabadiliko yote (build OK, 15 tests pass, browser verified)
+- [ ] Performance Letters: Secondary itumie cheo "Head Master" kwenye preview na PDF
+- [ ] Announcements: chagua All Classes au darasa lengwa, na mzazi aone tu taarifa zinazomhusu
+- [ ] Announcements: kubali PDF, Word, PNG, audio na video, na mzazi aweze kudownload attachment
+- [ ] Kagua tests, build na flow ya admin/mzazi kisha hifadhi mabadiliko
