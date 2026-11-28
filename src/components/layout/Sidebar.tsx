@@ -93,8 +93,8 @@ function SidebarInner({ items, user, logout, pathname, onNavigate, itemsVisible 
     <div className="flex flex-col h-full">
       <div className="p-6 pb-5">
         <div className="flex items-center gap-4">
-          <div className="w-14 h-14 rounded-full bg-white/10 flex items-center justify-center ring-2 ring-white/20">
-            <img src={dasLogo} alt="Logo" className="w-10 h-10 object-contain" />
+          <div className="w-14 h-14 rounded-full bg-white/10 flex items-center justify-center ring-2 ring-[hsl(var(--gold))]/70 overflow-hidden">
+            <img src={dasLogo} alt="Logo" className="w-full h-full object-cover" />
           </div>
           <div className="flex-1 min-w-0">
             <h2 className="text-base font-semibold text-white truncate">{user?.name || 'User'}</h2>
@@ -136,11 +136,11 @@ function SidebarInner({ items, user, logout, pathname, onNavigate, itemsVisible 
                       <item.icon
                         className={cn(
                           'w-5 h-5 transition-colors duration-200',
-                          isActive ? 'text-sky-300' : 'text-white/50 group-hover:text-white/80',
+                          isActive ? 'text-[hsl(var(--gold))]' : 'text-white/50 group-hover:text-white/80',
                         )}
                       />
                       <span className="flex-1 font-medium text-sm">{item.label}</span>
-                      {isActive && <div className="w-2 h-2 rounded-full bg-sky-300" />}
+                      {isActive && <div className="w-2 h-2 rounded-full bg-[hsl(var(--gold))]" />}
                     </NavLink>
                   </motion.li>
                 );
@@ -164,7 +164,7 @@ function SidebarInner({ items, user, logout, pathname, onNavigate, itemsVisible 
 
       <div className="p-4 pt-2">
         <div className="px-4 py-3 rounded-xl bg-white/5">
-          <p className="text-xs font-semibold text-white/80 tracking-wide">DAARUL-ARQAM</p>
+          <p className="text-xs font-bold text-[hsl(var(--gold))] tracking-[0.12em]">DAARUL-ARQAM</p>
           <p className="text-xs text-white/40">Schools Management System</p>
         </div>
       </div>
@@ -207,7 +207,7 @@ export function Sidebar() {
       <Button
         variant="ghost"
         size="icon"
-        className="fixed top-4 left-4 z-[60] lg:hidden bg-[#1e3a5f] text-white hover:bg-[#1e3a5f] touch-none"
+        className="fixed top-4 left-4 z-[60] lg:hidden bg-[hsl(var(--sidebar-background))] text-white hover:bg-[hsl(var(--sidebar-accent))] touch-none rounded-full"
         onClick={toggleSidebar}
         aria-label={isOpen ? 'Close menu' : 'Open menu'}
       >
@@ -260,8 +260,8 @@ export function Sidebar() {
             data-sidebar-glass="true"
             className={cn(
               'fixed left-3 top-3 bottom-3 w-[17rem] z-50 lg:hidden',
-              'rounded-3xl overflow-hidden',
-              'bg-gradient-to-b from-[#1e3a5f]/55 via-[#1a3455]/55 to-[#152a45]/60',
+              'rounded-[1.75rem] overflow-hidden',
+              'bg-gradient-to-b from-[hsl(172_66%_16%_/_0.96)] via-[hsl(172_62%_13%_/_0.96)] to-[hsl(173_60%_9%_/_0.97)]',
               'border border-white/15',
               'shadow-[0_20px_60px_-15px_rgba(0,0,0,0.55)]',
             )}
@@ -292,8 +292,8 @@ export function Sidebar() {
         data-sidebar-glass="true"
         className={cn(
           'hidden lg:block fixed left-4 top-4 bottom-4 w-[17rem] z-50',
-          'rounded-3xl overflow-hidden',
-          'bg-gradient-to-b from-[#1e3a5f]/55 via-[#1a3455]/55 to-[#152a45]/60',
+          'rounded-[1.75rem] overflow-hidden',
+          'bg-gradient-to-b from-[hsl(172_66%_16%_/_0.96)] via-[hsl(172_62%_13%_/_0.96)] to-[hsl(173_60%_9%_/_0.97)]',
           'border border-white/15',
           'shadow-[0_20px_60px_-15px_rgba(0,0,0,0.55)]',
         )}

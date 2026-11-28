@@ -3,8 +3,6 @@ import { Sidebar } from './Sidebar';
 import { useAuth } from '@/contexts/AuthContext';
 import { Navigate } from 'react-router-dom';
 import dasLogo from '@/assets/das-logo.png';
-import bgAdmin from '@/assets/bg-admin.jpg';
-import bgGeneral from '@/assets/bg-general.jpg';
 import { NotificationBell } from './NotificationBell';
 import { ScrollReveal } from './ScrollReveal';
 import { Button } from '@/components/ui/button';
@@ -27,7 +25,7 @@ function readScrollDebugEnabled() {
 }
 
 export function DashboardLayout({ children }: DashboardLayoutProps) {
-  const { isAuthenticated, isLoading, user } = useAuth();
+  const { isAuthenticated, isLoading } = useAuth();
   const [scrollDebugEnabled, setScrollDebugEnabled] = useState(readScrollDebugEnabled);
   const [lastScrollDebug, setLastScrollDebug] = useState<ScrollDebugEntry | null>(null);
 
@@ -62,9 +60,6 @@ export function DashboardLayout({ children }: DashboardLayoutProps) {
     return <Navigate to="/login" replace />;
   }
 
-  const isAdmin = user?.role === 'admin';
-  const backgroundImage = isAdmin ? bgAdmin : bgGeneral;
-
   const handleRefresh = () => {
     const reload = () => window.location.reload();
     if (typeof caches !== 'undefined') {
@@ -76,14 +71,16 @@ export function DashboardLayout({ children }: DashboardLayoutProps) {
 
   return (
     <div className="app-viewport fixed inset-0 w-full overflow-hidden relative">
-      {/* Background Image */}
-      <div 
-        className="fixed inset-0 bg-cover bg-center bg-no-repeat pointer-events-none -z-10"
-        style={{ backgroundImage: `url(${backgroundImage})` }}
+      {/* Soft brand background */}
+      <div className="fixed inset-0 bg-background pointer-events-none -z-10" />
+      <div
+        className="fixed inset-0 pointer-events-none -z-10"
+        style={{
+          background:
+            'radial-gradient(900px 520px at 100% -8%, hsl(var(--primary) / 0.12), transparent 62%), radial-gradient(760px 460px at -8% 108%, hsl(var(--gold) / 0.14), transparent 62%)',
+        }}
       />
-      {/* Overlay for better readability */}
-      <div className="fixed inset-0 bg-black/25 pointer-events-none -z-10" />
-      
+
       {/* Content */}
       <div className="relative z-10 h-full overflow-hidden">
         <Sidebar />
@@ -93,8 +90,8 @@ export function DashboardLayout({ children }: DashboardLayoutProps) {
           style={{ WebkitOverflowScrolling: 'touch', overscrollBehavior: 'none', overscrollBehaviorY: 'none', touchAction: 'pan-y' }}
         >
           {/* Header with Logo */}
-          <header className="hidden lg:flex items-center gap-3 px-8 py-4 border-b border-white/10 bg-[#1e3a5f] sticky top-0 z-30 touch-none">
-            <img src={dasLogo} alt="Daarul Arqam Logo" className="w-10 h-10 object-contain" />
+          <header className="hidden lg:flex items-center gap-3 px-6 py-3 mx-6 mt-4 rounded-2xl border border-white/10 bg-gradient-to-r from-[hsl(172_66%_14%)] to-[hsl(172_58%_28%)] sticky top-2 z-30 touch-none">
+            <img src={dasLogo} alt="Daarul Arqam Logo" className="w-10 h-10 object-cover rounded-full ring-2 ring-[hsl(var(--gold))]/70" />
             <div className="flex-1">
               <h1 className="font-display font-bold text-white text-sm leading-tight">DAARUL-ARQAM SCHOOLS</h1>
               <p className="text-xs text-white/70">Exam Results Management System</p>
@@ -115,13 +112,13 @@ export function DashboardLayout({ children }: DashboardLayoutProps) {
           <div className="lg:hidden fixed top-4 right-4 z-40 flex items-center gap-2 touch-none">
             <button
               onClick={handleRefresh}
-              className="bg-[#1e3a5f] rounded-full w-10 h-10 flex items-center justify-center text-white hover:bg-[#1e3a5f]"
+              className="bg-[hsl(var(--sidebar-background))] rounded-full w-10 h-10 flex items-center justify-center text-white hover:bg-[hsl(var(--sidebar-accent))]"
               title="Refresh"
               aria-label="Refresh"
             >
               <RefreshCw className="w-5 h-5" />
             </button>
-            <div className="bg-[#1e3a5f] rounded-full">
+            <div className="bg-[hsl(var(--sidebar-background))] rounded-full">
               <NotificationBell />
             </div>
           </div>
